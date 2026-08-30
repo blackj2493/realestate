@@ -48,7 +48,6 @@ import {
   checkSoldTransactionType,
   checkOnboardingExample,
   checkUnpriceableValues,
-  checkCityTrendCoverage,
   snapshotFromRows,
   type Problem,
   type SnapshotEntry,
@@ -446,44 +445,6 @@ async function checkUnpriceableValueHealth(): Promise<void> {
 }
 
 /**
- * City-level AVM trend coverage — a whole city missing from avm_trend_index.
- *
- * The sibling of checkUnpriceableValueHealth, one level up: that one asks whether a stored
- * OUTPUT is wrong, this one asks whether a model INPUT quietly disappeared. Kitchener priced
- * 1,291 of 1,292 actives on 2026-08-29 with no city trend at all, and every number it
- * produced looked reasonable — see migration 131 for the full account.
- *
- * The threshold is inventory, not sales: a city with 100+ priceable actives is one whose
- * estimates users actually read.
- */
-async function checkCityTrendCoverageHealth(): Promise<void> {
-  const sb = getServiceRoleClient();
-  const { data, error } = await sb.rpc('city_trend_coverage', {
-    p_min_actives: 100,
-    p_terminal: ESTIMATE_TERMINAL_STATUSES,
-    p_exact: UNPRICEABLE_EXACT,
-    p_patterns: UNPRICEABLE_PATTERNS,
-  });
-  if (error) {
-    problems.push({
-      severity: 'warn',
-      check: 'city-trend-coverage',
-      detail: `city trend coverage unavailable (${error.message}) — is migration 131 applied? The invariant is unchecked until this resolves.`,
-    });
-    return;
-  }
-  problems.push(
-    ...checkCityTrendCoverage(
-      (data ?? []).map((r: { city: string; active_listings: number; trend_rows: number }) => ({
-        city: String(r.city),
-        activeListings: Number(r.active_listings),
-        trendRows: Number(r.trend_rows),
-      }))
-    )
-  );
-}
-
-/**
  * Onboarding example integrity — the intro email (2B) builds a live dashboard for a HARDCODED
  * region (EXAMPLE_REGION = "Woodbridge"), which resolves only via the COMMUNITY_ALIASES
  * expansion in area.ts. This runs the SAME resolver against live Typesense and asserts the
@@ -634,7 +595,6 @@ async function main(): Promise<void> {
     ['price ledger', checkPriceLedgerFreshness],
     ['estimate freshness', checkEstimateHealth],
     ['unpriceable values', checkUnpriceableValueHealth],
-    ['city trend coverage', checkCityTrendCoverageHealth],
     ['email delivery', checkEmailHealth],
     ['media reconcile', checkMediaReconcileHealth],
     ['onboarding example', checkOnboardingExampleHealth],

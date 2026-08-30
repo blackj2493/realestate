@@ -50,14 +50,25 @@ export function footer(opts: {
     </p>`;
 }
 
-const HEAD = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"></head>`;
+const HEAD_OPEN = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark">`;
+const HEAD_CLOSE = `</head>`;
+/** HEAD with an optional embedded stylesheet (media queries live here — inline styles
+ *  cannot express one, and Gmail has supported <style> in <head> since 2016). */
+const head = (css?: string) => `${HEAD_OPEN}${css ? `<style>${css}</style>` : ""}${HEAD_CLOSE}`;
 const preheaderDiv = (t: string) => `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${t}</div>`;
 const LOGO_DARK_BG = `<span style="font-size:17px;font-weight:700;color:#ffffff;"><span style="font-weight:400;margin-right:8px;">&#10094;</span>PURE<span style="font-weight:400;color:#8fa4b8;">PROPERTY</span><span style="font-weight:400;color:#6b7e92;">.ca</span></span>`;
 const LOGO_LIGHT = `<div style="font-size:13px;font-weight:700;color:#0a1828;margin:0 0 20px;"><span style="font-weight:400;margin-right:6px;">&#10094;</span>PURE<span style="font-weight:400;color:#4a6378;">PROPERTY</span><span style="font-weight:400;color:#6b7e92;">.ca</span></div>`;
 
 /** Mode A — the branded "terminal readout" document (navy header + accent rule). */
-export function shell(opts: { preheader: string; headerLabel: string; body: string }): string {
-  return `${HEAD}
+export function shell(opts: {
+  preheader: string;
+  headerLabel: string;
+  body: string;
+  /** Optional embedded CSS for the document head — the only place a media query can live.
+   *  Purely additive: an email that omits it renders exactly as before. */
+  headStyle?: string;
+}): string {
+  return `${head(opts.headStyle)}
 <body style="margin:0;padding:0;background:#eef2f6;">
   ${preheaderDiv(opts.preheader)}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#eef2f6;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
@@ -87,7 +98,7 @@ export function shell(opts: { preheader: string; headerLabel: string; body: stri
 /** Mode B — the near-plaintext "plain note" (Tanmay's lead follow-up). No header bar,
  *  small light logo; deliberately un-designed so it reads as a real person, not a bot. */
 export function plainNote(opts: { preheader: string; body: string }): string {
-  return `${HEAD}
+  return `${head()}
 <body style="margin:0;padding:0;background:#ffffff;">
   ${preheaderDiv(opts.preheader)}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#ffffff;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">

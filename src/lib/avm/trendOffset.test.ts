@@ -266,3 +266,49 @@ describe('selectOffsets', () => {
     expect(selectOffsets(OFFSET_FIX, ['Other Region'], 'Condo Apartment')).toEqual([]);
   });
 });
+
+describe('regression: a blank CityRegion must feed the trend but never an offset', () => {
+  /**
+   * 2026-08-29. The refresh job required a community key and dropped the row otherwise —
+   * which removed the sale from the CITY trend too, a trend that never needed one. All of
+   * Waterloo Region and Brantford ship a blank CityRegion, so 10,681 sales vanished and
+   * four cities had no trend at all while the AVM kept returning plausible numbers.
+   *
+   * Lifting that guard creates the opposite hazard: δ is defined per city_region, so every
+   * one of those sales would pool into a single ''-keyed bucket and be written to
+   * avm_community_offset as a real row.
+   */
+  const rec = (cityRegion: string, l: number): LRecord => ({
+    city: 'Kitchener',
+    cityRegion,
+    subType: 'Detached',
+    periodEnd: '2026-12-31',
+    l,
+  });
+
+  it('builds a city trend from sales that have no community key', () => {
+    const records = Array.from({ length: 12 }, (_, i) => rec('', 13.5 + i * 0.01));
+    const { trendRows, offsetRows } = aggregateTrendAndOffset(records, {
+      minTrendSamples: 10,
+      minOffsetSamples: 3,
+    });
+    expect(trendRows).toHaveLength(1);
+    expect(trendRows[0].city).toBe('Kitchener');
+    expect(trendRows[0].n_sales).toBe(12);
+    // ...and no offset row is invented for the empty key.
+    expect(offsetRows).toHaveLength(0);
+  });
+
+  it('never emits an offset row keyed on an empty city_region', () => {
+    const records = [
+      ...Array.from({ length: 10 }, (_, i) => rec('', 13.5 + i * 0.01)),
+      ...Array.from({ length: 10 }, (_, i) => rec('Forest Heights', 13.6 + i * 0.01)),
+    ];
+    const { offsetRows } = aggregateTrendAndOffset(records, {
+      minTrendSamples: 10,
+      minOffsetSamples: 3,
+    });
+    expect(offsetRows.map((o) => o.city_region)).not.toContain('');
+    expect(offsetRows.map((o) => o.city_region)).toContain('Forest Heights');
+  });
+});

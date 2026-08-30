@@ -48,13 +48,17 @@ export const EMAIL_STREAMS: EmailStream[] = [
     key: "data_drop",
     title: "Weekly market update",
     desc: "One email a week on what's moving in the markets you follow.",
-    sender: null, // WS2 — the weekly Data Drop
+    sender: "scripts/worker/dataDrop.ts",
   },
   {
+    // The COLUMN is still `home_value` (migration 106 named it for a value email), but the
+    // stream that finally sends on it deliberately carries no valuation: `property_estimates`
+    // covers active listings only, and ~21% of homes in our markets have any vault record at
+    // all. The label describes what ARRIVES, which is the only thing the reader can check.
     key: "home_value",
-    title: "Your home's value",
-    desc: "When the estimated value of a home you own moves — plus a monthly recap.",
-    sender: null, // WS3 — needs user_homes first
+    title: "Your street, monthly",
+    desc: "What sold near a home you follow last month — how many, how fast, and how many went above asking.",
+    sender: "scripts/worker/streetRecap.ts",
   },
   {
     key: "product",

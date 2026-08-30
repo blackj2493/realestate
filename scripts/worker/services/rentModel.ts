@@ -11,9 +11,12 @@
 import { bedSplit } from '@/lib/listings/bedSplit';
 import { subTypeFamily } from '@/lib/listings/subTypeFamily';
 import { isPartialUnitRental } from '@/lib/listings/inHomeUnit';
+import { MONTHLY_RENT_BAND } from '@/lib/metrics/sanityBand';
 
-export const MIN_MONTHLY_RENT = 500;
-export const MAX_MONTHLY_RENT = 25000;
+// One definition, shared with the web side. It used to live only here, which is why
+// the address page's "Median rent" tile had no ceiling and published $120,300/mo.
+export const MIN_MONTHLY_RENT = MONTHLY_RENT_BAND.min;
+export const MAX_MONTHLY_RENT = MONTHLY_RENT_BAND.max;
 /**
  * Minimum leases a cohort needs before it publishes a rent.
  *
@@ -81,6 +84,23 @@ export interface RawLeaseInput {
   bathroomsTotal?: number | null; // real bath count (BathroomsTotalInteger)
   /** CountyOrParish — the parent geography for the `county` rung (migration 124). */
   county?: string | null;
+  /**
+   * Stable identity for the PROPERTY, not the record —
+   * coalesce(property_hash, norm_address, listing_key), the same key
+   * region_active_aggregates uses. The feed carries the same rental more than once
+   * (a relist, a corrected record, the same home under both "Toronto" and
+   * "Toronto C07") and each copy used to count as an independent comp.
+   *
+   * Measured 2026-08-22: 5,284 of 91,159 lease records are duplicates, and 426 of
+   * 5,867 published neighbourhood cohorts existed ONLY because duplicates lifted them
+   * over MIN_COHORT_SAMPLES. 262 Senlac Road published $23,008/mo from a cohort of
+   * [$23,000, $23,000, $8,000] where the two $23,000 records are the same house.
+   *
+   * The caller's SQL already dedupes; this is the guard that makes the rule belong to
+   * the model rather than to one query. Omit it and nothing is deduped, which is the
+   * pre-fix behaviour.
+   */
+  dedupeKey?: string | null;
   /** UnparsedAddress. THE contamination guard (125): 12.0% of the active for-lease
    *  book is an in-home unit — a basement or upper unit listed under the whole
    *  house's sub-type. Without this the lease lands in the Detached 3bd cohort and
@@ -142,6 +162,8 @@ type RowMeta = Omit<RentalIndexRow, 'avg_rent' | 'p10_rent' | 'sample_count'>;
 
 export function createRentAccumulator() {
   const groups = new Map<string, { meta: RowMeta; rents: number[] }>();
+  /** Properties already counted, so a duplicate record cannot become a second comp. */
+  const seen = new Set<string>();
   const bump = (key: string, meta: RowMeta, rent: number) => {
     let g = groups.get(key);
     if (!g) { g = { meta, rents: [] }; groups.set(key, g); }
@@ -152,6 +174,14 @@ export function createRentAccumulator() {
       if (!isLeaseRecord(r)) return;
       const rent = extractMonthlyRent(r);
       if (rent == null) return;
+      // ONE ROW PER PROPERTY. A cohort of three that is really two homes is not a
+      // cohort of three, and MIN_COHORT_SAMPLES is the only thing standing between a
+      // thin market and a published number.
+      const dk = (r.dedupeKey ?? '').trim();
+      if (dk) {
+        if (seen.has(dk)) return;
+        seen.add(dk);
+      }
       const cr = (r.cityRegion ?? '').trim();
       const city = (r.city ?? '').trim();
       // btrim: the feed ships "Semi-Detached " with a trailing space, which would
