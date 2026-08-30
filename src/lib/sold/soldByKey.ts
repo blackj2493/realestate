@@ -588,6 +588,11 @@ export interface LeasedRentItem {
   price: number;
   /** Full address string — the in-home-unit classifier reads its markers ("Bsmt", "(Lower)"). */
   address: string | null;
+  /** BathroomsTotalInteger. Feeds the grid's Rule C, which drops a home carrying far
+   *  more bathrooms than its cell's typical one — the grid has no bath axis, so this
+   *  is the only thing keeping a nine-bath estate out of a five-bath cell. Null when
+   *  the doc omits it; absent must never be read as a value. */
+  baths: number | null;
 }
 
 /**
@@ -606,7 +611,21 @@ export interface LeasedRentItem {
  * grid looking perfectly healthy. `soldByKey.fields.test.ts` guards this list.
  */
 export const CLOSED_NEAR_POINT_FIELDS =
-  "ClosePrice,BedroomsTotal,BedroomsAboveGrade,BedroomsBelowGrade,PropertySubType,UnparsedAddress";
+  "ClosePrice,BedroomsTotal,BedroomsAboveGrade,BedroomsBelowGrade,BathroomsTotalInteger,PropertySubType,UnparsedAddress";
+
+/**
+ * What a closed-deal query found, separated from what it fetched.
+ *
+ * `found` is the TRUE population inside the radius; `items` is the capped page. They
+ * were conflated until the grid header on N13718184 printed "250 leases" — the value
+ * of `per_page`, while 266 leases actually matched. A page size rendered as a count
+ * reads as full coverage when it is a sample.
+ */
+export interface ClosedNearPoint {
+  items: LeasedRentItem[];
+  /** Total matching the filter, ignoring the page cap. 0 when the query failed. */
+  found: number;
+}
 
 async function getClosedNearPoint(
   lat: number,
@@ -615,7 +634,7 @@ async function getClosedNearPoint(
   deal: "sold" | "leased",
   priceMin: number,
   priceMax: number
-): Promise<LeasedRentItem[]> {
+): Promise<ClosedNearPoint> {
   try {
     const res = await getSoldClient()
       .collections(SOLD_LISTINGS_COLLECTION)
@@ -627,7 +646,7 @@ async function getClosedNearPoint(
         include_fields: CLOSED_NEAR_POINT_FIELDS,
         per_page: 250,
       });
-    return (res.hits ?? []).map((h) => {
+    const items = (res.hits ?? []).map((h) => {
       const d = h.document as Partial<SoldListingDocument>;
       const split = bedSplit(d);
       return {
@@ -638,11 +657,13 @@ async function getClosedNearPoint(
         subType: typeof d.PropertySubType === "string" && d.PropertySubType ? d.PropertySubType : null,
         price: typeof d.ClosePrice === "number" ? d.ClosePrice : 0,
         address: typeof d.UnparsedAddress === "string" && d.UnparsedAddress ? d.UnparsedAddress : null,
+        baths: typeof d.BathroomsTotalInteger === "number" ? d.BathroomsTotalInteger : null,
       };
     });
+    return { items, found: typeof res.found === "number" ? res.found : items.length };
   } catch (err) {
     console.error(`[soldByKey] ${deal}-near-point failed:`, err);
-    return [];
+    return { items: [], found: 0 };
   }
 }
 
@@ -650,7 +671,7 @@ async function getClosedNearPoint(
  * Closed leases near a point — the ground truth for "what do homes here actually rent
  * for". Sanity band 500–20,000 $/mo. VOW — consumer branch only.
  */
-export function getLeasedNearPoint(lat: number, lng: number, radiusKm: number): Promise<LeasedRentItem[]> {
+export function getLeasedNearPoint(lat: number, lng: number, radiusKm: number): Promise<ClosedNearPoint> {
   return getClosedNearPoint(lat, lng, radiusKm, "leased", 500, 20_000);
 }
 
@@ -659,7 +680,7 @@ export function getLeasedNearPoint(lat: number, lng: number, radiusKm: number): 
  * for" (the sell-side twin of the rents grid). Sanity band $100k–$30M. VOW — consumer
  * branch only.
  */
-export function getSoldNearPoint(lat: number, lng: number, radiusKm: number): Promise<LeasedRentItem[]> {
+export function getSoldNearPoint(lat: number, lng: number, radiusKm: number): Promise<ClosedNearPoint> {
   return getClosedNearPoint(lat, lng, radiusKm, "sold", 100_000, 30_000_000);
 }
 

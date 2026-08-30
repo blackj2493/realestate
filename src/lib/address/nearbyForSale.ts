@@ -152,6 +152,17 @@ export interface AskingMatrix {
   rows: Array<{ label: string; cells: AskingMatrixCell[]; count: number }>;
   /** Listings that entered the grid (beds + type + price all present). */
   sample: number;
+  /**
+   * How many records EXIST near the point, before the fetch cap and before the
+   * beds/type/price filter. Present only when the caller knows it.
+   *
+   * The header used to print `sample` as the population: on N13718184 it read
+   * "250 leases" because `per_page: 250` is the fetch cap, while 266 leases actually
+   * matched. A number that is really a page size, printed as a count, is the silent
+   * truncation this repo keeps warning about — so the two are now separate fields and
+   * the card says "X of Y" whenever they differ.
+   */
+  total?: number;
 }
 
 // Owner calls (2026-07-24): a single real data point beats a dash — every cell with
@@ -159,7 +170,27 @@ export interface AskingMatrix {
 // the grid renders from 3 usable listings up. MEDIAN (not mean) throughout: rent
 // distributions are right-skewed (audited live: Detached 5bd near Beckett — median
 // $3,900 vs mean $4,167, one $6,000 lease dragging the mean 7% high).
-const MIN_CELL_SAMPLES = 1;
+/**
+ * A CELL NEEDS THREE HOMES BEFORE IT PUBLISHES A MEDIAN.
+ *
+ * This was 1. A single lease was printed under the word "Median" with a quiet "×1"
+ * beside it, and the ×n was expected to carry the whole warning. It does not: the
+ * number is set in the same type as a cell backed by fifty leases.
+ *
+ * Reported on /properties/N13718184, whose grid published **Detached 5+1 bd $19,000**.
+ * That is one real signed lease — 29 Riverside Boulevard W, a NINE-bathroom house on
+ * Vaughan's luxury street — sitting two columns from a $4,975 median. Nothing was
+ * wrong with the datum. What was wrong is calling one home a median.
+ *
+ * Three is the same floor the rest of the system already uses: MIN_COHORT_SAMPLES in
+ * the rent ladder, MIN_MEDIAN_SAMPLE on the rent tile (#410), MIN_MATRIX_SAMPLE right
+ * below. A median of two is the midpoint of two numbers, which is how the Kearney page
+ * published $120,300/mo; a median of one is just the number.
+ *
+ * Rule A (the outlier trim) does not save a thin cell either — it needs TRIM_MIN_N=4
+ * points before it will drop anything, so cells of 1 to 3 were entirely unguarded.
+ */
+const MIN_CELL_SAMPLES = 3;
 const MIN_MATRIX_SAMPLE = 3;
 const MAX_MATRIX_ROWS = 6;
 /** Beds bucket cap: 0 (studio) and 1–5 render as-is; 6 means "6+". Shared with the
@@ -226,6 +257,26 @@ export { isPartialUnitRental, IN_HOME_UNIT_LABEL };
 const TRIM_MIN_N = 4;
 const TRIM_LO = 0.5;
 const TRIM_HI = 2.0;
+// Rule C — bathroom mismatch. The grid's only axes are bedrooms and property type, so
+// a nine-bathroom estate and a five-bathroom family house share one cell whenever they
+// share a bedroom count. Bathrooms are the cheapest available proxy for the size and
+// finish the grid cannot see, and the gap is not subtle: on 29 Riverside Boulevard W
+// it was 9 baths against a cell whose typical home has 5.
+//
+// A THIRD AXIS IS NOT THE ANSWER. Splitting every cell by bath count would multiply an
+// already 9-column grid past readability and drive most cells under MIN_CELL_SAMPLES —
+// trading one wrong number for a page of dashes. So the bath count is used to EXCLUDE
+// non-comparable homes from a cell rather than to key one.
+//
+// The test is an absolute gap, not a ratio: bath counts are small integers, and 2 vs 4
+// (ratio 2.0) is a different kind of difference from 5 vs 10. Three-plus more bathrooms
+// than the cell's typical home is a different product, not a comp.
+//
+// Items with NO bath count are never dropped — absent is not "many", and the closed
+// grid could not read the field at all before this (it was missing from
+// CLOSED_NEAR_POINT_FIELDS).
+const BATH_TRIM_MIN_N = 3;
+const BATH_TRIM_GAP = 3;
 const HOUSE_ANCHOR_MIN_N = 3;
 const RECLASS_FRACTION = 0.7;
 /** Quartiles below this many kept points are noise — the cell shows median-only. */
@@ -262,8 +313,11 @@ export function buildBedsTypeMatrix(
     subType: string | null;
     price: number;
     address?: string | null;
+    /** BathroomsTotalInteger. Optional because absent is a real, common state and must
+     *  never be read as "few" or "many" — Rule C skips an item without it. */
+    baths?: number | null;
   }>,
-  opts: { mode?: "rent" | "sale" } = {}
+  opts: { mode?: "rent" | "sale"; total?: number } = {}
 ): AskingMatrix | null {
   const isRent = (opts.mode ?? "rent") === "rent";
   const usable = items.filter((i) => i.bedsAbove !== null && i.bedsAbove >= 0 && i.subType && i.price > 0);
@@ -277,6 +331,7 @@ export function buildBedsTypeMatrix(
     mergedBucket: bedKey({ above: (i.bedsAbove as number) + i.bedsDen, den: 0 }, BEDS_BUCKET_CAP),
     den: i.bedsDen,
     price: i.price,
+    baths: typeof i.baths === "number" && Number.isFinite(i.baths) && i.baths > 0 ? i.baths : null,
   }));
 
   // Pass 1b (SALE only) — collapse a "+1" column back into its whole-bedroom column
@@ -331,23 +386,46 @@ export function buildBedsTypeMatrix(
     }
   }
 
-  const byType = new Map<string, Map<string, number[]>>();
+  // Cells hold (price, baths) pairs, not bare prices: Rule C needs the bath count to
+  // decide what belongs in the cell before Rule A decides what is an outlier within it.
+  type Point = { price: number; baths: number | null };
+  const byType = new Map<string, Map<string, Point[]>>();
   const colsSeen = new Set<string>();
   for (const a of assigned) {
     colsSeen.add(a.bucket);
-    const cols = byType.get(a.label) ?? new Map<string, number[]>();
-    const prices = cols.get(a.bucket) ?? [];
-    prices.push(a.price);
-    cols.set(a.bucket, prices);
+    const cols = byType.get(a.label) ?? new Map<string, Point[]>();
+    const points = cols.get(a.bucket) ?? [];
+    points.push({ price: a.price, baths: a.baths });
+    cols.set(a.bucket, points);
     byType.set(a.label, cols);
   }
 
+  /**
+   * Rule C — drop homes with far more bathrooms than the cell's typical home.
+   *
+   * Runs BEFORE Rule A, and the order matters: a mansion is not a price outlier
+   * relative to a cell it has already skewed. Nine baths at $19,000 in a cell whose
+   * other members are five-bath houses at $5,000 sits inside Rule A's 0.5×–2× window
+   * once it has pulled the median up, so a price-only trim cannot see it.
+   *
+   * Items with an unknown bath count are kept and excluded from the median bath count
+   * — absent is not a value.
+   */
+  const trimBaths = (points: Point[]): Point[] => {
+    const known = points.map((p) => p.baths).filter((b): b is number => b !== null);
+    if (known.length < BATH_TRIM_MIN_N) return points;
+    const m = median(known)!;
+    const kept = points.filter((p) => p.baths === null || p.baths - m < BATH_TRIM_GAP);
+    // Never empty a cell: if every home is "atypical" then none of them is.
+    return kept.length ? kept : points;
+  };
+
   // Rule A — trim obvious outliers inside well-sampled cells.
-  const trimCell = (prices: number[]): number[] => {
-    if (prices.length < TRIM_MIN_N) return prices;
-    const m = median(prices)!;
-    const kept = prices.filter((p) => p >= m * TRIM_LO && p <= m * TRIM_HI);
-    return kept.length ? kept : prices;
+  const trimCell = (points: Point[]): Point[] => {
+    if (points.length < TRIM_MIN_N) return points;
+    const m = median(points.map((p) => p.price))!;
+    const kept = points.filter((p) => p.price >= m * TRIM_LO && p.price <= m * TRIM_HI);
+    return kept.length ? kept : points;
   };
 
   // Order 0, 0+1, 1, 1+1, 2, 2+1 … so each plus-room column sits beside its base.
@@ -356,7 +434,10 @@ export function buildBedsTypeMatrix(
     .map(([label, cols]) => {
       let count = 0;
       const cells: AskingMatrixCell[] = bedCols.map((b) => {
-        const prices = trimCell(cols.get(b) ?? []);
+        // Rule C then Rule A: decide what belongs in the cell, then what is extreme
+        // inside it. Reversing them lets a mansion set the median it is measured against.
+        const points = trimCell(trimBaths(cols.get(b) ?? []));
+        const prices = points.map((p) => p.price);
         count += prices.length;
         const showRange = prices.length >= RANGE_MIN_N;
         const sorted = showRange ? [...prices].sort((x, y) => x - y) : null;
@@ -375,7 +456,7 @@ export function buildBedsTypeMatrix(
     .filter((r) => r.cells.some((c) => c.median !== null));
   if (!rows.length) return null;
 
-  return { bedCols, rows, sample: usable.length };
+  return { bedCols, rows, sample: usable.length, total: opts.total };
 }
 
 /** One tappable street-radar pin — public IDX fields only. */
@@ -594,7 +675,12 @@ export async function getNearbyForSale(
       },
       events: [...newEvents, ...cutEvents],
       // Sale-side matrices use sale mode: no basement classifier / Rule B (rent logic).
-      bedsTypeMatrix: buildBedsTypeMatrix(all, { mode: isLease ? "rent" : "sale" }),
+      // `total` is the true nearby population; `all` is capped at per_page 100, so the
+      // card must not print the length of this array as a count.
+      bedsTypeMatrix: buildBedsTypeMatrix(all, {
+        mode: isLease ? "rent" : "sale",
+        total: res.found ?? listings.length,
+      }),
       pins: all
         .filter((l) => l.lat !== null && l.lng !== null)
         .map((l) => ({
