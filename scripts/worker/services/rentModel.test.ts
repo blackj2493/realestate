@@ -3,6 +3,7 @@ import {
   isLeaseRecord, extractMonthlyRent, percentile,
   createRentAccumulator, buildRentalIndexRows,
   MIN_MONTHLY_RENT, MAX_MONTHLY_RENT, MIN_COHORT_SAMPLES,
+  pickPreferredBasis,
   type RawLeaseInput, type RentalIndexRow,
 } from './rentModel';
 
@@ -389,5 +390,75 @@ describe('property dedupe', () => {
       acc.add(lease({ listPrice: 2_000, dedupeKey: 'same-basement', unparsedAddress: '1 Test Street Basement, Toronto, ON' }));
     }
     expect(acc.finalize().filter((r) => String(r.match_tier).startsWith('suite_'))).toHaveLength(0);
+  });
+});
+
+// ── 131: closed leases vs asking rents ───────────────────────────────────────────
+describe('rent basis (131)', () => {
+  const l = (rent: number, over: Partial<RawLeaseInput> = {}): RawLeaseInput => ({
+    status: 'Leased', closePrice: rent,
+    city: 'Vaughan', cityRegion: 'Uplands', propertySubType: 'Detached',
+    county: 'York', bedroomsTotal: 6, bedroomsAboveGrade: 5, bedroomsBelowGrade: 1,
+    bathroomsTotal: 5, ...over,
+  });
+
+  it('stamps every row with the basis the accumulator was opened for', () => {
+    const rows = buildRentalIndexRows([5000, 5500, 6000].map((r) => l(r)), 'closed_12');
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.basis === 'closed_12')).toBe(true);
+  });
+
+  it('defaults to asking, so every pre-131 caller keeps its exact behaviour', () => {
+    expect(buildRentalIndexRows([5000, 5500, 6000].map((r) => l(r)))
+      .every((r) => r.basis === 'asking')).toBe(true);
+  });
+
+  it('NEVER pools an ask with a close — that is the whole point of the column', () => {
+    // Same cohort key, two populations, wildly different levels. One accumulator per
+    // population means two rows; one accumulator for both would publish their blend,
+    // which is neither an offer nor a transaction.
+    const closed = buildRentalIndexRows([5000, 5000, 5000].map((r) => l(r)), 'closed_12');
+    const asking = buildRentalIndexRows(
+      [9000, 9000, 9000].map((r) => l(r, { status: 'For Lease', closePrice: null, listPrice: 9000 })),
+      'asking',
+    );
+    const cKey = closed.find((r) => r.match_tier === 'city_bath');
+    const aKey = asking.find((r) => r.match_tier === 'city_bath');
+    expect(cKey?.avg_rent).toBe(5000);
+    expect(aKey?.avg_rent).toBe(9000);
+    // Identical cohort key, so ONLY basis separates them — which is exactly why the
+    // unique index in 131 had to grow that column.
+    expect(cKey?.bedrooms_above).toBe(aKey?.bedrooms_above);
+    expect(cKey?.bathrooms).toBe(aKey?.bathrooms);
+  });
+});
+
+describe('pickPreferredBasis (131)', () => {
+  const row = (basis: string, avg_rent: number) => ({ basis, avg_rent });
+
+  it('prefers a signed lease over an ask, and a recent close over an old one', () => {
+    expect(pickPreferredBasis([row('asking', 9000), row('closed_24', 6000), row('closed_12', 5000)])?.avg_rent)
+      .toBe(5000);
+    expect(pickPreferredBasis([row('asking', 9000), row('closed_24', 6000)])?.avg_rent).toBe(6000);
+  });
+
+  it('falls back to the ask rather than returning nothing', () => {
+    // This is the rung-level fallback that lifts coverage 95.6% -> 98.7%. Dropping it
+    // would trade away more listings than the accuracy is worth.
+    expect(pickPreferredBasis([row('asking', 9000)])?.avg_rent).toBe(9000);
+  });
+
+  it('returns null for an empty set', () => {
+    expect(pickPreferredBasis([])).toBeNull();
+    expect(pickPreferredBasis(null)).toBeNull();
+    expect(pickPreferredBasis(undefined)).toBeNull();
+  });
+
+  it('refuses a row whose basis this build does not know', () => {
+    // An unrecognised basis must not be ranked last and quietly published: nobody could
+    // say what stands behind the number. Absent beats unexplainable.
+    expect(pickPreferredBasis([row('closed_36', 4000), row('', 100)])).toBeNull();
+    // ...but a known basis alongside it still answers.
+    expect(pickPreferredBasis([row('closed_36', 4000), row('asking', 7000)])?.avg_rent).toBe(7000);
   });
 });

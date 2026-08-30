@@ -10,7 +10,14 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { bedSplit } from '@/lib/listings/bedSplit';
 import { subTypeFamily, isRentableSubType } from '@/lib/listings/subTypeFamily';
-import { IN_HOME_UNIT_FAMILY, SUITE_BED_CAP, type MatchTier, type SuiteMatchTier } from './rentModel';
+import {
+  IN_HOME_UNIT_FAMILY,
+  pickPreferredBasis,
+  SUITE_BED_CAP,
+  type MatchTier,
+  type RentBasis,
+  type SuiteMatchTier,
+} from './rentModel';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,6 +36,13 @@ export interface RentAVMResult {
   /** True when the cohort separated "+1" homes; false when it fell back to the
    *  merged whole-bedroom cohort, which mixes a 1+den in with true 2 bedrooms. */
   plus_room_aware?: boolean;
+  /** Whether the number is built from SIGNED leases or from current asks, and over
+   *  what window (133). `match_tier` says how close the comps are; this says whether
+   *  they are transactions at all. Both are needed to read the figure honestly. */
+  basis?: RentBasis | null;
+  /** How many comps stand behind the median. A cohort of 4 and a cohort of 40 print
+   *  the same number today, and only this tells them apart. */
+  sample_count?: number | null;
 }
 
 export async function fetchRentAVM(params: {
@@ -79,7 +93,7 @@ export async function fetchRentAVM(params: {
   // null for land / commercial — those skip the pooled rung entirely (124).
   const family = subTypeFamily(propertySubType);
 
-  const sel = () => supabase.from('rental_market_index').select('avg_rent, p10_rent');
+  const sel = () => supabase.from('rental_market_index').select('avg_rent, p10_rent, basis, sample_count');
 
   const split = bedSplit({
     BedroomsAboveGrade: params.bedroomsAboveGrade,
@@ -87,7 +101,8 @@ export async function fetchRentAVM(params: {
     BedroomsTotal: bedroomsTotal,
   });
 
-  let row: { avg_rent: number; p10_rent: number } | null = null;
+  type CohortRow = { avg_rent: number; p10_rent: number; basis: RentBasis; sample_count: number | null };
+  let row: CohortRow | null = null;
   let tier: RentAVMResult['match_tier'] = null;
   let plusRoomAware = false;
 
@@ -99,20 +114,31 @@ export async function fetchRentAVM(params: {
   if (split) dims.push({ above: split.above, den: split.den, aware: true });
   dims.push({ above: null, den: null, aware: false });
 
-  /** One tier probe. `bedFilter` is the only thing that differs between the split
-   *  and merged passes, and PostgREST needs `is(col, null)` for a NULL match — an
-   *  `eq(col, null)` silently matches nothing, which would make the merged fallback
-   *  never fire and every thin cohort read as no-data. */
+  /**
+   * One tier probe. `bedFilter` is the only thing that differs between the split
+   * and merged passes, and PostgREST needs `is(col, null)` for a NULL match — an
+   * `eq(col, null)` silently matches nothing, which would make the merged fallback
+   * never fire and every thin cohort read as no-data.
+   *
+   * SINCE 133 THIS RETURNS UP TO THREE ROWS, one per basis, and picks the best in
+   * TypeScript. It deliberately does NOT filter on basis and issue three queries:
+   * the ladder is already 10 round trips per listing and the recompute takes an hour
+   * at that rate — asking three times per rung would make it three hours for the same
+   * answer. `maybeSingle()` is gone for the same reason it had to go: it ERRORS on
+   * more than one row, and after 133 more than one row is the normal case.
+   */
   const probe = async (
     apply: (q: ReturnType<typeof sel>) => ReturnType<typeof sel>,
     d: { above: number | null; den: 0 | 1 | null },
-  ) => {
+  ): Promise<CohortRow | null> => {
     let q = apply(sel());
     q = d.above === null
       ? q.is('bedrooms_above', null).eq('bedrooms_total', bedroomsTotal)
       : q.eq('bedrooms_above', d.above).eq('den', d.den as number);
-    const { data } = await q.maybeSingle();
-    return data as { avg_rent: number; p10_rent: number } | null;
+    const { data } = await q;
+    // Signed leases before asks, recent closes before old ones — one shared rule, in
+    // the model, so the four readers of this table cannot drift apart again.
+    return pickPreferredBasis((data ?? []) as CohortRow[]);
   };
 
   for (const d of dims) {
@@ -179,7 +205,15 @@ export async function fetchRentAVM(params: {
   const annualRent = (row.avg_rent || 0) * 12;
   const annualRentP10 = (row.p10_rent || 0) * 12;
 
-  return { annual_rent: annualRent, annual_rent_p10: annualRentP10, has_data: true, match_tier: tier, plus_room_aware: plusRoomAware };
+  return {
+    annual_rent: annualRent,
+    annual_rent_p10: annualRentP10,
+    has_data: true,
+    match_tier: tier,
+    plus_room_aware: plusRoomAware,
+    basis: row.basis ?? null,
+    sample_count: row.sample_count ?? null,
+  };
 }
 
 /**
@@ -274,7 +308,7 @@ export async function fetchSuiteRent(params: {
   const sel = () =>
     supabase
       .from('rental_market_index')
-      .select('avg_rent, p10_rent')
+      .select('avg_rent, p10_rent, basis')
       .eq('sub_type_family', IN_HOME_UNIT_FAMILY);
 
   // Geography first, then bed count — the same ordering principle as the whole-home
@@ -291,8 +325,11 @@ export async function fetchSuiteRent(params: {
   }
 
   for (const p of probes) {
-    const { data } = await p.run().maybeSingle();
-    const row = data as { avg_rent: number; p10_rent: number } | null;
+    // Not maybeSingle(): a suite cohort key returns one row per basis since 133, and
+    // maybeSingle() ERRORS on more than one — which would have taken out every suite
+    // rent the moment the closed passes landed.
+    const { data } = await p.run();
+    const row = pickPreferredBasis((data ?? []) as Array<{ avg_rent: number; p10_rent: number; basis: RentBasis }>);
     if (row) {
       return {
         monthly_rent: row.avg_rent || 0,
