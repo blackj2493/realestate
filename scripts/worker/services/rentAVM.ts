@@ -9,7 +9,7 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { bedSplit } from '@/lib/listings/bedSplit';
-import { subTypeFamily } from '@/lib/listings/subTypeFamily';
+import { subTypeFamily, isRentableSubType } from '@/lib/listings/subTypeFamily';
 import { IN_HOME_UNIT_FAMILY, SUITE_BED_CAP, type MatchTier, type SuiteMatchTier } from './rentModel';
 
 const supabase = createClient(
@@ -56,6 +56,26 @@ export async function fetchRentAVM(params: {
   const cityRegion = (params.cityRegion ?? '').trim();
   const propertySubType = (params.propertySubType ?? '').trim();
   const county = (params.county ?? '').trim();
+
+  // NOTHING TO RENT, SO NO RENT.
+  //
+  // subTypeFamily has always known which sub-types have no dwelling in them — Vacant
+  // Land, Parking Space, Sale Of Business, Office and the rest — but only the
+  // `city_family` rung consulted it, via `family` below. The nbhd / city_bath / city /
+  // county rungs key on the EXACT sub-type, so they happily built and served a "Vacant
+  // Land" rent cohort, and a vacant lot came back with a residential rent.
+  //
+  // Measured on production 2026-08-30: 409 non-dwelling listings carry a rent comp and
+  // 60 of them publish a cap rate INSIDE the 1-15% sanity band — so the band does not
+  // catch this; a plausible-looking cap rate on an empty lot renders exactly like a
+  // real one. 29 of the 60 are vacant land.
+  //
+  // The gate sits at the TOP because it is a fact about the property, not about the
+  // comps: no rung, however precise, can price rent for a building that does not exist.
+  if (!isRentableSubType(propertySubType)) {
+    return { annual_rent: 0, annual_rent_p10: 0, has_data: false, match_tier: null, plus_room_aware: false };
+  }
+
   // null for land / commercial — those skip the pooled rung entirely (124).
   const family = subTypeFamily(propertySubType);
 
