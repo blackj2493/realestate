@@ -23,9 +23,13 @@ const WIDE_RENT_RADIUS_KM = 5;
 
 /** CONSUMER-ONLY: leased-close medians with the adaptive radius. */
 export async function getLeasedTypicalRents(lat: number, lng: number): Promise<TypicalRents | null> {
-  const near = buildBedsTypeMatrix(await getLeasedNearPoint(lat, lng, 2));
+  // `found` is carried through so the card can print the real population rather than
+  // the page size — see AskingMatrix.total.
+  const nearHits = await getLeasedNearPoint(lat, lng, 2);
+  const near = buildBedsTypeMatrix(nearHits.items, { total: nearHits.found });
   if (near && near.sample >= RENT_TARGET_SAMPLE) return { matrix: near, radiusKm: 2 };
-  const wide = buildBedsTypeMatrix(await getLeasedNearPoint(lat, lng, WIDE_RENT_RADIUS_KM));
+  const wideHits = await getLeasedNearPoint(lat, lng, WIDE_RENT_RADIUS_KM);
+  const wide = buildBedsTypeMatrix(wideHits.items, { total: wideHits.found });
   return pickRentMatrix(near, 2, wide, WIDE_RENT_RADIUS_KM);
 }
 

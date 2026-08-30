@@ -28,9 +28,13 @@ const WIDE_RADIUS_KM = 5;
 
 /** CONSUMER-ONLY: sold-close medians + ranges with the adaptive radius. */
 export async function getSoldTypicalPrices(lat: number, lng: number): Promise<TypicalRents | null> {
-  const near = buildBedsTypeMatrix(await getSoldNearPoint(lat, lng, 2), { mode: "sale" });
+  // `found` is carried through so the card can print the real population rather than
+  // the page size — see AskingMatrix.total.
+  const nearHits = await getSoldNearPoint(lat, lng, 2);
+  const near = buildBedsTypeMatrix(nearHits.items, { mode: "sale", total: nearHits.found });
   if (near && near.sample >= TARGET_SAMPLE) return { matrix: near, radiusKm: 2 };
-  const wide = buildBedsTypeMatrix(await getSoldNearPoint(lat, lng, WIDE_RADIUS_KM), { mode: "sale" });
+  const wideHits = await getSoldNearPoint(lat, lng, WIDE_RADIUS_KM);
+  const wide = buildBedsTypeMatrix(wideHits.items, { mode: "sale", total: wideHits.found });
   return pickRentMatrix(near, 2, wide, WIDE_RADIUS_KM);
 }
 

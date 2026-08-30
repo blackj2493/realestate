@@ -102,13 +102,20 @@ export default function MarketGridCard({
     : actual
       ? "What homes rent for here"
       : "Typical rents nearby";
+  // A COUNT, NOT A PAGE SIZE. This printed `matrix.sample` alone, and that number is
+  // bounded by the query's per_page — so a dense area always read "250 leases" however
+  // many there were. On N13718184 it said 250 while 266 leases matched inside 2 km.
+  // A cap rendered as a total reads as full coverage when it is a sample, so when the
+  // grid saw fewer than exist, the card now says so.
+  const truncated = typeof matrix.total === "number" && matrix.total > matrix.sample;
+  const n = truncated ? `${matrix.sample} of ${matrix.total}` : `${matrix.sample}`;
   const meta = sell
     ? actual
-      ? `${matrix.sample} sales · ~6 mo · ${radiusKm} km`
-      : `${matrix.sample} live listings · ${radiusKm} km`
+      ? `${n} sales · ~6 mo · ${radiusKm} km`
+      : `${n} live listings · ${radiusKm} km`
     : actual
-      ? `${matrix.sample} leases · ~6 mo · ${radiusKm} km`
-      : `${matrix.sample} live rentals · ${radiusKm} km`;
+      ? `${n} leases · ~6 mo · ${radiusKm} km`
+      : `${n} live rentals · ${radiusKm} km`;
   const unit = sell ? (actual ? "closed sale" : "live listing") : actual ? "signed lease" : "live rental";
   return (
     // min-w-0 lets the card shrink inside any flex/grid parent so the wide table
