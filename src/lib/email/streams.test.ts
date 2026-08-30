@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { EMAIL_STREAMS, LIVE_EMAIL_STREAMS, type StreamKey } from "./streams";
 
 /**
@@ -22,6 +24,18 @@ describe("email stream catalogue", () => {
       "a stream on /account/emails with no sender is a switch that does nothing — " +
         "ship the sender first, then set `sender` in streams.ts"
     ).toEqual([]);
+  });
+
+  // The invariant above is only as good as the path. A typo, or a worker that is later
+  // renamed or deleted, would leave a stream claiming a sender that does not exist — and it
+  // would claim it on the preference centre, to users. Resolve it on disk.
+  it("names a sender file that actually exists", () => {
+    for (const s of LIVE_EMAIL_STREAMS) {
+      expect(
+        existsSync(path.join(process.cwd(), s.sender!)),
+        `${s.key} names ${s.sender}, which is not in the repo`
+      ).toBe(true);
+    }
   });
 
   it("hides every stream that has no sender yet", () => {

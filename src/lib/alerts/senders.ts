@@ -29,4 +29,43 @@ export const SENDERS = {
     from: "Tanmay at PureProperty <tanmay@pureproperty.ca>",
     replyTo: "tanmay@pureproperty.ca",
   },
+  /**
+   * Weekly Data Drop — the editorial/marketing stream (WS2).
+   *
+   * LITERAL BY DESIGN: it must NOT read ALERTS_FROM_EMAIL. That variable currently resolves
+   * to `support@` and wins over every default that consults it, so a Data Drop that read it
+   * would silently revert to the support identity and nobody would notice for weeks.
+   *
+   * REPLY-TO IS DELIBERATE, not an oversight. A weekly market email draws real replies
+   * ("what about Guelph?"). Replies are among the strongest positive signals Gmail weighs,
+   * and they are the best engagement data this stream can produce. Do not make it
+   * unmonitored the way the automated alert stream is.
+   *
+   * TODO(Unit 1): move to `data@send.pureproperty.ca` once the send subdomain is verified in
+   * Resend, so recurring marketing volume stops riding the reputation that delivers sign-in
+   * codes (voice.md §11.7 item 2). The root domain is already Resend-verified, so this
+   * address works today and only the host changes.
+   */
+  dataDrop: {
+    from: "PureProperty Data <data@pureproperty.ca>",
+    replyTo: "support@pureproperty.ca",
+  },
+  /**
+   * Monthly Street Recap — the owner stream.
+   *
+   * LITERAL, for the same reason as dataDrop: reading ALERTS_FROM_EMAIL would silently
+   * revert this to the support identity and nobody would notice for weeks.
+   *
+   * A SEPARATE IDENTITY FROM dataDrop, deliberately. The two say different things about why
+   * the reader is hearing from us — one is the market, the other is their own street — and
+   * somebody subscribed to both should be able to tell them apart in a threaded inbox
+   * without opening either. It also makes the reply useful: a reply to this stream is about
+   * one address, not about a market.
+   *
+   * TODO(Unit 1): move to the send subdomain alongside dataDrop once it is verified.
+   */
+  streetRecap: {
+    from: "PureProperty <homes@pureproperty.ca>",
+    replyTo: "support@pureproperty.ca",
+  },
 } satisfies Record<string, Sender>;

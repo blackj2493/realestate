@@ -64,15 +64,21 @@ async function promote(): Promise<void> {
   await c.query("SET statement_timeout TO '0'");
   await c.query('BEGIN');
   try {
+    // The column lists below are explicit on purpose — a SELECT * would break the moment
+    // the live and staging tables drift apart. The cost is that a NEW column silently
+    // defaults instead of copying: cohort_rung (migration 130) must appear in both lists or
+    // every FSA and city cohort arrives in live labelled 'community', and the ladder that
+    // exists to reach Waterloo Region quietly does nothing. Add a column here whenever you
+    // add one to the staging tables.
     await c.query('TRUNCATE avm_multiplier_matrix');
     await c.query(
-      `INSERT INTO avm_multiplier_matrix (city_region, property_sub_type, feature_name, beta, feat_mean, feat_std)
-       SELECT city_region, property_sub_type, feature_name, beta, feat_mean, feat_std FROM avm_multiplier_matrix_staging`,
+      `INSERT INTO avm_multiplier_matrix (cohort_rung, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std)
+       SELECT cohort_rung, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std FROM avm_multiplier_matrix_staging`,
     );
     await c.query('TRUNCATE avm_audit_report');
     await c.query(
-      `INSERT INTO avm_audit_report (city_region, property_sub_type, total_sales_analyzed, model_accuracy_score, average_error_margin, base_price)
-       SELECT city_region, property_sub_type, total_sales_analyzed, model_accuracy_score, average_error_margin, base_price FROM avm_audit_report_staging`,
+      `INSERT INTO avm_audit_report (cohort_rung, city_region, property_sub_type, total_sales_analyzed, model_accuracy_score, average_error_margin, base_price)
+       SELECT cohort_rung, city_region, property_sub_type, total_sales_analyzed, model_accuracy_score, average_error_margin, base_price FROM avm_audit_report_staging`,
     );
     const cnt = await c.query('SELECT count(*) AS n FROM avm_multiplier_matrix');
     await c.query('COMMIT');

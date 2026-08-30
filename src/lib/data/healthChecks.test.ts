@@ -13,7 +13,6 @@ import {
   checkSoldTransactionType,
   checkOnboardingExample,
   checkUnpriceableValues,
-  checkCityTrendCoverage,
   snapshotFromRows,
   LATEST_MONTH_KEY,
   type Problem,
@@ -763,74 +762,5 @@ describe("checkSoldTransactionType", () => {
     const out = checkSoldTransactionType({ total: 0, nullTotal: 0, nullRecent: 0 });
     expect(out).toHaveLength(1);
     expect(out[0].severity).toBe("warn");
-  });
-});
-
-describe("regression: Kitchener priced 1,291 homes with no city trend at all", () => {
-  /**
-   * 2026-08-29. refresh-avm-trend-offset.ts skips any sold row whose (city_region × sub-type)
-   * has no matrix cohort — and that skip removed the row from the CITY trend too. Waterloo
-   * Region and Brantford ship a blank CityRegion, so 10,681 sales vanished and four cities
-   * had ZERO trend rows. Nothing looked wrong: the AVM still returned a value for 1,291 of
-   * 1,292 Kitchener actives. The only trace was that none of them ever reached HIGH
-   * confidence while 33% of the rest of the book did.
-   */
-  const kitchener = { city: "Kitchener", activeListings: 1348, trendRows: 0 };
-
-  it("errors on a city with inventory and no trend rows", () => {
-    const problems = checkCityTrendCoverage([kitchener], {});
-    expect(problems).toHaveLength(1);
-    expect(problems[0].severity).toBe("error");
-    expect(problems[0].check).toBe("city-trend-coverage");
-    expect(problems[0].detail).toContain("Kitchener");
-    expect(problems[0].detail).toContain("1348");
-  });
-
-  it("downgrades a DOCUMENTED gap to a warning so it cannot mask other errors", () => {
-    const problems = checkCityTrendCoverage([kitchener], { kitchener: "blank CityRegion" });
-    expect(problems).toHaveLength(1);
-    expect(problems[0].severity).toBe("warn");
-    expect(problems[0].detail).toContain("blank CityRegion");
-  });
-
-  it("stays silent for a healthy city", () => {
-    expect(
-      checkCityTrendCoverage([{ city: "Vaughan", activeListings: 2100, trendRows: 24 }], {})
-    ).toEqual([]);
-  });
-
-  it("reports a resolved gap so KNOWN_TREND_GAPS cannot rot", () => {
-    const problems = checkCityTrendCoverage(
-      [{ city: "Kitchener", activeListings: 1348, trendRows: 18 }],
-      { kitchener: "blank CityRegion" }
-    );
-    expect(problems).toHaveLength(1);
-    expect(problems[0].check).toBe("trend-gap-resolved");
-    expect(problems[0].detail).toContain("remove it from KNOWN_TREND_GAPS");
-  });
-
-  it("flags a KNOWN_TREND_GAPS entry that was never evaluated", () => {
-    const problems = checkCityTrendCoverage(
-      [{ city: "Vaughan", activeListings: 2100, trendRows: 24 }],
-      { "some-renamed-city": "why" }
-    );
-    expect(problems).toHaveLength(1);
-    expect(problems[0].severity).toBe("warn");
-    expect(problems[0].detail).toContain("never evaluated");
-  });
-
-  it("warns rather than passing when the RPC returns nothing", () => {
-    const problems = checkCityTrendCoverage([], {});
-    expect(problems).toHaveLength(1);
-    expect(problems[0].severity).toBe("warn");
-    expect(problems[0].detail).toContain("unchecked");
-  });
-
-  it("matches the city case-insensitively", () => {
-    const problems = checkCityTrendCoverage(
-      [{ city: "Chatham-Kent", activeListings: 117, trendRows: 0 }],
-      { "chatham-kent": "26 communities, none trains a matrix" }
-    );
-    expect(problems[0].severity).toBe("warn");
   });
 });

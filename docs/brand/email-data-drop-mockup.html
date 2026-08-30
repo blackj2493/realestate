@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<!-- Generated from the Data Drop artifact source. Plan: docs/strategy/2026-08-28-weekly-data-drop.md -->
+<title>Weekly Data Drop Mockup</title>
+
+<style>
+  /* ── Page chrome tokens. Light is canonical; dark adapts the CHROME only.
+       The email specimen itself stays light in both themes — voice.md §11.6:
+       "Default theme: LIGHT (canonical), dark-aware. We do not author a
+       separate dark send." Showing it dark would misrepresent the send.      */
+  :root {
+    --ground:   #eef2f6;
+    --panel:    #fbfdff;
+    --panel-bd: #b8c6d6;
+    --ink:      #0f172a;
+    --ink-2:    #334155;
+    --muted:    #64748b;
+    --rule:     #cbd5e1;
+    --navy:     #0a1828;
+    --accent:   #0891b2;
+    --link:     #0e7490;
+    --warn:     #b45309;
+    --ok:       #0f766e;
+    --shadow:   rgba(15,23,42,.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #0b1420;
+      --panel:    #101d2c;
+      --panel-bd: #24384d;
+      --ink:      #e2ecf5;
+      --ink-2:    #b3c6d6;
+      --muted:    #7e95a8;
+      --rule:     #24384d;
+      --navy:     #0a1828;
+      --accent:   #22b8d4;
+      --link:     #4fd0e6;
+      --warn:     #d99429;
+      --ok:       #2fa595;
+      --shadow:   rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #0b1420;
+    --panel:    #101d2c;
+    --panel-bd: #24384d;
+    --ink:      #e2ecf5;
+    --ink-2:    #b3c6d6;
+    --muted:    #7e95a8;
+    --rule:     #24384d;
+    --navy:     #0a1828;
+    --accent:   #22b8d4;
+    --link:     #4fd0e6;
+    --warn:     #d99429;
+    --ok:       #2fa595;
+    --shadow:   rgba(0,0,0,.45);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 680px; margin: 0 auto; padding: 26px 16px 90px; }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── page head ─────────────────────────────────────────────────────────── */
+  h1.page-title {
+    font-size: 19px; font-weight: 700; letter-spacing: -0.01em;
+    margin: 0 0 8px; color: var(--ink); text-wrap: balance;
+  }
+  .page-lede { color: var(--ink-2); font-size: 13px; line-height: 1.65; margin: 0 0 8px; }
+  .page-lede b { color: var(--ink); }
+  .page-sub  { color: var(--muted); font-size: 12px; line-height: 1.65; margin: 0 0 8px; }
+  .page-sub code, .page-lede code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .92em; color: var(--ink-2);
+  }
+
+  .caution {
+    display: flex; gap: 10px; align-items: flex-start;
+    border: 1px solid var(--warn); border-left-width: 3px;
+    background: color-mix(in srgb, var(--warn) 8%, var(--panel));
+    border-radius: 6px; padding: 11px 13px; margin: 16px 0 4px;
+  }
+  .caution .bang {
+    font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700;
+    letter-spacing: .12em; color: var(--warn); text-transform: uppercase;
+    white-space: nowrap; padding-top: 1px;
+  }
+  .caution p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--ink-2); }
+
+  /* ── section dividers ──────────────────────────────────────────────────── */
+  .divider { display: flex; align-items: center; gap: 12px; margin: 46px 0 12px; }
+  .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  .tag {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: #fff; background: var(--navy); padding: 4px 10px; border-radius: 4px; white-space: nowrap;
+  }
+  .tag.fallback { background: var(--ok); }
+  .tag.rotate   { background: var(--accent); }
+  .sub { text-align: center; color: var(--ink-2); font-size: 12px; line-height: 1.6; margin: 0 auto 12px; max-width: 600px; }
+
+  /* ── annotation strip (NOT part of the email) ──────────────────────────── */
+  .meta {
+    max-width: 600px; margin: 0 auto 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px; color: var(--ink-2); background: var(--panel);
+    border: 1px dashed var(--panel-bd); border-radius: 8px;
+    padding: 9px 13px; line-height: 1.8;
+  }
+  .meta div { display: flex; gap: 8px; }
+  .meta .k {
+    flex: 0 0 66px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .07em; font-size: 9px; padding-top: 3px;
+  }
+  .meta .v { color: var(--ink); min-width: 0; word-break: break-word; }
+
+  /* ── ladder trace ──────────────────────────────────────────────────────── */
+  .trace {
+    max-width: 600px; margin: 12px auto 0;
+    border: 1px solid var(--panel-bd); border-radius: 8px;
+    background: var(--panel); overflow: hidden;
+  }
+  .trace-hd {
+    font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted);
+    padding: 8px 13px; border-bottom: 1px solid var(--panel-bd);
+  }
+  .trace table { width: 100%; border-collapse: collapse; }
+  .trace td {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px; padding: 5px 13px; vertical-align: top; color: var(--muted);
+    border-top: 1px solid color-mix(in srgb, var(--panel-bd) 45%, transparent);
+  }
+  .trace tr:first-child td { border-top: 0; }
+  .trace td.n    { width: 22px; color: var(--muted); }
+  .trace td.kind { width: 108px; color: var(--ink-2); }
+  .trace td.res  { width: 62px; }
+  .trace tr.fired td { color: var(--ink); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .trace tr.fired td.res { color: var(--accent); font-weight: 700; }
+  .trace tr.fired td.kind { color: var(--ink); font-weight: 700; }
+
+  /* ═══ THE EMAIL SPECIMEN — canonical light, both themes ═════════════════ */
+  .mail {
+    max-width: 600px; margin: 0 auto;
+    background: #ffffff; color: #0f172a;
+    border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 6px 24px var(--shadow);
+  }
+  .mail-hd { background: #0a1828; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; gap: 12px; }
+  .logo { font-size: 17px; font-weight: 700; color: #ffffff; white-space: nowrap; }
+  .logo .chev  { font-weight: 400; margin-right: 8px; }
+  .logo .prop  { font-weight: 400; color: #8fa4b8; }
+  .logo .tld   { font-weight: 400; color: #6b7e92; }
+  .mail-label {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #67e8f9; font-size: 10px; letter-spacing: .14em; white-space: nowrap;
+  }
+  .mail-rule { height: 2px; background: #0891b2; }
+  .mail-body { padding: 24px 24px 28px; }
+
+  .eyebrow {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    color: #64748b; margin: 0 0 18px;
+  }
+
+  /* the one headline number */
+  .figure {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 52px; line-height: 1; font-weight: 700;
+    color: #0a1828; letter-spacing: -0.02em; margin: 0 0 12px;
+  }
+  .figure .unit { font-size: 30px; color: #475569; }
+  .lede { font-size: 16px; line-height: 1.55; color: #0f172a; margin: 0 0 10px; text-wrap: balance; }
+  .lede b { font-weight: 700; }
+  .because { font-size: 14px; line-height: 1.6; color: #475569; margin: 0; }
+  .because .pop { color: #0a1828; font-weight: 600; }
+
+  .sec-hd {
+    font-size: 12px; color: #334155; text-transform: uppercase;
+    letter-spacing: .10em; margin: 26px 0 10px; font-weight: 700;
+  }
+
+  table.rows { width: 100%; border-collapse: collapse; }
+  table.rows td { padding: 9px 0; border-top: 1px solid #f1f5f9; vertical-align: baseline; font-size: 14px; }
+  table.rows tr:first-child td { border-top: 0; }
+  td.r-lbl { color: #475569; white-space: nowrap; }
+  td.r-val {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700; color: #0a1828; text-align: right; white-space: nowrap; padding-left: 12px;
+  }
+  td.r-ctx { color: #64748b; font-size: 12.5px; text-align: right; padding-left: 14px; }
+
+  /* source line — the trust device. Small by design; the button stays the one CTA. */
+  .sources { margin: 14px 0 0; font-size: 12px; line-height: 1.7; color: #64748b; }
+  .sources a { color: #0e7490; text-decoration: none; font-weight: 600; }
+
+  .cta-wrap { margin: 26px 0 0; }
+  .btn {
+    display: inline-block; background: #0891b2; color: #ffffff; text-decoration: none;
+    padding: 12px 20px; border-radius: 6px; font-size: 14px; font-weight: 600;
+  }
+  .also { font-size: 13px; color: #475569; margin: 20px 0 0; line-height: 1.6; }
+  .also .mk { color: #0a1828; font-weight: 600; }
+  .also a { color: #0e7490; text-decoration: none; font-weight: 600; }
+
+  .nudge {
+    margin: 22px 0 0; padding: 13px 15px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+    font-size: 13px; line-height: 1.6; color: #475569;
+  }
+  .nudge a { color: #0e7490; text-decoration: none; font-weight: 600; }
+
+  /* ── province-wide conversion block ────────────────────────────────────── */
+  .tension {
+    margin: 24px 0 0; padding: 15px 16px;
+    background: #f8fafc; border-left: 3px solid #0891b2; border-radius: 0 6px 6px 0;
+  }
+  .tension p { margin: 0; font-size: 14px; line-height: 1.6; color: #334155; }
+  .tension .big {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight: 700; color: #0a1828;
+  }
+
+  table.chips { width: 100%; border-collapse: separate; border-spacing: 6px 6px; margin: 4px -6px 0; }
+  table.chips td { padding: 0; width: 20%; }
+  table.chips a {
+    display: block; text-align: center; text-decoration: none;
+    padding: 10px 4px; font-size: 13px; font-weight: 600;
+    color: #0a1828; background: #ffffff;
+    border: 1px solid #cbd5e1; border-radius: 5px;
+  }
+  .pick-note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.6; color: #64748b; }
+
+  /* 15 chips at 20% each — 3 rows of 5, one per BOARD_MARKETS entry. */
+
+  .foot {
+    color: #64748b; font-size: 11px; margin-top: 26px; line-height: 1.6;
+    border-top: 1px solid #f1f5f9; padding-top: 16px;
+  }
+  .foot a { color: #64748b; }
+
+  /* ── reference blocks ──────────────────────────────────────────────────── */
+  .panel {
+    max-width: 600px; margin: 0 auto;
+    border: 1px solid var(--panel-bd); border-radius: 8px;
+    background: var(--panel); padding: 16px 18px;
+  }
+  .panel h3 {
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 12px; font-weight: 700;
+    font-family: ui-monospace, monospace;
+  }
+  .panel p { font-size: 13px; line-height: 1.65; color: var(--ink-2); margin: 0 0 10px; }
+  .panel p:last-child { margin-bottom: 0; }
+  .panel b { color: var(--ink); }
+
+  .scroll { overflow-x: auto; }
+  table.ref { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.ref th {
+    text-align: left; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; padding: 0 12px 8px 0; white-space: nowrap;
+    font-family: ui-monospace, monospace;
+  }
+  table.ref td {
+    padding: 7px 12px 7px 0; border-top: 1px solid var(--rule);
+    color: var(--ink-2); vertical-align: top; line-height: 1.5;
+  }
+  table.ref td.rank {
+    font-family: ui-monospace, monospace; color: var(--muted); width: 20px; padding-right: 10px;
+  }
+  table.ref td.kd {
+    font-family: ui-monospace, monospace; color: var(--ink); white-space: nowrap; font-size: 11.5px;
+  }
+  table.ref tr.weak td { color: var(--muted); }
+  table.ref tr.weak td.kd { color: var(--muted); }
+
+  pre.plain {
+    max-width: 600px; margin: 0 auto; overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px; line-height: 1.65; color: var(--ink-2);
+    background: var(--panel); border: 1px solid var(--panel-bd);
+    border-radius: 8px; padding: 15px 17px; white-space: pre;
+  }
+
+  .fin {
+    max-width: 600px; margin: 46px auto 0; padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px; line-height: 1.7; color: var(--muted);
+  }
+  .fin b { color: var(--ink-2); }
+
+  a:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (max-width: 520px) {
+    .figure { font-size: 42px; }
+    .figure .unit { font-size: 25px; }
+    td.r-ctx { display: none; }
+    .meta .k { flex-basis: 56px; }
+  }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+  <h1 class="page-title">Weekly Data Drop — email mockup</h1>
+  <p class="page-lede">
+    Three sends built on the locked §11 visual system, composed from
+    <code>emailShell.shell()</code> (Mode A). Each block shows a dashed
+    <b>annotation strip</b> (From / Subject / Preheader — not part of the email), the
+    rendered email at 600px, and the <b>ladder trace</b> that chose the headline.
+  </p>
+  <p class="page-sub">
+    Plan: <code>docs/strategy/2026-08-28-weekly-data-drop.md</code> §3–4.
+    Every number is monospace (§11.4); money is en-CA, no cents. The email specimen renders
+    light in both page themes — §11.6 keeps LIGHT canonical and we do not author a separate
+    dark send.
+  </p>
+
+  <div class="caution">
+    <span class="bang">Illustrative</span>
+    <p>
+      <b>Every figure below is invented for layout review.</b> None of it came from
+      <code>region_metrics</code> or any board. Nothing here may be quoted, screenshotted, or
+      reused as a market claim. Real numbers arrive only once the payload builder runs.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- A · THE STANDARD SEND                                                  -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="divider"><span class="tag">A · standard send · saved markets</span></div>
+  <p class="sub">
+    The common case. The reader saved Milton, Oakville and Burlington. The headline is the
+    biggest <b>move</b> across those three; the depth goes to one market only.
+  </p>
+
+  <div class="meta">
+    <div><span class="k">From</span><span class="v">PureProperty Data &lt;data@send.pureproperty.ca&gt;</span></div>
+    <div><span class="k">Subject</span><span class="v">Milton: a third of sellers have now cut their price</span></div>
+    <div><span class="k">Preheader</span><span class="v">Up from 27% four weeks ago — and homes are sitting 9 days longer.</span></div>
+    <div><span class="k">Key</span><span class="v">data_drop:2026-W36:leverage</span></div>
+  </div>
+
+  <div class="mail">
+    <div class="mail-hd">
+      <span class="logo"><span class="chev">&#10094;</span>PURE<span class="prop">PROPERTY</span><span class="tld">.ca</span></span>
+      <span class="mail-label">WEEKLY DATA DROP</span>
+    </div>
+    <div class="mail-rule"></div>
+    <div class="mail-body">
+
+      <p class="eyebrow">Milton &middot; week of August 28</p>
+
+      <p class="figure">34<span class="unit">%</span></p>
+      <p class="lede">of active Milton listings have <b>cut their asking price</b>.</p>
+      <p class="because">
+        Four weeks ago it was <span class="pop">27%</span>. That is one seller in three who
+        has already moved first.
+      </p>
+
+      <h2 class="sec-hd">The rest of the picture</h2>
+      <table class="rows">
+        <tr>
+          <td class="r-lbl">Sold above asking</td>
+          <td class="r-val">52%</td>
+          <td class="r-ctx">down 6 points vs last year</td>
+        </tr>
+        <tr>
+          <td class="r-lbl">Typical price cut</td>
+          <td class="r-val">$41,000</td>
+          <td class="r-ctx">median, among those that cut</td>
+        </tr>
+        <tr>
+          <td class="r-lbl">Days to sell</td>
+          <td class="r-val">41</td>
+          <td class="r-ctx">up from 32 a month ago</td>
+        </tr>
+      </table>
+
+      <p class="sources">
+        Check the tables:
+        <a href="#">Price cuts</a> &middot;
+        <a href="#">Days on market</a> &middot;
+        <a href="#">Sold over asking</a>
+      </p>
+
+      <div class="cta-wrap">
+        <a class="btn" href="#">See Milton on the map &rarr;</a>
+      </div>
+
+      <p class="also">
+        Also in your markets:
+        <span class="mk">Oakville</span> 24% &middot;
+        <span class="mk">Burlington</span> 29% cutting price.
+        <a href="#">Compare all three &rarr;</a>
+      </p>
+
+      <p class="foot">
+        You get this because the weekly market update is on.
+        <a href="#">Manage emails</a> &middot; <a href="#">Unsubscribe</a>.<br>
+        Aggregate figures only. Data as of August 27.<br>
+        Data is deemed reliable but not guaranteed accurate. Powered by PROPTX MLS&reg;.<br>
+        PureProperty &middot; 268 America Ave, Vaughan, ON L6A 3G7
+      </p>
+    </div>
+  </div>
+
+  <div class="trace">
+    <div class="trace-hd">Headline ladder — first rank to clear wins</div>
+    <table>
+      <tr><td class="n">1</td><td class="kind">over_ask_flip</td><td class="res">skip</td><td>52% — no 50% crossing this period</td></tr>
+      <tr class="fired"><td class="n">2</td><td class="kind">leverage</td><td class="res">FIRED</td><td>cutSharePct +7 pts vs 28d — clears ±4</td></tr>
+      <tr><td class="n">3</td><td class="kind">speed</td><td class="res">—</td><td>not evaluated; rank 2 won</td></tr>
+      <tr><td class="n">4</td><td class="kind">supply</td><td class="res">—</td><td>not evaluated</td></tr>
+      <tr><td class="n">5</td><td class="kind">bidding</td><td class="res">—</td><td>not evaluated</td></tr>
+      <tr><td class="n">6</td><td class="kind">rent</td><td class="res">—</td><td>not evaluated</td></tr>
+      <tr><td class="n">7</td><td class="kind">price</td><td class="res">—</td><td>fallback, always available</td></tr>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- B · THE FALLBACK SEND                                                  -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="divider"><span class="tag fallback">B · the majority send · 305 of 432</span></div>
+  <p class="sub">
+    <b>Not a fallback — 70.6% of the base has saved no market, so this is seven sends in
+    ten.</b> Its job is therefore different from A and C: those inform, this one
+    <b>converts</b>. Structure follows that job — tension, then proof, then a one-tap pick.
+    The province rollup comes from the reserved <code>Ontario</code> row
+    <code>competitionBoard.ts</code> already writes.
+  </p>
+
+  <div class="meta">
+    <div><span class="k">From</span><span class="v">PureProperty Data &lt;data@send.pureproperty.ca&gt;</span></div>
+    <div><span class="k">Subject</span><span class="v">Fewer than half of Ontario homes now sell over asking</span></div>
+    <div><span class="k">Preheader</span><span class="v">A month ago it was more than half. The advantage has moved.</span></div>
+    <div><span class="k">Key</span><span class="v">data_drop:2026-W36:over_ask_flip</span></div>
+    <div><span class="k">Goal</span><span class="v">convert to a saved market — the ONE metric this variant is judged on</span></div>
+  </div>
+
+  <div class="mail">
+    <div class="mail-hd">
+      <span class="logo"><span class="chev">&#10094;</span>PURE<span class="prop">PROPERTY</span><span class="tld">.ca</span></span>
+      <span class="mail-label">WEEKLY DATA DROP</span>
+    </div>
+    <div class="mail-rule"></div>
+    <div class="mail-body">
+
+      <p class="eyebrow">Ontario &middot; week of August 28</p>
+
+      <p class="figure">47<span class="unit">%</span></p>
+      <p class="lede">of Ontario homes sold <b>above the seller's asking price</b> last month.</p>
+      <p class="because">
+        A month ago it was <span class="pop">51%</span>. For the first time this year, most
+        sellers are taking less than they asked.
+      </p>
+
+      <div class="tension">
+        <p>
+          <b>But the province-wide number hides your city.</b> That 47% runs from
+          <span class="big">23%</span> in Ottawa to <span class="big">71%</span> in Whitby —
+          a 48-point spread. Pick your city below to see its own numbers.
+        </p>
+      </div>
+
+      <h2 class="sec-hd">The rest of the picture</h2>
+      <table class="rows">
+        <tr>
+          <td class="r-lbl">Typical sale vs asking</td>
+          <td class="r-val">99.2%</td>
+          <td class="r-ctx">median close against the ask</td>
+        </tr>
+        <tr>
+          <td class="r-lbl">Homes cutting price</td>
+          <td class="r-val">31%</td>
+          <td class="r-ctx">of active listings province-wide</td>
+        </tr>
+        <tr>
+          <td class="r-lbl">Days to sell</td>
+          <td class="r-val">38</td>
+          <td class="r-ctx">up from 34 a month ago</td>
+        </tr>
+      </table>
+
+      <p class="sources">
+        Check the tables:
+        <a href="#">Sold over asking</a> &middot;
+        <a href="#">Price cuts</a> &middot;
+        <a href="#">Days on market</a>
+      </p>
+
+      <h2 class="sec-hd">Pick your market &mdash; one tap</h2>
+      <table class="chips">
+        <tr>
+          <td><a href="#">Toronto</a></td>
+          <td><a href="#">Ottawa</a></td>
+          <td><a href="#">Mississauga</a></td>
+          <td><a href="#">Brampton</a></td>
+          <td><a href="#">Hamilton</a></td>
+        </tr>
+        <tr>
+          <td><a href="#">Vaughan</a></td>
+          <td><a href="#">Markham</a></td>
+          <td><a href="#">Richmond&nbsp;Hill</a></td>
+          <td><a href="#">Oakville</a></td>
+          <td><a href="#">Burlington</a></td>
+        </tr>
+        <tr>
+          <td><a href="#">Milton</a></td>
+          <td><a href="#">Oshawa</a></td>
+          <td><a href="#">Whitby</a></td>
+          <td><a href="#">Ajax</a></td>
+          <td><a href="#">Pickering</a></td>
+        </tr>
+      </table>
+      <p class="pick-note">
+        Next Thursday this email is about your city instead of the province. Change or remove
+        it any time. Don't see yours? Reply and tell us &mdash; we add markets as the data
+        covers them.
+      </p>
+
+      <p class="foot">
+        You get this because the weekly market update is on.
+        <a href="#">Manage emails</a> &middot; <a href="#">Unsubscribe</a>.<br>
+        Aggregate figures only. Data as of August 27.<br>
+        Data is deemed reliable but not guaranteed accurate. Powered by PROPTX MLS&reg;.<br>
+        PureProperty &middot; 268 America Ave, Vaughan, ON L6A 3G7
+      </p>
+    </div>
+  </div>
+
+  <div class="trace">
+    <div class="trace-hd">Headline ladder — first rank to clear wins</div>
+    <table>
+      <tr class="fired"><td class="n">1</td><td class="kind">over_ask_flip</td><td class="res">FIRED</td><td>51% &rarr; 47% — crossed below 50%</td></tr>
+      <tr><td class="n">2</td><td class="kind">leverage</td><td class="res">—</td><td>not evaluated; rank 1 won</td></tr>
+      <tr><td class="n">3</td><td class="kind">speed</td><td class="res">—</td><td>not evaluated</td></tr>
+      <tr><td class="n">4</td><td class="kind">supply</td><td class="res">—</td><td>not evaluated</td></tr>
+      <tr><td class="n">5</td><td class="kind">bidding</td><td class="res">—</td><td>not evaluated</td></tr>
+      <tr><td class="n">6</td><td class="kind">rent</td><td class="res">—</td><td>not evaluated</td></tr>
+      <tr><td class="n">7</td><td class="kind">price</td><td class="res">—</td><td>fallback, always available</td></tr>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- C · ROTATION                                                           -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="divider"><span class="tag rotate">C · same skeleton · different lead</span></div>
+  <p class="sub">
+    The point of the fixed skeleton. Nothing structural moves between A and C — only the
+    figure, the sentence and which board fed them. The reader learns the shape in two weeks
+    and scans it in six seconds.
+  </p>
+
+  <div class="meta">
+    <div><span class="k">From</span><span class="v">PureProperty Data &lt;data@send.pureproperty.ca&gt;</span></div>
+    <div><span class="k">Subject</span><span class="v">Oakville homes now take 52 days to sell, up from 40</span></div>
+    <div><span class="k">Preheader</span><span class="v">That is twelve more days to decide than buyers had last month.</span></div>
+    <div><span class="k">Key</span><span class="v">data_drop:2026-W36:speed</span></div>
+  </div>
+
+  <div class="mail">
+    <div class="mail-hd">
+      <span class="logo"><span class="chev">&#10094;</span>PURE<span class="prop">PROPERTY</span><span class="tld">.ca</span></span>
+      <span class="mail-label">WEEKLY DATA DROP</span>
+    </div>
+    <div class="mail-rule"></div>
+    <div class="mail-body">
+
+      <p class="eyebrow">Oakville &middot; week of August 28</p>
+
+      <p class="figure">52 <span class="unit">days</span></p>
+      <p class="lede">is how long an Oakville home now takes to sell.</p>
+      <p class="because">
+        Four weeks ago it was <span class="pop">40</span>. You have twelve more days to
+        decide than buyers had last month.
+      </p>
+
+      <h2 class="sec-hd">The rest of the picture</h2>
+      <table class="rows">
+        <tr>
+          <td class="r-lbl">Sold above asking</td>
+          <td class="r-val">38%</td>
+          <td class="r-ctx">down 9 points vs last year</td>
+        </tr>
+        <tr>
+          <td class="r-lbl">Homes cutting price</td>
+          <td class="r-val">24%</td>
+          <td class="r-ctx">up 2 points in four weeks</td>
+        </tr>
+        <tr>
+          <td class="r-lbl">Typical price cut</td>
+          <td class="r-val">$58,000</td>
+          <td class="r-ctx">median, among those that cut</td>
+        </tr>
+      </table>
+
+      <p class="sources">
+        Check the tables:
+        <a href="#">Days on market</a> &middot;
+        <a href="#">Sold over asking</a> &middot;
+        <a href="#">Price cuts</a>
+      </p>
+
+      <div class="cta-wrap">
+        <a class="btn" href="#">See Oakville on the map &rarr;</a>
+      </div>
+
+      <p class="also">
+        Also in your markets:
+        <span class="mk">Milton</span> 41 days &middot;
+        <span class="mk">Burlington</span> 45 days to sell.
+        <a href="#">Compare all three &rarr;</a>
+      </p>
+
+      <p class="foot">
+        You get this because the weekly market update is on.
+        <a href="#">Manage emails</a> &middot; <a href="#">Unsubscribe</a>.<br>
+        Aggregate figures only. Data as of August 27.<br>
+        Data is deemed reliable but not guaranteed accurate. Powered by PROPTX MLS&reg;.<br>
+        PureProperty &middot; 268 America Ave, Vaughan, ON L6A 3G7
+      </p>
+    </div>
+  </div>
+
+  <div class="trace">
+    <div class="trace-hd">Headline ladder — first rank to clear wins</div>
+    <table>
+      <tr><td class="n">1</td><td class="kind">over_ask_flip</td><td class="res">skip</td><td>38% — no 50% crossing</td></tr>
+      <tr><td class="n">2</td><td class="kind">leverage</td><td class="res">skip</td><td>cutSharePct +2 pts — below ±4</td></tr>
+      <tr class="fired"><td class="n">3</td><td class="kind">speed</td><td class="res">FIRED</td><td>trueDom 40 &rarr; 52, +30% — clears ±20%</td></tr>
+      <tr><td class="n">4</td><td class="kind">supply</td><td class="res">—</td><td>not evaluated; rank 3 won</td></tr>
+      <tr><td class="n">5</td><td class="kind">bidding</td><td class="res">—</td><td>not evaluated</td></tr>
+      <tr><td class="n">6</td><td class="kind">rent</td><td class="res">—</td><td>not evaluated</td></tr>
+      <tr><td class="n">7</td><td class="kind">price</td><td class="res">—</td><td>fallback, always available</td></tr>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="divider"><span class="tag">Anatomy</span></div>
+  <p class="sub">What moves week to week, and what never does.</p>
+
+  <div class="panel">
+    <h3>Fixed — never moves</h3>
+    <p>
+      Navy header and cyan rule &middot; the eyebrow (<b>market &middot; week of</b>) &middot;
+      one figure, one sentence, one reason &middot; the <b>Rest of the picture</b> heading with
+      exactly three rows &middot; the <b>Check the tables</b> source line &middot; one button
+      &middot; the other-markets line &middot; the footer.
+    </p>
+    <h3 style="margin-top:16px;">Rotates — chosen by the ladder</h3>
+    <p>
+      The figure and its unit &middot; the sentence and its four-week comparison &middot;
+      which three metrics fill the rows &middot; which trackers the source line names
+      &middot; the CTA target
+      (<b>terminal</b> for an active reader, <b>public tracker</b> for a dormant one).
+    </p>
+    <h3 style="margin-top:16px;">Why the source line earns its space</h3>
+    <p>
+      It is a <b>trust device before it is a link</b>. A reader who doubts "34%" can open the
+      table and see every neighbourhood behind it — the same discipline
+      <code>snapshotPublicData.ts</code> already applies to press angles, where each figure
+      carries the <code>/data</code> URL a human can verify it against. It also lands three
+      public backlinks in an email that gets forwarded, which the terminal CTA never can.
+      Keep it small: the button stays the one call to action.
+    </p>
+    <h3 style="margin-top:16px;">Never appears</h3>
+    <p>
+      No address, no listing row, no individual sold price, no photo. Every figure is a board
+      aggregate, which is what keeps the send inside the IDX §6.3(b) exemption by construction.
+      No claim of novelty — the prior-art gate in <code>trackers.ts</code> applies here too.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="divider"><span class="tag fallback">Why B is built that way</span></div>
+  <p class="sub">
+    Seven sends in ten are the province-wide version. It is judged on one number: how many
+    readers pick a market.
+  </p>
+
+  <div class="panel">
+    <h3>The sequence — news, tension, ask</h3>
+    <p>
+      A province-wide figure is abstract, and abstraction does not convert. So B opens with
+      the news, then says <b>the average hides your city</b> and prices that claim with the
+      real spread (23% to 71% — a 48-point gap), then asks. Nothing sits between the tension
+      and the ask; anything that does is a reason to stop reading before the tap.
+    </p>
+    <p>
+      The spread line is the load-bearing sentence, and it must end in an instruction, not a
+      riddle. <b>"Pick your city below to see its own numbers"</b> — say what to do. An
+      earlier draft ended on "this email cannot tell you which one until you pick it", which
+      is coy, makes the product sound withholding, and asks the reader to infer the action.
+    </p>
+
+    <h3 style="margin-top:16px;">The chips are the call to action</h3>
+    <p>
+      Not a generic <i>Save a market</i> link. The friction is <b>choosing</b>, not clicking,
+      so the email does the choosing: every market it can serve, one tap each.
+    </p>
+
+    <h3 style="margin-top:16px;">Drive the chips off BOARD_MARKETS — all 15</h3>
+    <p>
+      The set a reader may pick must be exactly the set the weekly can cover, or the chip
+      makes a promise the next send breaks. That set is <code>BOARD_MARKETS</code>
+      (<b>15</b>), not <code>QUICK_PICK_MARKETS</code> (<b>11</b>) — and they are not nested.
+      <b>London is a quick pick with no board row</b>: tap it and next Thursday you get the
+      province-wide email again. Showing only ten had the opposite fault — Milton, Oshawa,
+      Whitby, Ajax and Pickering are covered, and hiding them makes the offer look smaller
+      than it is.
+    </p>
+    <p>
+      So: chips = <code>BOARD_MARKETS</code>, generated, never hand-listed. Use
+      <code>QUICK_PICK_MARKETS</code> only for the cameras where one exists. A new board
+      market then lights up its own chip with no copy change.
+    </p>
+
+    <h3 style="margin-top:16px;">Nothing between the tension and the ask</h3>
+    <p>
+      A "what this looks like for one city" specimen sat here — a quoted Milton lead under
+      "if you followed Milton, this week's email would have opened with…". It was cut. It
+      re-explained a value proposition the reader had just been shown, pushed the chips below
+      a second scroll, and put a city nobody asked about in the most prominent block on the
+      page. The spread line already proves the point in one sentence.
+    </p>
+
+    <h3 style="margin-top:16px;">The picker already exists in-app, and is not working</h3>
+    <p>
+      <code>FirstRunRegionPicker</code> shows on the dashboard for anyone with no saved
+      region, and <code>AcceptTermsForm</code> offers the same list at signup. Both ship
+      today — and 305 users still have no market. <b>The missing piece was never the picker.
+      It is reaching people who stopped opening the dashboard.</b> That is precisely what
+      this email does, and it is why the chips belong in the message rather than behind
+      another link to a page these readers are not visiting.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="divider"><span class="tag">Subject lines by rank</span></div>
+  <p class="sub">
+    Same market, same week. The ladder's ordering is visible in the copy: rank 1 is a
+    headline, rank 7 is a statistic.
+  </p>
+
+  <div class="panel">
+    <div class="scroll">
+      <table class="ref">
+        <thead>
+          <tr><th>#</th><th>Kind</th><th>Subject line</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="rank">1</td><td class="kd">over_ask_flip</td><td>Fewer than half of Milton homes now sell over asking</td></tr>
+          <tr><td class="rank">2</td><td class="kd">leverage</td><td>Milton: a third of sellers have now cut their price</td></tr>
+          <tr><td class="rank">3</td><td class="kd">speed</td><td>Milton homes now take 41 days to sell, up from 32</td></tr>
+          <tr><td class="rank">4</td><td class="kd">supply</td><td>Milton has flipped to a buyer's market</td></tr>
+          <tr><td class="rank">5</td><td class="kd">bidding</td><td>Milton sales over asking are down 11 points from last year</td></tr>
+          <tr><td class="rank">6</td><td class="kd">rent</td><td>Three-bedroom Milton rents are up 7% in a year</td></tr>
+          <tr class="weak"><td class="rank">7</td><td class="kd">price</td><td>The typical Milton home sold for $1.04M last month</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px;">
+      Rank 7 is the fallback and reads like one. That is why the plan tracks
+      <b>headline kind spread</b> as a KPI: if <code>price</code> wins most weeks, the email
+      has decayed into the newsletter of levels the whole design exists to prevent.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="divider"><span class="tag">Plain-text part</span></div>
+  <p class="sub">
+    Required, not optional — §11.7 item 6. Every send is multipart, and this is what an
+    images-off or text-only client shows.
+  </p>
+
+  <pre class="plain">MILTON - WEEK OF AUGUST 28
+
+34% of active Milton listings have cut their asking price.
+
+Four weeks ago it was 27%. That is one seller in three who
+has already moved first.
+
+THE REST OF THE PICTURE
+
+  Sold above asking    52%       down 6 points vs last year
+  Typical price cut    $41,000   median, among those that cut
+  Days to sell         41        up from 32 a month ago
+
+Check the tables:
+  Price cuts        https://www.pureproperty.ca/data/price-cuts
+  Days on market    https://www.pureproperty.ca/data/days-on-market
+  Sold over asking  https://www.pureproperty.ca/data/over-asking
+
+See Milton on the map:
+https://www.pureproperty.ca/properties?city=Milton
+
+Also in your markets: Oakville 24%, Burlington 29% cutting price.
+
+--
+You get this because the weekly market update is on.
+Manage emails:  https://www.pureproperty.ca/account/emails
+Unsubscribe:    https://www.pureproperty.ca/api/email/unsubscribe?...
+
+Aggregate figures only. Data as of August 27.
+Data is deemed reliable but not guaranteed accurate.
+Powered by PROPTX MLS(R).
+PureProperty - 268 America Ave, Vaughan, ON L6A 3G7</pre>
+
+  <p class="fin">
+    <b>The map CTA is real, not a placeholder.</b>
+    <code>src/app/properties/page.tsx:238</code> reads
+    <code>searchParams.get("city")</code> and seeds the location once per distinct value, so
+    <code>?city=Milton</code> works as shown. <code>&amp;lens=</code> additionally opens the
+    map in a chosen persona.
+  </p>
+  <p class="fin" style="margin-top:16px;">
+    <b>What this mockup does not settle.</b>
+    The sender subdomain and local part. What counts as <b>dormant</b> for the CTA swap —
+    <code>activation_events</code> is the strongest candidate. And a gap in the ladder
+    itself: <code>pctOverAsk</code> and rents are not written to
+    <code>metric_snapshots</code>, so ranks 1 and 6 have no four-week history to compare
+    against and must launch on the boards' own year-over-year figures. See §11 of the plan.
+  </p>
+
+</div>
+</body>
+</html>

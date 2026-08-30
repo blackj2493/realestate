@@ -212,6 +212,12 @@ export function aggregateTrendAndOffset(
   // 2) Offset: δ_i = ℓ_i − g(city,sub,period); median per (city_region, sub).
   const offsetBuckets = new Map<string, number[]>(); // city_region||sub → δ values
   for (const rec of records) {
+    // A sale with no community key belongs to the CITY trend but to NO community offset:
+    // δ is defined per city_region, and there is nothing to key it on. Waterloo Region and
+    // Brantford ship a blank CityRegion on every row, so without this guard all ~11k of
+    // their sales would pool into one meaningless ''-keyed offset and then be written to
+    // avm_community_offset as a real row.
+    if (!rec.cityRegion) continue;
     const g = gIndex.get(`${rec.city}||${rec.subType}||${rec.periodEnd}`);
     if (g === undefined) continue; // bucket below minTrend → no anchor
     const key = `${rec.cityRegion}||${rec.subType}`;
