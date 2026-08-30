@@ -39,12 +39,7 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import { createClient } from '@supabase/supabase-js';
-import {
-  normalizePropertySubType,
-  cityRegionLookupCandidates,
-  cohortRungKeys,
-  type CohortRung,
-} from '@/lib/avm/normalizeType';
+import { normalizePropertySubType, cityRegionLookupCandidates } from '@/lib/avm/normalizeType';
 import { SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE } from '@/lib/avm/types';
 
 // Supabase client uses Node's native fetch (undici). We deliberately do NOT override
@@ -99,8 +94,6 @@ interface SoldRow {
   purchase_contract_date: string | null;
   city: string | null;
   city_region: string | null;
-  /** Cohort key for the FSA rung. Must stay in the SELECT below. */
-  postal_code: string | null;
   property_sub_type: string | null;
   building_area_total: number | null;
   lot_width: number | null;
@@ -185,11 +178,8 @@ async function loadMatrices(): Promise<MatrixIndex> {
 
   for (;;) {
     const { data, error } = await sb
-      // ALL rungs. The rung is part of the key below, which is what keeps the 67 colliding
-      // city/city_region names apart — "Ajax" the community and "Ajax" the city are separate
-      // cohorts and must never merge into one feature set.
       .from('avm_multiplier_matrix')
-      .select('id, cohort_rung, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std')
+      .select('id, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std')
       .gt('id', cursor)
       .order('id', { ascending: true })
       .limit(PAGE);
@@ -199,7 +189,6 @@ async function loadMatrices(): Promise<MatrixIndex> {
 
     for (const r of data as Array<{
       id: number;
-      cohort_rung: CohortRung;
       city_region: string;
       property_sub_type: string;
       feature_name: string;
@@ -210,7 +199,7 @@ async function loadMatrices(): Promise<MatrixIndex> {
       // Normalize sub_type so live lookups match (matrices are mostly canonical
       // already, but normalize is cheap and defensive against any drift).
       const sub = normalizePropertySubType(r.property_sub_type);
-      const verbatimKey = `${r.cohort_rung}||${r.city_region}||${sub}`;
+      const verbatimKey = `${r.city_region}||${sub}`;
       let m = byVerbatim.get(verbatimKey);
       if (!m) {
         m = new Map();
@@ -218,13 +207,8 @@ async function loadMatrices(): Promise<MatrixIndex> {
         // Register the SAME matrix under every candidate spelling so a
         // raw_vow_sold lookup hits it regardless of whether the comp's
         // CityRegion is the verbatim, prefix-stripped, or tag-stripped form.
-        // Community keys arrive in several spellings (verbatim / prefix-stripped /
-        // tag-stripped) so all of them are registered. FSA and city keys are exact by
-        // construction, so they register once.
-        const spellings =
-          r.cohort_rung === 'community' ? cityRegionLookupCandidates(r.city_region) : [r.city_region];
-        for (const cand of spellings) {
-          const candKey = `${r.cohort_rung}||${cand}||${sub}`;
+        for (const cand of cityRegionLookupCandidates(r.city_region)) {
+          const candKey = `${cand}||${sub}`;
           if (!out.has(candKey)) out.set(candKey, m);
         }
       }
@@ -284,7 +268,7 @@ async function readPage(cursor: string, pageSize: number, windowStartIso: string
     const { data, error } = await sb
       .from('raw_vow_sold')
       .select(
-        'listing_key, close_price, close_date, purchase_contract_date, city, city_region, postal_code, ' +
+        'listing_key, close_price, close_date, purchase_contract_date, city, city_region, ' +
           'property_sub_type, building_area_total, lot_width, bedrooms_above_grade, bedrooms_below_grade, ' +
           'bathrooms_total_integer, parking_total, interior_tier, exterior_tier, basement_tier'
       )
@@ -355,9 +339,6 @@ async function main() {
   let cursor = '';
   let scanned = 0;
   let noMatrix = 0;
-  // Which rung actually carried each sale. A collapse to community-only means the ladder
-  // stopped working, and the symptom would otherwise be invisible: the job still succeeds.
-  const rungUsed: Record<CohortRung, number> = { community: 0, fsa: 0, city: 0 };
   let noPeriod = 0;
   let noCity = 0;
   let usable = 0;
@@ -384,13 +365,7 @@ async function main() {
       const city = (r.city || '').trim();
       const cityRegion = (r.city_region || '').trim();
       const sub = normalizePropertySubType(r.property_sub_type);
-      // A community key is NOT required. It used to be, and that quietly removed the sale
-      // from the CITY trend g(city, sub, period) as well — a trend that never needed one.
-      // All of Waterloo Region and Brantford ship a blank CityRegion, so 10,681 sales
-      // vanished and four cities had no trend at all, while the AVM kept returning
-      // plausible numbers for them. cityRegion is still read below: it gates the community
-      // OFFSET, which genuinely cannot exist without it.
-      if (!city || !sub) {
+      if (!city || !cityRegion || !sub) {
         noCity++;
         continue;
       }
@@ -405,26 +380,11 @@ async function main() {
       }
       const periodEnd = periodEndForDate(dateIso);
 
-      // Walk the cohort ladder — community, then FSA, then city — and take the finest
-      // rung that has a trained matrix. cohortRungKeys is the single shared definition
-      // (src/lib/avm/normalizeType.ts); the trainer fills these rungs, migration 130 keys
-      // them. Chatham-Kent is why the ladder matters even when CityRegion IS populated:
-      // 200 sales across 26 communities means no community ever trains one.
-      let matrix: Matrix | undefined;
-      let usedRung: CohortRung | undefined;
-      for (const { rung, key } of cohortRungKeys(r.city_region, r.postal_code, city)) {
-        const m = matrixIndex.byKey.get(`${rung}||${key}||${sub}`);
-        if (m) {
-          matrix = m;
-          usedRung = rung;
-          break;
-        }
-      }
-      if (!matrix || !usedRung) {
+      const matrix = matrixIndex.byKey.get(`${cityRegion}||${sub}`);
+      if (!matrix) {
         noMatrix++;
         continue;
       }
-      rungUsed[usedRung]++;
 
       const l = adjustedLogPrice(r, matrix);
       if (l === null) continue;
@@ -447,11 +407,7 @@ async function main() {
   }
 
   console.log(
-    `\nScanned ${scanned} sold rows  ·  feature-adjusted ${usable}  ·  skipped ${noMatrix} (no matrix), ${noPeriod} (no date), ${noCity} (missing keys)` +
-      // A collapse to community-only means the ladder stopped working, and nothing else
-      // would say so: the job still succeeds and still writes a trend index.
-      `
-   rung used: community=${rungUsed.community} fsa=${rungUsed.fsa} city=${rungUsed.city}`
+    `\nScanned ${scanned} sold rows  ·  feature-adjusted ${usable}  ·  skipped ${noMatrix} (no matrix), ${noPeriod} (no date), ${noCity} (missing keys)`
   );
 
   // 3) Aggregate trend index: (city, sub, period) → median(l).

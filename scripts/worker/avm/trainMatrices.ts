@@ -27,7 +27,7 @@
  */
 import 'dotenv/config';
 import { Client } from 'pg';
-import { normalizePropertySubType, cohortRungKeys, type CohortRung } from '@/lib/avm/normalizeType';
+import { normalizePropertySubType } from '@/lib/avm/normalizeType';
 
 const APPLY = process.argv.includes('--apply');
 function numFlag(name: string, def: number): number {
@@ -69,26 +69,6 @@ function assertFeaturesTrained(models: Array<{ betas: number[] }>): void {
   }
 }
 
-/** The cohort-KEY twin of assertFeaturesTrained. A rung that trains zero cohorts almost
- *  always means the SELECT stopped fetching its column (city, postal_code), which leaves
- *  every key blank — and nothing downstream can tell that apart from "this rung was never
- *  needed". The AVM would keep returning plausible numbers for the markets the rung exists
- *  to serve, exactly as it did for Kitchener before 2026-08-29. Fail the run instead.
- *
- *  Community is excluded on purpose: it is the original rung and cannot regress to zero
- *  without the feed itself collapsing, which other checks already catch. */
-function assertRungsTrained(models: CohortModel[]): void {
-  if (models.length === 0) return;
-  for (const rung of ['fsa', 'city'] as const) {
-    if (!models.some((m) => m.rung === rung)) {
-      throw new Error(
-        `Rung "${rung}" trained 0 cohorts out of ${models.length}. Check that the ` +
-        'raw_vow_sold SELECT still fetches city and postal_code.',
-      );
-    }
-  }
-}
-
 const FEATURES = [
   'building_area_total', 'lot_width', 'bedrooms_above_grade', 'bathrooms_total_integer',
   'parking_total', 'interior_score', 'exterior_score', 'basement_score',
@@ -99,10 +79,6 @@ const P = FEATURES.length;
 interface SoldRow {
   close_price: number | null;
   city_region: string | null;
-  /** Cohort KEYS for the coarser rungs. Both must stay in the SELECT — see
-   *  assertRungsTrained for what happens when one silently drops out. */
-  city: string | null;
-  postal_code: string | null;
   property_sub_type: string | null;
   building_area_total: number | null;
   lot_width: number | null;
@@ -163,7 +139,6 @@ function trimmedMean(xs: number[]): number {
 }
 
 interface CohortModel {
-  rung: CohortRung;
   cityRegion: string;
   subType: string;
   n: number;
@@ -175,7 +150,7 @@ interface CohortModel {
   basePrice: number;
 }
 
-function trainCohort(rung: CohortRung, cityRegion: string, subType: string, rows: SoldRow[]): CohortModel | null {
+function trainCohort(cityRegion: string, subType: string, rows: SoldRow[]): CohortModel | null {
   const prices = rows.map((r) => r.close_price as number);
   const y = prices.map((p) => Math.log(p));
   const yBar = mean(y);
@@ -224,7 +199,7 @@ function trainCohort(rung: CohortRung, cityRegion: string, subType: string, rows
   const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
 
   return {
-    rung, cityRegion, subType, n: rows.length, betas, means, stds,
+    cityRegion, subType, n: rows.length, betas, means, stds,
     r2: Math.round(r2 * 1e4) / 1e4,
     mae: Math.round((absErr / Z.length) * 1e4) / 1e4,
     basePrice: Math.round(trimmedMean(prices)),
@@ -257,7 +232,7 @@ async function main(): Promise<void> {
       // silently concatenate in the +-accumulations (→ NaN). float8 comes back as JS number.
       `SELECT listing_key,
               close_price::float8              AS close_price,
-              city_region, city, postal_code, property_sub_type,
+              city_region, property_sub_type,
               building_area_total::float8       AS building_area_total,
               lot_width::float8                 AS lot_width,
               bedrooms_above_grade::float8      AS bedrooms_above_grade,
@@ -277,15 +252,11 @@ async function main(): Promise<void> {
     cursor = rows[rows.length - 1].listing_key;
     for (const r of rows) {
       scanned++;
+      const cr = (r.city_region || '').trim();
       const sub = normalizePropertySubType(r.property_sub_type || '');
-      if (!sub || !r.close_price || r.close_price <= 0) continue;
-      // A sale feeds EVERY rung it has a key for, not just the finest. The coarser rungs
-      // are fallbacks for subjects the finer one cannot reach, so they must be fitted on
-      // all available sales — not on whatever the community rung left behind.
-      for (const { rung, key: geo } of cohortRungKeys(r.city_region, r.postal_code, r.city)) {
-        const key = `${rung}||${geo}||${sub}`;
-        (cohorts.get(key) ?? cohorts.set(key, []).get(key)!).push(r);
-      }
+      if (!cr || !sub || !r.close_price || r.close_price <= 0) continue;
+      const key = `${cr}||${sub}`;
+      (cohorts.get(key) ?? cohorts.set(key, []).get(key)!).push(r);
     }
     if (rows.length < 2000) break;
   }
@@ -294,20 +265,17 @@ async function main(): Promise<void> {
   const models: CohortModel[] = [];
   for (const [key, rows] of cohorts) {
     if (rows.length < MIN_SAMPLES) continue;
-    const [rung, cr, sub] = key.split('||');
-    const m = trainCohort(rung as CohortRung, cr, sub, rows);
+    const [cr, sub] = key.split('||');
+    const m = trainCohort(cr, sub, rows);
     if (m) models.push(m);
   }
   models.sort((a, b) => b.n - a.n);
   assertFeaturesTrained(models);
-  assertRungsTrained(models);
-  const byRung = (r: CohortRung) => models.filter((m) => m.rung === r).length;
-  console.log(`   rungs: community=${byRung('community')} fsa=${byRung('fsa')} city=${byRung('city')}`);
   const trainedR2 = models.filter((m) => m.r2 >= 0.5).length;
   console.log(`   trained ${models.length.toLocaleString()} cohorts (≥${MIN_SAMPLES} sales); ${trainedR2} with R²≥0.50 (coefficient-mode eligible)`);
   console.log('   top cohorts by n:');
   for (const m of models.slice(0, 6)) {
-    console.log(`     [${m.rung}] ${m.cityRegion} / ${m.subType}  n=${m.n}  R²=${m.r2}  MAE=${(m.mae * 100).toFixed(1)}%  base=$${m.basePrice.toLocaleString()}`);
+    console.log(`     ${m.cityRegion} / ${m.subType}  n=${m.n}  R²=${m.r2}  MAE=${(m.mae * 100).toFixed(1)}%  base=$${m.basePrice.toLocaleString()}`);
   }
 
   if (!APPLY) {
@@ -324,15 +292,15 @@ async function main(): Promise<void> {
     for (const m of models) {
       for (let j = 0; j < P; j++) {
         await client.query(
-          `INSERT INTO avm_multiplier_matrix_staging (cohort_rung, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [m.rung, m.cityRegion, m.subType, FEATURES[j], m.betas[j], m.means[j], m.stds[j]],
+          `INSERT INTO avm_multiplier_matrix_staging (city_region, property_sub_type, feature_name, beta, feat_mean, feat_std)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [m.cityRegion, m.subType, FEATURES[j], m.betas[j], m.means[j], m.stds[j]],
         );
       }
       await client.query(
-        `INSERT INTO avm_audit_report_staging (cohort_rung, city_region, property_sub_type, total_sales_analyzed, model_accuracy_score, average_error_margin, base_price)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [m.rung, m.cityRegion, m.subType, m.n, m.r2, m.mae, m.basePrice],
+        `INSERT INTO avm_audit_report_staging (city_region, property_sub_type, total_sales_analyzed, model_accuracy_score, average_error_margin, base_price)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [m.cityRegion, m.subType, m.n, m.r2, m.mae, m.basePrice],
       );
     }
     await client.query('COMMIT');
