@@ -43,6 +43,11 @@ export async function fetchAuditInfo(
     .from(AUDIT_TABLE)
     .select('city_region, model_accuracy_score, base_price, total_sales_analyzed')
     .in('city_region', candidates)
+    // Community rung only. Migration 130 added FSA and city cohorts to avm_audit_report as
+    // well as the matrix, and 96 (city_region, sub-type) pairs now exist at BOTH a community
+    // and a city rung — "Aylmer" the community and "Aylmer" the city. Without this the
+    // lookup returns two rows for the same key and picks between them arbitrarily.
+    .eq('cohort_rung', 'community')
     .ilike('property_sub_type', typeKey)
     .limit(candidates.length);
 

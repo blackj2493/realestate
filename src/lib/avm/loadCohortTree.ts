@@ -44,6 +44,9 @@ async function fetchAllAudit(supabase: SupabaseClient): Promise<CohortRow[]> {
     const { data, error } = await supabase
       .from('avm_audit_report')
       .select('city_region, property_sub_type, model_accuracy_score, total_sales_analyzed')
+      // Community rung only — see auditService for why. This reads the WHOLE table, so
+      // without the filter the cohort tree doubles from 1,685 cohorts to 3,516.
+      .eq('cohort_rung', 'community')
       .order('city_region')
       .order('property_sub_type')
       .range(from, from + PAGE - 1);
