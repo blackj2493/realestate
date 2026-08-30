@@ -10,7 +10,10 @@ vi.mock('@/lib/supabase/client', () => ({
 // builders are awaited, never .catch()-chained here).
 function queryResolving(payload: { data: unknown; error: unknown }) {
   const q: Record<string, unknown> = {};
-  for (const m of ['from', 'select', 'order', 'range', 'rpc']) {
+  // 'eq' joined the chain when the audit reads were pinned to the community rung
+  // (migration 130 / PR #450). A stub missing a builder method fails as a TypeError
+  // deep inside the module, which reads like a logic bug rather than a stub gap.
+  for (const m of ['from', 'select', 'eq', 'order', 'range', 'rpc']) {
     q[m] = vi.fn(() => q);
   }
   q.then = (resolve: (v: unknown) => unknown) => Promise.resolve(resolve(payload));

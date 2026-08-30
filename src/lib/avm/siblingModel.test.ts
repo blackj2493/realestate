@@ -26,7 +26,8 @@ function makeSupabaseStub(dataset: { city_region: string }[]) {
 
   const auditInCall = vi.fn(() => emptyChain);
   const emptyChain: Record<string, unknown> = {};
-  for (const m of ["select", "ilike", "order", "range"]) {
+  // "eq" joined the chain when the audit read was pinned to the community rung (#450).
+  for (const m of ["select", "eq", "ilike", "order", "range"]) {
     emptyChain[m] = vi.fn(() => emptyChain);
   }
   emptyChain.in = auditInCall;
