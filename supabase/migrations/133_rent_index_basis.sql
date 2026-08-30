@@ -81,7 +81,14 @@ COMMENT ON COLUMN public.rental_market_index.basis IS
 --
 -- Body copied from the LIVE definition (pg_get_functiondef), not from the migration
 -- files, which have drifted — see the note in 122 and 125.
-CREATE OR REPLACE FUNCTION public.region_rental_yield(p_region text, p_subtypes text[])
+-- THE DEFAULT IS PART OF THE SIGNATURE. `CREATE OR REPLACE FUNCTION` cannot remove a
+-- parameter default from an existing function, and the first cut of this migration
+-- dropped `DEFAULT NULL::text[]` and failed with
+--   "cannot remove parameter defaults from existing function".
+-- It was written from pg_get_function_IDENTITY_arguments, which deliberately omits
+-- defaults because it exists to identify an overload, not to reproduce a declaration.
+-- Read pg_get_function_arguments when the goal is to rewrite the function.
+CREATE OR REPLACE FUNCTION public.region_rental_yield(p_region text, p_subtypes text[] DEFAULT NULL::text[])
 RETURNS TABLE(beds integer, typical_rent integer, rent_sample integer,
               median_price bigint, price_sample integer, gross_yield_pct numeric)
 LANGUAGE sql
