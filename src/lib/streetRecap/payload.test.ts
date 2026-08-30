@@ -178,3 +178,33 @@ describe("previousMonthWindow", () => {
     expect(w.label).toBe("December");
   });
 });
+
+/**
+ * The city rollup is optional. address_watches holds the GEOCODER's municipality and the
+ * feed holds TRREB's — Strathroy against "Adelaide Metcalfe", Toronto against
+ * "Toronto C01" — so requiring one skipped every real recipient on the first live dry run.
+ */
+describe("no city rollup", () => {
+  it("builds from the FSA cohort alone", () => {
+    const p = buildStreetRecapPayload(
+      input({
+        candidates: [{ scope: scope("fsa", "M5A"), sold: sold({ sales: 64, medianDom: 29 }) }],
+        city: null,
+      })
+    )!;
+    expect(p.scope.kind).toBe("fsa");
+    expect(p.local.sales).toBe(64);
+    expect(p.cityAgg).toBeNull();
+    expect(p.cityAbovePct).toBeNull();
+    // Nothing to compare against, so no verdict is invented.
+    expect(domVerdict(p)).toBeNull();
+  });
+
+  it("returns null when there is neither a cohort nor a city", () => {
+    expect(
+      buildStreetRecapPayload(
+        input({ candidates: [{ scope: scope("fsa", "M5A"), sold: sold({ sales: 2 }) }], city: null })
+      )
+    ).toBeNull();
+  });
+});

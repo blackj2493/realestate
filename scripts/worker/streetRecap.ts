@@ -109,27 +109,75 @@ async function stampSent(
 }
 
 /**
- * The scope ladder for one recipient, tightest first.
+ * Everything geographic for one recipient: the ladder, and the comparison city if there
+ * honestly is one.
  *
- * A reno lookup arrives with a `city_region` already resolved by the funnel; an address
- * watch arrives with a postal code instead. Both fall through to the city, which is the
- * rung `buildStreetRecapPayload` uses as the comparison as well as the last resort.
+ * THE CITY COMPARISON IS SUPPRESSED WHEN THE NAMES DISAGREE. `address_watches` holds the
+ * geocoder's municipality and the feed holds TRREB's, and they are usually different words
+ * for overlapping-but-not-identical areas: Strathroy against "Adelaide Metcalfe", Caledonia
+ * against "Haldimand", Toronto against "Toronto C01". Printing "across Toronto C01" is
+ * gibberish to a reader, and printing "across Toronto" beside a number computed from one
+ * downtown district is a claim we cannot support. When the two names do not match we simply
+ * do not compare — the standing-inventory block carries the email perfectly well.
  */
-function candidatesFor(
+function geographyFor(
   r: Recipient,
-  sold: Map<string, SoldAgg>
-): { scope: RecapScope; sold: SoldAgg }[] {
-  const out: { scope: RecapScope; sold: SoldAgg }[] = [];
-  const city = r.city ?? "";
+  sold: Map<string, SoldAgg>,
+  feedCity: Map<string, string>
+): {
+  candidates: { scope: RecapScope; sold: SoldAgg }[];
+  city: { scope: RecapScope; sold: SoldAgg } | null;
+  activesKey: string | null;
+} {
+  const candidates: { scope: RecapScope; sold: SoldAgg }[] = [];
+  let feed: string | null = null;
+  let activesKey: string | null = null;
+
   if (r.cityRegion) {
-    const agg = sold.get(scopeKey("region", r.cityRegion));
-    if (agg) out.push({ scope: { kind: "region", label: r.cityRegion, city }, sold: agg });
+    const k = scopeKey("region", r.cityRegion);
+    const agg = sold.get(k);
+    if (agg) {
+      feed = feed ?? feedCity.get(k) ?? null;
+      activesKey = k;
+      candidates.push({
+        scope: { kind: "region", label: r.cityRegion, city: r.city ?? feed ?? "" },
+        sold: agg,
+      });
+    }
   }
   if (r.fsa) {
-    const agg = sold.get(scopeKey("fsa", r.fsa));
-    if (agg) out.push({ scope: { kind: "fsa", label: r.fsa, city }, sold: agg });
+    const k = scopeKey("fsa", r.fsa);
+    const agg = sold.get(k);
+    if (agg) {
+      feed = feed ?? feedCity.get(k) ?? null;
+      candidates.push({
+        // The label stays the FSA for logs and keys; the renderer never prints it, because
+        // "Homes in N7G" is a sorting code, not a place someone lives.
+        scope: { kind: "fsa", label: r.fsa, city: r.city ?? feed ?? "" },
+        sold: agg,
+      });
+    }
   }
-  return out;
+
+  const namesAgree =
+    !!feed && !!r.city && feed.trim().toLowerCase() === r.city.trim().toLowerCase();
+  const cityName = namesAgree ? feed : null;
+  const cityAgg = cityName ? sold.get(scopeKey("city", cityName)) : undefined;
+
+  // The inventory block falls back to the FEED's city even when its name is unprintable.
+  // Those numbers are right for this address — 35 Parliament Street really is in Toronto
+  // C01 — and the block never names the place: it says "still for sale", anchored by the
+  // address in the lede. Only the COMPARISON needed a name, and only the name was wrong.
+  if (!activesKey && feed) activesKey = scopeKey("city", feed);
+
+  return {
+    candidates,
+    city:
+      cityAgg && cityName
+        ? { scope: { kind: "city", label: cityName, city: cityName }, sold: cityAgg }
+        : null,
+    activesKey,
+  };
 }
 
 async function main(): Promise<void> {
@@ -186,7 +234,10 @@ async function main(): Promise<void> {
     return;
   }
 
-  const { sold, actives } = await loadRecapAggregates(sb, scopes, { from: win.from, to: win.to });
+  const { sold, actives, feedCity } = await loadRecapAggregates(sb, scopes, {
+    from: win.from,
+    to: win.to,
+  });
   console.log(`   aggregates: ${sold.size} sold cohorts, ${actives.size} inventory cohorts`);
 
   let considered = 0;
@@ -198,21 +249,13 @@ async function main(): Promise<void> {
   for (const r of recipients) {
     considered++;
 
-    const cityAgg = r.city ? sold.get(scopeKey("city", r.city)) : undefined;
-    if (!cityAgg) {
-      // No city rollup means no comparison AND no last rung — nothing honest to send.
-      skippedNoPayload++;
-      continue;
-    }
+    const geo = geographyFor(r, sold, feedCity);
 
     const payload = buildStreetRecapPayload({
       address: r.address,
-      candidates: candidatesFor(r, sold),
-      city: { scope: { kind: "city", label: r.city!, city: r.city! }, sold: cityAgg },
-      actives:
-        (r.cityRegion ? actives.get(scopeKey("region", r.cityRegion)) : undefined) ??
-        (r.city ? actives.get(scopeKey("city", r.city)) : undefined) ??
-        null,
+      candidates: geo.candidates,
+      city: geo.city,
+      actives: (geo.activesKey ? actives.get(geo.activesKey) : undefined) ?? null,
       dataAsOf: nowIso,
       monthLabel: win.label,
     });

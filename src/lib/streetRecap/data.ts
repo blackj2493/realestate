@@ -143,6 +143,17 @@ export async function loadRecapAudience(sb: SB): Promise<Recipient[]> {
 export interface RecapAggregates {
   sold: Map<string, SoldAgg>;
   actives: Map<string, ActiveAgg>;
+  /**
+   * scopeKey → the city the FEED files that cohort under.
+   *
+   * Not the same string the recipient gave us, and that is the whole reason this exists.
+   * `address_watches` stores the geocoder's municipality — "Strathroy", "Caledonia",
+   * "Toronto" — while `raw_vow_sold.city` stores TRREB's: "Adelaide Metcalfe", "Haldimand",
+   * "Toronto C01". Toronto alone is filed under ~36 district codes, so an exact match on
+   * "Toronto" finds nothing. Asking the FSA cohort which city it belongs to is the only
+   * reliable way to reach a comparison rollup.
+   */
+  feedCity: Map<string, string>;
 }
 
 /** Map key, so a neighbourhood and a city of the same name never collide. */
@@ -187,11 +198,16 @@ export async function loadRecapAggregates(
 ): Promise<RecapAggregates> {
   const sold = new Map<string, SoldAgg>();
   const actives = new Map<string, ActiveAgg>();
+  const feedCity = new Map<string, string>();
 
+  // TWO PASSES, because we do not know which cities to ask for until the tight cohorts
+  // answer. The recipient's own city string is the geocoder's and rarely matches the feed's,
+  // so the neighbourhood and FSA cohorts are asked first and each reports the city it is
+  // filed under; those names — plus the recipient's own, in case it happens to match — are
+  // what the city pass then requests.
   const grains: { kind: RecapScope["kind"]; keys: string[] }[] = [
     { kind: "region", keys: scopes.regions },
     { kind: "fsa", keys: scopes.fsas },
-    { kind: "city", keys: scopes.cities },
   ];
 
   for (const g of grains) {
@@ -202,6 +218,7 @@ export async function loadRecapAggregates(
       p_to: window.to,
     });
     for (const r of rows) {
+      if (r.city) feedCity.set(scopeKey(g.kind, r.scope_key), r.city);
       sold.set(scopeKey(g.kind, r.scope_key), {
         sales: Number(r.sales),
         aboveAsking: Number(r.above_asking),
@@ -238,7 +255,32 @@ export async function loadRecapAggregates(
     }
   }
 
-  return { sold, actives };
+  // ── Pass 2: the comparison cities, now that we know their real names. ──
+  const cityKeys = [...new Set([...scopes.cities, ...feedCity.values()])].filter(Boolean);
+  if (cityKeys.length) {
+    const rows = await rpcChunked<SoldRow>(sb, "street_recap_sold", "city", cityKeys, {
+      p_from: window.from,
+      p_to: window.to,
+    });
+    for (const r of rows) {
+      sold.set(scopeKey("city", r.scope_key), {
+        sales: Number(r.sales),
+        aboveAsking: Number(r.above_asking),
+        medianDom: r.median_dom == null ? null : Number(r.median_dom),
+        byType: [],
+      });
+    }
+    const act = await rpcChunked<ActiveRow>(sb, "street_recap_actives", "city", cityKeys);
+    for (const a of act) {
+      actives.set(scopeKey("city", a.scope_key), {
+        active: Number(a.active),
+        cutPrice: Number(a.cut_price),
+        medianTrueDom: a.median_true_dom == null ? null : Number(a.median_true_dom),
+      });
+    }
+  }
+
+  return { sold, actives, feedCity };
 }
 
 /** The distinct scopes an audience needs, ready for loadRecapAggregates. */
