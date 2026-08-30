@@ -111,11 +111,6 @@ function NearbyRow({
 
 type TileData = { label: string; value: string; sub?: string };
 
-/** Fewest listings a "median" may be built from. Mirrors MIN_COHORT_SAMPLES in the rent
- *  ladder: below three, a median is one listing's asking price wearing a statistic's
- *  name, and one mispriced record IS the answer. */
-const MIN_MEDIAN_SAMPLE = 3;
-
 export default async function AreaInsights({
   lat,
   lng,
@@ -152,17 +147,7 @@ export default async function AreaInsights({
   // ── PUBLIC snapshot (active/IDX asking — anon-safe) ───────────────────
   const publicTiles: TileData[] = [];
   if (sale?.stats.medianAsking) publicTiles.push({ label: "Median asking (for sale)", value: formatPrice(sale.stats.medianAsking) });
-  // MIN_MEDIAN_SAMPLE, not just "is there a number". Kearney had two for-lease records
-  // within 12km and the tile published the midpoint of them as a market median. With the
-  // vacant-land record now filtered out it would publish ONE listing's asking price under
-  // the word "Median", which is the same overclaim wearing a smaller number. The rent
-  // ladder refuses to publish a cohort under 3; so does this.
-  if (lease?.stats.medianAsking && lease.totalFound >= MIN_MEDIAN_SAMPLE)
-    publicTiles.push({
-      label: "Median rent",
-      value: `${formatPrice(lease.stats.medianAsking)}/mo`,
-      sub: `${lease.totalFound} for rent within ${lease.radiusKm} km`,
-    });
+  if (lease?.stats.medianAsking) publicTiles.push({ label: "Median rent", value: `${formatPrice(lease.stats.medianAsking)}/mo` });
   if (sale && sale.totalFound > 0) publicTiles.push({ label: "For sale nearby", value: String(sale.totalFound), sub: `within ${sale.radiusKm} km` });
   if (sale?.stats.medianDaysListed != null)
     publicTiles.push({ label: "Median days listed", value: String(Math.round(sale.stats.medianDaysListed)), sub: "active inventory" });

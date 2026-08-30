@@ -74,7 +74,7 @@ import { findRelists, type RelistTargetFull } from '@/lib/watchlist/relistLookup
 import { addressesMatch, parseAddress } from '@/lib/watchlist/disposition';
 import { unsubscribeUrl, marketingUnsubscribeUrl } from '@/lib/alerts/unsubscribe';
 import { SENDERS } from '@/lib/alerts/senders';
-import { canSendAlerts, DIGEST_MESSAGE_ID, type EmailPrefsRow } from '@/lib/email/sendPolicy';
+import { canSendAlerts, type EmailPrefsRow } from '@/lib/email/sendPolicy';
 import { EMAIL_METRICS, recordEmailSendMetrics } from '@/lib/ops/emailSendMetrics';
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
@@ -675,70 +675,6 @@ export async function runAddressWatchPhase(
   return { processed: rows.length, baselined, emailed };
 }
 
-/**
- * Record that the nightly digest reached these addresses, so the weekly Data Drop can
- * stand down for anyone it already emailed today (sendPolicy.canSendDataDrop).
- *
- * READ-MERGE-WRITE, never a bare upsert of `sent`. That column is a map of message ids to
- * send times and it holds the ONBOARDING drip's idempotency keys; writing a fresh object
- * would delete them and re-send the whole drip to everyone with alerts.
- *
- * IT DOES NOT TOUCH `last_sent_at`. That column drives the onboarding drip's two-day gap.
- * Stamping it every night would silently end the drip for every user who has alerts on —
- * the exact class of quiet, months-later failure this codebase keeps producing.
- *
- * Best-effort throughout: the digest has already been delivered by the time this runs, so
- * a bookkeeping failure must never turn a successful send into a red job.
- */
-async function stampDigestSent(
-  supabase: ReturnType<typeof getServiceRoleClient>,
-  emails: string[],
-  nowIso: string
-): Promise<void> {
-  if (!emails.length) return;
-  const unique = [...new Set(emails.map((e) => e.trim().toLowerCase()))].filter(Boolean);
-  const CHUNK = 400; // stays clear of PostgREST's 1000-row default cap on the read
-
-  for (let i = 0; i < unique.length; i += CHUNK) {
-    const batch = unique.slice(i, i + CHUNK);
-    try {
-      const { data, error } = await supabase
-        .from('user_email_lifecycle')
-        .select('email, user_id, sent, first_seen_at')
-        .in('email', batch);
-      if (error) {
-        console.error('[alerts] lifecycle read failed:', error.message);
-        continue;
-      }
-
-      const existing = new Map(
-        (data ?? []).map((r) => [
-          (r as { email: string }).email,
-          r as { email: string; user_id: string | null; sent: Record<string, string> | null; first_seen_at: string | null },
-        ])
-      );
-
-      const rows = batch.map((email) => {
-        const lc = existing.get(email);
-        return {
-          email,
-          user_id: lc?.user_id ?? null,
-          sent: { ...(lc?.sent ?? {}), [DIGEST_MESSAGE_ID]: nowIso },
-          first_seen_at: lc?.first_seen_at ?? nowIso,
-          updated_at: nowIso,
-        };
-      });
-
-      const { error: upErr } = await supabase
-        .from('user_email_lifecycle')
-        .upsert(rows, { onConflict: 'email' });
-      if (upErr) console.error('[alerts] lifecycle stamp failed:', upErr.message);
-    } catch (e) {
-      console.error('[alerts] lifecycle stamp threw:', e instanceof Error ? e.message : e);
-    }
-  }
-}
-
 async function main() {
   if (!process.env.RESEND_API_KEY) {
     console.warn('[alerts] RESEND_API_KEY not set — skipping alerts digest.');
@@ -1191,9 +1127,6 @@ async function main() {
   // so the canary's invariant (sent + suppressed + fell-through = due) is exact: a user who
   // reaches the map but renders to nothing was never owed an email.
   let due = 0;
-  // Addresses that actually received a digest tonight. Recorded after the loop so the
-  // weekly Data Drop can stand down for them — see stampDigestSent.
-  const digested: string[] = [];
   for (const userId of userIds) {
     const payload: DigestPayload = {
       drops: dropsByUser.get(userId) ?? [],
@@ -1227,14 +1160,11 @@ async function main() {
         headers: { 'List-Unsubscribe': `<${uUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
       });
       sentUsers.add(userId);
-      digested.push(email);
       emailed++;
     } catch (e) {
       console.error('[alerts] send failed for', userId, e instanceof Error ? e.message : e);
     }
   }
-
-  await stampDigestSent(supabase, digested, new Date().toISOString());
 
   // ── Persist baselines ──────────────────────────────────────────────────────
   // Silent refreshes always apply. Alert-bearing patches apply when the user's

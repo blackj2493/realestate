@@ -38,12 +38,6 @@ export async function fetchCoefficients(
     .from(MATRIX_TABLE)
     .select('city_region, feature_name, beta, feat_mean, feat_std')
     .in('city_region', candidates)
-    // Community rung only. Migration 130 added FSA and city cohorts to this table, and 67
-    // city names collide with an existing city_region spelling — a subject in the community
-    // "Ajax" would otherwise match the CITY cohort "Ajax" too, and the two cohorts' rows
-    // would merge into one incoherent feature set. Extending the lookup to the coarser rungs
-    // is a deliberate change with a backtest behind it, not a side effect of training them.
-    .eq('cohort_rung', 'community')
     .ilike('property_sub_type', typeKey);
 
   if (error || !data || data.length === 0) {

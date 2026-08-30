@@ -87,15 +87,13 @@ export default function TrackAddressCard({
 
       {state === "done" ? (
         <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
-          Watching. You&apos;ll get a monthly note on what sells nearby, and an alert if this
-          home is listed. Unsubscribe anytime.
+          Watching. We&apos;ll email you if this address hits the market. Unsubscribe anytime.
         </p>
       ) : member ? (
         /* Signed-in member → one tap, tracked to their account email. No field. */
         <>
           <p className="mt-1 text-sm text-muted-foreground">
-            A monthly note on what actually sells near here — and an alert if this home is
-            listed for sale.
+            Be first to know if it&apos;s listed for sale — we&apos;ll alert your account.
           </p>
           <button
             type="button"
@@ -115,9 +113,7 @@ export default function TrackAddressCard({
         /* Auth still resolving — show the intent + a disabled control (never the email
            field, so a member never flashes the "no account needed" capture). */
         <>
-          <p className="mt-1 text-sm text-muted-foreground">
-            A monthly note on what actually sells near here.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Be first to know if it&apos;s listed for sale.</p>
           <button
             type="button"
             disabled
@@ -130,7 +126,7 @@ export default function TrackAddressCard({
         /* Anonymous → email capture, unchanged. */
         <>
           <p className="mt-1 text-sm text-muted-foreground">
-            A monthly note on what actually sells near here — no account needed.
+            Be first to know if it&apos;s listed for sale — no account needed.
           </p>
           <form onSubmit={submitAnon} className="mt-3 flex max-w-md gap-2">
             <input
