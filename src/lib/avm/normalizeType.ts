@@ -230,26 +230,3 @@ export function cohortRungKeys(
   if (c) out.push({ rung: 'city', key: c });
   return out;
 }
-
-/**
- * The cohort keys to LOOK UP, finest rung first, each expanded to the spellings that rung
- * can appear under.
- *
- * Community keys arrive verbatim, prefix-stripped and tag-stripped (see
- * cityRegionLookupCandidates); FSA and city keys are exact by construction, so they expand
- * to themselves.
- *
- * Shared by the matrix and the audit lookup so the two can never disagree about which
- * cohort a subject belongs to. They read different tables, but the trainer writes both in
- * the same loop, so a rung present in one is present in the other.
- */
-export function cohortRungLookupKeys(
-  cityRegion: string | null | undefined,
-  postalCode: string | null | undefined,
-  city: string | null | undefined
-): Array<{ rung: CohortRung; keys: string[] }> {
-  return cohortRungKeys(cityRegion, postalCode, city).map(({ rung, key }) => ({
-    rung,
-    keys: rung === 'community' ? cityRegionLookupCandidates(key) : [key],
-  }));
-}
