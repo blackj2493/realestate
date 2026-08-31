@@ -452,8 +452,23 @@ async function main() {
   // negative (fabricated), zero (no comp at index time) or null (never computed).
   // --all re-checks the positives too, which the cohort-floor change can also move.
   const candidateFilter = all ? '' : 'AND (cap_rate_est IS NULL OR cap_rate_est <= 0)';
+  // SCOPE = what we might publish, PLUS anything we HAVE published.
+  //
+  // The floor alone was `list_price >= 100000`, which excluded by definition the very
+  // listings whose price is the fault. C13591550 and N13722132 both ask $1 and carry
+  // cap rates of 19,768,692% and 12,944,398% — visible and sortable in the public
+  // index — and no run of this job could ever reach them to clear the values.
+  //
+  // #456 fixed the computation, so a $1 listing no longer PRODUCES a cap rate. It could
+  // not clean up the ones already stored, because cleanup requires being scanned.
+  //
+  // The second clause is deliberately keyed on a stored metric rather than on a lower
+  // price floor: dropping the floor would sweep in ~50,000 for-lease records whose
+  // list_price IS the monthly rent, for no gain (the lease guard zeroes them anyway).
+  // Measured 2026-08-31 it adds 1,634 rows, every one of them For Sale — 82 above the
+  // 15% band and 1,550 carrying a fabricated negative.
   const scopeSql =
-    `FROM listings WHERE list_price >= 100000 ` +
+    `FROM listings WHERE (list_price >= 100000 OR (cap_rate_est IS NOT NULL AND cap_rate_est <> 0)) ` +
     `AND coalesce(standard_status,'') <> ALL($1::text[]) ${candidateFilter}`;
 
   const { rows: countRows } = await client.query(`SELECT count(*)::int AS n ${scopeSql}`, [CLOSED_STATUSES]);
