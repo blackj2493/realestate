@@ -339,10 +339,25 @@ export function rentSeedForStrategy(
   }
 ): number {
   const { purchasePrice, compMonthlyRent, wholeHomeMonthlyRent } = input;
+  const mainUnit = seedMonthlyRent(purchasePrice, compMonthlyRent);
   if (strategy === "whole-home" && typeof wholeHomeMonthlyRent === "number" && wholeHomeMonthlyRent > 0) {
-    return Math.round(wholeHomeMonthlyRent);
+    // FLOORED AT THE MAIN UNIT. Leasing the WHOLE house cannot earn less than leasing
+    // part of it — the whole-home figure already contains the basement. This is an
+    // arithmetic invariant about one property, NOT a tuned threshold: there is nothing
+    // here to calibrate and nothing measured to justify.
+    //
+    // It fires because the two sides are separate cohorts with separate depths, and the
+    // ladder will answer a thin one. Sampled across 25 listings carrying a measured
+    // suite, 24 differed (median +21.4%) and 3 came back INVERTED — one at -53%, a 7+2
+    // whose whole-home cohort held 3 leases against the main unit's 7. Publishing a
+    // whole-house lease below the main unit's is incoherent on its face.
+    //
+    // The floor cannot catch the other tail. A cohort of 3 can also answer far too HIGH
+    // ($18,000/mo on one sampled 5+2), and no invariant rules that out. That is what the
+    // sample count beside the field is for — print the depth, let the reader weigh it.
+    return Math.max(Math.round(wholeHomeMonthlyRent), mainUnit);
   }
-  return seedMonthlyRent(purchasePrice, compMonthlyRent);
+  return mainUnit;
 }
 
 /**

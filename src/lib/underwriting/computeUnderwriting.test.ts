@@ -172,6 +172,20 @@ describe('rentSeedForStrategy', () => {
     expect(rentSeedForStrategy('whole-home', { ...listing, wholeHomeMonthlyRent: null })).toBe(3_993);
   });
 
+  it('never prices the whole house below its own main unit', () => {
+    // Two cohorts, two depths: the ladder answered a 3-lease whole-home cohort below a
+    // 7-lease main-unit one on a real 7+2 (-53%). Leasing the entire house cannot earn
+    // less than leasing part of it, whatever the comps say.
+    const inverted = { purchasePrice: 999_000, compMonthlyRent: 16_000, wholeHomeMonthlyRent: 7_500 };
+    expect(rentSeedForStrategy('whole-home', inverted)).toBe(16_000);
+    // Split is untouched by the floor — it is the main unit by definition.
+    expect(rentSeedForStrategy('split', inverted)).toBe(16_000);
+  });
+
+  it('leaves an ordinary whole-home premium alone', () => {
+    expect(rentSeedForStrategy('whole-home', { purchasePrice: 999_000, compMonthlyRent: 4_000, wholeHomeMonthlyRent: 4_250 })).toBe(4_250);
+  });
+
   it('falls all the way back to the price rule when there is no comp at all', () => {
     expect(rentSeedForStrategy('whole-home', { purchasePrice: 500_000 })).toBe(2_000); // 0.004 x price
   });
