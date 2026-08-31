@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import InfoDot from "@/components/ui/InfoDot";
 import type { GlossaryKey } from "@/lib/glossary";
 import {
+  rentOnStrategySwitch,
   computeUnderwriting,
   seedAssumptions,
   rentSeedBasis,
@@ -71,6 +72,18 @@ interface UnderwritingSandboxProps {
   /** The same two for the suite line, which is its own editable field below. */
   suiteRentBasis?: string | null;
   suiteRentSampleCount?: number | null;
+  /**
+   * What ONE tenant pays for the ENTIRE house, with its own rung and depth.
+   *
+   * `compMonthlyRent` above is the MAIN UNIT wherever a suite is observed, so without
+   * this the "Whole home" strategy priced a whole house at its main unit's rent — it
+   * deleted the suite income and added nothing back. Usually a THINNER cohort than the
+   * main unit (W13714292: 7 leases against 17), which is why it carries its own count.
+   */
+  wholeHomeMonthlyRent?: number | null;
+  wholeHomeRentTier?: string | null;
+  wholeHomeRentBasis?: string | null;
+  wholeHomeRentSampleCount?: number | null;
   /**
    * Measured monthly rent for an OBSERVED in-home suite (migration 125) — a below-grade
    * kitchen or a basement described as an Apartment, in a house that is not already a
@@ -161,6 +174,10 @@ export default function UnderwritingSandbox({
   rentSampleCount = null,
   suiteRentBasis = null,
   suiteRentSampleCount = null,
+  wholeHomeMonthlyRent = null,
+  wholeHomeRentTier = null,
+  wholeHomeRentBasis = null,
+  wholeHomeRentSampleCount = null,
   suiteMonthlyRent = null,
   areaSuiteMonthlyRent = null,
   suiteConversion = null,
@@ -180,15 +197,29 @@ export default function UnderwritingSandbox({
   const [advanced, setAdvanced] = useState(false);
 
   /**
-   * Switching strategy rewrites ONLY the two lines the strategy owns — suite income
-   * and the conversion capex. Everything the reader has tuned (rent, rate, down
-   * payment, opex) survives the toggle, so comparing two strategies compares the
-   * strategies rather than resetting the work.
+   * Switching strategy rewrites the lines the strategy OWNS — suite income, the
+   * conversion capex, and the rent. Everything the reader has tuned survives, so
+   * comparing two strategies compares the strategies rather than resetting the work.
+   *
+   * RENT IS ONE OF THOSE LINES, which this handler used to miss. It means a different
+   * thing on each strategy: the main unit on Split, the entire house on Whole home. By
+   * deleting the suite income and leaving the rent alone it underwrote a whole house at
+   * its main unit's rent — on W13714292 a 7-bed / 5-bath / 3-kitchen detached showed
+   * -$1,733/mo and DSCR 0.61 against a ladder that prices the whole-home lease at
+   * $4,800. `rentOnStrategySwitch` re-seeds only a field the reader has not touched.
    */
   const pickStrategy = (next: UnderwritingStrategy) => {
     setStrategy(next);
     setInternalA((prev) => ({
       ...prev,
+      monthlyRent: rentOnStrategySwitch({
+        from: strategy,
+        to: next,
+        currentRent: prev.monthlyRent,
+        purchasePrice: prev.purchasePrice,
+        compMonthlyRent,
+        wholeHomeMonthlyRent,
+      }),
       otherMonthlyIncome: suiteIncomeFor(next, next === "add-suite" ? areaSuiteMonthlyRent : suiteMonthlyRent),
       suiteCapex: next === "add-suite" ? (suiteConversion?.typical ?? SUITE_CONVERSION_COST.typical) : 0,
     }));
@@ -221,16 +252,29 @@ export default function UnderwritingSandbox({
   // different confidence — on X12909812 they were $2,300 and $1,516 — so the field says
   // which one it is instead of calling both an "estimate".
   const rentBasis = rentSeedBasis(compMonthlyRent);
+  // THE LABELS FOLLOW THE STRATEGY, because the cohorts do. Whole home and the main
+  // unit are two different lookups that can land on two different rungs with two very
+  // different depths — on W13714292, 7 leases against 17. Describing the whole-home
+  // rent with the main unit's provenance would be a new way of saying the same wrong
+  // thing this change removes.
+  const onWholeHomeComp = strategy === "whole-home" && !!wholeHomeMonthlyRent;
+  const activeTier = onWholeHomeComp ? wholeHomeRentTier : rentMatchTier;
   const rentBasisLabel =
-    rentBasis === "comps" ? rentTierLabel(rentMatchTier) ?? "Comparable rents" : "Rule of thumb";
+    rentBasis === "comps" ? rentTierLabel(activeTier) ?? "Comparable rents" : "Rule of thumb";
   const rentBasisHint =
     rentBasis === "comps"
-      ? rentTierExplainer(rentMatchTier) ?? undefined
+      ? rentTierExplainer(activeTier) ?? undefined
       : "No rental comparables nearby for this property type, so this starts from a share of the asking price. Adjust it.";
   // HOW MANY, and of WHAT. Only on the comps path: the price rule has no cohort behind
   // it, and printing a sample count next to it would invent one.
   const rentProvenance =
-    rentBasis === "comps" ? rentProvenanceNote({ basis: rentBasisKind, sampleCount: rentSampleCount }) : null;
+    rentBasis === "comps"
+      ? rentProvenanceNote(
+          onWholeHomeComp
+            ? { basis: wholeHomeRentBasis, sampleCount: wholeHomeRentSampleCount }
+            : { basis: rentBasisKind, sampleCount: rentSampleCount }
+        )
+      : null;
   // SPLIT ONLY. These two describe the cohort behind `suite_rent_est`, an OBSERVED
   // suite on this property. "Add a suite" prices an AREA suite from a different lookup
   // entirely, so the same line under that field would describe the wrong comps. Today

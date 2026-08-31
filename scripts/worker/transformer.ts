@@ -785,6 +785,12 @@ export interface TransformResult {
      *  document dropped them, so the sandbox could not tell 40 leases from 3 asks. */
     rent_basis?: string;
     rent_sample_count?: number;
+    /** What ONE tenant pays for the ENTIRE house. Distinct from `monthlyRent`'s comp
+     *  wherever a suite is observed, because that one is the main unit alone. */
+    whole_home_monthly_rent?: number;
+    whole_home_rent_tier?: string;
+    whole_home_rent_basis?: string;
+    whole_home_rent_sample_count?: number;
     suite_rent_est?: number;
     suite_rent_tier?: string;
     suite_rent_basis?: string;
@@ -887,6 +893,12 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // have no second kitchen. Retired in 125; suite income is now measured, and only for
   // homes where a suite is OBSERVED (hasObservedSuite below).
   let rentAVM: RentAVMResult = { annual_rent: 0, annual_rent_p10: 0, has_data: false, match_tier: null };
+  // THE WHOLE-HOME LEASE, KEPT. `rentAVM` is REBOUND to the main-unit comp below
+  // whenever a suite is observed, and until now the whole-home answer was simply lost
+  // — so the sandbox's "Whole home" tab, which deletes the suite income and re-uses
+  // whatever is in the rent field, priced an entire house at its MAIN UNIT's rent.
+  // On W13714292 (4+3 detached, Brampton) that is $4,800 published as $3,800.
+  let wholeHomeRent: RentAVMResult = rentAVM;
   let suiteRent: SuiteRentResult = {
     monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null,
     basis: null, sample_count: null,
@@ -908,6 +920,7 @@ export async function transformListing(raw: any): Promise<TransformResult> {
       // one rung earlier, so this is additive, never a regression.
       county: raw.CountyOrParish,
     });
+    wholeHomeRent = rentAVM;
   } catch (err) {
     console.warn('[Transformer] Rent AVM lookup failed:', err);
   }
@@ -1207,6 +1220,19 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     typesensePayload.suite_rent_tier = suiteRent.has_data ? (suiteRent.match_tier ?? '') : '';
     typesensePayload.suite_rent_basis = suiteRent.has_data ? (suiteRent.basis ?? '') : '';
     typesensePayload.suite_rent_sample_count = suiteRent.has_data ? (suiteRent.sample_count ?? 0) : 0;
+    // What ONE tenant pays for the entire house, with its own rung and depth — a
+    // different cohort from the main unit and usually a THINNER one, which is exactly
+    // why it ships its own count rather than borrowing the main unit's. On W13714292:
+    // whole home $4,800 from 7 signed leases, main unit $3,800 from 17.
+    //
+    // Written unconditionally, INCLUDING where no suite was observed. There the two
+    // are the same number by construction (fetchMainUnitRent returns the whole-home
+    // comp when there is no plus-room to strip), and a consumer that has to ask which
+    // case it is in is a consumer that will one day guess wrong.
+    typesensePayload.whole_home_monthly_rent = wholeHomeRent.has_data ? Math.round(wholeHomeRent.annual_rent / 12) : 0;
+    typesensePayload.whole_home_rent_tier = wholeHomeRent.has_data ? (wholeHomeRent.match_tier ?? '') : '';
+    typesensePayload.whole_home_rent_basis = wholeHomeRent.has_data ? (wholeHomeRent.basis ?? '') : '';
+    typesensePayload.whole_home_rent_sample_count = wholeHomeRent.has_data ? (wholeHomeRent.sample_count ?? 0) : 0;
   }
 
   // Price discovery flag from TrueValue service

@@ -122,6 +122,11 @@ interface Drift {
   suiteTierTo: string;
   suiteBasisTo: string;
   suiteSampleTo: number;
+  /** One tenant, the entire house — the strategy the sandbox could not price. */
+  wholeHomeTo: number;
+  wholeHomeTierTo: string;
+  wholeHomeBasisTo: string;
+  wholeHomeSampleTo: number;
   hadComp: boolean;
 }
 
@@ -247,6 +252,13 @@ async function recompute(raw: any) {
   return {
     metrics,
     hadComp: rent.has_data,
+    // `rent` is the MAIN UNIT wherever a suite was observed; `rentAVM` is untouched and
+    // still holds the whole-home lease. Both are published — the sandbox needs one per
+    // strategy, and reading either as the other is the bug this repairs.
+    wholeHomeRent: rentAVM.has_data ? Math.round(rentAVM.annual_rent / 12) : 0,
+    wholeHomeTier: rentAVM.has_data ? (rentAVM.match_tier ?? '') : '',
+    wholeHomeBasis: rentAVM.has_data ? (rentAVM.basis ?? '') : '',
+    wholeHomeSample: rentAVM.has_data ? (rentAVM.sample_count ?? 0) : 0,
     tier: rent.has_data ? (rent.match_tier ?? '') : '',
     basis: rent.has_data ? (rent.basis ?? '') : '',
     sample: rent.has_data ? (rent.sample_count ?? 0) : 0,
@@ -303,6 +315,10 @@ async function pushTypesense(
       suite_rent_tier: r.suiteTierTo,
       suite_rent_basis: r.suiteBasisTo,
       suite_rent_sample_count: r.suiteSampleTo,
+      whole_home_monthly_rent: r.wholeHomeTo,
+      whole_home_rent_tier: r.wholeHomeTierTo,
+      whole_home_rent_basis: r.wholeHomeBasisTo,
+      whole_home_rent_sample_count: r.wholeHomeSampleTo,
     }))
     .join('\n');
   const res = await fetch(
@@ -469,7 +485,10 @@ async function main() {
     for (const res of results) {
       if (!res) continue;
       scanned++;
-      const { r, metrics, hadComp, tier, basis, sample, suiteRent, suiteTier, suiteBasis, suiteSample } = res;
+      const {
+        r, metrics, hadComp, tier, basis, sample, suiteRent, suiteTier, suiteBasis, suiteSample,
+        wholeHomeRent, wholeHomeTier, wholeHomeBasis, wholeHomeSample,
+      } = res;
       const stored = r.cap_rate_est == null ? null : Number(r.cap_rate_est);
       if (hadComp) gainedComp++;
       if (stored != null && stored < 0 && metrics.cap_rate_est >= 0) clearedNegative++;
@@ -498,6 +517,7 @@ async function main() {
       // against — a converged row skips here and keeps an empty provenance line forever.
       // Backfilling them is a ONE-TIME `--resync-index` pass, which is exactly the case
       // that flag was added for. After that pass they ride along with any real drift.
+      // The same is true of the four `whole_home_*` fields.
       if (capSame && tierSame && suiteSame && !resyncIndex) continue;
       drifted.push({
         key: r.listing_key,
@@ -513,6 +533,10 @@ async function main() {
         suiteTierTo: suiteTier,
         suiteBasisTo: suiteBasis,
         suiteSampleTo: suiteSample,
+        wholeHomeTo: wholeHomeRent,
+        wholeHomeTierTo: wholeHomeTier,
+        wholeHomeBasisTo: wholeHomeBasis,
+        wholeHomeSampleTo: wholeHomeSample,
         hadComp,
       });
     }

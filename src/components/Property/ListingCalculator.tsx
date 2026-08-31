@@ -51,6 +51,10 @@ export default function ListingCalculator({
   rentSampleCount = null,
   suiteRentBasis = null,
   suiteRentSampleCount = null,
+  wholeHomeMonthlyRent = null,
+  wholeHomeRentTier = null,
+  wholeHomeRentBasis = null,
+  wholeHomeRentSampleCount = null,
   suiteMonthlyRent = null,
   areaSuiteMonthlyRent = null,
   suiteConversion = null,
@@ -75,6 +79,11 @@ export default function ListingCalculator({
   rentSampleCount?: number | null;
   suiteRentBasis?: string | null;
   suiteRentSampleCount?: number | null;
+  /** One tenant, the entire house — what the "Whole home" strategy is actually worth. */
+  wholeHomeMonthlyRent?: number | null;
+  wholeHomeRentTier?: string | null;
+  wholeHomeRentBasis?: string | null;
+  wholeHomeRentSampleCount?: number | null;
   /** Measured in-home suite rent (125), and the cost of building one where none exists. */
   suiteMonthlyRent?: number | null;
   areaSuiteMonthlyRent?: number | null;
@@ -126,6 +135,10 @@ export default function ListingCalculator({
         rentSampleCount={rentSampleCount}
         suiteRentBasis={suiteRentBasis}
         suiteRentSampleCount={suiteRentSampleCount}
+        wholeHomeMonthlyRent={wholeHomeMonthlyRent}
+        wholeHomeRentTier={wholeHomeRentTier}
+        wholeHomeRentBasis={wholeHomeRentBasis}
+        wholeHomeRentSampleCount={wholeHomeRentSampleCount}
         suiteMonthlyRent={suiteMonthlyRent}
         areaSuiteMonthlyRent={areaSuiteMonthlyRent}
         suiteConversion={suiteConversion}
@@ -205,6 +218,10 @@ export default function ListingCalculator({
           rentSampleCount={rentSampleCount}
           suiteRentBasis={suiteRentBasis}
           suiteRentSampleCount={suiteRentSampleCount}
+          wholeHomeMonthlyRent={wholeHomeMonthlyRent}
+          wholeHomeRentTier={wholeHomeRentTier}
+          wholeHomeRentBasis={wholeHomeRentBasis}
+          wholeHomeRentSampleCount={wholeHomeRentSampleCount}
           suiteMonthlyRent={suiteMonthlyRent}
           areaSuiteMonthlyRent={areaSuiteMonthlyRent}
           suiteConversion={suiteConversion}

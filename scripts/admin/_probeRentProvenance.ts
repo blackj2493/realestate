@@ -92,7 +92,9 @@ async function main() {
   const doc = json.hits?.[0]?.document;
   if (!doc) { console.log('   absent from the index'); return; }
   for (const f of ['gross_yield_est', 'rent_match_tier', 'rent_basis', 'rent_sample_count',
-                   'suite_rent_est', 'suite_rent_tier', 'suite_rent_basis', 'suite_rent_sample_count']) {
+                   'suite_rent_est', 'suite_rent_tier', 'suite_rent_basis', 'suite_rent_sample_count',
+                   'whole_home_monthly_rent', 'whole_home_rent_tier', 'whole_home_rent_basis',
+                   'whole_home_rent_sample_count']) {
     console.log(`   ${f.padEnd(26)} ${doc[f] === undefined ? '(field absent)' : JSON.stringify(doc[f])}`);
   }
   console.log('');

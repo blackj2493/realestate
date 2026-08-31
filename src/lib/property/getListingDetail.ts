@@ -189,6 +189,10 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     rentSampleCount: null,
     suiteRentBasis: null,
     suiteRentSampleCount: null,
+    wholeHomeMonthlyRent: null,
+    wholeHomeRentTier: null,
+    wholeHomeRentBasis: null,
+    wholeHomeRentSampleCount: null,
     // geoFlags (+ geoChecked/geoCheckedAt) are PUBLIC-records facts (flood/rail/
     // traffic), NOT TRREB VOW data — intentionally NOT nulled: {...detail} passes
     // them through for anon users too (Phase 2 plan §2/§4.1). Do not "fix" this by
@@ -266,7 +270,7 @@ async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null
  * be correct end to end and the page would keep printing "available" for another hour on
  * exactly the listings it was written to catch.
  */
-export const DETAIL_SHAPE_VERSION = "v8-rent-provenance";
+export const DETAIL_SHAPE_VERSION = "v9-whole-home-rent";
 
 export interface ListingDetail {
   listing_key: string;
@@ -321,6 +325,17 @@ export interface ListingDetail {
   /** The same two for the suite line, which is its own editable field in the sandbox. */
   suiteRentBasis: string | null;
   suiteRentSampleCount: number | null;
+  /**
+   * What ONE tenant pays for the ENTIRE house, with its own rung and depth.
+   *
+   * Distinct from `compMonthlyRent` wherever a suite is observed, because that one is
+   * the main unit alone. The sandbox's "Whole home" strategy had nothing else to reach
+   * for and re-used the main-unit figure, pricing a 7-bed house at its 4-bed comp.
+   */
+  wholeHomeMonthlyRent: number | null;
+  wholeHomeRentTier: string | null;
+  wholeHomeRentBasis: string | null;
+  wholeHomeRentSampleCount: number | null;
   /**
    * Geo-joined public-records diligence flags (flood/rail/traffic), precomputed by
    * enrichGeoFlags.ts. Merged into Things to Know as `external`. PUBLIC data → not
@@ -464,6 +479,10 @@ export const getListingDetail = cache(
       suiteMonthlyRent: number | null;
       suiteRentBasis: string | null;
       suiteRentSampleCount: number | null;
+      wholeHomeMonthlyRent: number | null;
+      wholeHomeRentTier: string | null;
+      wholeHomeRentBasis: string | null;
+      wholeHomeRentSampleCount: number | null;
     }> = withTimeout(
       searchListings({ query: "*", rawFilterBy: `id:=\`${listingKey}\``, perPage: 1 }),
       4000,
@@ -493,6 +512,20 @@ export const getListingDetail = cache(
           suiteRentBasis: doc?.suite_rent_basis || null,
           suiteRentSampleCount:
             doc?.suite_rent_sample_count && doc.suite_rent_sample_count > 0 ? doc.suite_rent_sample_count : null,
+          // Read RAW, with no suite subtracted: this figure is one lease of the whole
+          // house, so the basement is already inside it by definition. Subtracting the
+          // suite here — as the main-unit line above must — would be the double count
+          // running backwards.
+          wholeHomeMonthlyRent:
+            doc?.whole_home_monthly_rent && doc.whole_home_monthly_rent > 0
+              ? Math.round(doc.whole_home_monthly_rent)
+              : null,
+          wholeHomeRentTier: doc?.whole_home_rent_tier || null,
+          wholeHomeRentBasis: doc?.whole_home_rent_basis || null,
+          wholeHomeRentSampleCount:
+            doc?.whole_home_rent_sample_count && doc.whole_home_rent_sample_count > 0
+              ? doc.whole_home_rent_sample_count
+              : null,
           // Measured in-home suite rent (125). Present only where the feed OBSERVES a
           // suite; 0/absent everywhere else, and the two must stay indistinguishable.
           suiteMonthlyRent: suite,
@@ -504,6 +537,8 @@ export const getListingDetail = cache(
           capRatePct: null, compMonthlyRent: null, rentMatchTier: null,
           rentBasis: null, rentSampleCount: null,
           suiteMonthlyRent: null, suiteRentBasis: null, suiteRentSampleCount: null,
+          wholeHomeMonthlyRent: null, wholeHomeRentTier: null,
+          wholeHomeRentBasis: null, wholeHomeRentSampleCount: null,
         };
       });
 
@@ -651,6 +686,7 @@ export const getListingDetail = cache(
     const {
       capRatePct: realCapRate, compMonthlyRent, rentMatchTier, rentBasis, rentSampleCount,
       suiteMonthlyRent: observedSuiteRent, suiteRentBasis, suiteRentSampleCount,
+      wholeHomeMonthlyRent, wholeHomeRentTier, wholeHomeRentBasis, wholeHomeRentSampleCount,
     } = await capRatePromise;
 
     // A home with no suite still needs the area's suite rent, or "Add a suite" prices
@@ -971,6 +1007,10 @@ export const getListingDetail = cache(
       rentSampleCount,
       suiteRentBasis,
       suiteRentSampleCount,
+      wholeHomeMonthlyRent,
+      wholeHomeRentTier,
+      wholeHomeRentBasis,
+      wholeHomeRentSampleCount,
       geoFlags,
       geoChecked,
       geoCheckedAt,

@@ -855,6 +855,10 @@ export default async function PropertyPage({
       rentSampleCount={view.rentSampleCount}
       suiteRentBasis={view.suiteRentBasis}
       suiteRentSampleCount={view.suiteRentSampleCount}
+      wholeHomeMonthlyRent={view.wholeHomeMonthlyRent}
+      wholeHomeRentTier={view.wholeHomeRentTier}
+      wholeHomeRentBasis={view.wholeHomeRentBasis}
+      wholeHomeRentSampleCount={view.wholeHomeRentSampleCount}
       suiteMonthlyRent={view.suiteMonthlyRent}
       areaSuiteMonthlyRent={view.areaSuiteMonthlyRent}
       suiteConversion={conversion}

@@ -216,6 +216,14 @@ export const unindexedFields: UnindexedField[] = [
   { name: 'rent_sample_count', type: 'int32', index: false, facet: false, optional: true },
   { name: 'suite_rent_basis', type: 'string', index: false, facet: false, optional: true },
   { name: 'suite_rent_sample_count', type: 'int32', index: false, facet: false, optional: true },
+  // What ONE tenant pays for the ENTIRE house, with its own rung and depth. Wherever a
+  // suite is observed this is a DIFFERENT cohort from the rent above, which is the main
+  // unit alone — and the sandbox's "Whole home" tab had nothing else to fall back on,
+  // so it priced whole houses at their main unit's rent.
+  { name: 'whole_home_monthly_rent', type: 'float', index: false, facet: false, optional: true },
+  { name: 'whole_home_rent_tier', type: 'string', index: false, facet: false, optional: true },
+  { name: 'whole_home_rent_basis', type: 'string', index: false, facet: false, optional: true },
+  { name: 'whole_home_rent_sample_count', type: 'int32', index: false, facet: false, optional: true },
   { name: 'zoning_desc', type: 'string', index: false, facet: false, optional: true },
   { name: 'zoning_source', type: 'string', index: false, facet: false, optional: true },
   { name: 'RawRooms', type: 'auto', index: false, facet: false },
@@ -476,6 +484,12 @@ export interface TypesensePropertyDocument {
   rent_basis?: string;
   /** How many comps the cohort median was taken over. 0/absent = unknown, never "few". */
   rent_sample_count?: number;
+  /** One tenant, the entire house. Differs from the rent above wherever a suite is
+   *  observed, because that one is the main unit alone. */
+  whole_home_monthly_rent?: number;
+  whole_home_rent_tier?: string;
+  whole_home_rent_basis?: string;
+  whole_home_rent_sample_count?: number;
   suite_rent_est?: number;
   suite_rent_tier?: string;
   suite_rent_basis?: string;

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   computeUnderwriting,
+  rentSeedForStrategy,
+  rentOnStrategySwitch,
   seedAssumptions,
   defaultStrategy,
   SUITE_CONVERSION_COST,
@@ -145,5 +147,66 @@ describe('rental strategy', () => {
     const free = computeUnderwriting({ ...a, suiteCapex: 0 });
     expect(built.capRatePct).toBe(free.capRatePct);
     expect(built.monthlyMortgage).toBe(free.monthlyMortgage);
+  });
+});
+
+describe('rentSeedForStrategy', () => {
+  const listing = { purchasePrice: 999_000, compMonthlyRent: 3_993, wholeHomeMonthlyRent: 4_800 };
+
+  it('prices the whole house on whole-home and the main unit on split', () => {
+    // W13714292: the ladder answers both, and they are 21% apart.
+    expect(rentSeedForStrategy('whole-home', listing)).toBe(4_800);
+    expect(rentSeedForStrategy('split', listing)).toBe(3_993);
+  });
+
+  it('leaves add-suite on the house as it stands', () => {
+    // Nothing is built yet, so today's comp is the right anchor; the new suite arrives
+    // as its own line with a build cost beside it.
+    expect(rentSeedForStrategy('add-suite', listing)).toBe(3_993);
+  });
+
+  it('falls back to the comp when no whole-home figure exists', () => {
+    // A document that predates the field must degrade to the old behaviour, not to 0.
+    expect(rentSeedForStrategy('whole-home', { purchasePrice: 999_000, compMonthlyRent: 3_993 })).toBe(3_993);
+    expect(rentSeedForStrategy('whole-home', { ...listing, wholeHomeMonthlyRent: 0 })).toBe(3_993);
+    expect(rentSeedForStrategy('whole-home', { ...listing, wholeHomeMonthlyRent: null })).toBe(3_993);
+  });
+
+  it('falls all the way back to the price rule when there is no comp at all', () => {
+    expect(rentSeedForStrategy('whole-home', { purchasePrice: 500_000 })).toBe(2_000); // 0.004 x price
+  });
+});
+
+describe('rentOnStrategySwitch', () => {
+  const listing = { purchasePrice: 999_000, compMonthlyRent: 3_993, wholeHomeMonthlyRent: 4_800 };
+
+  it('re-seeds an untouched field to the incoming strategy', () => {
+    // THE BUG: this used to return 3_993 — a 7-bed house priced at its 4-bed comp.
+    expect(rentOnStrategySwitch({ from: 'split', to: 'whole-home', currentRent: 3_993, ...listing })).toBe(4_800);
+    expect(rentOnStrategySwitch({ from: 'whole-home', to: 'split', currentRent: 4_800, ...listing })).toBe(3_993);
+  });
+
+  it('keeps a rent the reader typed', () => {
+    // They know something the ladder does not. Clobbering it is worse than a stale seed.
+    expect(rentOnStrategySwitch({ from: 'split', to: 'whole-home', currentRent: 4_200, ...listing })).toBe(4_200);
+  });
+
+  it('is stable across a round trip, so toggling twice returns to where it started', () => {
+    const there = rentOnStrategySwitch({ from: 'split', to: 'whole-home', currentRent: 3_993, ...listing });
+    const back = rentOnStrategySwitch({ from: 'whole-home', to: 'split', currentRent: there, ...listing });
+    expect(back).toBe(3_993);
+  });
+
+  it('changes nothing when the two strategies share a comp', () => {
+    // A home with no observed suite: the main-unit lookup IS the whole-home one, so
+    // there is no plus-room to strip and the switch must be a no-op.
+    const noSuite = { purchasePrice: 999_000, compMonthlyRent: 4_800, wholeHomeMonthlyRent: 4_800 };
+    expect(rentOnStrategySwitch({ from: 'whole-home', to: 'add-suite', currentRent: 4_800, ...noSuite })).toBe(4_800);
+  });
+
+  it('leaves a tuned field alone even when the incoming strategy has no figure', () => {
+    const noWhole = { purchasePrice: 999_000, compMonthlyRent: 3_993 };
+    expect(rentOnStrategySwitch({ from: 'split', to: 'whole-home', currentRent: 4_500, ...noWhole })).toBe(4_500);
+    expect(rentOnStrategySwitch({ from: 'split', to: 'whole-home', currentRent: 3_993, ...noWhole })).toBe(3_993);
   });
 });
