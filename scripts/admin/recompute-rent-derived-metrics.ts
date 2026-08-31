@@ -612,7 +612,22 @@ async function main() {
     console.log(`   … ${Math.min(i + PG_CHUNK, drifted.length)}/${drifted.length}`);
   }
   console.log(`✅ Postgres: ${pgUpdated.toLocaleString()} row(s) updated.`);
-  await client.end();
+  // THE CONNECTION STAYS OPEN. It used to close here, and `verifyWrites` at the end of
+  // main() takes the same client -- so that check has never once run. Every invocation
+  // since it was added has ended with:
+  //
+  //   Fatal: Error: Client was closed and is not queryable
+  //       at async verifyWrites (...)
+  //
+  // after the writes had already landed, which reads like a failed job that in fact
+  // succeeded. Worse, verifyWrites is the net added AFTER the 2026-08-21 clobber
+  // incident to catch a writer that starts MID-RUN -- the one thing the pre-flight
+  // guard structurally cannot see, because this job writes nothing until the whole
+  // scan is done. It was dead on arrival.
+  //
+  // The 2026-08-31 run proved why that gap is real: a second copy of this job was
+  // started from another worktree two minutes after the first, and its pre-flight
+  // printed "No concurrent writer" quite honestly.
 
   console.log(`\n📤 Typesense: patching ${drifted.length.toLocaleString()} document(s)…`);
   let updated = 0;
