@@ -151,3 +151,53 @@ export function rentTierExplainer(tier: string | null | undefined): string | nul
       return null;
   }
 }
+
+/**
+ * WHAT STANDS BEHIND A RENT, IN ONE SENTENCE (this change).
+ *
+ * `rentTierLabel` says how CLOSE the comps are and `rentBasisLabel` says whether they
+ * are transactions. Neither says HOW MANY, and the count is the thing a reader can act
+ * on: the Underwriting Sandbox published "$3,993" with the same weight whether forty
+ * signed leases stood behind it or three asks did.
+ *
+ * The gap was visible on W13714292, a 4+3 detached in Brampton. The sandbox seeded
+ * $3,993 from the `city_bath` rung. Six inches above it on the same page, the leased
+ * grid printed its own medians WITH sample counts (×14, ×24) from a 2 km radius, and
+ * the two never agreed — because the ladder holds the bath count and gives up the
+ * neighbourhood, while the grid holds the neighbourhood and has no bath axis at all.
+ * A reader could see both numbers and had nothing to tell them apart.
+ *
+ * NO THRESHOLD LIVES HERE. A "thin sample" cut would be a judgement about a cohort
+ * this module cannot see, and the repo has been burned by exactly that kind of
+ * invented constant (the $1,500 suite offset, the 1.6x multiplier). Print the count
+ * and let the reader weigh it, the way the grid already does.
+ *
+ * Returns null when NEITHER part is known — an empty provenance line is worse than
+ * none, because it implies the number has none.
+ */
+export function rentProvenanceNote(input: {
+  basis?: string | null;
+  sampleCount?: number | null;
+}): string | null {
+  const n =
+    typeof input.sampleCount === 'number' && Number.isFinite(input.sampleCount) && input.sampleCount > 0
+      ? Math.trunc(input.sampleCount)
+      : null;
+  const phrase = basisPhrase(input.basis, n ?? 2);
+  if (phrase && n !== null) return `Based on ${n.toLocaleString()} ${phrase}.`;
+  if (phrase) return `Based on ${phrase}.`;
+  if (n !== null) return `Based on ${n.toLocaleString()} comparable ${n === 1 ? 'rent' : 'rents'}.`;
+  return null;
+}
+
+/** The countable noun for a basis, agreeing in number with `n`. Plain language: these
+ *  strings reach the same readers the emails do (voice.md §5.1). */
+function basisPhrase(basis: string | null | undefined, n: number): string | null {
+  const many = n !== 1;
+  switch (basis) {
+    case 'closed_12': return many ? 'signed leases from the past year' : 'signed lease from the past year';
+    case 'closed_24': return many ? 'signed leases from the past two years' : 'signed lease from the past two years';
+    case 'asking': return many ? 'current asking rents' : 'current asking rent';
+    default: return null;
+  }
+}

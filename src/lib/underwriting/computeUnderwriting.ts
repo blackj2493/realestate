@@ -307,3 +307,86 @@ export function isIncomeProperty(propertySubType?: string | null): boolean {
   const t = (propertySubType || "").toLowerCase();
   return !/vacant|\bland\b|parking|locker|office|retail|industrial|commercial|\bbusiness\b|investment|\bfarm\b/.test(t);
 }
+
+/**
+ * THE RENT A STRATEGY IS ACTUALLY WORTH.
+ *
+ * Each strategy leases a different thing, so each has its own comp:
+ *
+ *   whole-home  ONE tenant, the entire house — `wholeHomeMonthlyRent`.
+ *   split       the MAIN UNIT only; the suite is a separate line — `compMonthlyRent`.
+ *   add-suite   the house as it stands today, with the new suite added beside it.
+ *
+ * `compMonthlyRent` is the main-unit comp wherever a suite is observed (the detail page
+ * subtracts the measured suite back out of `gross_yield_est`). That is correct for
+ * Split and WRONG for Whole home, and until now Whole home had nothing else to reach
+ * for: switching strategy deleted the suite income and left the rent field alone, so a
+ * 7-bed / 5-bath / 3-kitchen house was underwritten at its 4-bed comp. On W13714292
+ * that published -$1,733/mo and DSCR 0.61 on a home the ladder prices at $4,800.
+ *
+ * Falls back to `compMonthlyRent` when no whole-home figure exists — a document that
+ * predates the field, or a listing with no comp at all. Never invents one, and in
+ * particular never derives it from the "median +31.9%" figure in the comments above:
+ * no script in this repo reproduces that measurement, and a rent computed from a
+ * remembered ratio is the $1,500 suite constant with extra steps.
+ */
+export function rentSeedForStrategy(
+  strategy: UnderwritingStrategy,
+  input: {
+    purchasePrice: number;
+    compMonthlyRent?: number | null;
+    wholeHomeMonthlyRent?: number | null;
+  }
+): number {
+  const { purchasePrice, compMonthlyRent, wholeHomeMonthlyRent } = input;
+  const mainUnit = seedMonthlyRent(purchasePrice, compMonthlyRent);
+  if (strategy === "whole-home" && typeof wholeHomeMonthlyRent === "number" && wholeHomeMonthlyRent > 0) {
+    // FLOORED AT THE MAIN UNIT. Leasing the WHOLE house cannot earn less than leasing
+    // part of it — the whole-home figure already contains the basement. This is an
+    // arithmetic invariant about one property, NOT a tuned threshold: there is nothing
+    // here to calibrate and nothing measured to justify.
+    //
+    // It fires because the two sides are separate cohorts with separate depths, and the
+    // ladder will answer a thin one. Sampled across 25 listings carrying a measured
+    // suite, 24 differed (median +21.4%) and 3 came back INVERTED — one at -53%, a 7+2
+    // whose whole-home cohort held 3 leases against the main unit's 7. Publishing a
+    // whole-house lease below the main unit's is incoherent on its face.
+    //
+    // The floor cannot catch the other tail. A cohort of 3 can also answer far too HIGH
+    // ($18,000/mo on one sampled 5+2), and no invariant rules that out. That is what the
+    // sample count beside the field is for — print the depth, let the reader weigh it.
+    return Math.max(Math.round(wholeHomeMonthlyRent), mainUnit);
+  }
+  return mainUnit;
+}
+
+/**
+ * What Monthly Rent should read after the reader switches strategy.
+ *
+ * A TUNED RENT SURVIVES THE SWITCH. `pickStrategy` was built to rewrite only the lines
+ * a strategy owns, so that comparing two strategies compares the strategies instead of
+ * discarding the reader's work — and that principle is right. The bug was that rent was
+ * never recognised as a line the strategy owns: it means a different thing on each one.
+ *
+ * So: re-seed ONLY when the field still holds the outgoing strategy's seed. A reader
+ * who typed their own number keeps it, because they know something the ladder does not;
+ * a reader who never touched it gets the comp for the business they just switched to.
+ *
+ * Toggling back and forth is stable — each hop leaves the field on the new strategy's
+ * seed, which the next hop recognises.
+ */
+export function rentOnStrategySwitch(input: {
+  from: UnderwritingStrategy;
+  to: UnderwritingStrategy;
+  currentRent: number;
+  purchasePrice: number;
+  compMonthlyRent?: number | null;
+  wholeHomeMonthlyRent?: number | null;
+}): number {
+  const { from, to, currentRent, ...seed } = input;
+  const outgoing = rentSeedForStrategy(from, seed);
+  // Whole dollars on both sides: the seeds are rounded and the input is numeric, so an
+  // exact compare is the honest test of "untouched" without a tolerance to tune.
+  if (Math.round(currentRent) !== outgoing) return currentRent;
+  return rentSeedForStrategy(to, seed);
+}

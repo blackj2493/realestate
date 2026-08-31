@@ -57,7 +57,7 @@
 
 import 'dotenv/config';
 import { Client } from 'pg';
-import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent } from '../worker/services/rentAVM';
+import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent, type SuiteRentResult } from '../worker/services/rentAVM';
 import { resolveRatioPrice, fetchMillRate } from '../worker/services/ratioPriceCalculator';
 import { calculateFinancialMetrics } from '../worker/services/financialMetrics';
 import { hasObservedSuite } from '@/lib/listings/observedSuite';
@@ -112,9 +112,21 @@ interface Drift {
   yieldTo: number;
   cashflowTo: number;
   tierTo: string;
+  /** What kind of comp stands behind the rent, and how many. Patched alongside the
+   *  rung for the same reason the rung is patched alongside the cap rate: a repaired
+   *  number beside a stale provenance line is still a number nobody can weigh. */
+  basisTo: string;
+  sampleTo: number;
   /** Measured suite rent (125), monthly. 0 = no observed suite, or no cohort. */
   suiteTo: number;
   suiteTierTo: string;
+  suiteBasisTo: string;
+  suiteSampleTo: number;
+  /** One tenant, the entire house — the strategy the sandbox could not price. */
+  wholeHomeTo: number;
+  wholeHomeTierTo: string;
+  wholeHomeBasisTo: string;
+  wholeHomeSampleTo: number;
   hadComp: boolean;
 }
 
@@ -168,7 +180,13 @@ async function recompute(raw: any) {
   // Suite rent (125), only where the feed OBSERVES a suite — never from a score. Same
   // gate the transformer applies, so a recomputed listing and a freshly-synced one
   // cannot disagree.
-  let suiteRent = { monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null as string | null };
+  // Typed from the service rather than structurally, so a field added to SuiteRentResult
+  // (basis / sample_count) reaches this job instead of being silently dropped by a
+  // narrower local shape — which is how the index and a recompute drift apart.
+  let suiteRent: SuiteRentResult = {
+    monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null,
+    basis: null, sample_count: null,
+  };
   let rent = rentAVM;
   if (rentAVM.has_data && hasObservedSuite(raw)) {
     const [suite, mainUnit] = await Promise.all([
@@ -234,9 +252,20 @@ async function recompute(raw: any) {
   return {
     metrics,
     hadComp: rent.has_data,
+    // `rent` is the MAIN UNIT wherever a suite was observed; `rentAVM` is untouched and
+    // still holds the whole-home lease. Both are published — the sandbox needs one per
+    // strategy, and reading either as the other is the bug this repairs.
+    wholeHomeRent: rentAVM.has_data ? Math.round(rentAVM.annual_rent / 12) : 0,
+    wholeHomeTier: rentAVM.has_data ? (rentAVM.match_tier ?? '') : '',
+    wholeHomeBasis: rentAVM.has_data ? (rentAVM.basis ?? '') : '',
+    wholeHomeSample: rentAVM.has_data ? (rentAVM.sample_count ?? 0) : 0,
     tier: rent.has_data ? (rent.match_tier ?? '') : '',
+    basis: rent.has_data ? (rent.basis ?? '') : '',
+    sample: rent.has_data ? (rent.sample_count ?? 0) : 0,
     suiteRent: suiteRent.has_data ? suiteRent.monthly_rent : 0,
     suiteTier: suiteRent.has_data ? (suiteRent.match_tier ?? '') : '',
+    suiteBasis: suiteRent.has_data ? (suiteRent.basis ?? '') : '',
+    suiteSample: suiteRent.has_data ? (suiteRent.sample_count ?? 0) : 0,
   };
 }
 
@@ -280,8 +309,16 @@ async function pushTypesense(
       // Patched in the SAME document as the numbers it qualifies. Splitting them would
       // leave a repaired cap rate sitting next to a stale confidence signal.
       rent_match_tier: r.tierTo,
+      rent_basis: r.basisTo,
+      rent_sample_count: r.sampleTo,
       suite_rent_est: r.suiteTo,
       suite_rent_tier: r.suiteTierTo,
+      suite_rent_basis: r.suiteBasisTo,
+      suite_rent_sample_count: r.suiteSampleTo,
+      whole_home_monthly_rent: r.wholeHomeTo,
+      whole_home_rent_tier: r.wholeHomeTierTo,
+      whole_home_rent_basis: r.wholeHomeBasisTo,
+      whole_home_rent_sample_count: r.wholeHomeSampleTo,
     }))
     .join('\n');
   const res = await fetch(
@@ -448,7 +485,10 @@ async function main() {
     for (const res of results) {
       if (!res) continue;
       scanned++;
-      const { r, metrics, hadComp, tier, suiteRent, suiteTier } = res;
+      const {
+        r, metrics, hadComp, tier, basis, sample, suiteRent, suiteTier, suiteBasis, suiteSample,
+        wholeHomeRent, wholeHomeTier, wholeHomeBasis, wholeHomeSample,
+      } = res;
       const stored = r.cap_rate_est == null ? null : Number(r.cap_rate_est);
       if (hadComp) gainedComp++;
       if (stored != null && stored < 0 && metrics.cap_rate_est >= 0) clearedNegative++;
@@ -471,6 +511,13 @@ async function main() {
       // skip and patches the index for every scanned row, to reconcile a divergence a
       // Postgres-only comparison cannot see. Idempotence is the reason this is a flag
       // and not the default: without it a converged re-run writes nothing.
+      //
+      // THE PROVENANCE FIELDS CANNOT DRIFT-DETECT. `rent_basis` and `rent_sample_count`
+      // are new and Postgres stores neither, so there is nothing on `r` to compare them
+      // against — a converged row skips here and keeps an empty provenance line forever.
+      // Backfilling them is a ONE-TIME `--resync-index` pass, which is exactly the case
+      // that flag was added for. After that pass they ride along with any real drift.
+      // The same is true of the four `whole_home_*` fields.
       if (capSame && tierSame && suiteSame && !resyncIndex) continue;
       drifted.push({
         key: r.listing_key,
@@ -480,8 +527,16 @@ async function main() {
         yieldTo: metrics.gross_yield_est,
         cashflowTo: metrics.net_monthly_cashflow,
         tierTo: tier,
+        basisTo: basis,
+        sampleTo: sample,
         suiteTo: suiteRent,
         suiteTierTo: suiteTier,
+        suiteBasisTo: suiteBasis,
+        suiteSampleTo: suiteSample,
+        wholeHomeTo: wholeHomeRent,
+        wholeHomeTierTo: wholeHomeTier,
+        wholeHomeBasisTo: wholeHomeBasis,
+        wholeHomeSampleTo: wholeHomeSample,
         hadComp,
       });
     }

@@ -241,9 +241,21 @@ export interface ListingDocument {
   /** Rung of the rent ladder behind cap_rate_est / gross_yield_est — the confidence
    *  signal. Absent on documents not re-transformed since migration 124. */
   rent_match_tier?: string;
+  /** WHAT kind of comps stand behind that rent, and HOW MANY. The rung says how close
+   *  they are and stops there. '' / 0 are the no-data sentinels, same as the rung. */
+  rent_basis?: string;
+  rent_sample_count?: number;
+  /** One tenant, the entire house — a different cohort from the rent above wherever a
+   *  suite is observed, and usually a thinner one. */
+  whole_home_monthly_rent?: number;
+  whole_home_rent_tier?: string;
+  whole_home_rent_basis?: string;
+  whole_home_rent_sample_count?: number;
   /** Measured monthly rent for an OBSERVED in-home suite (125). 0/absent = none. */
   suite_rent_est?: number;
   suite_rent_tier?: string;
+  suite_rent_basis?: string;
+  suite_rent_sample_count?: number;
   gross_yield_est?: number;
 
   // ─── Builder / Density / Zoning ──────────────────────────────────────

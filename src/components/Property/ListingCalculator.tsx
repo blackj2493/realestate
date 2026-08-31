@@ -47,6 +47,14 @@ export default function ListingCalculator({
   hasSuitePotential = false,
   compMonthlyRent = null,
   rentMatchTier = null,
+  rentBasis = null,
+  rentSampleCount = null,
+  suiteRentBasis = null,
+  suiteRentSampleCount = null,
+  wholeHomeMonthlyRent = null,
+  wholeHomeRentTier = null,
+  wholeHomeRentBasis = null,
+  wholeHomeRentSampleCount = null,
   suiteMonthlyRent = null,
   areaSuiteMonthlyRent = null,
   suiteConversion = null,
@@ -66,6 +74,16 @@ export default function ListingCalculator({
   /** Comp-derived rent + its rung, threaded to the sandbox's Monthly Rent seed. */
   compMonthlyRent?: number | null;
   rentMatchTier?: string | null;
+  /** What kind of comps stand behind that rent, and how many. Shown under the field. */
+  rentBasis?: string | null;
+  rentSampleCount?: number | null;
+  suiteRentBasis?: string | null;
+  suiteRentSampleCount?: number | null;
+  /** One tenant, the entire house — what the "Whole home" strategy is actually worth. */
+  wholeHomeMonthlyRent?: number | null;
+  wholeHomeRentTier?: string | null;
+  wholeHomeRentBasis?: string | null;
+  wholeHomeRentSampleCount?: number | null;
   /** Measured in-home suite rent (125), and the cost of building one where none exists. */
   suiteMonthlyRent?: number | null;
   areaSuiteMonthlyRent?: number | null;
@@ -113,6 +131,14 @@ export default function ListingCalculator({
         hasSuitePotential={hasSuitePotential}
         compMonthlyRent={compMonthlyRent}
         rentMatchTier={rentMatchTier}
+        rentBasis={rentBasis}
+        rentSampleCount={rentSampleCount}
+        suiteRentBasis={suiteRentBasis}
+        suiteRentSampleCount={suiteRentSampleCount}
+        wholeHomeMonthlyRent={wholeHomeMonthlyRent}
+        wholeHomeRentTier={wholeHomeRentTier}
+        wholeHomeRentBasis={wholeHomeRentBasis}
+        wholeHomeRentSampleCount={wholeHomeRentSampleCount}
         suiteMonthlyRent={suiteMonthlyRent}
         areaSuiteMonthlyRent={areaSuiteMonthlyRent}
         suiteConversion={suiteConversion}
@@ -188,6 +214,14 @@ export default function ListingCalculator({
           hasSuitePotential={hasSuitePotential}
           compMonthlyRent={compMonthlyRent}
           rentMatchTier={rentMatchTier}
+          rentBasis={rentBasis}
+          rentSampleCount={rentSampleCount}
+          suiteRentBasis={suiteRentBasis}
+          suiteRentSampleCount={suiteRentSampleCount}
+          wholeHomeMonthlyRent={wholeHomeMonthlyRent}
+          wholeHomeRentTier={wholeHomeRentTier}
+          wholeHomeRentBasis={wholeHomeRentBasis}
+          wholeHomeRentSampleCount={wholeHomeRentSampleCount}
           suiteMonthlyRent={suiteMonthlyRent}
           areaSuiteMonthlyRent={areaSuiteMonthlyRent}
           suiteConversion={suiteConversion}
