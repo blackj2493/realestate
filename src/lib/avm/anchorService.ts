@@ -528,7 +528,13 @@ function adjustedLogPrice(
     ['exterior_score', exteriorScore],
   ];
   for (const [name, value] of feats) {
-    if (value === null) continue;
+    // `== null` on purpose: a comp from an RPC that does not RETURN a column carries
+    // `undefined`, not null. Before migration 134, sold_fsa_comps and sold_city_comps
+    // omitted bedrooms_below_grade, so `(undefined − mean) / std` was NaN and every comp
+    // from those rungs was silently dropped the moment any coefficients were applied —
+    // the anchor fell to the prior alone (predSD 0.22 → LOW) and the peer search found
+    // nothing (→ floor). That, not the ladder, was what #452 measured.
+    if (value == null) continue;
     const cf = coeff.get(name);
     if (!cf || cf.beta === 0 || !(cf.std > 0)) continue;
     const z = clamp((value - cf.mean) / cf.std, -Z_CLAMP, Z_CLAMP);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isUnpriceableType, fsaOf, cohortRungKeys } from './normalizeType';
+import { isUnpriceableType, fsaOf, cohortRungKeys, cohortRungLookupKeys } from './normalizeType';
 
 /**
  * Commercial-gap Phase 0: the dwelling comp AVM must return "unavailable" for
@@ -135,5 +135,42 @@ describe('cohortRungKeys', () => {
     // community rung never trains. The FSA and city rungs must still be offered.
     const keys = cohortRungKeys('Wallaceburg', 'N8A 1A1', 'Chatham-Kent');
     expect(keys.map((k) => k.rung)).toEqual(['community', 'fsa', 'city']);
+  });
+});
+
+describe('cohortRungLookupKeys', () => {
+  it('expands only the COMMUNITY rung to its candidate spellings', () => {
+    // A prefixed community must still match its clean spelling; an FSA is exact.
+    const rungs = cohortRungLookupKeys('1001 - BR Bronte', 'L6L 1A1', 'Oakville');
+    expect(rungs.map((r) => r.rung)).toEqual(['community', 'fsa', 'city']);
+    expect(rungs[0].keys).toContain('1001 - BR Bronte');
+    expect(rungs[0].keys).toContain('Bronte');
+    expect(rungs[1].keys).toEqual(['L6L']);
+    expect(rungs[2].keys).toEqual(['Oakville']);
+  });
+
+  it('drops the community rung when the feed ships a blank CityRegion', () => {
+    // The Waterloo Region shape: no community key exists at all.
+    const rungs = cohortRungLookupKeys('', 'N2H 5X8', 'Kitchener');
+    expect(rungs.map((r) => r.rung)).toEqual(['fsa', 'city']);
+    expect(rungs[0].keys).toEqual(['N2H']);
+  });
+
+  it('keeps a coarse key exact so it cannot borrow a community spelling', () => {
+    // 67 city names collide with a city_region. "Ajax" the CITY must expand to itself
+    // only — never to a stripped community variant that would match another cohort.
+    const rungs = cohortRungLookupKeys('', null, '1001 - Ajax');
+    expect(rungs).toEqual([{ rung: 'city', keys: ['1001 - Ajax'] }]);
+  });
+
+  it('searches the community rung alone when no coarse key is offered', () => {
+    // fetchCoefficients / fetchAuditInfo — the trained-cohort lookups — pass null here.
+    expect(cohortRungLookupKeys('Brampton West', null, null)).toEqual([
+      { rung: 'community', keys: ['Brampton West'] },
+    ]);
+  });
+
+  it('returns nothing when no key exists', () => {
+    expect(cohortRungLookupKeys('', '', '')).toEqual([]);
   });
 });

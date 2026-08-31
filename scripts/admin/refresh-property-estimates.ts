@@ -37,10 +37,17 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
 import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from '@/lib/avm/livingArea';
-import { estimateFromMarketData, shouldEvaluatePeers, resolveModel, type AVMMarketData } from '@/lib/avm/calculator';
+import {
+  estimateFromMarketData,
+  shouldEvaluatePeers,
+  resolveModel,
+  marketDataOf,
+  type AVMMarketData,
+  type ResolvedModel,
+} from '@/lib/avm/calculator';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from '@/lib/avm/anchorService';
-import { type CoefficientRow } from '@/lib/avm/matrixService';
-import { normalizePropertySubType, isUnpriceableType } from '@/lib/avm/normalizeType';
+import { normalizePropertySubType, isUnpriceableType, fsaOf } from '@/lib/avm/normalizeType';
+import type { AVMInput } from '@/lib/avm/types';
 import type { RoomData } from '@/lib/room-utils';
 
 // Supabase client uses Node's native fetch (undici). We deliberately do NOT override
@@ -229,45 +236,27 @@ function lookupCalibration(payload: Record<string, unknown>, rooms: RoomData[]):
 // the resolved model so each distinct cohort pays the DB cost once.
 // INVARIANT: uses resolveModel (same as calculateAVM) so the batch is byte-identical
 // to the request path for every listing: native coefficients gate routing, effective
-// (possibly borrowed) coefficients drive adjustment, peer.basis='borrowed' when borrowed.
-interface MarketStaticData {
-  nativeCoefficients: CoefficientRow[];
-  effectiveCoefficients: CoefficientRow[];
-  r2: number | null;
-  basePrice: number | null;
-  n: number | null | undefined;
-  borrowed: boolean;
-}
-const marketStaticCache = new Map<string, MarketStaticData>();
+// (coarse-rung or borrowed) coefficients drive adjustment, peer.basis='borrowed' when borrowed.
+const marketStaticCache = new Map<string, ResolvedModel>();
 
 async function getMarketStatic(
-  cityRegion: string,
-  normalizedType: string,
-  city: string | null,
-  rawPropertySubType: string
-): Promise<MarketStaticData> {
-  // Cache key: cohort identity (city + subType determine the sibling search scope,
-  // so include city to avoid serving Aurora's sibling model to a different city's
-  // untrained cohort with the same cityRegion name).
-  const key = `${cityRegion.toLowerCase()}|${normalizedType.toLowerCase()}|${(city ?? '').toLowerCase()}`;
+  input: Pick<AVMInput, 'cityRegion' | 'propertySubType' | 'city' | 'rawPropertySubType' | 'postalCode'>
+): Promise<ResolvedModel> {
+  // Cache key: cohort identity. city scopes the sibling search (so Aurora's sibling model
+  // is never served to another city's untrained cohort of the same cityRegion name); the
+  // postal FSA is a rung of the cohort ladder, so two subjects in different FSAs of an
+  // untrained community resolve to different models.
+  const key = [
+    input.cityRegion.toLowerCase(),
+    input.propertySubType.toLowerCase(),
+    (input.city ?? '').toLowerCase(),
+    fsaOf(input.postalCode),
+  ].join('|');
   const cached = marketStaticCache.get(key);
   if (cached) return cached;
-  const resolved = await resolveModel(sb, {
-    cityRegion,
-    propertySubType: normalizedType,
-    city,
-    rawPropertySubType,
-  });
-  const market: MarketStaticData = {
-    nativeCoefficients: resolved.nativeCoefficients,
-    effectiveCoefficients: resolved.effectiveCoefficients,
-    r2: resolved.r2,
-    basePrice: resolved.basePrice,
-    n: resolved.n,
-    borrowed: resolved.borrowed,
-  };
-  marketStaticCache.set(key, market);
-  return market;
+  const resolved = await resolveModel(sb, input);
+  marketStaticCache.set(key, resolved);
+  return resolved;
 }
 
 async function readPage(cursor: string, pageSize: number): Promise<ListingRow[] | null> {
@@ -422,14 +411,9 @@ async function main() {
       const avmInput = avmEligible ? mapListingToAVMInput(payload, { rooms, bucketCalibration }) : null;
       if (avmInput) {
         // getMarketStatic mirrors calculateAVM's resolveModel: native coefficients gate
-        // routing; effective (possibly borrowed) coefficients drive comp adjustment.
-        const staticData = await getMarketStatic(
-          avmInput.cityRegion,
-          avmInput.propertySubType,
-          avmInput.city,
-          avmInput.rawPropertySubType
-        );
-        // EFFECTIVE coefficients (borrowed when untrained+sibling) drive anchor adjustment.
+        // routing; effective (coarse-rung or borrowed) coefficients drive comp adjustment.
+        const staticData = await getMarketStatic(avmInput);
+        // EFFECTIVE coefficients (coarse rung, or borrowed when untrained+sibling) drive anchor adjustment.
         const anchor = await fetchAnchor(
           sb,
           avmInput,
@@ -446,14 +430,8 @@ async function main() {
           // Mark borrowed-basis so peerEstimate caps HIGH the same way as the request path.
           if (peer && staticData.borrowed) peer.basis = 'borrowed';
         }
-        const market: AVMMarketData = {
-          anchor,
-          r2: staticData.r2,
-          basePrice: staticData.basePrice,
-          // NATIVE coefficients: keep outlierGuard on the untrained→peer path (same as calculateAVM).
-          coefficients: staticData.nativeCoefficients,
-          peer,
-        };
+        // marketDataOf decides routing vs adjustment coefficients — same as calculateAVM.
+        const market: AVMMarketData = { anchor, peer, ...marketDataOf(staticData) };
         const est = estimateFromMarketData(avmInput, market);
         if (est.estimatedValue > 0) {
           // Per-row write guards: clamp + validate before any value reaches the
