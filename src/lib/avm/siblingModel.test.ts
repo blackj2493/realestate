@@ -5,9 +5,7 @@ import { pickSibling } from "./siblingModel";
 // Mock the supabase client module so we can inject a chainable stub.
 vi.mock("@/lib/supabase/client", () => ({ getServiceRoleClient: vi.fn() }));
 // Mock matrixService so the test only exercises the paging logic.
-vi.mock("./matrixService", () => ({
-  fetchCoefficients: vi.fn().mockResolvedValue({ rows: [], rung: null }),
-}));
+vi.mock("./matrixService", () => ({ fetchCoefficients: vi.fn().mockResolvedValue([]) }));
 // Mock normalizeType so rawVariantsOf returns a non-empty array.
 vi.mock("./normalizeType", () => ({
   rawVariantsOf: vi.fn(() => ["Detached"]),

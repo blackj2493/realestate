@@ -26,7 +26,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from './anchorService';
 import { fetchAuditInfo } from './auditService';
 import { fetchCoefficients, type CoefficientRow } from './matrixService';
-import type { CohortRung } from './normalizeType';
 import { fetchSiblingModel } from './siblingModel';
 import { clamp, featureContributions, subjectAdjustmentTotal } from './features';
 import { isUnpriceableType } from './normalizeType';
@@ -58,13 +57,6 @@ export interface AVMMarketData {
   n?: number | null;
   /** Per-feature standardized coefficients (beta/mean/std) for this market. */
   coefficients: CoefficientRow[];
-  /**
-   * True when the coefficients came from a cohort COARSER than a community — the postal
-   * FSA or the whole city (migration 130). The model is the subject's own market, so it is
-   * used; but a blunter cohort never earns HIGH confidence, the same rule a borrowed
-   * sibling follows.
-   */
-  coarseRung?: boolean;
   /**
    * Peer comp-grid anchor for SATURATING outliers (CLAUDE.md §10). Supplied by the
    * async layer ONLY when isSaturating() is true:
@@ -132,25 +124,16 @@ export interface ResolvedModel {
   basePrice: number | null;
   n: number | null | undefined;
   borrowed: boolean;
-  /** Coefficients came from the FSA or city rung rather than a community. */
-  coarseRung: boolean;
 }
 
 export async function resolveModel(
   supabase: SupabaseClient,
-  input: Pick<AVMInput, 'cityRegion' | 'propertySubType' | 'city' | 'rawPropertySubType' | 'postalCode'>
+  input: Pick<AVMInput, 'cityRegion' | 'propertySubType' | 'city' | 'rawPropertySubType'>
 ): Promise<ResolvedModel> {
-  // Both lookups walk the SAME community → FSA → city ladder (cohortRungLookupKeys), so the
-  // r2 that gates the coefficient engine always describes the cohort the coefficients came
-  // from. The trainer writes the matrix row and the audit row together, so a rung present in
-  // one is present in the other.
-  const ladder = { postalCode: input.postalCode, city: input.city };
-  const [matrix, audit] = await Promise.all([
-    fetchCoefficients(supabase, input.cityRegion, input.propertySubType, ladder),
-    fetchAuditInfo(supabase, input.cityRegion, input.propertySubType, ladder),
+  const [nativeCoefficients, audit] = await Promise.all([
+    fetchCoefficients(supabase, input.cityRegion, input.propertySubType),
+    fetchAuditInfo(supabase, input.cityRegion, input.propertySubType),
   ]);
-  const nativeCoefficients = matrix.rows;
-  const coarseRung = matrix.rung !== null && matrix.rung !== 'community';
 
   if (nativeCoefficients.length === 0) {
     const sibling = await fetchSiblingModel(supabase, input.city, input.propertySubType, input.rawPropertySubType);
@@ -162,7 +145,6 @@ export async function resolveModel(
         basePrice: audit.basePrice,
         n: sibling.n,
         borrowed: true,
-        coarseRung: false, // a sibling is borrowed, not coarse — capHigh already applies
       };
     }
   }
@@ -174,7 +156,6 @@ export async function resolveModel(
     basePrice: audit.basePrice,
     n: audit.n,
     borrowed: false,
-    coarseRung,
   };
 }
 
@@ -182,7 +163,7 @@ export async function calculateAVM(
   supabase: SupabaseClient,
   input: AVMInput
 ): Promise<AVMResult> {
-  const { nativeCoefficients, effectiveCoefficients, r2, basePrice, n, borrowed, coarseRung } =
+  const { nativeCoefficients, effectiveCoefficients, r2, basePrice, n, borrowed } =
     await resolveModel(supabase, input);
 
   // EFFECTIVE (possibly borrowed) coefficients drive comp ADJUSTMENT.
@@ -205,7 +186,6 @@ export async function calculateAVM(
     coefficients: nativeCoefficients, // NATIVE: keeps outlierGuard on the untrained→peer path
     n,
     peer,
-    coarseRung,
   });
 }
 
@@ -241,13 +221,7 @@ export function estimateFromMarketData(
   const outlierGuard =
     market.coefficients.length > 0 ? isFeatureOutlier(input, market.coefficients, tuning) : true;
   if (market.peer !== undefined && outlierGuard) {
-    if (market.peer)
-      return peerEstimate(
-        market.peer,
-        market.r2,
-        market.coefficients.length === 0 || !!market.coarseRung,
-        tuning
-      );
+    if (market.peer) return peerEstimate(market.peer, market.r2, market.coefficients.length === 0, tuning);
     // peer === null → too few peers anywhere. For TRAINED cohorts the home is a
     // Σβz saturating outlier → 'floor' honestly labels "clamped number, too few peers".
     // For UNTRAINED cohorts the home isn't necessarily large/upgraded — there just
@@ -278,15 +252,7 @@ function normalEstimate(input: AVMInput, market: AVMMarketData, tuning: AvmTunin
   // native model we cannot compute Σβz for this subject — fall through to anchor-only
   // so engineMode stays ANCHOR_ONLY and the UI does not append "· adjusted for…".
   if (market.r2 !== null && market.r2 >= COEFFICIENT_ENGINE_THRESHOLD && market.coefficients.length > 0) {
-    return calculateWithCoefficients(
-      baseAnchor,
-      anchor,
-      market.r2,
-      input,
-      market.coefficients,
-      !!market.coarseRung,
-      tuning
-    );
+    return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, market.coefficients, tuning);
   }
 
   // Anchor-only: estimate = anchor; band derived directly from predSD.
@@ -299,7 +265,7 @@ function normalEstimate(input: AVMInput, market: AVMMarketData, tuning: AvmTunin
     breakdown: blankBreakdown(),
     adjustmentLog: 0,
     anchor,
-  }, { capHigh: !!market.coarseRung }, tuning);
+  }, undefined, tuning);
 }
 
 /**
@@ -340,8 +306,6 @@ function calculateWithCoefficients(
   r2Score: number,
   input: AVMInput,
   coefficients: CoefficientRow[],
-  /** Coarser-than-community cohort: demote HIGH, see AVMMarketData.coarseRung. */
-  capHigh = false,
   tuning: AvmTuning = DEFAULT_TUNING
 ): AVMResult {
   const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
@@ -365,7 +329,7 @@ function calculateWithCoefficients(
     breakdown,
     adjustmentLog: total,
     anchor,
-  }, { capHigh }, tuning);
+  }, undefined, tuning);
 }
 
 /**
