@@ -17,6 +17,16 @@ import { COEFFICIENT_ENGINE_THRESHOLD } from './types';
 
 const SIBLING_MIN_N = 30;
 
+/**
+ * The bar a model must clear before it may STAND IN for an untrained community — a
+ * sibling's (pickSibling) or a coarse ladder rung's (calculator.resolveModel). A
+ * community's OWN model is never held to it: a trained community routes as trained
+ * whatever its R², and the engine gate handles the adjustment.
+ */
+export function clearsFallbackGate(r2: number | null | undefined, n: number | null | undefined): boolean {
+  return (r2 ?? 0) >= COEFFICIENT_ENGINE_THRESHOLD && (n ?? 0) >= SIBLING_MIN_N;
+}
+
 export interface SiblingModel {
   coefficients: CoefficientRow[];
   r2: number;
@@ -30,7 +40,7 @@ export function pickSibling(
 ): { city_region: string; r2: number; n: number } | null {
   const eligible = rows
     .map((r) => ({ city_region: r.city_region, r2: r.model_accuracy_score ?? 0, n: r.total_sales_analyzed ?? 0 }))
-    .filter((r) => r.r2 >= COEFFICIENT_ENGINE_THRESHOLD && r.n >= SIBLING_MIN_N);
+    .filter((r) => clearsFallbackGate(r.r2, r.n));
   if (eligible.length === 0) return null;
   eligible.sort((a, b) => (b.n - a.n) || (b.r2 - a.r2));
   return eligible[0];

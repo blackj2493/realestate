@@ -80,6 +80,7 @@ import {
   shouldEvaluatePeers,
   resolveModel,
   calculateAVM,
+  marketDataOf,
 } from '@/lib/avm/calculator';
 import type { CoefficientRow } from '@/lib/avm/matrixService';
 import type { AVMInput, AVMResult } from '@/lib/avm/types';
@@ -559,9 +560,10 @@ async function replaySale(
 
   const input = inputFromSale(s);
 
-  // Live, leakage-safe model resolution (static matrix/audit/sibling).
-  const { nativeCoefficients, effectiveCoefficients, r2, basePrice, n, borrowed } =
-    await resolveModel(sb, input);
+  // Live, leakage-safe model resolution (static matrix/audit/ladder/sibling).
+  const model = await resolveModel(sb, input);
+  const { nativeCoefficients, effectiveCoefficients, r2, basePrice, n, borrowed } = model;
+  const staticMarket = marketDataOf(model);
   const untrained = nativeCoefficients.length === 0;
 
   // As-of trend/offset for this subject (shaped like the live queries).
@@ -609,15 +611,8 @@ async function replaySale(
     if (peer && borrowed) peer.basis = 'borrowed';
   }
 
-  // estimate uses NATIVE coefficients (keeps the outlierGuard on the untrained→peer path).
-  const result: AVMResult = estimateFromMarketData(input, {
-    anchor,
-    r2,
-    basePrice,
-    coefficients: nativeCoefficients,
-    n,
-    peer,
-  });
+  // marketDataOf decides routing vs adjustment coefficients — same as calculateAVM.
+  const result: AVMResult = estimateFromMarketData(input, { anchor, peer, ...staticMarket });
 
   const close = s.close_price;
   const est = result.estimatedValue > 0 ? result.estimatedValue : null;
@@ -651,14 +646,7 @@ async function replaySale(
       altPeer = replayPeer(input, effectiveCoefficients, community, cityPool, 0, trend, nowMs);
       if (altPeer && borrowed) altPeer.basis = 'borrowed';
     }
-    const altResult = estimateFromMarketData(input, {
-      anchor: altAnchor,
-      r2,
-      basePrice,
-      coefficients: nativeCoefficients,
-      n,
-      peer: altPeer,
-    });
+    const altResult = estimateFromMarketData(input, { anchor: altAnchor, peer: altPeer, ...staticMarket });
     oldEst = altResult.estimatedValue > 0 ? altResult.estimatedValue : null;
     if (oldEst !== null) {
       oldAbsPct = Math.abs(oldEst - close) / close;
@@ -971,8 +959,8 @@ async function harnessNowEstimate(input: AVMInput, pool: Sale[], expanded: Map<s
   // NOW snapshot = trailing TREND_WINDOW months up to today (no cutoff).
   const snap = buildSnapshot(pool, expanded, monthsAgoIso(TREND_WINDOW_MONTHS), null);
 
-  const { nativeCoefficients, effectiveCoefficients, r2, basePrice, n, borrowed } =
-    await resolveModel(sb, input);
+  const model = await resolveModel(sb, input);
+  const { nativeCoefficients, effectiveCoefficients, basePrice, borrowed } = model;
   const cityKey = input.city ?? input.cityRegion;
   const trend = selectTrendSeries(snap.trendRows, cityKey, input.propertySubType) as TrendRow[];
   const offsets = selectOffsets(snap.offsetRows, cityRegionLookupCandidates(input.cityRegion), input.propertySubType) as OffsetRow[];
@@ -1013,7 +1001,7 @@ async function harnessNowEstimate(input: AVMInput, pool: Sale[], expanded: Map<s
     peer = replayPeer(input, effectiveCoefficients, community, cityWide, new Set(cityRegionLookupCandidates(input.cityRegion)).size, trend, nowMs, fsaRung);
     if (peer && borrowed) peer.basis = 'borrowed';
   }
-  return estimateFromMarketData(input, { anchor, r2, basePrice, coefficients: nativeCoefficients, n, peer });
+  return estimateFromMarketData(input, { anchor, peer, ...marketDataOf(model) });
 }
 
 async function runFidelity(pool: Sale[], expanded: Map<string, Matrix>) {

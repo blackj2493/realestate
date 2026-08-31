@@ -24,11 +24,11 @@
 import type { AVMInput, AVMResult, AVMAdjustmentBreakdown, AnchorBasis, AvmTuning } from './types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from './anchorService';
-import { fetchAuditInfo } from './auditService';
-import { fetchCoefficients, type CoefficientRow } from './matrixService';
-import { fetchSiblingModel } from './siblingModel';
+import { fetchCohortAudit, NO_AUDIT, type AuditInfo } from './auditService';
+import { fetchCohortCoefficients, type CoefficientRow } from './matrixService';
+import { fetchSiblingModel, clearsFallbackGate } from './siblingModel';
 import { clamp, featureContributions, subjectAdjustmentTotal } from './features';
-import { isUnpriceableType } from './normalizeType';
+import { cohortRungLookupKeys, isUnpriceableType, type CohortRung } from './normalizeType';
 import {
   ENGINE_MODE_COEFFICIENT_ADJUSTED,
   ENGINE_MODE_ANCHOR_ONLY,
@@ -57,6 +57,19 @@ export interface AVMMarketData {
   n?: number | null;
   /** Per-feature standardized coefficients (beta/mean/std) for this market. */
   coefficients: CoefficientRow[];
+  /**
+   * Coefficients from a cohort COARSER than the community — the postal FSA or the whole
+   * city (migration 130) — for a subject whose community has no trained model. They
+   * drive the feature ADJUSTMENT only. `coefficients` stays EMPTY for such a subject, so
+   * it still ROUTES as untrained: peers are always evaluated, the floor branch publishes
+   * instead of suppressing, and no path reaches HIGH.
+   *
+   * WHY THE SPLIT. #452 let a coarse cohort route as TRAINED — the same rows in
+   * `coefficients` — and the probe measured 25% of Waterloo Region + Brantford
+   * suppressed on the floor branch and 25 of 40 listings MEDIUM → LOW (#458). Having
+   * coefficients is not the same thing as being a trained community.
+   */
+  coarseCoefficients?: CoefficientRow[];
   /**
    * Peer comp-grid anchor for SATURATING outliers (CLAUDE.md §10). Supplied by the
    * async layer ONLY when isSaturating() is true:
@@ -105,17 +118,22 @@ export function shouldEvaluatePeers(
 }
 
 /**
- * Resolved model for a single listing: fetches native coefficients + audit, then
- * borrows the best trained sibling when the native cohort is untrained.
+ * Resolved model for a single listing: walks the cohort ladder (community → postal FSA
+ * → city, normalizeType.cohortRungLookupKeys) for coefficients + audit, then borrows the
+ * best trained sibling when no rung has a model.
  *
- * This is the SINGLE SOURCE OF TRUTH for the borrow+decouple logic. Both the
- * request-time path (calculateAVM) and the nightly batch precompute
- * (refresh-property-estimates) call it so they can never diverge.
+ * This is the SINGLE SOURCE OF TRUTH for the ladder+borrow+decouple logic. The
+ * request-time path (calculateAVM), the nightly batch precompute
+ * (refresh-property-estimates) and the backtest call it so they can never diverge.
  *
- *   nativeCoefficients  — drive ROUTING (empty ⟺ untrained, always evaluates peers)
- *   effectiveCoefficients — drive ADJUSTMENT (= sibling's when borrowed, else native)
- *   r2 / basePrice / n  — from the native audit, overridden by sibling when borrowed
+ *   nativeCoefficients  — drive ROUTING (empty ⟺ untrained, always evaluates peers).
+ *                         Only the COMMUNITY rung fills this.
+ *   effectiveCoefficients — drive ADJUSTMENT (= coarse rung's, sibling's, or native)
+ *   r2 / basePrice / n  — from the audit row of the rung that answered; sibling's when borrowed
  *   borrowed            — true when a sibling's model was substituted
+ *   rung                — which rung supplied effectiveCoefficients: 'community' (trained),
+ *                         'fsa' | 'city' (coarse — routes as untrained, see
+ *                         AVMMarketData.coarseCoefficients), null (sibling or no model)
  */
 export interface ResolvedModel {
   nativeCoefficients: CoefficientRow[];
@@ -124,38 +142,101 @@ export interface ResolvedModel {
   basePrice: number | null;
   n: number | null | undefined;
   borrowed: boolean;
+  rung: CohortRung | null;
 }
 
 export async function resolveModel(
   supabase: SupabaseClient,
-  input: Pick<AVMInput, 'cityRegion' | 'propertySubType' | 'city' | 'rawPropertySubType'>
+  input: Pick<AVMInput, 'cityRegion' | 'propertySubType' | 'city' | 'rawPropertySubType' | 'postalCode'>
 ): Promise<ResolvedModel> {
-  const [nativeCoefficients, audit] = await Promise.all([
-    fetchCoefficients(supabase, input.cityRegion, input.propertySubType),
-    fetchAuditInfo(supabase, input.cityRegion, input.propertySubType),
+  // Both lookups walk the SAME ladder and return every rung that answered, so the audit
+  // read for a rung always describes the cohort its coefficients came from. The trainer
+  // writes the matrix row and the audit row together, so a rung present in one is
+  // present in the other.
+  const rungs = cohortRungLookupKeys(input.cityRegion, input.postalCode, input.city);
+  const [models, audits] = await Promise.all([
+    fetchCohortCoefficients(supabase, rungs, input.propertySubType),
+    fetchCohortAudit(supabase, rungs, input.propertySubType),
   ]);
+  const auditOf = (rung: CohortRung): AuditInfo => audits.find((a) => a.rung === rung) ?? NO_AUDIT;
 
-  if (nativeCoefficients.length === 0) {
-    const sibling = await fetchSiblingModel(supabase, input.city, input.propertySubType, input.rawPropertySubType);
-    if (sibling) {
+  for (const model of models) {
+    const audit = auditOf(model.rung);
+
+    // The community's own model: trained, whatever its R² (the engine gate handles that).
+    if (model.rung === 'community') {
       return {
-        nativeCoefficients,
-        effectiveCoefficients: sibling.coefficients,
-        r2: sibling.r2,
+        nativeCoefficients: model.rows,
+        effectiveCoefficients: model.rows,
+        r2: audit.r2,
         basePrice: audit.basePrice,
-        n: sibling.n,
-        borrowed: true,
+        n: audit.n,
+        borrowed: false,
+        rung: 'community',
+      };
+    }
+
+    // A coarse rung: the subject's OWN market, one or two resolutions up. It stands in for
+    // the untrained community only if it clears the bar a sibling must clear — a weak fit
+    // is skipped for the next rung, exactly as pickSibling skips a weak sibling. Its
+    // coefficients adjust; nothing here routes, so nativeCoefficients stays empty.
+    if (clearsFallbackGate(audit.r2, audit.n)) {
+      return {
+        nativeCoefficients: [],
+        effectiveCoefficients: model.rows,
+        r2: audit.r2,
+        basePrice: audit.basePrice,
+        n: audit.n,
+        borrowed: false,
+        rung: model.rung,
       };
     }
   }
 
+  // No usable rung. Only the community audit row is kept from here on — exactly what the
+  // pre-ladder lookup returned — so an unused coarse rung's r2 can never switch the
+  // engine on, and its Base_Price never becomes the anchor's prior.
+  const audit = auditOf('community');
+  const sibling = await fetchSiblingModel(supabase, input.city, input.propertySubType, input.rawPropertySubType);
+  if (sibling) {
+    return {
+      nativeCoefficients: [],
+      effectiveCoefficients: sibling.coefficients,
+      r2: sibling.r2,
+      basePrice: audit.basePrice,
+      n: sibling.n,
+      borrowed: true,
+      rung: null,
+    };
+  }
+
   return {
-    nativeCoefficients,
-    effectiveCoefficients: nativeCoefficients,
+    nativeCoefficients: [],
+    effectiveCoefficients: [],
     r2: audit.r2,
     basePrice: audit.basePrice,
     n: audit.n,
     borrowed: false,
+    rung: null,
+  };
+}
+
+/**
+ * The static half of AVMMarketData for a resolved model — the ONE place that decides
+ * which coefficients ROUTE (native) and which coarse ones ADJUST. Every caller that
+ * resolves a model and then calls estimateFromMarketData spreads this in, so the
+ * request path, the nightly batch and the backtest cannot disagree about it.
+ */
+export function marketDataOf(
+  model: ResolvedModel
+): Pick<AVMMarketData, 'r2' | 'basePrice' | 'n' | 'coefficients' | 'coarseCoefficients'> {
+  return {
+    r2: model.r2,
+    basePrice: model.basePrice,
+    n: model.n,
+    coefficients: model.nativeCoefficients, // NATIVE: keeps outlierGuard on the untrained→peer path
+    coarseCoefficients:
+      model.rung === 'fsa' || model.rung === 'city' ? model.effectiveCoefficients : undefined,
   };
 }
 
@@ -163,10 +244,10 @@ export async function calculateAVM(
   supabase: SupabaseClient,
   input: AVMInput
 ): Promise<AVMResult> {
-  const { nativeCoefficients, effectiveCoefficients, r2, basePrice, n, borrowed } =
-    await resolveModel(supabase, input);
+  const model = await resolveModel(supabase, input);
+  const { nativeCoefficients, effectiveCoefficients, basePrice, borrowed } = model;
 
-  // EFFECTIVE (possibly borrowed) coefficients drive comp ADJUSTMENT.
+  // EFFECTIVE (coarse-rung or borrowed) coefficients drive comp ADJUSTMENT.
   const anchor = await fetchAnchor(supabase, input, effectiveCoefficients, basePrice);
 
   // Peer comp-grid for the homes the standard estimate mis-prices. undefined →
@@ -179,14 +260,7 @@ export async function calculateAVM(
     if (peer && borrowed) peer.basis = 'borrowed';
   }
 
-  return estimateFromMarketData(input, {
-    anchor,
-    r2,
-    basePrice,
-    coefficients: nativeCoefficients, // NATIVE: keeps outlierGuard on the untrained→peer path
-    n,
-    peer,
-  });
+  return estimateFromMarketData(input, { anchor, peer, ...marketDataOf(model) });
 }
 
 /**
@@ -232,6 +306,20 @@ export function estimateFromMarketData(
     // TRAINED 'floor' is a saturating outlier shown at a clamped neighbourhood number —
     // a known severe under-estimate. Suppressing is more honest than publishing it low.
     if (tuning.suppressFloor && !untrained) return unavailable(market);
+    // COARSE cohort with too few peers: the coarse model can at least say whether the
+    // home is an outlier. When it is, `base` is the same clamped extrapolation a trained
+    // floor would show — an $8.8M Woolwich home priced at 2.5× the FSA's typical — so
+    // label it 'floor' and publish LOW: honest about the number, and LOW already keeps
+    // it out of every competition signal. Not suppressed, because a coarse rung is a
+    // fallback and coverage must not fall below what the untrained path published.
+    if (
+      untrained &&
+      market.coarseCoefficients &&
+      market.coarseCoefficients.length > 0 &&
+      isFeatureOutlier(input, market.coarseCoefficients, tuning)
+    ) {
+      return { ...base, basis: 'floor', confidence: CONFIDENCE_LOW };
+    }
     return {
       ...base,
       basis: untrained ? base.basis : 'floor',
@@ -242,17 +330,20 @@ export function estimateFromMarketData(
   return normalEstimate(input, market, tuning);
 }
 
-/** Today's behaviour: coefficient engine when R² clears the gate AND native coefficients are present, else anchor-only. */
+/** Coefficient engine when R² clears the gate AND a model of the subject's own market is present, else anchor-only. */
 function normalEstimate(input: AVMInput, market: AVMMarketData, tuning: AvmTuning = DEFAULT_TUNING): AVMResult {
   const { anchor } = market;
   const baseAnchor = Math.exp(anchor.anchorLevel);
 
-  // Gate on BOTH r2 AND non-empty native coefficients: when the cohort is untrained
-  // (empty coefficients) the r2 may come from a borrowed sibling, but without a
-  // native model we cannot compute Σβz for this subject — fall through to anchor-only
-  // so engineMode stays ANCHOR_ONLY and the UI does not append "· adjusted for…".
-  if (market.r2 !== null && market.r2 >= COEFFICIENT_ENGINE_THRESHOLD && market.coefficients.length > 0) {
-    return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, market.coefficients, tuning);
+  // Native coefficients adjust a trained cohort. Coarse coefficients adjust an untrained
+  // one whose FSA or city has a model — fitted on the subject's own market, unlike a
+  // borrowed sibling's, which never reach here (the r2 may be the sibling's, but without
+  // a model of THIS market we cannot compute Σβz for the subject). A coarse-rung estimate
+  // never earns HIGH, the same rule the peer and floor paths apply to untrained cohorts.
+  const coarse = market.coefficients.length === 0 && (market.coarseCoefficients?.length ?? 0) > 0;
+  const adjusting = coarse ? market.coarseCoefficients! : market.coefficients;
+  if (market.r2 !== null && market.r2 >= COEFFICIENT_ENGINE_THRESHOLD && adjusting.length > 0) {
+    return calculateWithCoefficients(baseAnchor, anchor, market.r2, input, adjusting, coarse, tuning);
   }
 
   // Anchor-only: estimate = anchor; band derived directly from predSD.
@@ -265,7 +356,7 @@ function normalEstimate(input: AVMInput, market: AVMMarketData, tuning: AvmTunin
     breakdown: blankBreakdown(),
     adjustmentLog: 0,
     anchor,
-  }, undefined, tuning);
+  }, coarse ? { capHigh: true } : undefined, tuning);
 }
 
 /**
@@ -306,6 +397,8 @@ function calculateWithCoefficients(
   r2Score: number,
   input: AVMInput,
   coefficients: CoefficientRow[],
+  /** Coarser-than-community cohort: demote HIGH, see AVMMarketData.coarseCoefficients. */
+  capHigh = false,
   tuning: AvmTuning = DEFAULT_TUNING
 ): AVMResult {
   const coeff = new Map(coefficients.map((c) => [c.featureName, c]));
@@ -329,7 +422,7 @@ function calculateWithCoefficients(
     breakdown,
     adjustmentLog: total,
     anchor,
-  }, undefined, tuning);
+  }, capHigh ? { capHigh } : undefined, tuning);
 }
 
 /**
