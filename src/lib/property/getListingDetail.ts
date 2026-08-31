@@ -182,6 +182,13 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     // when this is null — a build cost with no income beside it is worse than nothing.
     areaSuiteMonthlyRent: null,
     rentMatchTier: null,
+    // Nulled WITH the rent, not because a cohort size is VOW data, but because a
+    // provenance line describing a number the reader cannot see is noise at best and
+    // a hint at the gated figure's confidence at worst.
+    rentBasis: null,
+    rentSampleCount: null,
+    suiteRentBasis: null,
+    suiteRentSampleCount: null,
     // geoFlags (+ geoChecked/geoCheckedAt) are PUBLIC-records facts (flood/rail/
     // traffic), NOT TRREB VOW data — intentionally NOT nulled: {...detail} passes
     // them through for anon users too (Phase 2 plan §2/§4.1). Do not "fix" this by
@@ -259,7 +266,7 @@ async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null
  * be correct end to end and the page would keep printing "available" for another hour on
  * exactly the listings it was written to catch.
  */
-export const DETAIL_SHAPE_VERSION = "v7-last-seen-honesty";
+export const DETAIL_SHAPE_VERSION = "v8-rent-provenance";
 
 export interface ListingDetail {
   listing_key: string;
@@ -307,6 +314,13 @@ export interface ListingDetail {
   areaSuiteMonthlyRent: number | null;
   /** Which rung produced that rent — drives how confidently the UI labels it. */
   rentMatchTier: string | null;
+  /** Whether that rent stands on signed leases or on current asks (RentBasis). */
+  rentBasis: string | null;
+  /** How many comps the cohort median was taken over. Null = unknown, never "few". */
+  rentSampleCount: number | null;
+  /** The same two for the suite line, which is its own editable field in the sandbox. */
+  suiteRentBasis: string | null;
+  suiteRentSampleCount: number | null;
   /**
    * Geo-joined public-records diligence flags (flood/rail/traffic), precomputed by
    * enrichGeoFlags.ts. Merged into Things to Know as `external`. PUBLIC data → not
@@ -445,7 +459,11 @@ export const getListingDetail = cache(
       capRatePct: number | null;
       compMonthlyRent: number | null;
       rentMatchTier: string | null;
+      rentBasis: string | null;
+      rentSampleCount: number | null;
       suiteMonthlyRent: number | null;
+      suiteRentBasis: string | null;
+      suiteRentSampleCount: number | null;
     }> = withTimeout(
       searchListings({ query: "*", rawFilterBy: `id:=\`${listingKey}\``, perPage: 1 }),
       4000,
@@ -467,6 +485,14 @@ export const getListingDetail = cache(
               ? Math.max(0, Math.round(totalMonthly - suite))
               : totalMonthly,
           rentMatchTier: doc?.rent_match_tier ?? null,
+          // '' and 0 are the transformer's no-data sentinels for these, exactly as they
+          // are for rent_match_tier — normalise both to null here so the UI has ONE
+          // absent value to branch on and cannot render "Based on 0 comparable rents."
+          rentBasis: doc?.rent_basis || null,
+          rentSampleCount: doc?.rent_sample_count && doc.rent_sample_count > 0 ? doc.rent_sample_count : null,
+          suiteRentBasis: doc?.suite_rent_basis || null,
+          suiteRentSampleCount:
+            doc?.suite_rent_sample_count && doc.suite_rent_sample_count > 0 ? doc.suite_rent_sample_count : null,
           // Measured in-home suite rent (125). Present only where the feed OBSERVES a
           // suite; 0/absent everywhere else, and the two must stay indistinguishable.
           suiteMonthlyRent: suite,
@@ -474,7 +500,11 @@ export const getListingDetail = cache(
       })
       .catch((capErr) => {
         console.error(`[getListingDetail] cap_rate lookup failed for ${listingKey}:`, capErr);
-        return { capRatePct: null, compMonthlyRent: null, rentMatchTier: null, suiteMonthlyRent: null };
+        return {
+          capRatePct: null, compMonthlyRent: null, rentMatchTier: null,
+          rentBasis: null, rentSampleCount: null,
+          suiteMonthlyRent: null, suiteRentBasis: null, suiteRentSampleCount: null,
+        };
       });
 
     // Resolve rooms before the AVM: room dimensions are the AVM's best square-
@@ -618,7 +648,10 @@ export const getListingDetail = cache(
       typeof payload["OriginalListPrice"] === "number"
         ? (payload["OriginalListPrice"] as number)
         : null;
-    const { capRatePct: realCapRate, compMonthlyRent, rentMatchTier, suiteMonthlyRent: observedSuiteRent } = await capRatePromise;
+    const {
+      capRatePct: realCapRate, compMonthlyRent, rentMatchTier, rentBasis, rentSampleCount,
+      suiteMonthlyRent: observedSuiteRent, suiteRentBasis, suiteRentSampleCount,
+    } = await capRatePromise;
 
     // A home with no suite still needs the area's suite rent, or "Add a suite" prices
     // the renovation and leaves the income side blank.
@@ -934,6 +967,10 @@ export const getListingDetail = cache(
       suiteMonthlyRent,
       areaSuiteMonthlyRent,
       rentMatchTier,
+      rentBasis,
+      rentSampleCount,
+      suiteRentBasis,
+      suiteRentSampleCount,
       geoFlags,
       geoChecked,
       geoCheckedAt,

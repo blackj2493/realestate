@@ -780,8 +780,15 @@ export interface TransformResult {
     /** Which rung of the rent ladder produced cap_rate_est / gross_yield_est. Drives
      *  rentTierConfidence() — see src/lib/metrics/rentTier.ts. '' = no rent comp. */
     rent_match_tier?: string;
+    /** Whether that rent stands on signed leases or on current asks, and how many comps
+     *  are behind the median. fetchRentAVM has returned both since 133; until now the
+     *  document dropped them, so the sandbox could not tell 40 leases from 3 asks. */
+    rent_basis?: string;
+    rent_sample_count?: number;
     suite_rent_est?: number;
     suite_rent_tier?: string;
+    suite_rent_basis?: string;
+    suite_rent_sample_count?: number;
     price_discovery_flag?: boolean;
     // Basement field for suite analysis
     BasementType?: string[];
@@ -880,7 +887,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // have no second kitchen. Retired in 125; suite income is now measured, and only for
   // homes where a suite is OBSERVED (hasObservedSuite below).
   let rentAVM: RentAVMResult = { annual_rent: 0, annual_rent_p10: 0, has_data: false, match_tier: null };
-  let suiteRent: SuiteRentResult = { monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null };
+  let suiteRent: SuiteRentResult = {
+    monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null,
+    basis: null, sample_count: null,
+  };
   try {
     rentAVM = await fetchRentAVM({
       city: raw.City || '',
@@ -1186,8 +1196,17 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     // two can never be read apart. Error spans 5.56% ('nbhd') to 14.49% ('county') and
     // CAP_RATE_BAND cannot tell them apart — a wrong 4.2% looks like a right one.
     typesensePayload.rent_match_tier = rentAVM.has_data ? (rentAVM.match_tier ?? '') : '';
+    // The rung alone was never enough. It says how CLOSE the comps are; these say what
+    // KIND they are and HOW MANY. Written from the same `rentAVM` the rung comes from —
+    // which is the MAIN-UNIT result after the split swap above, so the three describe
+    // one cohort and cannot drift apart. '' / 0 are the no-data sentinels, matching
+    // rent_match_tier: absent must be indistinguishable from absent, never from "few".
+    typesensePayload.rent_basis = rentAVM.has_data ? (rentAVM.basis ?? '') : '';
+    typesensePayload.rent_sample_count = rentAVM.has_data ? (rentAVM.sample_count ?? 0) : 0;
     typesensePayload.suite_rent_est = suiteRent.has_data ? suiteRent.monthly_rent : 0;
     typesensePayload.suite_rent_tier = suiteRent.has_data ? (suiteRent.match_tier ?? '') : '';
+    typesensePayload.suite_rent_basis = suiteRent.has_data ? (suiteRent.basis ?? '') : '';
+    typesensePayload.suite_rent_sample_count = suiteRent.has_data ? (suiteRent.sample_count ?? 0) : 0;
   }
 
   // Price discovery flag from TrueValue service

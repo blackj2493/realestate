@@ -115,6 +115,9 @@ export const indexedFields: IndexedField[] = [
   // Which rung of the rent ladder produced cap_rate_est / gross_yield_est.
   // optional: pre-124 documents carry no value until they are re-transformed.
   { name: 'rent_match_tier', type: 'string', facet: false, optional: true },
+  // rent_basis / rent_sample_count and the suite pair are UNINDEXED CARGO — nothing
+  // queries, filters, facets or sorts on them, so they live below with the other
+  // display-only fields rather than paying for an index nobody reads.
   // Measured monthly suite rent, 0 when no suite is observed (migration 125).
   { name: 'suite_rent_est', type: 'float', facet: false, optional: true },
   { name: 'suite_rent_tier', type: 'string', facet: false, optional: true },
@@ -203,6 +206,16 @@ export const unindexedFields: UnindexedField[] = [
   { name: 'ListOfficeName', type: 'string', index: false, facet: false, optional: true },
   // Zoning cargo — municipal open data (NOT MLS), display-only. Plain-language name + a
   // provenance key that resolves to source/by-law/attribution (src/lib/zoning/attribution.ts).
+  // Rent provenance cargo: WHAT kind of comps stand behind the rent, and HOW MANY.
+  // fetchRentAVM has returned both since 133 and the document dropped them, so the
+  // Underwriting Sandbox could not tell 40 signed leases from 3 asks. Unindexed on
+  // purpose — they are read once, on the detail page, and never searched on. Four
+  // enum-valued strings and two small ints across ~99.5k documents cost ~10 MB of
+  // stored JSON and no index at all.
+  { name: 'rent_basis', type: 'string', index: false, facet: false, optional: true },
+  { name: 'rent_sample_count', type: 'int32', index: false, facet: false, optional: true },
+  { name: 'suite_rent_basis', type: 'string', index: false, facet: false, optional: true },
+  { name: 'suite_rent_sample_count', type: 'int32', index: false, facet: false, optional: true },
   { name: 'zoning_desc', type: 'string', index: false, facet: false, optional: true },
   { name: 'zoning_source', type: 'string', index: false, facet: false, optional: true },
   { name: 'RawRooms', type: 'auto', index: false, facet: false },
@@ -459,8 +472,14 @@ export interface TypesensePropertyDocument {
   cap_rate_est: number;
   /** Rung that produced the rent behind cap_rate_est. See src/lib/metrics/rentTier.ts. */
   rent_match_tier?: string;
+  /** Whether that rent stands on signed leases or on asks. See RentBasis in rentTier.ts. */
+  rent_basis?: string;
+  /** How many comps the cohort median was taken over. 0/absent = unknown, never "few". */
+  rent_sample_count?: number;
   suite_rent_est?: number;
   suite_rent_tier?: string;
+  suite_rent_basis?: string;
+  suite_rent_sample_count?: number;
   /** Cap rate floor using P10 rent + 8% vacancy (conservative scenario) */
   cap_rate_floor: number;
   /** Estimated gross yield: Annual Rent / ListPrice */

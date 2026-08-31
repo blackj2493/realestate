@@ -27,7 +27,7 @@
  */
 
 import 'dotenv/config';
-import { indexedFields } from '@/lib/typesense/typesenseSchema';
+import { indexedFields, unindexedFields } from '@/lib/typesense/typesenseSchema';
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const COLLECTION = 'properties';
@@ -49,9 +49,14 @@ async function main() {
     process.exit(1);
   }
 
-  const field = indexedFields.find((f) => f.name === name);
+  // BOTH LISTS. A display-only field is added the same way an indexed one is — it just
+  // carries `index: false`. Searching only `indexedFields` refused every cargo field and
+  // pushed the operator toward retyping the definition by hand, which is the one thing
+  // this script exists to prevent.
+  const field =
+    indexedFields.find((f) => f.name === name) ?? unindexedFields.find((f) => f.name === name);
   if (!field) {
-    console.error(`❌ "${name}" is not in indexedFields (src/lib/typesense/typesenseSchema.ts).`);
+    console.error(`❌ "${name}" is in neither indexedFields nor unindexedFields (src/lib/typesense/typesenseSchema.ts).`);
     console.error('   Add it to the code first, so the schema and the collection agree.');
     process.exit(1);
   }

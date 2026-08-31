@@ -42,7 +42,7 @@ import {
 } from "@/lib/underwriting/computeUnderwriting";
 import StrategyPicker, { strategyOptionsFor } from "./StrategyPicker";
 import { suiteConversionNote, type SuiteConversion } from "@/lib/listings/suiteConversion";
-import { rentTierLabel, rentTierExplainer } from "@/lib/metrics/rentTier";
+import { rentTierLabel, rentTierExplainer, rentProvenanceNote } from "@/lib/metrics/rentTier";
 import { useScenariosStore, type Scenario } from "@/lib/underwriting/useScenarios";
 import type { SharedDealInputs } from "@/lib/finance/dealInputs";
 
@@ -58,6 +58,19 @@ interface UnderwritingSandboxProps {
   compMonthlyRent?: number | null;
   /** Rung behind that rent, for the field's basis label. */
   rentMatchTier?: string | null;
+  /**
+   * What kind of comps stand behind that rent, and how many.
+   *
+   * The rung alone says how CLOSE the comps are and stops there. On W13714292 the
+   * field seeded $3,993 off the `city_bath` rung while the leased grid on the same
+   * page printed its own medians WITH counts (×14, ×24) from a 2 km radius — two
+   * numbers, no way for a reader to tell which one to trust.
+   */
+  rentBasis?: string | null;
+  rentSampleCount?: number | null;
+  /** The same two for the suite line, which is its own editable field below. */
+  suiteRentBasis?: string | null;
+  suiteRentSampleCount?: number | null;
   /**
    * Measured monthly rent for an OBSERVED in-home suite (migration 125) — a below-grade
    * kitchen or a basement described as an Apartment, in a house that is not already a
@@ -142,6 +155,12 @@ export default function UnderwritingSandbox({
   hasSuitePotential = false,
   compMonthlyRent = null,
   rentMatchTier = null,
+  // Renamed on the way in: `rentBasis` below is already taken by the comps/rule-of-thumb
+  // question, which is a different axis. This one is signed-leases vs asks.
+  rentBasis: rentBasisKind = null,
+  rentSampleCount = null,
+  suiteRentBasis = null,
+  suiteRentSampleCount = null,
   suiteMonthlyRent = null,
   areaSuiteMonthlyRent = null,
   suiteConversion = null,
@@ -208,6 +227,17 @@ export default function UnderwritingSandbox({
     rentBasis === "comps"
       ? rentTierExplainer(rentMatchTier) ?? undefined
       : "No rental comparables nearby for this property type, so this starts from a share of the asking price. Adjust it.";
+  // HOW MANY, and of WHAT. Only on the comps path: the price rule has no cohort behind
+  // it, and printing a sample count next to it would invent one.
+  const rentProvenance =
+    rentBasis === "comps" ? rentProvenanceNote({ basis: rentBasisKind, sampleCount: rentSampleCount }) : null;
+  // SPLIT ONLY. These two describe the cohort behind `suite_rent_est`, an OBSERVED
+  // suite on this property. "Add a suite" prices an AREA suite from a different lookup
+  // entirely, so the same line under that field would describe the wrong comps. Today
+  // the two cannot both be set — a listing with an observed suite is never offered
+  // "Add a suite" — but that is a coupling elsewhere, not a guarantee here.
+  const suiteProvenance =
+    strategy === "split" ? rentProvenanceNote({ basis: suiteRentBasis, sampleCount: suiteRentSampleCount }) : null;
 
   // ── Saved scenarios (dual-path store) ──────────────────────────────────────
   const signedIn = useScenariosStore((s) => s.signedIn);
@@ -446,6 +476,13 @@ export default function UnderwritingSandbox({
                 Main unit only — the basement is priced separately below.
               </p>
             )}
+            {/* The depth behind the number. The label above says WHERE the comps are;
+                this says how many there are and whether they are signed leases. The
+                page's own leased grid has always shown its counts — this field showed
+                none, so the two disagreed with no way to weigh them. */}
+            {rentProvenance && (
+              <p className="mt-1 text-[10px] leading-tight text-muted-foreground">{rentProvenance}</p>
+            )}
           </div>
 
           {/* Suite income. Sits in the open, beside the rent it belongs with, and only
@@ -472,6 +509,9 @@ export default function UnderwritingSandbox({
                 onChange={(e) => set("otherMonthlyIncome", Math.max(0, Number(e.target.value)))}
                 className="h-8 bg-muted border-border text-xs font-mono text-foreground"
               />
+              {suiteProvenance && (
+                <p className="mt-1 text-[10px] leading-tight text-muted-foreground">{suiteProvenance}</p>
+              )}
               <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
                 {strategy === "add-suite"
                   ? "Assumes you build a legal second unit. It needs a building permit and your municipality's approval."

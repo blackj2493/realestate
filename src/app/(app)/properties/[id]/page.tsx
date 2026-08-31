@@ -851,6 +851,10 @@ export default async function PropertyPage({
       // from, so the calculator and the Deal Score cannot disagree about the rent.
       compMonthlyRent={view.compMonthlyRent}
       rentMatchTier={view.rentMatchTier}
+      rentBasis={view.rentBasis}
+      rentSampleCount={view.rentSampleCount}
+      suiteRentBasis={view.suiteRentBasis}
+      suiteRentSampleCount={view.suiteRentSampleCount}
       suiteMonthlyRent={view.suiteMonthlyRent}
       areaSuiteMonthlyRent={view.areaSuiteMonthlyRent}
       suiteConversion={conversion}

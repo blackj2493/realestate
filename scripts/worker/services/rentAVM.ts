@@ -274,10 +274,17 @@ export interface SuiteRentResult {
   monthly_rent_p10: number;
   has_data: boolean;
   match_tier: SuiteMatchTier | null;
+  /** Signed leases or asks, same meaning as RentAVMResult.basis. */
+  basis?: RentBasis | null;
+  /** How many leases stand behind the median. Carried for the same reason the
+   *  whole-home ladder carries it: the sandbox prints the suite rent as its own
+   *  editable line, and a cohort of 4 and a cohort of 40 read identically without it. */
+  sample_count?: number | null;
 }
 
 const NO_SUITE: SuiteRentResult = {
   monthly_rent: 0, monthly_rent_p10: 0, has_data: false, match_tier: null,
+  basis: null, sample_count: null,
 };
 
 /**
@@ -308,7 +315,7 @@ export async function fetchSuiteRent(params: {
   const sel = () =>
     supabase
       .from('rental_market_index')
-      .select('avg_rent, p10_rent, basis')
+      .select('avg_rent, p10_rent, basis, sample_count')
       .eq('sub_type_family', IN_HOME_UNIT_FAMILY);
 
   // Geography first, then bed count — the same ordering principle as the whole-home
@@ -329,13 +336,17 @@ export async function fetchSuiteRent(params: {
     // maybeSingle() ERRORS on more than one — which would have taken out every suite
     // rent the moment the closed passes landed.
     const { data } = await p.run();
-    const row = pickPreferredBasis((data ?? []) as Array<{ avg_rent: number; p10_rent: number; basis: RentBasis }>);
+    const row = pickPreferredBasis(
+      (data ?? []) as Array<{ avg_rent: number; p10_rent: number; basis: RentBasis; sample_count: number | null }>
+    );
     if (row) {
       return {
         monthly_rent: row.avg_rent || 0,
         monthly_rent_p10: row.p10_rent || 0,
         has_data: (row.avg_rent || 0) > 0,
         match_tier: p.tier,
+        basis: row.basis ?? null,
+        sample_count: row.sample_count ?? null,
       };
     }
   }
