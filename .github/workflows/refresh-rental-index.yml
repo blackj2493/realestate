@@ -67,7 +67,12 @@ jobs:
         timeout-minutes: 30
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx tsx scripts/admin/refreshRentalMarketIndex.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
+        # pipefail: `tsx … | tee` otherwise returns tee's 0 and a Fatal goes green — the
+        # recompute step below failed EVERY Monday with a masked exit code (see
+        # ghost-reconcile.yml, which hit the same trap first).
+        run: |
+          set -o pipefail
+          npx tsx scripts/admin/refreshRentalMarketIndex.ts --apply 2>&1 | tee -a "$SUMMARY_FILE"
 
       # Rebuilding the cohorts above changes nothing a user can see, on its own.
       # cap_rate_est / gross_yield_est / net_monthly_cashflow are written onto each
@@ -97,7 +102,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
-        run: npx tsx scripts/admin/recompute-rent-derived-metrics.ts --all --apply --samples=0 2>&1 | tee -a "$SUMMARY_FILE"
+        run: |
+          set -o pipefail
+          npx tsx scripts/admin/recompute-rent-derived-metrics.ts --all --apply --samples=0 2>&1 | tee -a "$SUMMARY_FILE"
 
       - name: Notify operator
         if: always()

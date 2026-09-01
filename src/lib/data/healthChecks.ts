@@ -908,16 +908,17 @@ export function checkDistressRate(input: { actives: number; flagged: number }): 
  *      Chatham-Kent spreads 200 sales across 26 communities, so none qualifies.
  *
  * Measured 2026-08-29: not one listing in these cities ever reaches HIGH AVM confidence,
- * against 33% of the rest of the book. The fix is a coarser matrix rung (FSA, then city),
- * after which every entry below should be deleted.
+ * against 33% of the rest of the book. The fix is a coarser matrix rung (FSA, then city).
  */
 export const KNOWN_TREND_GAPS: Record<string, string> = {
-  kitchener: "sold feed ships a blank CityRegion (3,543 sales dropped) — needs an FSA/city matrix rung",
-  cambridge: "sold feed ships a blank CityRegion (2,301 sales dropped) — needs an FSA/city matrix rung",
-  waterloo: "sold feed ships a blank CityRegion (1,701 sales dropped) — needs an FSA/city matrix rung",
-  brantford: "sold feed ships a blank CityRegion (1,535 sales dropped) — needs an FSA/city matrix rung",
-  woolwich: "sold feed ships a blank CityRegion (345 sales dropped) — needs an FSA/city matrix rung",
-  "chatham-kent": "CityRegion present but 200 sales split across 26 communities, so no community trains a matrix",
+  // Empty by design. All six original entries (Kitchener, Cambridge, Waterloo, Brantford,
+  // Woolwich — blank CityRegion — and Chatham-Kent, thin communities) were closed by the
+  // cohort ladder: #443 trained the FSA/city rungs, #446 taught the trend job to walk
+  // them, and the 2026-08-31 canary reported all six as trend-gap-resolved. That report
+  // is exactly the signal this list exists to produce.
+  //
+  // Add an entry ONLY for a real, scoped gap, always with the reason and the fix:
+  //   'city' (lowercase): 'why the trend cannot be built, and what would fix it',
 };
 
 /** One city's trend coverage, from the `city_trend_coverage` RPC (migration 131). */
