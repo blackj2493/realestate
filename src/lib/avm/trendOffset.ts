@@ -24,6 +24,8 @@
  * anchorService.ts so the standardization aligns with the live request path.
  */
 
+import { compSqft } from './features';
+
 /** Standardized per-feature coefficient (avm_multiplier_matrix row). */
 export interface FeatureCoeff {
   beta: number;
@@ -39,6 +41,9 @@ export type Matrix = Map<string, FeatureCoeff>;
 export interface SoldFeatures {
   close_price: number | null;
   building_area_total: number | null;
+  /** Fallback half of compSqft. Optional so a caller that predates the coalesce still
+   *  typechecks — it just keeps the old, sparser coverage. */
+  living_area_range?: number | null;
   lot_width: number | null;
   bedrooms_above_grade: number | null;
   /** Den / below-grade bedrooms. Kept in step with anchorService: once the champion
@@ -140,7 +145,7 @@ export function adjustedLogPrice(row: SoldFeatures, matrix: Matrix): number | nu
   const basementScore = row.basement_tier !== null ? 10 - row.basement_tier : null;
 
   const feats: Array<[string, number | null]> = [
-    ['building_area_total', row.building_area_total],
+    ['building_area_total', compSqft(row)],
     ['lot_width', row.lot_width !== null && row.lot_width > 0 ? row.lot_width : null],
     ['bedrooms_above_grade', row.bedrooms_above_grade],
     ['bedrooms_below_grade', row.bedrooms_below_grade],

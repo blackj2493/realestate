@@ -53,6 +53,52 @@ export const FEATURE_SPECS: FeatureSpec[] = [
   { inputField: 'exteriorTier', name: 'exterior_score', key: 'exteriorAdjustment', valueOf: (i) => 5 - i.exteriorTier },
 ];
 
+/** The two raw_vow_sold size columns, structurally — so every neutralizer can ask
+ *  compSqft without importing anyone else's row type. */
+export interface SoldSizeColumns {
+  building_area_total: number | null;
+  living_area_range?: number | null;
+}
+
+/**
+ * A comp's square footage, for BOTH neutralization and similarity weighting.
+ *
+ * `building_area_total` is populated on only 67.4% of sale rows in the 36-month training
+ * window. The other 32.6% are not unmeasured homes — 49,819 of them carry the declared
+ * band in `living_area_range`, which is the SAME NUMBER wherever both columns exist
+ * (171,608 of 180,619). The feed just does not always fill both.
+ *
+ * Reading the bare column threw that away, and a null does not cost nothing:
+ *
+ *   • In adjustedLogPrice, a comp with no size is neutralized without its size term, so
+ *     whatever made it bigger or smaller than the cohort stays in its adjusted level and
+ *     lands in the anchor. A third of the pool pushing the anchor around by their size
+ *     is the noise the model exists to remove.
+ *   • In the training fit, a null is mean-imputed to z=0 — the textbook cause of
+ *     attenuation. Refitting Vellore Village Detached on rows that HAVE the column moves
+ *     beta_sqft 0.1033 -> 0.1591 and R2 0.708 -> 0.809. Coalescing gets 0.1322 / 0.744
+ *     without discarding a single sale.
+ *   • In similarityWeight, a null skips the BW_SQFT term, so a comp of unknown size is
+ *     treated as neither near nor far and competes on beds and baths alone.
+ *
+ * This is the ONLY place the rule is written. The comp RPCs and the trainer do not
+ * coalesce; they were changed to SUPPLY both columns (migration 136) and call this. A
+ * second COALESCE in SQL would be a second definition, and definitions drift — a comp
+ * pool sized differently from the fit is the failure PR #470 fixed, one level down.
+ * features.compSqft.test.ts asserts every source still fetches both columns and that
+ * nobody has re-implemented the rule.
+ *
+ * NOT the same question as resolveModelSqft (livingArea.ts). That one asks what the
+ * SUBJECT should carry; this asks what a COMP carries. They agree by construction, which
+ * is the point.
+ */
+export function compSqft(c: SoldSizeColumns): number | null {
+  const exact = c.building_area_total;
+  if (exact !== null && exact !== undefined && exact > 0) return exact;
+  const band = c.living_area_range;
+  return band !== null && band !== undefined && band > 0 ? band : null;
+}
+
 /** Each present feature's standardized contribution β·clamp((x−mean)/std, ±Z_CLAMP). */
 export function featureContributions(
   input: AVMInput,

@@ -28,6 +28,7 @@
 import 'dotenv/config';
 import { Client } from 'pg';
 import { normalizePropertySubType, cohortRungKeys, type CohortRung } from '@/lib/avm/normalizeType';
+import { compSqft } from '@/lib/avm/features';
 
 const APPLY = process.argv.includes('--apply');
 function numFlag(name: string, def: number): number {
@@ -105,6 +106,11 @@ interface SoldRow {
   postal_code: string | null;
   property_sub_type: string | null;
   building_area_total: number | null;
+  /** Fallback half of compSqft. building_area_total is filled on only 67.4% of sales,
+   *  but 49,819 of the rest carry the SAME number here — identical wherever both exist
+   *  (171,608 of 180,619). A null is mean-imputed to z=0 below, which attenuates
+   *  beta_sqft toward zero; coalescing takes coverage to 86.0%. */
+  living_area_range: number | null;
   lot_width: number | null;
   bedrooms_above_grade: number | null;
   bedrooms_below_grade: number | null;
@@ -119,7 +125,11 @@ interface SoldRow {
 function featureVec(r: SoldRow): (number | null)[] {
   const score = (tier: number | null, top: number) => (tier == null ? null : top - tier);
   return [
-    r.building_area_total, r.lot_width, r.bedrooms_above_grade, r.bathrooms_total_integer,
+    // compSqft, not the bare column — the SAME helper anchorService uses to size a comp
+    // and avm-backtest uses to size a subject. If the fit and the comps ever disagree
+    // about what a size IS, the subject is scored against a scale it was not fitted on:
+    // exactly the failure PR #470 fixed, one level down.
+    compSqft(r), r.lot_width, r.bedrooms_above_grade, r.bathrooms_total_integer,
     r.parking_total, score(r.interior_tier, 6), score(r.exterior_tier, 5), score(r.basement_tier, 10),
     r.bedrooms_below_grade,
   ];
@@ -231,6 +241,40 @@ function trainCohort(rung: CohortRung, cityRegion: string, subType: string, rows
   };
 }
 
+/**
+ * Multi-row INSERT in chunks. Postgres caps a statement at 65,535 bound parameters and
+ * every row here binds 7, so 1,000 rows per statement leaves an order of magnitude of
+ * headroom.
+ *
+ * This used to be one round-trip PER ROW — 31,671 of them for a full run, inside the
+ * single transaction below. Two problems, one of which is not a performance problem:
+ * the TRUNCATE takes an ACCESS EXCLUSIVE lock, so the staging table was unreadable for
+ * the entire insert loop; and a session-pooler connection does not reliably survive that
+ * long. When it dropped mid-loop (measured: "Connection terminated unexpectedly" after
+ * ~10 minutes) the client died but the server-side transaction stayed `idle in
+ * transaction`, holding that lock until a human ran pg_terminate_backend. Batching takes
+ * the loop from ~31.7k round-trips to ~35 and the lock window from minutes to seconds.
+ */
+async function insertChunked(
+  client: Client,
+  table: string,
+  columns: string[],
+  rows: unknown[][],
+): Promise<void> {
+  const CHUNK = 1000;
+  const width = columns.length;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const slice = rows.slice(i, i + CHUNK);
+    const values = slice
+      .map((_, r) => `(${columns.map((_, c) => `$${r * width + c + 1}`).join(',')})`)
+      .join(',');
+    await client.query(
+      `INSERT INTO ${table} (${columns.join(', ')}) VALUES ${values}`,
+      slice.flat(),
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const url = process.env.DATABASE_URL || process.env.DIRECT_DB_URL;
   if (!url) { console.error('❌ Set DATABASE_URL (Session pooler, §12)'); process.exit(1); }
@@ -259,6 +303,7 @@ async function main(): Promise<void> {
               close_price::float8              AS close_price,
               city_region, city, postal_code, property_sub_type,
               building_area_total::float8       AS building_area_total,
+              living_area_range::float8         AS living_area_range,
               lot_width::float8                 AS lot_width,
               bedrooms_above_grade::float8      AS bedrooms_above_grade,
               bedrooms_below_grade::float8      AS bedrooms_below_grade,
@@ -321,22 +366,22 @@ async function main(): Promise<void> {
   try {
     await client.query('TRUNCATE avm_multiplier_matrix_staging');
     await client.query('TRUNCATE avm_audit_report_staging');
+
+    const coeffRows: unknown[][] = [];
+    const auditRows: unknown[][] = [];
     for (const m of models) {
       for (let j = 0; j < P; j++) {
-        await client.query(
-          `INSERT INTO avm_multiplier_matrix_staging (cohort_rung, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [m.rung, m.cityRegion, m.subType, FEATURES[j], m.betas[j], m.means[j], m.stds[j]],
-        );
+        coeffRows.push([m.rung, m.cityRegion, m.subType, FEATURES[j], m.betas[j], m.means[j], m.stds[j]]);
       }
-      await client.query(
-        `INSERT INTO avm_audit_report_staging (cohort_rung, city_region, property_sub_type, total_sales_analyzed, model_accuracy_score, average_error_margin, base_price)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [m.rung, m.cityRegion, m.subType, m.n, m.r2, m.mae, m.basePrice],
-      );
+      auditRows.push([m.rung, m.cityRegion, m.subType, m.n, m.r2, m.mae, m.basePrice]);
     }
+    await insertChunked(client, 'avm_multiplier_matrix_staging',
+      ['cohort_rung', 'city_region', 'property_sub_type', 'feature_name', 'beta', 'feat_mean', 'feat_std'], coeffRows);
+    await insertChunked(client, 'avm_audit_report_staging',
+      ['cohort_rung', 'city_region', 'property_sub_type', 'total_sales_analyzed', 'model_accuracy_score', 'average_error_margin', 'base_price'], auditRows);
+
     await client.query('COMMIT');
-    console.log(`\n✅ Wrote ${models.length.toLocaleString()} challenger cohorts (${models.length * P} coefficient rows) to staging.`);
+    console.log(`\n✅ Wrote ${models.length.toLocaleString()} challenger cohorts (${coeffRows.length.toLocaleString()} coefficient rows) to staging.`);
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
     throw e;
