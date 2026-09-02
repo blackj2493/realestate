@@ -1,8 +1,13 @@
 /**
- * ShareDialog — turns the current multi-select into a public share link.
+ * ShareDialog — turns a listing selection into a link the user can send.
  *
- * Persists the chosen ListingKeys via POST /api/share, then surfaces no-cost,
- * client-only ways to send the resulting /share/<token> link: copy, native
+ * Two modes:
+ *  - Multi-select (terminal compare panel): persists the chosen ListingKeys via
+ *    POST /api/share and shares the resulting /share/<token> page.
+ *  - Single listing (`shareUrl` given): shares that exact URL — the listing's own
+ *    canonical page — so the recipient lands on the full listing, not a card grid.
+ *
+ * Either way we surface no-cost, client-only ways to send the link: copy, native
  * share sheet, SMS app, and email. We share a LINK (never raw listing data) to
  * stay TRREB-compliant — the recipient views listings inside our own UI.
  */
@@ -18,23 +23,43 @@ interface ShareDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   listingKeys: string[];
+  /**
+   * Share this exact URL instead of minting a /share/<token> link. Single-listing
+   * surfaces pass the listing's canonical page URL.
+   */
+  shareUrl?: string;
+  /** Native share-sheet title + email subject. Defaults to the multi-select title. */
+  title?: string;
+  /** Sentence before the link in the SMS/email/share-sheet text. */
+  summary?: string;
+  /** Dialog heading. Defaults to "Share N properties". */
+  heading?: string;
 }
 
 const SHARE_TITLE = "Properties on PureProperty";
 
-export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDialogProps) {
+export default function ShareDialog({
+  open,
+  onOpenChange,
+  listingKeys,
+  shareUrl,
+  title,
+  summary,
+  heading,
+}: ShareDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [url, setUrl] = useState<string | null>(null);
+  const [minted, setMinted] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Create the share link once per open. Re-runs if the selection changes while open.
+  // Mint the share link once per open. Re-runs if the selection changes while open.
+  // A fixed shareUrl needs no round-trip — it IS the link, so the effect stays idle.
   useEffect(() => {
-    if (!open) return;
+    if (!open || shareUrl) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
-    setUrl(null);
+    setMinted(null);
     setCopied(false);
 
     (async () => {
@@ -46,7 +71,7 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || "Could not create share link");
-        if (!cancelled) setUrl(data.url as string);
+        if (!cancelled) setMinted(data.url as string);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Could not create share link");
       } finally {
@@ -57,9 +82,17 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
     return () => {
       cancelled = true;
     };
-  }, [open, listingKeys]);
+  }, [open, listingKeys, shareUrl]);
 
-  const message = url ? `${listingKeys.length} properties on PureProperty: ${url}` : "";
+  const url = shareUrl ?? minted;
+  const shareTitle = title ?? SHARE_TITLE;
+  const lead = summary ?? `${listingKeys.length} properties on PureProperty`;
+  const message = url ? `${lead}: ${url}` : "";
+  const dialogHeading =
+    heading ?? `Share ${listingKeys.length} ${listingKeys.length === 1 ? "property" : "properties"}`;
+  const dialogDescription = shareUrl
+    ? "Anyone with the link can view this listing."
+    : "Anyone with the link can view this selection.";
 
   const handleCopy = useCallback(async () => {
     if (!url) return;
@@ -76,7 +109,7 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
     if (!url) return;
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
-        await navigator.share({ title: SHARE_TITLE, text: message, url });
+        await navigator.share({ title: shareTitle, text: message, url });
       } catch {
         /* user dismissed the share sheet — no-op */
       }
@@ -84,11 +117,11 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
       // No native share sheet (most desktops) — fall back to copying the link.
       handleCopy();
     }
-  }, [url, message, handleCopy]);
+  }, [url, shareTitle, message, handleCopy]);
 
   const smsHref = url ? `sms:?&body=${encodeURIComponent(message)}` : undefined;
   const emailHref = url
-    ? `mailto:?subject=${encodeURIComponent(SHARE_TITLE)}&body=${encodeURIComponent(message)}`
+    ? `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(message)}`
     : undefined;
 
   return (
@@ -99,10 +132,10 @@ export default function ShareDialog({ open, onOpenChange, listingKeys }: ShareDi
           <div className="mb-4 flex items-start justify-between">
             <div>
               <Dialog.Title className="text-base font-semibold text-foreground">
-                Share {listingKeys.length} {listingKeys.length === 1 ? "property" : "properties"}
+                {dialogHeading}
               </Dialog.Title>
               <Dialog.Description className="mt-1 text-xs text-muted-foreground">
-                Anyone with the link can view this selection.
+                {dialogDescription}
               </Dialog.Description>
             </div>
             <Dialog.Close

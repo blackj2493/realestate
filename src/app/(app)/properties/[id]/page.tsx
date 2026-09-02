@@ -77,6 +77,7 @@ import { buildTheRead } from "@/lib/property/theRead";
 import { resolvePersona } from "@/lib/personas/resolvePersona";
 import { LENS_COOKIE } from "@/lib/personas/lensPersistence";
 import WatchButton from "@/components/watchlist/WatchButton";
+import ShareListingButton from "@/components/Property/ShareListingButton";
 import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
@@ -483,6 +484,8 @@ export default async function PropertyPage({
 
   const p = detail.full_payload as RawListing;
   const address = p.UnparsedAddress || detail.city || "Address Unavailable";
+  // The link the Share pill hands out — the descriptive canonical, same as the metadata.
+  const shareUrl = listingCanonical(id, p);
   // Commercial-gap Phase 0: everything AVM/persona-derived on this page (Deal Score,
   // Estimated Sale, Renovation Upside, The Read, schools, beds/baths hero) is built
   // for dwellings. Commercial-class listings arrive here via organic search (the
@@ -921,19 +924,27 @@ export default async function PropertyPage({
               )}
               <div className="mb-2 flex items-start justify-between gap-3">
                 <h1 className="text-2xl font-bold text-foreground">{address}</h1>
-                {/* Prominent save — top of the detail so it's reachable without
-                    scrolling past the entire financial workup (mirrors the dashboard). */}
-                <WatchButton
-                  item={{
-                    listing_key: id,
-                    address,
-                    city: detail.city ?? undefined,
-                    list_price: price,
-                    thumb: view.media_urls[0],
-                  }}
-                  label="Save"
-                  className="min-h-[44px] shrink-0 md:min-h-0"
-                />
+                {/* Prominent save + share — top of the detail so both are reachable
+                    without scrolling past the entire financial workup (mirrors the dashboard). */}
+                <div className="flex shrink-0 items-center gap-2">
+                  <WatchButton
+                    item={{
+                      listing_key: id,
+                      address,
+                      city: detail.city ?? undefined,
+                      list_price: price,
+                      thumb: view.media_urls[0],
+                    }}
+                    label="Save"
+                    className="min-h-[44px] md:min-h-0"
+                  />
+                  <ShareListingButton
+                    listingKey={id}
+                    address={address}
+                    url={shareUrl}
+                    className="min-h-[44px] md:min-h-0"
+                  />
+                </div>
               </div>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 {status.kind === "sold" ? (
