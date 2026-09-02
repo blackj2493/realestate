@@ -258,6 +258,58 @@ export function resolveLivingArea(
 }
 
 /**
+ * The size signal the MODEL is allowed to see — deliberately NOT the sharpest one.
+ *
+ * {@link resolveLivingArea} answers "how big is this home", and the room-dimension sum
+ * is the best answer we have. This answers a different question: "what would a
+ * comparable SALE have carried in `raw_vow_sold.building_area_total`". That column is
+ * what `avm_multiplier_matrix` was fitted on, and what every comp is neutralized with
+ * in anchorService. A standardized feature only means anything against the distribution
+ * it was fitted on, so the subject has to be measured the way the comps were measured,
+ * not the best way we know how.
+ *
+ * The two scales are not interchangeable. A room sum omits halls, stairs, closets,
+ * bathrooms and wall thickness and is then grossed up by a flat GLA_GROSSUP, while the
+ * MLS band is a seller-declared gross figure — and the residual between them SHEARS
+ * with size. Measured over avm_sqft_calibration (Detached, median room-sum GLA ÷ band
+ * midpoint):
+ *
+ *   700-1100   1.27      2000-2500  1.00
+ *   1100-1500  1.12      2500-3000  0.94
+ *   1500-2000  1.05      3000-3500  0.90
+ *                        3500-5000  0.83
+ *
+ * Monotonic, not noise. Feeding a room sum to a band-fitted coefficient therefore made
+ * the AVM read every large home as smaller than the comps it was priced against, and
+ * every small home as larger. On N13545488 (Vaughan, declared 2500-3000) it fed 2,354
+ * sqft against 26 same-band comps carrying 2,750 and took 4.9 points off the estimate,
+ * landing it below all but 2 of 39 directly comparable sales.
+ *
+ * Nothing caught it because raw_vow_sold stores no room dimensions at all:
+ * avm-backtest.ts builds its subjects straight from `building_area_total`
+ * (`inputFromSale`), so the accuracy gate has only ever scored the band scale. The
+ * substitution production was making sat outside everything the gate could see.
+ *
+ * Priority: exact BuildingAreaTotal → LivingAreaRange midpoint. The `rooms` and
+ * `calibrated` rungs are left out ON PURPOSE — both are room-sum scale
+ * (refresh-sqft-calibration.ts builds median_gla out of roomSumSqft), so both carry the
+ * same shear. Dropping them costs the feature on 1 listing in 8,000 (measured: of 8,000
+ * priced actives, 619 carry an exact BuildingAreaTotal, 7,380 a band, 1 neither), and
+ * that one falls to mean-imputation — no signal beats biased signal.
+ */
+export function resolveModelSqft(
+  payload: Record<string, unknown> | null | undefined
+): LivingAreaResult {
+  const exact = numOrNull(payload?.['BuildingAreaTotal']);
+  if (exact !== null && inRange(exact)) return { sqft: exact, source: 'exact' };
+
+  const mid = parseLivingAreaRange(payload?.['LivingAreaRange']);
+  if (mid !== null && inRange(mid)) return { sqft: mid, source: 'range_midpoint' };
+
+  return { sqft: null, source: 'none' };
+}
+
+/**
  * The avm_sqft_calibration cohort key: CityRegion, falling back to City when the feed
  * ships none (all of Waterloo Region + Brantford — see the FSA-cohort fix, PR #324).
  *

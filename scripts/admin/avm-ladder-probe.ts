@@ -21,7 +21,7 @@
  *   … change the code …
  *   npx tsx --env-file=.env scripts/admin/avm-ladder-probe.ts --out after.json --baseline before.json
  *
- * Read-only: listings, property_estimates, avm_sqft_calibration and the AVM's own
+ * Read-only: listings, property_estimates and the AVM's own
  * lookups. Writes nothing but the --out file.
  */
 
@@ -31,11 +31,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
-import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from '@/lib/avm/livingArea';
 import { calculateAVM, resolveModel } from '@/lib/avm/calculator';
-import { normalizePropertySubType, isUnpriceableType, fsaOf } from '@/lib/avm/normalizeType';
+import { isUnpriceableType, fsaOf } from '@/lib/avm/normalizeType';
 import type { AVMInput } from '@/lib/avm/types';
-import type { RoomData } from '@/lib/room-utils';
 
 // ── CLI ──────────────────────────────────────────────────────────────────────
 function flag(name: string): string | undefined {
@@ -137,38 +135,6 @@ function isActive(payload: Record<string, unknown> | null, listPrice: number | n
 }
 
 // Same no-rooms sqft fallback the nightly batch and the detail page use.
-const calibration = new Map<string, BucketCalibration>();
-async function loadCalibration(): Promise<void> {
-  const { data, error } = await sb
-    .from('avm_sqft_calibration')
-    .select('city_region, property_sub_type, living_area_range, median_gla, sample_count');
-  if (error) {
-    console.warn(`   ⚠️  calibration load failed (continuing without fallback): ${error.message}`);
-    return;
-  }
-  for (const r of data ?? []) {
-    const medianGla = Number(r.median_gla);
-    if (medianGla > 0) {
-      calibration.set(`${r.city_region}||${r.property_sub_type}||${r.living_area_range}`, {
-        medianGla,
-        sampleCount: Number(r.sample_count) || 0,
-      });
-    }
-  }
-}
-function lookupCalibration(payload: Record<string, unknown>, rooms: RoomData[]): BucketCalibration | null {
-  if (resolveLivingArea(payload, { rooms }).source !== 'range_midpoint') return null;
-  const cityRegion = calibrationRegionKey(
-    typeof payload['CityRegion'] === 'string' ? (payload['CityRegion'] as string) : null,
-    typeof payload['City'] === 'string' ? (payload['City'] as string) : null
-  );
-  const subType =
-    typeof payload['PropertySubType'] === 'string' ? normalizePropertySubType(payload['PropertySubType'] as string) : '';
-  const bucket = String(payload['LivingAreaRange'] ?? '').trim();
-  if (!cityRegion || !subType || !bucket) return null;
-  return calibration.get(`${cityRegion}||${subType}||${bucket}`) ?? null;
-}
-
 /** Newest listing keys first, so the sample is mostly live listings; filtered to
  *  active + priceable + mappable, then cut to PER_CITY. Deterministic for a given table. */
 async function sampleCity(group: string, city: string): Promise<{ row: ListingRow; input: AVMInput }[]> {
@@ -189,8 +155,7 @@ async function sampleCity(group: string, city: string): Promise<{ row: ListingRo
     if (!payload || !isActive(payload, numOrNull(row.list_price))) continue;
     const subType = payload['PropertySubType'];
     if (isUnpriceableType(typeof subType === 'string' ? subType : null)) continue;
-    const rooms: RoomData[] = Array.isArray(payload['rooms']) ? (payload['rooms'] as RoomData[]) : [];
-    const input = mapListingToAVMInput(payload, { rooms, bucketCalibration: lookupCalibration(payload, rooms) });
+    const input = mapListingToAVMInput(payload);
     if (!input) continue;
     out.push({ row, input });
     if (out.length >= PER_CITY) break;
@@ -401,7 +366,6 @@ async function main() {
     /* not a git checkout */
   }
   console.log(`AVM ladder probe @ ${head}  per-city ${PER_CITY}\n`);
-  await loadCalibration();
 
   const rows: ProbeRow[] = [];
   for (const [group, cities] of Object.entries(GROUPS)) {

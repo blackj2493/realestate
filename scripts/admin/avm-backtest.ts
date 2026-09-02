@@ -88,8 +88,6 @@ import { COMP_WINDOW_MO, SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE as DEFAULT_CLOSE
 import { NEUTRAL_TIER, BASEMENT_NONE_TIER } from '@/lib/avm/conditionScoring';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
 import { computeDealScore } from '@/lib/dealScore/computeDealScore';
-import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from '@/lib/avm/livingArea';
-import type { RoomData } from '@/lib/room-utils';
 
 // ── CLI flags ────────────────────────────────────────────────────────────────
 const LEAKY = process.argv.includes('--leaky');
@@ -919,29 +917,7 @@ async function liveAVMForKey(key: string): Promise<{ input: AVMInput; r: AVMResu
     .maybeSingle();
   if (!row) return null;
   const payload = row.full_payload as Record<string, unknown>;
-  const rooms: RoomData[] = Array.isArray(payload?.rooms) ? (payload.rooms as RoomData[]) : [];
-  let bucketCalibration: BucketCalibration | null = null;
-  // CityRegion ?? City — mirrors getListingDetail / the build script (calibrationRegionKey)
-  // so fidelity keys the same cohort the live path does for blank-CityRegion listings.
-  const cityRegion = calibrationRegionKey(
-    typeof payload?.CityRegion === 'string' ? (payload.CityRegion as string) : null,
-    typeof payload?.City === 'string' ? (payload.City as string) : null
-  );
-  const subType = String(payload?.PropertySubType ?? '').trim();
-  const bucket = String(payload?.LivingAreaRange ?? '').trim();
-  if (cityRegion && subType && bucket && resolveLivingArea(payload, { rooms }).source === 'range_midpoint') {
-    const { data: cal } = await sb
-      .from('avm_sqft_calibration')
-      .select('median_gla, sample_count')
-      .eq('city_region', cityRegion)
-      .ilike('property_sub_type', subType)
-      .eq('living_area_range', bucket)
-      .maybeSingle();
-    if (cal && Number(cal.median_gla) > 0) {
-      bucketCalibration = { medianGla: Number(cal.median_gla), sampleCount: Number(cal.sample_count) };
-    }
-  }
-  const input = mapListingToAVMInput(payload, { rooms, bucketCalibration });
+  const input = mapListingToAVMInput(payload);
   if (!input) return null;
   const r = await calculateAVM(sb, input);
   return { input, r };

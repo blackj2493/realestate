@@ -7,12 +7,14 @@
  * the model was standardized on. Missing fields stay `null` → the calculator
  * skips them (≡ training mean-imputation, z=0); a genuine `0` is kept.
  *
- * building_area_total is resolved via resolveLivingArea (./livingArea): exact
- * BuildingAreaTotal → measured GLA from room dimensions (when `opts.rooms` is
- * supplied) → calibrated bucket median (when `opts.bucketCalibration` is supplied)
- * → naive LivingAreaRange midpoint. BuildingAreaTotal is ~never filled for houses,
- * so the room-dimension measurement is what keeps large homes from being valued
- * off an inflated 1,500-sqft-wide range bucket.
+ * building_area_total is resolved via resolveModelSqft (./livingArea): exact
+ * BuildingAreaTotal → LivingAreaRange midpoint. That is the COMPS' scale, and the
+ * whole point of this mapper is that the subject reaches the coefficients measured
+ * the way the training rows were. It used to call resolveLivingArea, whose sharper
+ * room-dimension measurement lives on a different scale and sheared the estimate
+ * with size — see the note on resolveModelSqft for the numbers.
+ *
+ * Use resolveLivingArea, not this, for anything a person reads (GLA, $/sqft).
  *
  * Condition tiers come from the shared scoring module (./conditionScoring), so
  * active/IDX and VOW-sold listings score identically. Tiers only affect the
@@ -22,7 +24,7 @@
 import type { AVMInput } from './types';
 import { deriveInteriorTier, deriveExteriorTier, deriveBasementTier } from './conditionScoring';
 import { normalizePropertySubType, fsaOf } from './normalizeType';
-import { resolveLivingArea, type ResolveLivingAreaOpts } from './livingArea';
+import { resolveModelSqft } from './livingArea';
 
 /** Mirror of ingester.ts numOrNull: empty/missing/non-finite → null; else the number. */
 function numOrNull(v: unknown): number | null {
@@ -32,8 +34,7 @@ function numOrNull(v: unknown): number | null {
 }
 
 export function mapListingToAVMInput(
-  payload: Record<string, unknown> | null | undefined,
-  opts: ResolveLivingAreaOpts = {}
+  payload: Record<string, unknown> | null | undefined
 ): AVMInput | null {
   if (!payload) return null;
 
@@ -69,7 +70,7 @@ export function mapListingToAVMInput(
     city,
     propertySubType: normalizePropertySubType(rawPropertySubType),
     rawPropertySubType,
-    buildingAreaTotal: resolveLivingArea(payload, opts).sqft,
+    buildingAreaTotal: resolveModelSqft(payload).sqft,
     lotWidth,
     lotDepth,
     bedroomsAboveGrade: numOrNull(payload.BedroomsAboveGrade),
