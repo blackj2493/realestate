@@ -997,6 +997,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     transactionType: raw.TransactionType,
     taxAnnualAmount: raw.TaxAnnualAmount ?? null,
     associationFee: raw.AssociationFee ?? null,
+    // ANNUAL ground rent where the land is leased, not owned. Ignored until now, which
+    // is why land-lease housing published yields above 100%.
+    leasedLandFee: (raw as Record<string, unknown>).LeasedLandFee as number ?? null,
     maintenanceExpense: raw.MaintenanceExpense ?? null,
     insuranceExpense: raw.InsuranceExpense ?? null,
     baseMillRate: millRate.base_mill_rate,
