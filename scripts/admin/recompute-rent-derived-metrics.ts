@@ -131,7 +131,14 @@ interface Drift {
 }
 
 function apiKey(): string {
-  const key = process.env.TYPESENSE_ADMIN_API_KEY;
+  // trim() ON PURPOSE, and it carries this script's worst incident: the GitHub secret
+  // starts with a BOM (U+FEFF), fetch() rejects any header value above 0xFF ("Cannot
+  // convert argument to a ByteString"), and `… | tee` masked the non-zero exit — so the
+  // Typesense half of every weekly run died at its FIRST write while Postgres was already
+  // patched (found 2026-08-31; the 08-24 run failed identically). trim() strips U+FEFF
+  // (it is ECMAScript whitespace), which is also why the trimmed-key consumers and the
+  // query-param search client never noticed the secret was dirty.
+  const key = (process.env.TYPESENSE_ADMIN_API_KEY ?? '').trim();
   if (!key) {
     console.error('❌ TYPESENSE_ADMIN_API_KEY is not set — the partial update requires it.');
     process.exit(1);
