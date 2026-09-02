@@ -148,6 +148,27 @@ export async function POST(req: Request) {
   const v = validatePayload(body);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
 
+  // City alert rows are IDENTIFIED by their area, so creating one twice is a no-op, not a
+  // second subscription. Two writers race for them routinely: the bell's create, and the
+  // server-side reconcile behind a debounced config PUT (areaAlertSync). Without this the
+  // loser inserts a duplicate and the account gets the same area twice in one digest.
+  if (v.payload.area_type === "city" && v.payload.source.kind === "city") {
+    // limit(1), not maybeSingle(): accounts created before this guard can already hold
+    // duplicates, and maybeSingle() errors on >1 row — which would fall through and add
+    // a third.
+    const { data: existing } = await supabase
+      .from("market_bubbles")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("area_type", "city")
+      .eq("source->>city", v.payload.source.city)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (existing?.length) {
+      return NextResponse.json({ item: rowToBubble(existing[0] as Record<string, unknown>) });
+    }
+  }
+
   const { data, error } = await supabase
     .from("market_bubbles")
     .insert({

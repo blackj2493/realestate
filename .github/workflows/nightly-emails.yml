@@ -67,8 +67,16 @@ jobs:
       # Price drops + status changes + relists (watchlist), new listings (saved market
       # bubbles), anonymous listing alerts and address watches. Reads the Typesense index
       # the sync just refreshed. No-ops cleanly if RESEND_API_KEY is unset.
+      #
+      # `shell: bash` is load-bearing, not cosmetic: it runs the step with `-eo pipefail`,
+      # where the DEFAULT run shell is `bash -e` with NO pipefail. Every send here is
+      # piped into `tee`, so without it the pipeline reports tee's exit code and a sender
+      # that CRASHED — or exited 1 on its own fatal handler — left the step green and the
+      # run "successful" with nobody emailed. Same masking that hid the weekly Typesense
+      # patch failing for weeks (#465).
       - name: Send Watchlist Alerts
         timeout-minutes: 15
+        shell: bash
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -87,6 +95,7 @@ jobs:
       - name: Send Onboarding Sequence
         if: always()
         timeout-minutes: 15
+        shell: bash # pipefail — see the note on the step above
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
