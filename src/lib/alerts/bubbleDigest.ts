@@ -2,7 +2,12 @@
  * Bubble new-listing digest shaping — pure (§4). Enforces the anti-irritation
  * model from the spec: ≤6 rows per bubble, noisy bubbles collapse to a count,
  * a listing matching several of a user's bubbles appears once (first wins).
+ *
+ * "First wins" is only fair if FIRST means something. compareBubbleSpecificity defines
+ * that order — see its own note.
  */
+
+import { isWholeCityRegion } from "@/lib/dashboard/area";
 
 export interface NewListingAlert {
   listing_key: string;
@@ -43,6 +48,53 @@ export interface BubbleSection {
 
 export const BUBBLE_EMAIL_ROW_CAP = 6;
 export const BUBBLE_COLLAPSE_THRESHOLD = 20;
+
+// ── Scan order: narrowest area first ────────────────────────────────────────
+/** The only fields the ordering needs — the worker's row and a test row both satisfy it. */
+export interface BubbleAreaOrder {
+  id: string;
+  name: string;
+  area_type: string;
+  source?: { city?: string } | null;
+  created_at?: string | null;
+}
+
+/**
+ * Rank an area by how specific it is. Lower claims a listing first.
+ *
+ * 0 — drawn / commute / school. Hand-placed by the user, and never a superset of a city.
+ * 1 — a community or neighbourhood city row ("Vellore Village", a Toronto district).
+ * 2 — a whole city, which CONTAINS every rank-1 area a user might also have saved.
+ */
+function specificityRank(b: BubbleAreaOrder): number {
+  if (b.area_type !== "city") return 0;
+  return isWholeCityRegion(b.source?.city ?? b.name) ? 2 : 1;
+}
+
+/**
+ * Total, stable scan order for a user's alerting areas.
+ *
+ * `buildBubbleSections` hands a listing to the FIRST area that matched it and shrinks
+ * every later area's count by what it lost — an area that loses all of its matches drops
+ * out of the email entirely (`total <= 0`). Until now "first" was whatever order Postgres
+ * returned, because the worker's query carried no ORDER BY, so a broad area could swallow
+ * a narrow one nested inside it and the choice could differ from night to night.
+ *
+ * Observed on prod 2026-09-01: one account held both "Barrhaven" and
+ * "7711 - Barrhaven - Half Moon Bay" with identical filters. Every Half Moon Bay listing
+ * is also a Barrhaven listing, so whichever row the scan reached first took all of them
+ * and the other section rendered nothing.
+ *
+ * Sorting by rank makes the winner the most precisely named area the user has. created_at
+ * then id break ties, so the order is total — the same every night — rather than merely
+ * narrower-usually-first.
+ */
+export function compareBubbleSpecificity(a: BubbleAreaOrder, b: BubbleAreaOrder): number {
+  const byRank = specificityRank(a) - specificityRank(b);
+  if (byRank !== 0) return byRank;
+  const byAge = (a.created_at ?? "").localeCompare(b.created_at ?? "");
+  return byAge !== 0 ? byAge : a.id.localeCompare(b.id);
+}
 
 // ── Lookback dedup (migration 083 market_bubbles.notified_keys) ──────────────
 // The worker searches EntryTimestamp past (watermark − LOOKBACK) so listings the

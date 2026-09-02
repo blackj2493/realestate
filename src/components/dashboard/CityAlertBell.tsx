@@ -7,10 +7,17 @@
  * can't see — so the alert is materialized as a market_bubbles row with area_type 'city'
  * (migration 083; alert-carrier only, filtered out of BubbleSections).
  *
- * Since the tiered default-ON change (§176), ADDING an area auto-creates this row (see
- * DashboardClient.addRegion), so the bell usually renders already-ON. It remains: the
- * manual opt-in for regions saved BEFORE that change (which have no row yet), the mute
- * control, and the All / My-filters scope pair. States:
+ * Since the tiered default-ON change (§176), ADDING an area auto-creates this row, so the
+ * bell usually renders already-ON. The row is now kept in step SERVER-SIDE, by
+ * areaAlertSync.reconcileCityAlerts on every config save — DashboardClient.addRegion is
+ * the fast path, not the only one, because the writers that skipped it (the Customize
+ * panel, the Data Drop chip, a stale cross-device push) are exactly how areas ended up
+ * emailing after they were removed. The bell remains: the manual opt-in for regions saved
+ * before §176, the MUTE control, and the All / My-filters scope pair.
+ *
+ * A muted row is never un-muted by the reconcile — `alerts_enabled = false` is this
+ * button's decision, and keeping the area on the dashboard is not consent to undo it.
+ * States:
  *   - no row yet      → muted bell. Click CREATES the row with the TIERED default scope
  *                       (whole city → 'filtered'/lens, community → 'all') — never a
  *                       surprise city-wide firehose.
@@ -97,9 +104,12 @@ export default function CityAlertBell({
 
   return (
     <span className={cn("flex items-center gap-1.5", detail && "w-full")}>
-      {/* Scope pair — same control as saved bubbles. "My filters" captures the
-          dashboard's CURRENT lens each time it's clicked (so re-clicking after
-          changing filters re-captures), and the email labels what it matched.
+      {/* Scope pair — same control as saved bubbles. "My filters" means the dashboard's
+          filters as they are NOW: the click captures the lens, and every later config
+          save re-syncs it server-side (areaAlertSync.reconcileCityAlerts). It used to
+          capture once and then freeze, with nothing on screen saying so — one live
+          account was alerting on `4+ bd · 4+ ba · 4+ garage · ≥30′ frontage` while its
+          dashboard read `4+ bd · detached`. The email labels what it matched.
 
           Below `lg` it moves off the header row into RegionDrilldown's `mobileDetail`,
           where it gets a full line and 44px segments instead of crushing the title. */}
@@ -133,7 +143,7 @@ export default function CityAlertBell({
           <button
             type="button"
             aria-pressed={scope === "filtered"}
-            title={`Email only listings matching your dashboard filters (captured as of now — click again after changing filters to re-capture)`}
+            title={`Email only listings matching your dashboard filters — it follows them as you change them`}
             onClick={() => void updateAlertFilters(row.id, { lens })}
             className={cn(
               "transition-colors",

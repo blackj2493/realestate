@@ -76,9 +76,27 @@ export default function DashboardClient() {
   );
   const cityMayAutoOpen = bubblesLoaded && bubbleCount === 0;
 
+  /**
+   * Another device wrote a newer config while this tab held an older copy. Take theirs.
+   *
+   * This tab's pending edit is dropped, which is the point: the old behaviour was to
+   * overwrite, and overwriting is what erased saved areas across devices while their
+   * alert rows (stored in a different table) survived and kept emailing. Losing one lens
+   * tweak is the cheaper failure. We do not push back — pushConfig has already advanced
+   * its baseline, so a re-push here would just start a ping-pong between two tabs.
+   */
+  const adoptServer = (raw: unknown) => {
+    const merged = normalizeConfig(raw);
+    setConfig(merged);
+    saveConfig(merged);
+    setPickerOpen(merged.regions.length === 0);
+  };
+
+  const push = (c: DashboardConfig) => pushConfig(c, { onServerNewer: adoptServer });
+
   // Hydrate localStorage-first (instant paint), then reconcile with the server
   // copy (dashboard_prefs, migration 096) so the config follows the ACCOUNT, not
-  // the browser. Server wins on load; edits are last-writer-wins via pushConfig.
+  // the browser. Server wins on load AND on a conflicting write (see adoptServer).
   useEffect(() => {
     const cfg = getConfig();
     setConfig(cfg);
@@ -102,22 +120,23 @@ export default function DashboardClient() {
         merged.lastVisitAt = Date.now(); // re-stamp this visit on the merged copy
         setConfig(merged);
         saveConfig(merged);
-        pushConfig(merged);
+        push(merged);
         setPickerOpen(merged.regions.length === 0);
       } else {
         // Signed in but never synced — seed the server from this device.
-        pushConfig({ ...cfg, lastVisitAt: Date.now() });
+        push({ ...cfg, lastVisitAt: Date.now() });
       }
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const update = (c: DashboardConfig) => {
     setConfig(c);
     saveConfig(c);
-    pushConfig(c);
+    push(c);
   };
 
   // Auto-apply: add/remove a single region live so its dashboard sections appear/disappear
@@ -129,7 +148,7 @@ export default function DashboardClient() {
       added = true;
       const next = { ...prev, regions: [...prev.regions, area] };
       saveConfig(next);
-      pushConfig(next);
+      push(next);
       return next;
     });
     // Tiered default-ON alerts (§176): materialize the area's new-listing alert as a
@@ -143,7 +162,7 @@ export default function DashboardClient() {
     setConfig((prev) => {
       const next = { ...prev, regions: prev.regions.filter((r) => r !== area) };
       saveConfig(next);
-      pushConfig(next);
+      push(next);
       return next;
     });
     // Keep alerts from outliving the visible area: removing a region also removes its
@@ -218,7 +237,17 @@ export default function DashboardClient() {
       <main className="mx-auto max-w-[1600px] space-y-8 pt-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <PasskeyPrompt />
 
-        {showConfig && <DashboardConfigPanel config={config} onChange={update} />}
+        {/* Region edits go through addRegion/removeRegion, NOT onChange. Editing
+            config.regions directly is what let "Customize Workspace" remove an area from
+            the dashboard while its alert row kept emailing, with no UI left to mute it. */}
+        {showConfig && (
+          <DashboardConfigPanel
+            config={config}
+            onChange={update}
+            onAddRegion={addRegion}
+            onRemoveRegion={removeRegion}
+          />
+        )}
 
         <ActionFeed
           regions={config.regions}

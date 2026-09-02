@@ -38,6 +38,7 @@ import { Resend } from 'resend';
 import Typesense, { Client } from 'typesense';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { buildAreaClause } from '@/lib/bubbles/stats';
+import { buildTransactionClause, SALE_PRICE_FLOOR } from '@/lib/filters/fundamentals';
 import { bubbleAlertFilter } from '@/lib/alerts/bubbleFilterClause';
 import {
   classifyStatusChange,
@@ -49,6 +50,7 @@ import {
   advanceNotifiedKeys,
   buildBubbleSections,
   BUBBLE_LOOKBACK_MS,
+  compareBubbleSpecificity,
   filterFreshMatches,
   parseNotifiedKeys,
   type BubbleMatches,
@@ -81,8 +83,14 @@ const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const TYPESENSE_PORT = 443;
 const FROM = SENDERS.alerts.from;
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.pureproperty.ca').replace(/\/$/, '');
-/** Same rental-noise floor as bubble stats (src/lib/bubbles/stats.ts). */
-const SALES_FLOOR = 'ListPrice:>=100000';
+/**
+ * Sale scope for the unfiltered ('all') new-listing search — the exact clause bubble
+ * stats uses (src/lib/bubbles/stats.ts), which this line's comment already claimed but
+ * did not carry. The price floor alone was doing two jobs badly: it inferred "this is a
+ * sale" from "this costs a lot", so a commercial lease quoted ANNUALLY (there is one at
+ * ≥$100k today) was emailed as a new listing for sale. TransactionType says it exactly.
+ */
+const SALES_FLOOR = `${buildTransactionClause('sale')} && ListPrice:>=${SALE_PRICE_FLOOR}`;
 /** §6.3b display cap — also bounds the per-bubble fetch. */
 const MAX_BUBBLE_FETCH = 100;
 
@@ -112,6 +120,8 @@ interface BubbleRow {
   alert_scope?: string;
   /** BubbleFiltersSnapshot jsonb — untyped at this boundary; bubbleAlertFilter parses defensively. */
   filters?: unknown;
+  /** Only used to break ties in compareBubbleSpecificity — never in a query. */
+  created_at?: string;
 }
 
 /** How long after a campaign dies without a transaction we keep scanning for a relist. */
@@ -1023,7 +1033,7 @@ async function main() {
   {
     const first = await supabase
       .from('market_bubbles')
-      .select('id, user_id, name, area_type, polygon, source, notify_since, notified_keys, alert_scope, filters')
+      .select('id, user_id, name, area_type, polygon, source, notify_since, notified_keys, alert_scope, filters, created_at')
       .eq('alerts_enabled', true);
     if (!first.error) {
       bubbleData = (first.data ?? []) as unknown as BubbleRow[];
@@ -1031,7 +1041,7 @@ async function main() {
       // Pre-095 (no alert_scope) or pre-083 (no notified_keys): degrade in order.
       const pre095 = await supabase
         .from('market_bubbles')
-        .select('id, user_id, name, area_type, polygon, source, notify_since, notified_keys')
+        .select('id, user_id, name, area_type, polygon, source, notify_since, notified_keys, created_at')
         .eq('alerts_enabled', true);
       if (!pre095.error) {
         bubbleData = (pre095.data ?? []) as unknown as BubbleRow[]; // alert_scope undefined → 'all'
@@ -1039,12 +1049,13 @@ async function main() {
         hasNotifiedKeys = false;
         const legacy = await supabase
           .from('market_bubbles')
-          .select('id, user_id, name, area_type, polygon, source, notify_since')
+          .select('id, user_id, name, area_type, polygon, source, notify_since, created_at')
           .eq('alerts_enabled', true);
         if (legacy.error) bubbleErrMsg = legacy.error.message;
         else bubbleData = (legacy.data ?? []).map((r) => ({ ...r, notified_keys: [] })) as unknown as BubbleRow[];
       }
     }
+    if (bubbleData) bubbleData = [...bubbleData].sort(compareBubbleSpecificity);
   }
 
   if (bubbleErrMsg !== null) {

@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   advanceNotifiedKeys,
   buildBubbleSections,
+  compareBubbleSpecificity,
   filterFreshMatches,
   parseNotifiedKeys,
   BUBBLE_EMAIL_ROW_CAP,
   BUBBLE_COLLAPSE_THRESHOLD,
   NOTIFIED_KEY_RETENTION_MS,
+  type BubbleAreaOrder,
   type BubbleMatches,
   type NewListingAlert,
 } from "./bubbleDigest";
@@ -98,5 +100,61 @@ describe("lookback dedup helpers (notified_keys)", () => {
     expect(next.find((n) => n.k === "N1")?.t).toBe(NOW);
     // an existing key is not re-stamped (its original alert time stands)
     expect(next.find((n) => n.k === "KEPT")?.t).toBe(NOW - 1000);
+  });
+});
+
+describe("compareBubbleSpecificity — narrowest area claims a listing first", () => {
+  const area = (
+    id: string,
+    area_type: string,
+    city: string | null,
+    created_at = "2026-01-01T00:00:00Z"
+  ): BubbleAreaOrder => ({
+    id,
+    name: city ?? id,
+    area_type,
+    source: city ? { city } : null,
+    created_at,
+  });
+
+  const order = (rows: BubbleAreaOrder[]) =>
+    [...rows].sort(compareBubbleSpecificity).map((r) => r.id);
+
+  it("puts a drawn / school area ahead of every city row", () => {
+    expect(
+      order([
+        area("city", "city", "Toronto"),
+        area("community", "city", "Vellore Village"),
+        area("school", "school", null),
+        area("drawn", "draw", null),
+      ])
+    ).toEqual(["drawn", "school", "community", "city"]);
+  });
+
+  it("puts a community ahead of the whole city that contains it", () => {
+    // The live case: every Half Moon Bay listing is also a Barrhaven listing, so whichever
+    // ran first took all of them and the other section rendered nothing.
+    expect(
+      order([area("toronto", "city", "Toronto"), area("district", "city", "Toronto C01")])
+    ).toEqual(["district", "toronto"]);
+  });
+
+  it("is a TOTAL order — equal rank falls back to created_at, then id", () => {
+    const older = area("z-older", "city", "Milton", "2026-01-01T00:00:00Z");
+    const newer = area("a-newer", "city", "Ajax", "2026-06-01T00:00:00Z");
+    expect(order([newer, older])).toEqual(["z-older", "a-newer"]);
+
+    const sameDay = [
+      area("b", "city", "Ajax", "2026-01-01T00:00:00Z"),
+      area("a", "city", "Milton", "2026-01-01T00:00:00Z"),
+    ];
+    expect(order(sameDay)).toEqual(["a", "b"]);
+    expect(order([...sameDay].reverse())).toEqual(["a", "b"]);
+  });
+
+  it("falls back to the row name when source.city is missing", () => {
+    expect(
+      order([area("named-city", "city", null), { id: "x", name: "Toronto", area_type: "city" }])
+    ).toEqual(["named-city", "x"]);
   });
 });

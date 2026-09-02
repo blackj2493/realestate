@@ -8,12 +8,25 @@ import { BOARDS, DEFAULT_BOARD_ORDER, type BoardId } from "@/lib/dashboard/board
 import type { DashboardConfig } from "@/lib/dashboard/config";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
+/**
+ * "Customize Workspace" — market areas + metric boards.
+ *
+ * Area edits are DELEGATED to the dashboard's own addRegion/removeRegion, not applied
+ * through `onChange`. Editing `config.regions` here directly is exactly how an area could
+ * leave the dashboard while its nightly alert row (`market_bubbles`, a different table)
+ * kept emailing — and once the section was gone there was no bell left to mute it with.
+ * Boards still go through `onChange`; they have no server-side twin.
+ */
 export default function DashboardConfigPanel({
   config,
   onChange,
+  onAddRegion,
+  onRemoveRegion,
 }: {
   config: DashboardConfig;
   onChange: (c: DashboardConfig) => void;
+  onAddRegion: (region: string) => void;
+  onRemoveRegion: (region: string) => void;
 }) {
   const [q, setQ] = useState("");
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -35,12 +48,11 @@ export default function DashboardConfigPanel({
 
   const addRegion = (label: string) => {
     if (!label || config.regions.includes(label)) return;
-    onChange({ ...config, regions: [...config.regions, label] });
+    onAddRegion(label);
     setQ("");
     setSuggestions([]);
   };
-  const removeRegion = (label: string) =>
-    onChange({ ...config, regions: config.regions.filter((r) => r !== label) });
+  const removeRegion = (label: string) => onRemoveRegion(label);
 
   const toggleBoard = (id: BoardId) => {
     const on = config.boards.includes(id);

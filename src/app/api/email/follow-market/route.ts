@@ -29,6 +29,7 @@ import { verifyUnsubscribe } from "@/lib/alerts/unsubscribe";
 import { recordActivation } from "@/lib/analytics/activation";
 import { BOARD_MARKETS } from "@/lib/data/marketBoard";
 import { marketMapUrl } from "@/lib/dataDrop/cameras";
+import { reconcileCityAlerts } from "@/lib/dashboard/areaAlertSync";
 import { withUtm } from "@/lib/email/utm";
 
 export const dynamic = "force-dynamic";
@@ -104,10 +105,11 @@ export async function GET(req: NextRequest) {
     const already = existing.some((r) => r.toLowerCase() === city.toLowerCase());
     if (!already) {
       const next = [...existing, city].slice(-MAX_REGIONS);
+      const nextConfig = { ...config, regions: next };
       const { error } = await sb.from("dashboard_prefs").upsert(
         {
           user_id: userId,
-          config: { ...config, regions: next },
+          config: nextConfig,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -115,6 +117,13 @@ export async function GET(req: NextRequest) {
       if (error) {
         console.error("[follow-market] upsert failed:", error.message);
       } else {
+        // Saving the market has to also make it ALERT. This route writes config.regions
+        // server-side, so it never went through the dashboard's add-area path and the
+        // market it just saved would have emailed nothing — the one thing the chip
+        // promises. reconcileCityAlerts is the shared step every regions writer takes.
+        const alerts = await reconcileCityAlerts(sb, userId, nextConfig);
+        if (alerts.error) console.error("[follow-market] alert reconcile failed:", alerts.error);
+
         // Same kind the in-app picker emits, so retention funnels see one population and the
         // `source` tells us how much of it the email is responsible for.
         await recordActivation({
