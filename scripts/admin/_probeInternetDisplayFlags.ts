@@ -10,15 +10,32 @@
  *   InternetEntireListingDisplayYN  "Distribute to Internet"      (idx-payload.md:131)
  *   InternetAddressDisplayYN        "Display Address on Internet" (idx-payload.md:130)
  *
- * Neither field is read anywhere in this codebase today, so this probe answers only
- * the first question — "did the agent do it, and has it reached our vault?" — not
- * "is the listing gone", which it cannot be until the suppression path is built.
+ * Neither field is read anywhere in this codebase today, so this probe cannot answer
+ * "is the listing gone" — it will not be until the suppression path is built.
  *
- * Reads only. Reports, per key:
- *   1. Supabase `listings.full_payload` — the flags as the feed last transmitted them
+ * THE VAULT ALONE CANNOT ANSWER "DID THE AGENT DO IT". If the board stops transmitting
+ * a record once the flag goes false, our `listings` row simply freezes at the last
+ * payload it ever sent — still reading true/absent. That is indistinguishable from an
+ * agent who did nothing. Only a live per-key feed lookup separates the two, so this
+ * probe does both and prints an explicit verdict:
+ *
+ *   feed returns key + flag false    → CONFIRMED: the opt-out is live in the feed.
+ *   feed returns key + flag true     → NOT DONE: no opt-out recorded on this key.
+ *   feed returns key + flag absent   → NOT DONE (field never populated for this key).
+ *   feed does not return key         → AMBIGUOUS: either the board withdrew the record
+ *                                      (consistent with an opt-out) or the key is
+ *                                      outside our licensed scope / never existed.
+ *                                      Cannot be read as confirmation on its own.
+ *
+ * Reads only — no writes, no deletes. Reports, per key:
+ *   1. VOW feed, live — the flags as the board serves them RIGHT NOW (the verdict).
+ *   2. Supabase `listings.full_payload` — the flags as the feed last transmitted them
  *      (stripStoredMedia keeps everything but `media`, so they are present if sent).
- *   2. Supabase `raw_vow_sold` — whether the key is in the append-only sold vault.
- *   3. Typesense `properties` — whether a doc is still live, and on which surface.
+ *   3. Supabase `raw_vow_sold` — whether the key is in the append-only sold vault.
+ *   4. Typesense `properties` — whether a doc is still live, and on which surface.
+ *
+ * Requires PROPTX_VOW_TOKEN, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and
+ * TYPESENSE_ADMIN_API_KEY in .env.local.
  *
  * Run: npx tsx scripts/admin/_probeInternetDisplayFlags.ts
  */
@@ -28,6 +45,45 @@ import { createClient } from '@supabase/supabase-js';
 
 const KEYS = ['C13661766', 'C13010562', 'C12736862'];
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
+const API_BASE_URL = process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata';
+const VOW_TOKEN = process.env.PROPTX_VOW_TOKEN;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Mirrors ghostReconcile.feedGet — retries transient feed errors up to 3 attempts. */
+async function feedGet(url: string, token: string): Promise<any> {
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+    if (res.ok) return res.json();
+    if (attempt >= 3) throw new Error(`feed HTTP ${res.status}: ${url.slice(0, 120)}`);
+    await sleep(1500 * attempt);
+  }
+}
+
+/** Current payloads straight from VOW, or-chained (ghostReconcile.fetchCurrentPayloads). */
+async function fetchCurrentPayloads(keys: string[]): Promise<Map<string, any>> {
+  const filter = keys.map((k) => `ListingKey eq '${k}'`).join(' or ');
+  const url = `${API_BASE_URL}/Property?$filter=${encodeURIComponent(filter)}&$top=${keys.length}`;
+  const data = await feedGet(url, VOW_TOKEN!);
+  const out = new Map<string, any>();
+  for (const r of data.value ?? []) out.set(r.ListingKey, r);
+  return out;
+}
+
+/** The whole point of the probe: turn a live feed payload into a defensible verdict. */
+function verdict(live: any | undefined): string {
+  if (!live) {
+    return 'AMBIGUOUS — feed does not return this key. Either the board withdrew the\n' +
+      '                        record (consistent with an opt-out) or it is outside our\n' +
+      '                        licensed scope. NOT confirmation on its own.';
+  }
+  const f = live.InternetEntireListingDisplayYN;
+  if (f === false || f === 'N' || f === 'false') return 'CONFIRMED — opt-out is live in the feed.';
+  if (f === undefined || f === null) return 'NOT DONE — field never populated for this key.';
+  return `NOT DONE — flag still ${JSON.stringify(f)}; no opt-out recorded.`;
+}
 
 /** The feed sends these as booleans, but dirty payloads also carry 'Y'/'N'/'true'.
  *  Report the raw value verbatim — do NOT coerce, because `undefined` (field never
@@ -50,10 +106,31 @@ async function main() {
     connectionTimeoutSeconds: 60,
   });
 
+  if (!VOW_TOKEN) {
+    throw new Error(
+      'PROPTX_VOW_TOKEN is not set. Without it this probe can only read our own stale ' +
+        'vault, which cannot distinguish "agent did nothing" from "board withdrew the record".'
+    );
+  }
+
+  // Live feed first — this is the only source that can confirm the agent's change.
+  const live = await fetchCurrentPayloads(KEYS);
+
   for (const key of KEYS) {
     console.log(`\n${'='.repeat(70)}\n${key}\n${'='.repeat(70)}`);
 
-    // 1. Vault payload — the authoritative record of what the feed last told us.
+    const l = live.get(key);
+    console.log('  --- VOW feed, live (authoritative) ---');
+    console.log(`  VERDICT:              ${verdict(l)}`);
+    if (l) {
+      console.log(`  feed StandardStatus:  ${l.StandardStatus ?? '(none)'} / ${l.MlsStatus ?? '(none)'}`);
+      console.log(`  feed ModTimestamp:    ${l.ModificationTimestamp ?? '(none)'}`);
+      console.log(`  >> InternetEntireListingDisplayYN: ${describeFlag(l.InternetEntireListingDisplayYN)}`);
+      console.log(`  >> InternetAddressDisplayYN:       ${describeFlag(l.InternetAddressDisplayYN)}`);
+    }
+
+    // 1. Vault payload — what the feed last told US, which may be stale (see header).
+    console.log('  --- our vault (may lag the feed) ---');
     const { data: row, error } = await supabase
       .from('listings')
       .select('listing_key, unparsed_address, status, full_payload, updated_at')
@@ -100,8 +177,8 @@ async function main() {
   }
 
   console.log(
-    `\nNOTE: a "false" flag above confirms the agent's change reached our feed. It does ` +
-      `NOT mean the listing is suppressed — no code reads these fields yet.\n`
+    `\nNOTE: a CONFIRMED verdict means the opt-out is live in the feed. It does NOT mean ` +
+      `the listing is suppressed on our site — no code reads these fields yet.\n`
   );
 }
 
