@@ -408,7 +408,7 @@ async function main() {
       const subType = payload['PropertySubType'];
       const avmEligible = !isUnpriceableType(typeof subType === 'string' ? subType : null);
 
-      const avmInput = avmEligible ? mapListingToAVMInput(payload, { rooms, bucketCalibration }) : null;
+      const avmInput = avmEligible ? mapListingToAVMInput(payload) : null;
       if (avmInput) {
         // getMarketStatic mirrors calculateAVM's resolveModel: native coefficients gate
         // routing; effective (coarse-rung or borrowed) coefficients drive comp adjustment.

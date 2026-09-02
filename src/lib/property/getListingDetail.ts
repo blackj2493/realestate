@@ -18,8 +18,6 @@ import { compMonthlyRentFrom } from "@/lib/metrics/compRent";
 import { pickPreferredBasis } from "@/lib/metrics/rentTier";
 import { calculateAVM } from "@/lib/avm/calculator";
 import { mapListingToAVMInput } from "@/lib/avm/mapListingToAVMInput";
-import { resolveLivingArea, calibrationRegionKey, type BucketCalibration } from "@/lib/avm/livingArea";
-import { normalizePropertySubType } from "@/lib/avm/normalizeType";
 import type { AVMResult } from "@/lib/avm/types";
 import {
   isCondo,
@@ -542,9 +540,9 @@ export const getListingDetail = cache(
         };
       });
 
-    // Resolve rooms before the AVM: room dimensions are the AVM's best square-
-    // footage signal (BuildingAreaTotal is ~never filled for houses). Best-effort,
-    // so failure → [] and the AVM falls back to the calibrated bucket / midpoint.
+    // Rooms are for the room table and $/sqft, NOT for the AVM: the model reads
+    // resolveModelSqft (the comps' banded scale), because a room-sum measurement is
+    // on a different scale than the coefficients were fitted on. See resolveModelSqft.
     const rooms: RoomData[] = await roomsPromise;
 
     // Best-effort PureProperty Estimate (AVM). Never blocks the listing.
@@ -553,44 +551,7 @@ export const getListingDetail = cache(
     try {
       const payload = listing.full_payload as Record<string, unknown> | null;
 
-      // Only when room dimensions don't yield a measured size do we fall back to
-      // the calibrated bucket → one indexed PK point-lookup, skipped on the common
-      // (measured) path so we don't add a query per page.
-      let bucketCalibration: BucketCalibration | null = null;
-      if (resolveLivingArea(payload, { rooms }).source === "range_midpoint") {
-        // CityRegion ?? City — matches the build script's calibrationRegionKey, so
-        // blank-CityRegion municipalities (Waterloo Region, Brantford) hit their
-        // city-keyed cohort instead of the naive range midpoint.
-        const cityRegion = calibrationRegionKey(
-          typeof payload?.["CityRegion"] === "string" ? (payload["CityRegion"] as string) : null,
-          typeof payload?.["City"] === "string" ? (payload["City"] as string) : null
-        );
-        const subType = normalizePropertySubType(
-          typeof payload?.["PropertySubType"] === "string" ? (payload["PropertySubType"] as string) : ""
-        );
-        const bucket = String(payload?.["LivingAreaRange"] ?? "").trim();
-        if (cityRegion && subType && bucket) {
-          try {
-            const { data: cal } = await supabase
-              .from("avm_sqft_calibration")
-              .select("median_gla, sample_count")
-              .eq("city_region", cityRegion)
-              .eq("property_sub_type", subType)
-              .eq("living_area_range", bucket)
-              .maybeSingle();
-            if (cal && Number(cal.median_gla) > 0) {
-              bucketCalibration = {
-                medianGla: Number(cal.median_gla),
-                sampleCount: Number(cal.sample_count) || 0,
-              };
-            }
-          } catch (calError) {
-            console.error(`[getListingDetail] sqft calibration lookup failed for ${listingKey}:`, calError);
-          }
-        }
-      }
-
-      const avmInput = mapListingToAVMInput(payload, { rooms, bucketCalibration });
+      const avmInput = mapListingToAVMInput(payload);
       if (avmInput) {
         estimate = await withTimeout(calculateAVM(supabase, avmInput), 8000, "AVM");
         if (estimate && estimate.estimatedValue > 0) {

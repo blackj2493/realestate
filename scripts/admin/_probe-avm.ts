@@ -11,8 +11,6 @@ import crossFetch from 'cross-fetch';
 import { mapListingToAVMInput } from '@/lib/avm/mapListingToAVMInput';
 import { calculateAVM } from '@/lib/avm/calculator';
 import type { AVMResult } from '@/lib/avm/types';
-import type { RoomData } from '@/lib/room-utils';
-import { resolveLivingArea, type BucketCalibration } from '@/lib/avm/livingArea';
 
 const agent = new https.Agent({ rejectUnauthorized: false });
 (global as unknown as { fetch: typeof fetch }).fetch = ((url: RequestInfo | URL, init?: RequestInit) =>
@@ -46,27 +44,8 @@ async function probe(key: string) {
 
   const payload = row.full_payload as Record<string, unknown>;
   const listPrice = Number(row.list_price);
-  const rooms: RoomData[] = Array.isArray(payload?.rooms) ? (payload.rooms as RoomData[]) : [];
 
-  // Calibration fallback for GLA — match what getListingDetail does.
-  let bucketCalibration: BucketCalibration | null = null;
-  const cityRegion = String(payload?.CityRegion ?? '').trim();
-  const subType = String(payload?.PropertySubType ?? '').trim();
-  const bucket = String(payload?.LivingAreaRange ?? '').trim();
-  if (cityRegion && subType && bucket && resolveLivingArea(payload, { rooms }).source === 'range_midpoint') {
-    const { data: cal } = await sb
-      .from('avm_sqft_calibration')
-      .select('median_gla, sample_count')
-      .eq('city_region', cityRegion)
-      .ilike('property_sub_type', subType)
-      .eq('living_area_range', bucket)
-      .maybeSingle();
-    if (cal && Number(cal.median_gla) > 0) {
-      bucketCalibration = { medianGla: Number(cal.median_gla), sampleCount: Number(cal.sample_count) };
-    }
-  }
-
-  const input = mapListingToAVMInput(payload, { rooms, bucketCalibration });
+  const input = mapListingToAVMInput(payload);
   if (!input) {
     console.log(`\n── ${key} — mapListingToAVMInput returned null (missing CityRegion or PropertySubType)\n`);
     return;
