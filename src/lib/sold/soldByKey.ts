@@ -20,6 +20,7 @@ import { deriveDealType } from "@/lib/sold/dealType";
 import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
 import { primaryImageFromPhotos } from "@/lib/etl/selectPrimaryImage";
 import { bedSplit } from "@/lib/listings/bedSplit";
+import { cityFilterClause } from "@/lib/listings/cityHubs";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -547,6 +548,91 @@ export async function getSoldSitemapEntries(max: number): Promise<SoldSitemapEnt
     console.error("[soldByKey] sitemap export failed:", err);
     return [];
   }
+}
+
+/** A sold/off-market record reduced to what a public LINK needs. No VOW values. */
+export interface SoldPublicLink {
+  id: string;
+  address: string;
+  city: string;
+  cityRegion: string;
+}
+
+/**
+ * Public sold records matching a Typesense filter, newest first.
+ *
+ * ANONYMOUS-SAFE by construction: `include_fields: PUBLIC_FIELDS` is the same structural
+ * gate the address page's own anon path uses, so no price, date, photo or brokerage can
+ * be returned — only the address, which is public record and which
+ * /addresses/sitemap.xml already publishes for every one of these records.
+ *
+ * "Newest first" is free: the collection's default_sorting_field is PurchaseContractDate
+ * and q:"*" orders on it descending. The DATE ITSELF IS NEVER FETCHED — ordering by a
+ * field is not returning it. Best-effort ([] on failure); a link block is never worth
+ * failing a page render over.
+ */
+async function searchSoldPublicLinks(filterBy: string, max: number): Promise<SoldPublicLink[]> {
+  try {
+    const res = await getSoldClient()
+      .collections(SOLD_LISTINGS_COLLECTION)
+      .documents()
+      .search({
+        q: "*",
+        query_by: "UnparsedAddress", // required syntactically; ignored for q:"*"
+        filter_by: filterBy,
+        include_fields: PUBLIC_FIELDS,
+        per_page: Math.min(Math.max(max, 1), 100), // §4 caps a public result set at 100
+      });
+    return (res.hits ?? [])
+      .map((h) => h.document as Partial<SoldListingDocument>)
+      .filter((d): d is Partial<SoldListingDocument> & { id: string } => Boolean(d.id && d.UnparsedAddress))
+      .map((d) => ({
+        id: d.id,
+        address: d.UnparsedAddress ?? "",
+        city: d.City ?? "",
+        cityRegion: d.CityRegion ?? "",
+      }));
+  } catch (err) {
+    console.error("[soldByKey] public link query failed:", err);
+    return [];
+  }
+}
+
+/**
+ * Recently SOLD homes in a city — the crawl path from the (indexable, sitemapped) city
+ * hub into the /address tree. Until 2026-09-02 not one server-rendered link pointed at
+ * that tree, so the sitemap was its only way in and every address page sat at crawl
+ * depth infinity with no internal PageRank.
+ *
+ * `cities` is the TRREB City list a hub slug resolves to (Toronto = ~36 district codes),
+ * filtered with the hub's own cityFilterClause so the two agree. DealType:=sold keeps
+ * leases and de-listed campaigns out of a block headed "sold" — legacy docs that predate
+ * the field simply don't appear, which is the right trade for an honest heading.
+ */
+export function getRecentSoldPublicForCity(cities: string[], max = 24): Promise<SoldPublicLink[]> {
+  const clause = cityFilterClause(cities);
+  if (!clause) return Promise.resolve([]);
+  return searchSoldPublicLinks(`${clause} && DealType:=sold`, max);
+}
+
+/**
+ * Recently SOLD homes near a point, excluding the subject — the sibling links that give
+ * the /address tree internal depth instead of 45,000 leaves hanging off a sitemap.
+ * Needs the subject's geo; records whose postal code never resolved have no `location`
+ * and simply don't match.
+ */
+export async function getRecentSoldPublicNearPoint(
+  lat: number,
+  lng: number,
+  radiusKm: number,
+  excludeKey: string,
+  max = 8
+): Promise<SoldPublicLink[]> {
+  // Over-fetch by one and drop the subject HERE rather than with an `id:!=` filter: `id`
+  // is Typesense's reserved document key, and a self-link on every address page is a
+  // silly thing to make depend on how a reserved field negates.
+  const rows = await searchSoldPublicLinks(`location:(${lat}, ${lng}, ${radiusKm} km) && DealType:=sold`, max + 1);
+  return rows.filter((r) => r.id !== excludeKey).slice(0, max);
 }
 
 /**

@@ -29,6 +29,8 @@ import { PropertyCard } from "@/components/PropertyCard";
 import { toCardData } from "@/lib/listings/listingCardData";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import HubFaq from "@/components/seo/HubFaq";
+import SoldAddressLinks from "@/components/address/SoldAddressLinks";
+import { getRecentSoldPublicForCity } from "@/lib/sold/soldByKey";
 import { deslugCity } from "@/lib/listings/listingPath";
 import {
   citiesForHubSlug,
@@ -44,6 +46,7 @@ export const dynamicParams = true;
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const PER_PAGE = 48; // well under the §4 cap of 100
 const MIN_INDEXABLE = 3; // fewer than this → noindex (thin-content / doorway guard)
+const SOLD_LINKS = 24; // crawlable links into the /address tree, well under the §4 cap of 100
 
 /**
  * Resolve a hub SLUG → its listings, grouping all TRREB City values that normalize to it
@@ -52,7 +55,7 @@ const MIN_INDEXABLE = 3; // fewer than this → noindex (thin-content / doorway 
  */
 const getCityHub = cache(async (slug: string) => {
   const { cities } = await citiesForHubSlug(slug);
-  if (cities.length === 0) return { listings: [] as ListingDocument[], totalFound: 0 };
+  if (cities.length === 0) return { listings: [] as ListingDocument[], totalFound: 0, cities };
   try {
     const res = await searchListings({
       query: "*",
@@ -61,10 +64,10 @@ const getCityHub = cache(async (slug: string) => {
       sortBy: "ListPrice",
       sortOrder: "desc",
     });
-    return { listings: res.listings, totalFound: res.totalFound };
+    return { listings: res.listings, totalFound: res.totalFound, cities };
   } catch (err) {
     console.error(`[CityHub] listing query failed for "${slug}":`, err);
-    return { listings: [] as ListingDocument[], totalFound: 0 };
+    return { listings: [] as ListingDocument[], totalFound: 0, cities };
   }
 });
 
@@ -116,7 +119,7 @@ export default async function CityHubPage({
 }) {
   const { prov, city } = await params;
   const cityName = deslugCity(city);
-  const { listings, totalFound } = await getCityHub(city);
+  const { listings, totalFound, cities } = await getCityHub(city);
   const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}`;
   const provLabel = prov.toUpperCase();
 
@@ -127,6 +130,10 @@ export default async function CityHubPage({
   // Cross-link to the commercial hub tree (commercial-gap Phase 2), only when it clears
   // the same floor — never link to a thin/noindex page.
   const { total: commercialTotal } = await citiesForHubSlug(city, COMMERCIAL_ACTIVE_FILTER);
+  // The crawl path into the /address tree. This hub is indexable and sitemapped; the
+  // address pages had no server-rendered inbound link at all until this block existed.
+  // Public fields only (address), so it renders identically for anon and Googlebot.
+  const recentSold = await getRecentSoldPublicForCity(cities, SOLD_LINKS);
 
   const breadcrumb = {
     "@context": "https://schema.org",
@@ -241,6 +248,13 @@ export default async function CityHubPage({
             </div>
           </section>
         )}
+
+        <SoldAddressLinks
+          items={recentSold}
+          heading={`Recently sold homes in ${cityName}`}
+          headingId="sold-heading"
+          blurb={`Sale records for ${cityName} addresses. Sale prices and dates need a free PureProperty account — real estate board rules require a verified sign-in to show them.`}
+        />
 
         {totalFound > 0 && (
           <HubFaq

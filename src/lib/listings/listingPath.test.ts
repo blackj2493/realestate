@@ -6,6 +6,7 @@ import {
   deslugCity,
   cityHubSlug,
   cityHubResolves,
+  buildAddressPath,
 } from "./listingPath";
 
 describe("slugify", () => {
@@ -133,5 +134,39 @@ describe("city hub slug round-trip", () => {
     expect(cityHubResolves("St. Catharines")).toBe(true); // → /property/on/st-catharines
     expect(cityHubResolves("")).toBe(false);
     expect(cityHubResolves("   ")).toBe(false);
+  });
+});
+
+describe("buildAddressPath", () => {
+  it("builds /address/{prov}/{city}/{street}-{KEY} from a sold record", () => {
+    expect(
+      buildAddressPath({
+        id: "E12801884",
+        address: "2545 Simcoe Street PH20, Oshawa, ON L1H 7K4",
+        city: "Oshawa",
+      })
+    ).toBe("/address/on/oshawa/2545-simcoe-street-ph20-E12801884");
+  });
+
+  it("uses only the street portion — the city/prov/postal tail would duplicate the path", () => {
+    const path = buildAddressPath({
+      id: "C12115995",
+      address: "33 Mill Street 2303, Toronto C08, ON M5A 3R3",
+      city: "Toronto C08",
+    });
+    // District code collapses to the hub slug, exactly as the sitemap emits it.
+    expect(path).toBe("/address/on/toronto/33-mill-street-2303-C12115995");
+    expect(path).not.toContain("m5a");
+  });
+
+  it("returns null without a key or a city — both yield a URL that cannot resolve", () => {
+    expect(buildAddressPath({ id: "", address: "1 Main St", city: "Barrie" })).toBeNull();
+    expect(buildAddressPath({ id: "X1", address: "1 Main St", city: "" })).toBeNull();
+  });
+
+  it("keeps the key alone when the address slugifies to nothing", () => {
+    expect(buildAddressPath({ id: "X13063230", address: "", city: "Amaranth" })).toBe(
+      "/address/on/amaranth/X13063230"
+    );
   });
 });
