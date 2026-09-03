@@ -123,7 +123,14 @@ async function reconcileOne(
   // 2) sold_listings — the 180-day Typesense comp cache. Index ONLY when the close is inside
   //    the window (an older archive row must not enter the rolling cache).
   const doc = toSoldDocument(
-    { ...rec, mls_status: raw.MlsStatus ?? null, transaction_type: raw.TransactionType ?? null } as any,
+    {
+        ...rec,
+        mls_status: raw.MlsStatus ?? null,
+        transaction_type: raw.TransactionType ?? null,
+        // Seller opt-out — toSoldDocument drops the doc when either switch says No.
+        internet_display: raw.InternetEntireListingDisplayYN,
+        internet_address_display: raw.InternetAddressDisplayYN,
+      } as any,
     raw.ListOfficeName ?? null,
     { media: raw.media ?? raw.Media, images: raw.images ?? raw.Images }
   );

@@ -186,7 +186,14 @@ async function repairSoldChunk(raws: any[]): Promise<{ vaulted: number; anchored
     if (!rec) continue;
     records.push(rec);
     const doc = toSoldDocument(
-      { ...rec, mls_status: raw.MlsStatus ?? null, transaction_type: raw.TransactionType ?? null } as any,
+      {
+        ...rec,
+        mls_status: raw.MlsStatus ?? null,
+        transaction_type: raw.TransactionType ?? null,
+        // Seller opt-out — toSoldDocument drops the doc when either switch says No.
+        internet_display: raw.InternetEntireListingDisplayYN,
+        internet_address_display: raw.InternetAddressDisplayYN,
+      } as any,
       raw.ListOfficeName ?? null,
       { media: raw.media, images: raw.images }
     );

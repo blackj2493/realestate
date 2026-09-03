@@ -824,7 +824,14 @@ export async function runSoldSync(
       if (soldData) {
         soldRecords.push(soldData);
         const doc = toSoldDocument(
-          { ...soldData, mls_status: rawListing.MlsStatus ?? null, transaction_type: rawListing.TransactionType ?? null },
+          {
+            ...soldData,
+            mls_status: rawListing.MlsStatus ?? null,
+            transaction_type: rawListing.TransactionType ?? null,
+            // Seller opt-out — live feed booleans here; toSoldDocument drops it on No.
+            internet_display: (rawListing as any).InternetEntireListingDisplayYN,
+            internet_address_display: (rawListing as any).InternetAddressDisplayYN,
+          },
           rawListing.ListOfficeName ?? null,
           { media: (rawListing as any).media, images: (rawListing as any).images }
         );

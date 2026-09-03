@@ -16,6 +16,7 @@
 import 'dotenv/config';
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
+import { isListingDisplayOptedOut } from '@/lib/compliance/internetDisplay';
 import { transformListing, TransformResult } from './transformer';
 import Typesense, { Client } from 'typesense';
 import {
@@ -374,12 +375,25 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
   // are never indexed: nothing in the frontend searches them and they only consume
   // Typesense RAM (caused bulk-sync OOM). Sold/lease comps are served from Supabase;
   // the Supabase `listings` table still keeps every status for True DOM history.
+  // Seller opt-out ("Distribute to Internet" = No) — never index, whatever the status.
+  // Read off full_payload rather than the lean Typesense doc, which does not carry the
+  // field. Absent ≠ opted out; see isListingDisplayOptedOut.
+  const optedOutKeys = new Set(
+    transformed
+      .filter((t) => isListingDisplayOptedOut(t.supabasePayload.full_payload))
+      .map((t) => t.supabasePayload.listing_key),
+  );
   const searchableDocs = options?.isSold
     ? [] // entire sold batch (Query B) — never indexed
     : typesenseDocuments.filter(
-        (d) => !NON_ACTIVE_STATUSES.has(String(d.Status ?? '').trim().toLowerCase()),
+        (d) =>
+          !NON_ACTIVE_STATUSES.has(String(d.Status ?? '').trim().toLowerCase()) &&
+          !optedOutKeys.has(String(d.id)),
       );
   const skippedCount = typesenseDocuments.length - searchableDocs.length;
+  if (optedOutKeys.size > 0) {
+    console.log(`   🚫 ${optedOutKeys.size} listing(s) opted out of internet display — not indexed`);
+  }
 
   if (searchableDocs.length === 0) {
     console.log(`🔍 Skipping Typesense — no active docs in batch (${skippedCount} non-active skipped)`);

@@ -11,6 +11,7 @@
 
 import { cache as reactCache } from "react";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { isListingDisplayOptedOut } from "@/lib/compliance/internetDisplay";
 import { getSoldPhotoUrls } from "@/lib/property/soldPhotos";
 import { searchListings } from "@/lib/typesense/client";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
@@ -267,8 +268,13 @@ async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null
  * resolves a feed-absent listing to `{ kind: "active" }`. Without the bump the fix would
  * be correct end to end and the page would keep printing "available" for another hour on
  * exactly the listings it was written to catch.
+ *
+ * v10 is the second deliberate VALUE bump. Honouring the seller's "Distribute to
+ * Internet" opt-out (see the gate in getListingDetail) changes what an existing key
+ * resolves to, so entries cached before this deploy would keep serving an opted-out
+ * listing for up to an hour — on exactly the listings a removal request waits on.
  */
-export const DETAIL_SHAPE_VERSION = "v9-whole-home-rent";
+export const DETAIL_SHAPE_VERSION = "v10-internet-display-optout";
 
 export interface ListingDetail {
   listing_key: string;
@@ -447,6 +453,17 @@ export const getListingDetail = cache(
       throw new Error(`Database query failed: ${error.message}`);
     }
     if (!listing) {
+      return null;
+    }
+
+    // Seller opt-out — "Distribute to Internet" = No. THIS is the gate that actually
+    // takes a listing down. The search index is not enough: this page reads the
+    // `listings` table directly, so a listing pulled from Typesense still rendered
+    // here with its address and price (188 Maplehurst, 2026-09-02). Resolving to null
+    // routes the page through its existing not-found branch — the caller cannot leak
+    // what it never received. The row itself stays: §12 keeps every status for True
+    // DOM history, and the feed would rewrite a deleted row within 24h anyway.
+    if (isListingDisplayOptedOut(listing.full_payload)) {
       return null;
     }
 
