@@ -354,3 +354,68 @@ describe('suite income', () => {
     expect(m.cap_rate_est).toBe(0);
   });
 });
+
+describe('implausible condo fee (the four worst cap rates in the book)', () => {
+  const condo = (associationFee: number | null): FinancialMetricsInput => ({
+    ...baseInput,
+    annual_rent: 36_000, annual_rent_p10: 32_000, has_rent_data: true,
+    propertySubType: 'Condo Apartment', isCondo: true,
+    calculation_price: 499_999, listPrice: 499_999, taxAnnualAmount: 3_019,
+    associationFee,
+  });
+
+  it('refuses every ratio when the "monthly fee" cannot be a fee', () => {
+    // W13554590 carries associationFee 624,012. hoa = fee * 12 made that $7.5M of
+    // annual opex on a $500k condo, and the page stored cap_rate_est -1,494%.
+    const r = calculateFinancialMetrics(condo(624_012));
+    expect(r.cap_rate_est).toBe(0);
+    expect(r.gross_yield_est).toBe(0);
+    expect(r.net_monthly_cashflow).toBe(0);
+    expect(r.annual_opex).toBe(0);
+  });
+
+  it('keeps a steep but REAL fee — blanking those would be the worse trade', () => {
+    // $12,906/mo on a $1.15M condo and $12,086/mo on a $23.5M penthouse are real.
+    // p99.9 of 30,080 active condos is $5,026, so the ceiling sits far above the
+    // honest maximum and catches only the records carrying something else.
+    const r = calculateFinancialMetrics(condo(12_906));
+    expect(r.annual_opex).toBeGreaterThan(0);
+    expect(r.cap_rate_est).not.toBe(0);
+  });
+
+  it('is unbothered by an ordinary fee', () => {
+    const r = calculateFinancialMetrics(condo(615)); // the measured median
+    expect(r.cap_rate_est).toBeGreaterThan(0);
+  });
+});
+
+describe('leased land — the ground rent the engine used to ignore', () => {
+  const trailer = (leasedLandFee: number | null): FinancialMetricsInput => ({
+    ...baseInput,
+    annual_rent: 18_000, annual_rent_p10: 16_000, has_rent_data: true,
+    propertySubType: 'MobileTrailer',
+    calculation_price: 22_900, listPrice: 22_900, taxAnnualAmount: 1,
+    leasedLandFee,
+  });
+
+  it('charges the ANNUAL ground rent to opex', () => {
+    const without = calculateFinancialMetrics(trailer(null));
+    const with_ = calculateFinancialMetrics(trailer(5_635)); // the measured median
+    expect(with_.annual_opex - without.annual_opex).toBeCloseTo(5_635, 0);
+  });
+
+  it('brings a land-lease yield down toward honesty', () => {
+    // The price buys the STRUCTURE; the rent covers structure plus land. Ignoring the
+    // land payment is what let a $22,900 trailer publish a cap rate above 90%.
+    const without = calculateFinancialMetrics(trailer(null));
+    const with_ = calculateFinancialMetrics(trailer(5_635));
+    expect(with_.cap_rate_est).toBeLessThan(without.cap_rate_est);
+  });
+
+  it('changes nothing for a home on land the buyer owns', () => {
+    const owned = calculateFinancialMetrics(trailer(null));
+    const zero = calculateFinancialMetrics(trailer(0));
+    expect(zero.annual_opex).toBe(owned.annual_opex);
+    expect(zero.cap_rate_est).toBe(owned.cap_rate_est);
+  });
+});
