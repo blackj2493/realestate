@@ -40,7 +40,11 @@ function PopupCard({
   onSelect: (l: ListingDocument) => void;
   onComps?: (l: ListingDocument) => void;
 }) {
-  const src = listing.thumbnailUrl || listing.primaryImageUrl;
+  // primaryImageUrl FIRST here, unlike the ledger card: this photo is a full-width
+  // 340x176 hero (see the container below), and thumbnailUrl is the 240px variant —
+  // it would be visibly soft at this size. QuickLookPanel picks the same order for
+  // the same reason. Every genuinely small surface keeps thumbnailUrl first.
+  const src = listing.primaryImageUrl || listing.thumbnailUrl;
   const deal = dealScoreFromDocument(listing);
   const loc = listing.location;
   const canComp = Boolean(onComps && Array.isArray(loc) && (loc[0] || loc[1]));

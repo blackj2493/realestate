@@ -202,6 +202,11 @@ export const unindexedFields: UnindexedField[] = [
   { name: 'RawImages', type: 'string[]', index: false, facet: false },
   // Best-fit thumbnail URL chosen by selectPrimaryImage() — stored, not searchable.
   { name: 'primaryImageUrl', type: 'string', index: false, facet: false, optional: true },
+  // The COVER photo's 240px 'Thumbnail' variant, when the media pass fetched one.
+  // primaryImageUrl is the 960x960 'Medium' (median 155 KB); card surfaces render a
+  // 144x112 box, so they read `thumbnailUrl || primaryImageUrl` and pay 12 KB instead.
+  // Optional on purpose — a doc synced before this field existed simply falls back.
+  { name: 'thumbnailUrl', type: 'string', index: false, facet: false, optional: true },
   // Listing brokerage — display cargo for the TRREB §6.3(c) text label on every card.
   { name: 'ListOfficeName', type: 'string', index: false, facet: false, optional: true },
   // Zoning cargo — municipal open data (NOT MLS), display-only. Plain-language name + a
@@ -373,6 +378,11 @@ export const typesenseSchema = {
     { name: 'RawImages', type: 'string[]' as const, index: false, facet: false },
     // Best-fit thumbnail URL chosen by selectPrimaryImage() — stored, not searchable.
     { name: 'primaryImageUrl', type: 'string' as const, index: false, facet: false, optional: true },
+    // The COVER photo's 240px 'Thumbnail' variant, when the media pass fetched one.
+    // primaryImageUrl is the 960x960 'Medium' (median 155 KB); card surfaces render a
+    // 144x112 box, so they read `thumbnailUrl || primaryImageUrl` and pay 12 KB instead.
+    // Optional on purpose — a doc synced before this field existed simply falls back.
+    { name: 'thumbnailUrl', type: 'string' as const, index: false, facet: false, optional: true },
     // Listing brokerage — display cargo for the TRREB §6.3(c) text label on every card.
     { name: 'ListOfficeName', type: 'string' as const, index: false, facet: false, optional: true },
     // Zoning cargo — municipal open data (NOT MLS), display-only (plain-language + provenance key).

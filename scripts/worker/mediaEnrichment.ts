@@ -284,13 +284,106 @@ function chunkKeys(keys: string[]): string[][] {
  * LargestNoWatermark, and dedupeMediaByObject drops it defensively even if the feed
  * volunteers one.
  */
+/**
+ * Only the first couple of photos can be the cover, so the cover-thumb pass asks
+ * for `Order lt COVER_THUMB_MAX_ORDER` instead of every photo. Measured against
+ * AMPRE 2026-09-02 on a 4-listing chunk: 100+ Thumbnail rows become 9.
+ */
+const COVER_THUMB_MAX_ORDER = 2;
+
+/**
+ * The COVER photo's 240px 'Thumbnail' URL for each key in one chunk.
+ *
+ * Why a separate pass rather than another size in the main walk: the main walk
+ * feeds dedupeMediaByObject, which collapses each logical photo (keyed by
+ * MediaObjectID) to its single best size — a Thumbnail record would be dropped
+ * on sight because Medium outranks it, and forcing it through would put a 240px
+ * URL into `media_urls` and therefore into the gallery. This map stays beside
+ * the media array and only ever feeds the card thumbnail.
+ *
+ * Why it is worth a request at all: the ledger renders a 144x112 card from
+ * `primaryImageUrl`, which is the 960x960 'Medium' variant — a median 155 KB for
+ * a card that needs ~12 KB, and Next.js flags it as the LCP element on
+ * /properties. The size is inside the imgproxy signature so the URL cannot be
+ * rewritten (a hand-edited `rs:fit:288:288` returns 403); the small image only
+ * exists as this separate URL. Measured on 120 live listings: 'Thumbnail' is
+ * present on 100% of them at 240x160 and a median 12 KB — 92% smaller.
+ *
+ * Returns false ONLY on a fetch failure, and the caller deliberately does not
+ * turn that into a failedKeys entry: a listing with photos but no cover thumb is
+ * not a listing without photos, and every consumer already falls back to
+ * `primaryImageUrl`. A missing thumb costs bytes, never correctness.
+ */
+async function fetchCoverThumbs(
+  chunk: string[],
+  token: string,
+  out: Map<string, string>
+): Promise<boolean> {
+  const keyFilter = `(${chunk.map((k) => `ResourceRecordKey eq '${k}'`).join(' or ')})`;
+  const filter =
+    `${keyFilter} and ResourceName eq 'Property'` +
+    ` and ImageSizeDescription eq 'Thumbnail' and Order lt ${COVER_THUMB_MAX_ORDER}`;
+  const url =
+    `${API_BASE_URL}/Media?$filter=${encodeURIComponent(filter)}` +
+    `&$orderby=ResourceRecordKey,Order&$top=${MEDIA_PAGE_SIZE}`;
+  const result: FetchResult<any> = await fetchWithRetry<any>(url, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!result.success || !result.data) {
+    console.warn(`   ⚠️  Cover-thumb fetch failed (non-fatal): ${result.error}`);
+    return false;
+  }
+  // A listing can return several rows inside the Order window, so keep the
+  // lowest Order — the same record selectPrimaryImage would call the cover.
+  const bestOrder = new Map<string, number>();
+  for (const m of (result.data.value || []) as any[]) {
+    const lk = m?.ResourceRecordKey;
+    if (!lk || !m.MediaURL || m.MediaStatus === 'Deleted') continue;
+    const order = m.Order ?? Number.POSITIVE_INFINITY;
+    const prev = bestOrder.get(lk);
+    if (prev === undefined || order < prev) {
+      bestOrder.set(lk, order);
+      out.set(lk, m.MediaURL);
+    }
+  }
+  return true;
+}
+
+/**
+ * Cover thumbs ONLY, for the backfill — the live index predates the field and the
+ * daily sync sets it just for listings it happens to touch.
+ *
+ * Deliberately not fetchMediaForKeys(): that walks every photo at Medium and pages
+ * through 30+ records per listing, which for a ~100k-doc backfill is hours of
+ * requests for data we already hold. This is one bounded request per 25 keys.
+ *
+ * Best-effort per chunk, like the sync path: a chunk that fails is simply missing
+ * from the returned map, so the caller writes nothing and the card keeps falling
+ * back to primaryImageUrl. Re-running picks the stragglers up.
+ */
+export async function fetchCoverThumbsForKeys(
+  keys: string[],
+  token: string
+): Promise<Map<string, string>> {
+  const thumbs = new Map<string, string>();
+  if (!token || keys.length === 0) return thumbs;
+  for (const chunk of chunkKeys(keys)) {
+    await fetchCoverThumbs(chunk, token, thumbs);
+    await sleep(MEDIA_REQUEST_DELAY_MS);
+  }
+  return thumbs;
+}
+
 export async function fetchMediaForKeys(
   keys: string[],
   token: string
-): Promise<{ media: Map<string, StoredMedia[]>; failedKeys: Set<string> }> {
+): Promise<{ media: Map<string, StoredMedia[]>; failedKeys: Set<string>; thumbs: Map<string, string> }> {
   const grouped = new Map<string, StoredMedia[]>();
   const failedKeys = new Set<string>();
-  if (!token || keys.length === 0) return { media: grouped, failedKeys };
+  // Cover-photo 240px URLs, keyed by ListingKey. Additive: absent = fall back.
+  const thumbs = new Map<string, string>();
+  if (!token || keys.length === 0) return { media: grouped, failedKeys, thumbs };
 
   // Accumulate raw media (with Order) so we sort per listing after grouping.
   const rawByKey = new Map<string, any[]>();
@@ -304,6 +397,10 @@ export async function fetchMediaForKeys(
     if (!(await fetchChunkAtSize(chunk, primarySize, token, rawByKey))) {
       for (const k of chunk) failedKeys.add(k);
     }
+    // Cover thumbs ride the same chunking. A failure here is swallowed on
+    // purpose — see fetchCoverThumbs: no thumb is a bandwidth cost, not a
+    // missing listing, so it must never mark the chunk failed.
+    await fetchCoverThumbs(chunk, token, thumbs);
   }
 
   // Fallback pass — ONLY the keys the primary size found nothing for, and only
@@ -334,7 +431,7 @@ export async function fetchMediaForKeys(
   // A key that returned media (despite a later-page failure in its chunk) is NOT
   // a failure — only keys we ended up with nothing for stay flagged.
   for (const lk of grouped.keys()) failedKeys.delete(lk);
-  return { media: grouped, failedKeys };
+  return { media: grouped, failedKeys, thumbs };
 }
 
 /**
@@ -445,9 +542,14 @@ export async function enrichListingsWithMedia(
   const keys = listings.map((l) => l.ListingKey).filter(Boolean);
   if (keys.length === 0) return 0;
   try {
-    const { media: mediaMap, failedKeys } = await fetchMediaForKeys(keys, token);
+    const { media: mediaMap, failedKeys, thumbs } = await fetchMediaForKeys(keys, token);
     let withMedia = 0;
     for (const listing of listings) {
+      // The cover thumb is set BEFORE the failed-fetch guard: it comes from its
+      // own request, so a failed media page says nothing about it, and dropping
+      // a thumb we actually hold would just re-ship the 155 KB photo.
+      const thumb = thumbs.get(listing.ListingKey);
+      if (thumb) listing.thumbnailUrl = thumb;
       // Don't false-empty a failed fetch: leave `media` untouched so the
       // downstream preserveExistingMedia / next sweep can recover it. Only a
       // confirmed-zero fetch gets `media = []`.
