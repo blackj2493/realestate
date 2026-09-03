@@ -24,6 +24,7 @@ import * as fs from 'fs';
 
 // Import cross-fetch
 import crossFetch from 'cross-fetch';
+import { isListingDisplayOptedOut } from '@/lib/compliance/internetDisplay';
 
 // Patch global fetch with TLS disabled agent for Supabase client
 const agent = new https.Agent({ rejectUnauthorized: false });
@@ -229,8 +230,15 @@ async function processBatch(records: ListingRecord[]): Promise<TransformResult> 
   // payload still says Active), so this flag is the only thing standing between a
   // reindex and a resurrected ghost — worth asserting at the point of use, not just
   // in a query someone may later rewrite.
+  //
+  // The seller opt-out belongs on this line for the same reason: a full reindex
+  // rebuilds the collection from the vault, so a gate that lived only in the
+  // incremental sync would republish every opted-out listing on the next rebuild.
   const active = records.filter(
-    (r) => r.is_orphaned !== true && isActiveListing(r.full_payload)
+    (r) =>
+      r.is_orphaned !== true &&
+      isActiveListing(r.full_payload) &&
+      !isListingDisplayOptedOut(r.full_payload)
   );
   result.skipped = records.length - active.length;
 

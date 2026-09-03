@@ -102,7 +102,14 @@ async function reconcileOne(
 
   // 2) sold_listings Typesense cache — built with the exact ingester mapping.
   const doc = toSoldDocument(
-    { ...rec, mls_status: raw.MlsStatus ?? null, transaction_type: raw.TransactionType ?? null } as any,
+    {
+        ...rec,
+        mls_status: raw.MlsStatus ?? null,
+        transaction_type: raw.TransactionType ?? null,
+        // Seller opt-out — toSoldDocument drops the doc when either switch says No.
+        internet_display: raw.InternetEntireListingDisplayYN,
+        internet_address_display: raw.InternetAddressDisplayYN,
+      } as any,
     raw.ListOfficeName ?? null,
     { media: raw.media ?? raw.Media, images: raw.images ?? raw.Images }
   );

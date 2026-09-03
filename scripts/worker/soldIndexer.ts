@@ -32,6 +32,7 @@ import { parsePostalFromAddress } from './parsePostal';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
 import { selectPrimaryImage, primaryImageFromPhotos } from '../../src/lib/etl/selectPrimaryImage';
 import { deriveDealType } from '../../src/lib/sold/dealType';
+import { isOptedOutValue } from '../../src/lib/compliance/internetDisplay';
 import { purgeSupersededForCloses } from './purgeSupersededDelisted';
 
 export const SOLD_WINDOW_DAYS = 180; // mirrors MAX_WINDOW_DAYS in the sold route
@@ -92,6 +93,14 @@ export interface SoldIndexInput {
   /** Raw board status signals for deriving DealType (real values, not price). */
   mls_status: string | null;
   transaction_type: string | null;
+  /**
+   * Seller internet-display switches, exactly as the source gave them. Optional
+   * because the callers hold different shapes: the backfill selects them out of
+   * raw_payload as STRINGS ('false'), the incremental path holds the live feed
+   * BOOLEAN. isOptedOutValue reads both, and absent means "not opted out".
+   */
+  internet_display?: unknown;
+  internet_address_display?: unknown;
 }
 
 /**
@@ -119,6 +128,13 @@ export function toSoldDocument(
   rawMedia?: { media?: unknown; images?: unknown; photos?: unknown }
 ): SoldListingDocument | null {
   if (!r.listing_key) return null;
+  // Seller opt-out. Gated here rather than in each caller because this function is the
+  // one choke point every sold_listings writer shares — the backfill, the incremental
+  // ingester, ghostReconcile and both reconcilers. Either switch removes the document:
+  // the /address page it feeds exists to publish an address.
+  if (isOptedOutValue(r.internet_display) || isOptedOutValue(r.internet_address_display)) {
+    return null;
+  }
   if (!r.purchase_contract_date) return null;
   const ms = new Date(r.purchase_contract_date).getTime();
   if (!Number.isFinite(ms)) return null;
@@ -318,6 +334,10 @@ async function backfill(days = SOLD_WINDOW_DAYS): Promise<void> {
     'parking_total, list_price, close_price, purchase_contract_date, basement_tier, ' +
     'brokerage:raw_payload->>ListOfficeName, ' +
     'mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType, ' +
+    // Seller opt-out switches — toSoldDocument drops the row when either says No.
+    // They arrive as the STRINGS 'true'/'false' through ->>; isOptedOutValue expects that.
+    'internet_display:raw_payload->>InternetEntireListingDisplayYN, ' +
+    'internet_address_display:raw_payload->>InternetAddressDisplayYN, ' +
     // Thumbnail comes from the flat `photos` column (migration 101) — already
     // Active-only, de-duplicated and Order-sorted. This previously pulled the
     // raw_payload->media sub-tree: ~37 eight-field objects per row, of which only the

@@ -10,6 +10,7 @@ import {
   type DelistedDealType,
 } from '../../src/lib/sold/dealType';
 import type { SoldListingDocument } from '../../src/lib/typesense/soldListingsSchema';
+import { isAnyInternetDisplayOptedOut } from '../../src/lib/compliance/internetDisplay';
 import { parsePostalFromAddress } from './parsePostal';
 
 function toInt(v: unknown): number {
@@ -107,6 +108,10 @@ export function extractDelistedRecord(
 ): DelistedRecord | null {
   const dealType = deriveDelistedDealType(raw?.MlsStatus);
   if (!dealType) return null;
+  // Seller opt-out — drop the record at the mapper, before it can reach either the
+  // archive table or the sold_listings collection behind the public /address page.
+  // Either switch removes it: that page exists to publish an address.
+  if (isAnyInternetDisplayOptedOut(raw)) return null;
   const listingKey = raw.ListingKey || raw.ListingId || '';
   if (!listingKey) return null;
   const eventDate = delistedEventDate(raw, nowMs);
