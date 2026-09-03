@@ -93,14 +93,35 @@ const leaseFilter = (from: string, to: string) =>
   `TransactionType eq 'For Lease' and StandardStatus eq 'Closed' ` +
   `and CloseDate ge ${from} and CloseDate lt ${to}`;
 
-/** Which of these keys are already stored (resume/idempotency). */
+/**
+ * Which of these keys are already stored (resume/idempotency).
+ *
+ * RETRIED, and the reason is specific: supabase-js REJECTS its promise when the underlying
+ * fetch dies mid-flight ("terminated") rather than resolving with an `{ error }` object. So
+ * the `if (error)` branch below never sees a dropped connection — it propagates straight out
+ * of here and kills the run. That is exactly how a 2h05m run died at 2025-10 having logged
+ * zero feed retries, zero presence errors and zero upsert failures: the one call without a
+ * retry was the one that failed. Over a walk this long a transient drop is close to certain.
+ */
 async function alreadyStored(keys: string[]): Promise<Set<string>> {
   const seen = new Set<string>();
   for (let i = 0; i < keys.length; i += PRESENCE_CHUNK) {
     const chunk = keys.slice(i, i + PRESENCE_CHUNK);
-    const { data, error } = await sb.from('raw_vow_sold').select('listing_key').in('listing_key', chunk);
-    if (error) throw new Error(`presence check: ${error.message}`);
-    for (const r of data ?? []) seen.add(r.listing_key);
+    let lastErr: unknown = null;
+    let ok = false;
+    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+      try {
+        const { data, error } = await sb.from('raw_vow_sold').select('listing_key').in('listing_key', chunk);
+        if (error) throw new Error(`presence check: ${error.message}`);
+        for (const r of data ?? []) seen.add(r.listing_key);
+        ok = true;
+      } catch (e) {
+        lastErr = e;
+        console.warn(`   ⚠️  presence check ${(e as Error)?.message ?? e} — retry ${attempt + 1}/3`);
+        await sleep(1000 * (attempt + 1));
+      }
+    }
+    if (!ok) throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
   }
   return seen;
 }
