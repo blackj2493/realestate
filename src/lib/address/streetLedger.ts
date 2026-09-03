@@ -15,13 +15,25 @@
  * filter finds NOTHING. So the SQL filters by street token only, and rows are verified
  * in JS: strict street-name match (streetNamesMatch) + a locality check that accepts
  * postal-FSA equality first, then city equality/prefix, then shared Ottawa-group
- * membership. Flat-column ilike scan (NO raw_payload → no detoast), cached 6h per
- * (street, city, fsa) so the force-dynamic profile page doesn't re-scan 280k rows.
+ * membership. Flat-column ilike scan, cached 6h per (street, city, fsa) so the
+ * force-dynamic profile page doesn't re-scan 280k rows. The two seller opt-out
+ * aliases below are the only `raw_payload` reads, and Postgres projects them after
+ * the LIMIT, so at most SCAN_LIMIT rows detoast per uncached call — measured over
+ * PostgREST at +11 to +46ms median on the heaviest street tokens in the book
+ * (Maplehurst / Yonge / Main, 8 paired runs each, 2026-09-02).
+ *
+ * The scan itself is the cost that matters, and it is not always survivable: a very
+ * common token ("Yonge") has been seen to exceed the statement timeout, in which case
+ * the query returns null and the card renders nothing. It fails closed — but that is
+ * why a street with obvious sales can show no ledger.
  */
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
+import { isOptedOutValue } from "@/lib/compliance/internetDisplay";
+import { soldAddressHref } from "@/lib/search/searchTarget";
+import { extractListingKey } from "@/lib/listings/listingPath";
 
 /**
  * Leases live in raw_vow_sold too, and are excluded by the feed's own
@@ -42,6 +54,10 @@ export interface LedgerSale {
   listingKey: string;
   /** Street address only ("761 Cappamore Drive"). */
   address: string;
+  /** The ROW's own city, not the subject's — the locality rule above accepts an OREB
+   *  area name ("Barrhaven") for a geocoder city ("Nepean"), so the two differ. The
+   *  card needs the row's value to build that record's canonical /address URL. */
+  city: string;
   closePrice: number;
   /** Date-only ISO string ("2024-05-13") — render with timeZone:'UTC' (MEDIUM-18). */
   dateISO: string;
@@ -58,6 +74,30 @@ export interface StreetLedgerGated {
 export interface StreetLedgerPublic {
   streetLabel: string;
   count: number;
+}
+
+/**
+ * The keyed /address URL for one ledger row, or null when the row must render without a
+ * link. Lives here, beside the shape it reads, so the rule is testable without a render.
+ *
+ * Two rows get no link:
+ *  - one whose key `extractListingKey` rejects. That is the ROUTE's own parser, so a key
+ *    it cannot read would fall through to the key-less resolution ladder and 404. Linking
+ *    only what the route can parse is what keeps every rendered link live.
+ *  - the subject itself, which is the page the reader is already on. Compared
+ *    case-insensitively because the route param is whatever the URL carried.
+ *
+ * Note this cannot answer whether the RECORD is still displayable — the seller opt-out is
+ * enforced in the query above, so an opted-out row never reaches a link in the first place.
+ */
+export function ledgerRowHref(
+  sale: Pick<LedgerSale, "listingKey" | "address" | "city">,
+  subjectKey?: string | null
+): string | null {
+  const key = extractListingKey(sale.listingKey);
+  if (!key) return null;
+  if (key === (subjectKey ?? "").trim().toUpperCase()) return null;
+  return soldAddressHref(sale.address, sale.city, key);
 }
 
 /** Longest distinctive street token (≥4 chars) for the SQL ilike probe. */
@@ -106,7 +146,22 @@ const fetchLedger = unstable_cache(
       const safeToken = token.replace(/[%_,()]/g, "");
       const { data, error } = await sb
         .from("raw_vow_sold")
-        .select("listing_key, unparsed_address, city, city_region, close_price, purchase_contract_date, property_sub_type")
+        .select(
+          "listing_key, unparsed_address, city, city_region, close_price, purchase_contract_date, property_sub_type, " +
+            // Seller opt-out (internetDisplay.ts, PR #475). This card prints a street
+            // address and a close price, so the switches that take the listing and
+            // address pages down have to reach it too.
+            //
+            // Nothing else can reach it. #475 works by keeping opted-out records OUT of
+            // the two Typesense collections (plus purgeInternetDisplayOptOuts.ts for the
+            // documents already there). This query does not read an index — it reads
+            // raw_vow_sold directly, which is where the opt-out itself is recorded. So a
+            // purged record stays purged everywhere except here unless the gate is on
+            // this read. Verified 2026-09-02: C13661766 (188 Maplehurst Avenue, the home
+            // #475 was written for) carries both flags false and still matched this scan.
+            "internet_display:raw_payload->>InternetEntireListingDisplayYN, " +
+            "internet_address_display:raw_payload->>InternetAddressDisplayYN"
+        )
         .ilike("unparsed_address", `%${safeToken}%`)
         .eq("transaction_type", SALE_TRANSACTION_TYPE)
         .gte("close_price", MIN_CLOSE_PRICE)
@@ -118,7 +173,11 @@ const fetchLedger = unstable_cache(
       }
 
       const sales: LedgerSale[] = [];
-      for (const r of data as Array<Record<string, unknown>>) {
+      // Through `unknown`: supabase-js cannot type a `->>` JSON alias, so it widens the
+      // whole row to GenericStringError and a direct cast no longer overlaps.
+      for (const r of data as unknown as Array<Record<string, unknown>>) {
+        // Either switch removes the row — the ledger exists to publish an address.
+        if (isOptedOutValue(r.internet_display) || isOptedOutValue(r.internet_address_display)) continue;
         const rowAddress = typeof r.unparsed_address === "string" ? r.unparsed_address : "";
         const parsed = parseAddress(rowAddress);
         if (!streetNamesMatch(streetName, parsed.streetName)) continue;
@@ -138,6 +197,7 @@ const fetchLedger = unstable_cache(
         sales.push({
           listingKey: String(r.listing_key ?? ""),
           address: rowAddress.split(",")[0].trim(),
+          city: typeof r.city === "string" ? r.city : "",
           closePrice: close,
           dateISO: dateISO.slice(0, 10),
           subType: typeof r.property_sub_type === "string" && r.property_sub_type ? r.property_sub_type : null,

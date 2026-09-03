@@ -5,9 +5,14 @@
  * { streetLabel, count } (getStreetLedgerPublic) — the redacted dots below are pure
  * placeholders (redact-skeleton, evenly spaced, no year/price/date anywhere in the
  * DOM). Consumers receive the full ledger and get real dots positioned by date.
+ *
+ * Consumer rows link to the record's own sale page. The anonymous branch never holds a
+ * listing key, so the link cannot exist there — the gate stays structural.
  */
-import { Lock } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, Lock } from "lucide-react";
 import SignInLink from "@/components/auth/SignInLink";
+import { ledgerRowHref } from "@/lib/address/streetLedger";
 import type { StreetLedgerGated, StreetLedgerPublic } from "@/lib/address/streetLedger";
 
 const MAX_DOTS = 10;
@@ -39,11 +44,16 @@ export default function StreetLedgerCard({
   isConsumer,
   gated,
   publicLedger,
+  subjectKey,
 }: {
   isConsumer: boolean;
   /** CONSUMER ONLY — anonymous callers must pass null. */
   gated: StreetLedgerGated | null;
   publicLedger: StreetLedgerPublic | null;
+  /** The listing key of the page this card sits on, when it has one. That row is the
+   *  home the reader is already looking at, so it renders without a link rather than
+   *  offering a round trip back to the same record. */
+  subjectKey?: string | null;
 }) {
   const count = isConsumer ? (gated?.count ?? 0) : (publicLedger?.count ?? 0);
   const streetLabel = (isConsumer ? gated?.streetLabel : publicLedger?.streetLabel) ?? "";
@@ -76,14 +86,15 @@ export default function StreetLedgerCard({
             const move = prev ? pctMove(s.closePrice, prev.closePrice) : null;
             const isHi = s.closePrice === hi && hi !== lo;
             const isLo = s.closePrice === lo && hi !== lo;
-            return (
-              <li key={`${s.listingKey}-${i}`} className="relative flex items-center gap-3 py-2 pl-5">
-                <span
-                  className="absolute left-0 top-1/2 h-[7px] w-[7px] -translate-y-1/2 rounded-full border-2 border-card bg-emerald-500"
-                  aria-hidden="true"
-                />
+            // The keyed /address URL — the same shape the sitemap and the profile ladder's
+            // sold redirect emit, so a row lands on the one canonical page for its record
+            // (which redirects on to the full report when the listing row survived). The
+            // rule for which rows get one lives in streetLedger.ts, next to the data.
+            const href = ledgerRowHref(s, subjectKey);
+            const row = (
+              <>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-foreground">{s.address}</p>
+                  <p className="truncate text-sm font-semibold text-foreground group-hover:underline">{s.address}</p>
                   <p className="font-mono text-[10px] text-muted-foreground">{fmtDate(s.dateISO)}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-right">
@@ -112,7 +123,35 @@ export default function StreetLedgerCard({
                       {isHi ? "High" : "Low"}
                     </span>
                   )}
+                  {/* A chevron, not just a hover tint — the row has to read as a destination
+                      on touch, where there is no hover. The unlinked subject row keeps the
+                      same width so the price column still aligns down the card. */}
+                  {href ? (
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  ) : (
+                    <span className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  )}
                 </div>
+              </>
+            );
+            return (
+              <li key={`${s.listingKey}-${i}`} className="relative pl-5">
+                <span
+                  className="absolute left-0 top-1/2 h-[7px] w-[7px] -translate-y-1/2 rounded-full border-2 border-card bg-emerald-500"
+                  aria-hidden="true"
+                />
+                {href ? (
+                  <Link
+                    href={href}
+                    prefetch={false}
+                    aria-label={`Sale record for ${s.address}`}
+                    className="group -mx-2 flex items-center gap-3 rounded px-2 py-2 transition-colors hover:bg-muted/50"
+                  >
+                    {row}
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3 py-2">{row}</div>
+                )}
               </li>
             );
           })}
