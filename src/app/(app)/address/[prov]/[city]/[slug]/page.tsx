@@ -32,7 +32,8 @@ import { notFound, redirect } from "next/navigation";
 import { GraduationCap, Footprints, Lock, MapPin, Images } from "lucide-react";
 import { extractListingKey, deslugCity, cityHubSlug } from "@/lib/listings/listingPath";
 import { cityHrefOrMap } from "@/lib/listings/cityHubs";
-import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, hasFullListingRow, type SoldPublic } from "@/lib/sold/soldByKey";
+import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, hasFullListingRow, getRecentSoldPublicNearPoint, type SoldPublic } from "@/lib/sold/soldByKey";
+import SoldAddressLinks from "@/components/address/SoldAddressLinks";
 import { getSaleRecordByKeyGated } from "@/lib/address/saleRecord";
 import SaleRecordCard from "@/components/address/SaleRecordCard";
 import { resolveAddressSlug } from "@/lib/address/resolveProfile";
@@ -49,6 +50,8 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 export const dynamic = "force-dynamic"; // render depends on auth (anon vs consumer)
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
+const NEARBY_SOLD_KM = 1.5; // walkable radius — keeps the links genuinely "near this home"
+const NEARBY_SOLD_MAX = 9; // enough to interlink the tree, short enough to stay a sidebar
 
 /** Public neighbourhood context (EQAO schools + Overture walkability) — best-effort. */
 function publicContext(loc: [number, number] | null) {
@@ -305,6 +308,13 @@ export default async function AddressPage({
   const { href: cityHref, isHub: cityIsHub } = await cityHrefOrMap(cityName, prov, pub.location);
   const canonical = `${SITE_URL}/address/${prov.toLowerCase()}/${city}/${slug}`;
   const ctx = publicContext(pub.location);
+  // Sibling links inside the /address tree. The city hub is the way IN; these give the
+  // tree internal depth, so a crawler that reaches one address page reaches its
+  // neighbours instead of dead-ending. Public fields only — see SoldAddressLinks.
+  // NOT streamed: this is the crawl path, and it belongs in the first HTML flush.
+  const nearbySold = pub.location
+    ? await getRecentSoldPublicNearPoint(pub.location[0], pub.location[1], NEARBY_SOLD_KM, pub.id, NEARBY_SOLD_MAX)
+    : [];
 
   // PUBLIC structured data — postal address only, NO sale information.
   const jsonLd = {
@@ -427,7 +437,16 @@ export default async function AddressPage({
           )}
         </section>
 
-        <ListingComplianceNotice />
+        <SoldAddressLinks
+          items={nearbySold}
+          heading="Recently sold near this home"
+          headingId="nearby-sold-heading"
+          blurb={`Other ${cityName} addresses with a sale record within ${NEARBY_SOLD_KM} km.`}
+        />
+
+        <div className="mt-8">
+          <ListingComplianceNotice />
+        </div>
       </div>
     </main>
   );

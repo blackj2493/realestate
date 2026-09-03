@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getSoldSitemapEntries } from "@/lib/sold/soldByKey";
-import { cityHubSlug, slugify } from "@/lib/listings/listingPath";
+import { buildAddressPath } from "@/lib/listings/listingPath";
 
 /**
  * /addresses/sitemap.xml — sitemap for the public /address (sold/off-market) pages.
@@ -20,12 +20,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries = await getSoldSitemapEntries(MAX_URLS);
   const out: MetadataRoute.Sitemap = [];
   for (const e of entries) {
-    const citySlug = cityHubSlug(e.city) || slugify(e.city);
-    if (!citySlug) continue; // can't build a clean URL without a city
-    const street = slugify((e.address || "").split(",")[0]);
-    const slug = street ? `${street}-${e.id}` : e.id;
+    // Same builder the in-page links use — a sitemap URL the links can't reproduce is
+    // what made this sitemap the address tree's ONLY crawl path (see buildAddressPath).
+    const path = buildAddressPath(e);
+    if (!path) continue;
     out.push({
-      url: `${SITE_URL}/address/on/${citySlug}/${slug}`,
+      url: `${SITE_URL}${path}`,
       changeFrequency: "monthly",
       priority: 0.5,
     });
