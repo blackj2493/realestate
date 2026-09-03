@@ -40,7 +40,7 @@ import {
 } from './types';
 import type { CoefficientRow } from './matrixService';
 import { rawVariantsOf, cityRegionLookupCandidates, fsaOf } from './normalizeType';
-import { subjectAdjustmentTotal } from './features';
+import { subjectAdjustmentTotal, compSqft } from './features';
 
 export interface AnchorResult {
   /** ln(price) at the community-average feature level. exp(anchorLevel) is the anchor. */
@@ -60,6 +60,10 @@ export interface CompRow {
   purchase_contract_date: string | null;
   close_date: string | null;
   building_area_total: number | null;
+  /** The declared MLS band as an integer midpoint. Present on 86% of sale rows against
+   *  building_area_total's 67%, and IDENTICAL to it wherever both exist (171,608 of
+   *  180,619 rows). Fallback half of {@link compSqft}. */
+  living_area_range?: number | null;
   lot_width: number | null;
   lot_depth: number | null;
   bedrooms_above_grade: number | null;
@@ -82,7 +86,7 @@ export interface CompRow {
  *  postal_code is FSA-only on legacy rows; backfill it from raw_payload->>PostalCode to
  *  unlock full block/building-level geo weighting (see geoMatchWeight). */
 const COMP_SELECT =
-  'close_price, purchase_contract_date, close_date, building_area_total, ' +
+  'close_price, purchase_contract_date, close_date, building_area_total, living_area_range, ' +
   'lot_width, lot_depth, bedrooms_above_grade, bedrooms_below_grade, bathrooms_total_integer, parking_total, ' +
   'interior_tier, exterior_tier, basement_tier, postal_code';
 
@@ -517,7 +521,7 @@ function adjustedLogPrice(
   const exteriorScore = c.exterior_tier !== null ? 5 - c.exterior_tier : null;
   const basementScore = c.basement_tier !== null ? 10 - c.basement_tier : null;
   const feats: Array<[string, number | null]> = [
-    ['building_area_total', c.building_area_total],
+    ['building_area_total', compSqft(c)],
     ['lot_width', c.lot_width !== null && c.lot_width > 0 ? c.lot_width : null],
     ['bedrooms_above_grade', c.bedrooms_above_grade],
     ['bedrooms_below_grade', c.bedrooms_below_grade],
@@ -603,8 +607,9 @@ export function similarityWeight(subject: AVMInput, c: CompRow): number {
   if (subject.bathroomsTotalInteger != null && c.bathrooms_total_integer != null) {
     logw += -0.5 * ((subject.bathroomsTotalInteger - c.bathrooms_total_integer) / BW_BATHS) ** 2;
   }
-  if (subject.buildingAreaTotal && subject.buildingAreaTotal > 0 && c.building_area_total && c.building_area_total > 0) {
-    logw += -0.5 * (Math.log(subject.buildingAreaTotal / c.building_area_total) / BW_SQFT) ** 2;
+  const compArea = compSqft(c);
+  if (subject.buildingAreaTotal && subject.buildingAreaTotal > 0 && compArea && compArea > 0) {
+    logw += -0.5 * (Math.log(subject.buildingAreaTotal / compArea) / BW_SQFT) ** 2;
   }
   logw += lotSimLog(subject, c);
   return Math.exp(logw);

@@ -45,6 +45,7 @@ import {
   cohortRungKeys,
   type CohortRung,
 } from '@/lib/avm/normalizeType';
+import { compSqft } from '@/lib/avm/features';
 import { SALE_TRANSACTION_TYPE, MIN_CLOSE_PRICE } from '@/lib/avm/types';
 
 // Supabase client uses Node's native fetch (undici). We deliberately do NOT override
@@ -103,6 +104,8 @@ interface SoldRow {
   postal_code: string | null;
   property_sub_type: string | null;
   building_area_total: number | null;
+  /** Fallback half of compSqft — see features.ts. */
+  living_area_range: number | null;
   lot_width: number | null;
   bedrooms_above_grade: number | null;
   /** Den / below-grade bedrooms. Kept in step with anchorService: once the champion
@@ -251,7 +254,7 @@ function adjustedLogPrice(row: SoldRow, matrix: Matrix): number | null {
   const basementScore = row.basement_tier !== null ? 10 - row.basement_tier : null;
 
   const feats: Array<[string, number | null]> = [
-    ['building_area_total', row.building_area_total],
+    ['building_area_total', compSqft(row)],
     ['lot_width', row.lot_width !== null && row.lot_width > 0 ? row.lot_width : null],
     ['bedrooms_above_grade', row.bedrooms_above_grade],
     ['bedrooms_below_grade', row.bedrooms_below_grade],
@@ -285,7 +288,7 @@ async function readPage(cursor: string, pageSize: number, windowStartIso: string
       .from('raw_vow_sold')
       .select(
         'listing_key, close_price, close_date, purchase_contract_date, city, city_region, postal_code, ' +
-          'property_sub_type, building_area_total, lot_width, bedrooms_above_grade, bedrooms_below_grade, ' +
+          'property_sub_type, building_area_total, living_area_range, lot_width, bedrooms_above_grade, bedrooms_below_grade, ' +
           'bathrooms_total_integer, parking_total, interior_tier, exterior_tier, basement_tier'
       )
       .gt('listing_key', cursor)

@@ -75,6 +75,7 @@ import {
   type TrendRow,
   type OffsetRow,
 } from '@/lib/avm/anchorService';
+import { compSqft } from '@/lib/avm/features';
 import {
   estimateFromMarketData,
   shouldEvaluatePeers,
@@ -168,6 +169,8 @@ interface PoolRow {
   city_region: string | null;
   property_sub_type: string | null;
   building_area_total: number | null;
+  /** Fallback half of compSqft — see features.ts. */
+  living_area_range: number | null;
   lot_width: number | null;
   lot_depth: number | null;
   bedrooms_above_grade: number | null;
@@ -229,7 +232,7 @@ interface ResultRow {
 // supplied), a small fidelity gap in every prior run.
 const SELECT_COLS =
   'listing_key, close_price, purchase_contract_date, close_date, city, city_region, ' +
-  'property_sub_type, building_area_total, lot_width, lot_depth, bedrooms_above_grade, bedrooms_below_grade, ' +
+  'property_sub_type, building_area_total, living_area_range, lot_width, lot_depth, bedrooms_above_grade, bedrooms_below_grade, ' +
   'bathrooms_total_integer, parking_total, interior_tier, exterior_tier, basement_tier, ' +
   // list_price + original_list_price + days_on_market: the pre-sale state for
   // --dealscore (100% populated on For Sale closes; flat columns, no TOAST).
@@ -397,6 +400,7 @@ function toCompRow(c: Sale): CompRow {
     purchase_contract_date: c.purchase_contract_date,
     close_date: c.close_date,
     building_area_total: c.building_area_total,
+    living_area_range: c.living_area_range,
     lot_width: c.lot_width,
     lot_depth: c.lot_depth,
     bedrooms_above_grade: c.bedrooms_above_grade,
@@ -416,7 +420,10 @@ function inputFromSale(s: Sale): AVMInput {
     city: (s.city || '').trim() || null,
     propertySubType: s.normSub,
     rawPropertySubType: (s.property_sub_type || '').trim(),
-    buildingAreaTotal: s.building_area_total !== null && s.building_area_total > 0 ? s.building_area_total : null,
+    // compSqft, not the bare column. Production sizes a comp with this exact helper and
+    // the subject with resolveModelSqft, which is the same rule read off the active
+    // payload — so a harness subject sized any other way scores a model that never ships.
+    buildingAreaTotal: compSqft(s),
     lotWidth: s.lot_width !== null && s.lot_width > 0 ? s.lot_width : null,
     lotDepth: s.lot_depth !== null && s.lot_depth > 0 ? s.lot_depth : null,
     bedroomsAboveGrade: s.bedrooms_above_grade,
@@ -721,7 +728,7 @@ async function replaySale(
     price_tier: priceTier(close),
     property_sub_type: s.property_sub_type,
     norm_sub: s.normSub,
-    sqft_present: s.building_area_total !== null && s.building_area_total > 0,
+    sqft_present: compSqft(s) !== null,
     lot_present: s.lot_width !== null && s.lot_width > 0,
     untrained,
     borrowed,
@@ -945,7 +952,7 @@ async function harnessNowEstimate(input: AVMInput, pool: Sale[], expanded: Map<s
   const synthetic: Sale = {
     listing_key: '__SUBJECT__', close_price: null, purchase_contract_date: null, close_date: null,
     city: input.city, city_region: input.cityRegion, property_sub_type: input.rawPropertySubType,
-    building_area_total: input.buildingAreaTotal, lot_width: input.lotWidth, lot_depth: input.lotDepth ?? null,
+    building_area_total: input.buildingAreaTotal, living_area_range: null, lot_width: input.lotWidth, lot_depth: input.lotDepth ?? null,
     bedrooms_above_grade: input.bedroomsAboveGrade, bedrooms_below_grade: input.bedroomsBelowGrade,
     bathrooms_total_integer: input.bathroomsTotalInteger,
     parking_total: input.parkingTotal, interior_tier: null, exterior_tier: null, basement_tier: null,
