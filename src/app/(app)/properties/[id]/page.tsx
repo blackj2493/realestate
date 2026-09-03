@@ -1157,6 +1157,7 @@ export default async function PropertyPage({
                   isConsumer={isAuthed}
                   gated={streetLedgerGated}
                   publicLedger={streetLedgerPublic}
+                  subjectKey={id}
                 />
               </div>
             )}
