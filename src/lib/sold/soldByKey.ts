@@ -17,6 +17,7 @@ import { SOLD_LISTINGS_COLLECTION, type SoldListingDocument } from "@/lib/typese
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { parseAddress, addressesMatch, streetNamesMatchPrefix, unitsMatch, type ParsedAddress } from "@/lib/watchlist/disposition";
 import { deriveDealType } from "@/lib/sold/dealType";
+import { isOptedOutValue } from "@/lib/compliance/internetDisplay";
 import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
 import { primaryImageFromPhotos } from "@/lib/etl/selectPrimaryImage";
 import { bedSplit } from "@/lib/listings/bedSplit";
@@ -124,11 +125,22 @@ async function getSoldArchivePublicByKey(key: string): Promise<SoldPublic | null
   try {
     const { data } = await getServiceRoleClient()
       .from("raw_vow_sold")
-      .select("listing_key, unparsed_address, city, city_region, postal_code, photos, mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType")
+      .select(
+        "listing_key, unparsed_address, city, city_region, postal_code, photos, mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType, " +
+          // Seller opt-out. Purging the Typesense doc does NOT take this page down: the
+          // archive fallback re-serves it straight from raw_vow_sold, so the gate has to
+          // sit on the read, not only on the index.
+          "internet_display:raw_payload->>InternetEntireListingDisplayYN, " +
+          "internet_address_display:raw_payload->>InternetAddressDisplayYN"
+      )
       .eq("listing_key", key)
       .maybeSingle();
     const row = data as Record<string, unknown> | null;
     if (!row?.listing_key) return null;
+    // Either switch removes this page — it exists to publish an address.
+    if (isOptedOutValue(row.internet_display) || isOptedOutValue(row.internet_address_display)) {
+      return null;
+    }
     const address = (row.unparsed_address as string | null) ?? "";
     return {
       id: String(row.listing_key),
@@ -157,12 +169,20 @@ async function getSoldArchiveGatedByKey(key: string): Promise<SoldListingDocumen
       .select(
         "listing_key, unparsed_address, city, city_region, close_price, list_price, purchase_contract_date, photos, " +
           "bedrooms_above_grade, bedrooms_below_grade, bathrooms_total_integer, building_area_total, property_sub_type, " +
-          "office:raw_payload->>ListOfficeName, mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType"
+          "office:raw_payload->>ListOfficeName, mls_status:raw_payload->>MlsStatus, txn_type:raw_payload->>TransactionType, " +
+          // Seller opt-out — the gated archive read needs the same gate as the public
+          // one. A registered consumer is not an exemption: the seller told the board
+          // to stop distributing, and that instruction is not conditional on who looks.
+          "internet_display:raw_payload->>InternetEntireListingDisplayYN, " +
+          "internet_address_display:raw_payload->>InternetAddressDisplayYN"
       )
       .eq("listing_key", key)
       .maybeSingle();
     const row = data as Record<string, unknown> | null;
     if (!row?.listing_key) return null;
+    if (isOptedOutValue(row.internet_display) || isOptedOutValue(row.internet_address_display)) {
+      return null;
+    }
     // Mirror the indexer: date-only value → epoch ms (rendered with timeZone:'UTC').
     const ms = row.purchase_contract_date ? new Date(row.purchase_contract_date as string).getTime() : 0;
     const above = toInt(row.bedrooms_above_grade);
