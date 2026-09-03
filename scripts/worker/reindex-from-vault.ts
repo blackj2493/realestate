@@ -11,7 +11,13 @@
  *
  * WARNING: Uses SUPABASE_SERVICE_ROLE_KEY - NEVER expose to frontend!
  *
+ * WARNING: It writes with action:'upsert', which REPLACES each document. Run it only
+ * from a checkout at origin/main — a field the running transformer does not emit is
+ * deleted from every document this touches. A pre-flight refuses a stale checkout;
+ * see assertFreshCheckout() and src/lib/etl/checkoutGuard.ts.
+ *
  * Run: npx tsx --env-file=.env scripts/worker/reindex-from-vault.ts
+ *      …--allow-stale   skip the pre-flight (you own the consequences)
  */
 
 // MUST set TLS env var BEFORE importing supabase client
@@ -21,6 +27,12 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Typesense from 'typesense';
 import * as https from 'https';
 import * as fs from 'fs';
+import { execFileSync } from 'child_process';
+import {
+  staleCheckoutReasons,
+  DOCUMENT_SHAPING_PATHS,
+  type CheckoutSignals,
+} from '@/lib/etl/checkoutGuard';
 
 // Import cross-fetch
 import crossFetch from 'cross-fetch';
@@ -406,12 +418,89 @@ async function fetchChunk(lastId: string | null): Promise<FetchResult> {
 }
 
 // ============================================================================
+// Pre-flight: is this checkout allowed to rewrite the index?
+// ============================================================================
+
+/**
+ * Read the git facts the guard judges. Every command is best-effort: a missing git,
+ * a tarball with no .git, or a failed fetch must surface as "unknown", never as a
+ * quiet pass. The decision itself lives in src/lib/etl/checkoutGuard.ts.
+ */
+function readCheckoutSignals(): CheckoutSignals {
+  const git = (args: string[]): string | null => {
+    try {
+      return execFileSync('git', args, {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+    } catch {
+      return null;
+    }
+  };
+
+  // Refresh origin/main first. Without it the lag is measured against whatever the
+  // last fetch happened to leave behind, which understates it — and understating is
+  // the one failure this guard cannot afford. A failure here is not fatal on its own:
+  // a previously-fetched ref still measures something real.
+  git(['fetch', 'origin', 'main', '--quiet']);
+
+  const remoteResolved = git(['rev-parse', '--verify', '--quiet', 'origin/main']);
+  if (!remoteResolved) {
+    return { behind: 0, dirty: 0, branch: null, remoteUnknown: true };
+  }
+
+  const paths = [...DOCUMENT_SHAPING_PATHS];
+  const behindOut = git(['rev-list', '--count', 'HEAD..origin/main', '--', ...paths]);
+  // `--untracked-files=no`: a new file nobody imports yet changes no document.
+  const dirtyOut = git(['status', '--porcelain', '--untracked-files=no', '--', ...paths]);
+  const branchOut = git(['rev-parse', '--abbrev-ref', 'HEAD']);
+
+  return {
+    behind: behindOut === null ? 0 : Number(behindOut) || 0,
+    dirty: dirtyOut ? dirtyOut.split('\n').filter((l) => l.trim() !== '').length : 0,
+    branch: branchOut && branchOut !== 'HEAD' ? branchOut : null,
+    // A resolvable ref whose count we somehow could not read is still unknown.
+    remoteUnknown: behindOut === null,
+  };
+}
+
+/**
+ * Refuse to start from a checkout that does not write what main writes.
+ *
+ * This job upserts WHOLE documents, so an old checkout does not merely write stale
+ * values — the fields its transformer never emits are deleted from every document it
+ * touches. See src/lib/etl/checkoutGuard.ts for the incident this replays.
+ */
+function assertFreshCheckout(): void {
+  const reasons = staleCheckoutReasons(readCheckoutSignals());
+  if (reasons.length === 0) return;
+
+  console.error('\n⛔ Refusing to re-index: this checkout does not write what main writes.\n');
+  for (const r of reasons) console.error(`   • ${r}`);
+  console.error(
+    '\n   This job upserts whole documents. A field the running code does not emit is\n' +
+      '   DELETED from every document it touches — no reader errors, it just reads as\n' +
+      '   "no data". On 2026-08-23 that cost 99.3% of the collection.\n' +
+      '\n   Fix: run it from a checkout at origin/main.\n' +
+      '   Override (you own the consequences): --allow-stale\n'
+  );
+  process.exit(1);
+}
+
+// ============================================================================
 // Main Re-index Loop
 // ============================================================================
 
 async function reindexFromVault(): Promise<void> {
   console.log('\n🚀 Shadow MLS - Vault Re-Indexer (Memory-Safe)');
   console.log('===============================================\n');
+
+  if (process.argv.includes('--allow-stale')) {
+    console.warn('⚠️  --allow-stale: checkout guard skipped by request.\n');
+  } else {
+    assertFreshCheckout();
+  }
 
   console.log('📋 Configuration:');
   console.log(`   Supabase URL: ${SUPABASE_URL.split('//')[1]?.split('.')[0] || 'hidden'}.supabase.co`);
