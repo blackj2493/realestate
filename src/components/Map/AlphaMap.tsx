@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import DeckGL from "@deck.gl/react";
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, TextLayer, PolygonLayer, ColumnLayer, PathLayer } from "@deck.gl/layers";
-import { Map, Layer as MapboxLayer } from "react-map-gl/mapbox";
+import { Map, Layer as MapboxLayer, type MapRef } from "react-map-gl/mapbox";
 import { MapViewState, FlyToInterpolator, WebMercatorViewport, type Layer } from "@deck.gl/core";
 import { Layers, MapPin, Minus, Plus, X, Landmark } from "lucide-react";
 import Supercluster from "supercluster";
@@ -186,7 +186,38 @@ export default function AlphaMap({
   const flewNonceRef = useRef<number | null>(null);
   const viewStateRef = useRef<MapViewState>(initialViewState);
   const dimsRef = useRef<{ width: number; height: number } | null>(null);
+  const mapRef = useRef<MapRef | null>(null);
   const reportTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Push deck.gl's measurement onto the Mapbox basemap.
+  //
+  // Mapbox does not reliably size itself to its container here: on a cold load the
+  // canvas stays at the HTML default 300x150 while `.mapboxgl-map` measures the full
+  // pane, so Mapbox fetches the style and glyphs but NO vector tiles and the map reads
+  // as a blank black panel with one small patch of basemap in the corner. deck.gl
+  // measures the same box correctly (pins, clusters and price pills all land in the
+  // right place), which is why the failure looks like "the map is slow" rather than
+  // "the map is broken".
+  //
+  // Verified against production 2026-09-02: one synthetic `window.resize` repaired it
+  // instantly and permanently, and nothing a user does — pan, zoom, re-query — ever
+  // did. A window resize is just `map.resize()`, so call that ourselves from the two
+  // moments the size can first become known: deck's onResize and the map's own load.
+  // Guarded on a real size change so a settled map is not re-rendered on every measure.
+  const syncBasemapSize = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    const dims = dimsRef.current;
+    if (!map || !dims || dims.width === 0 || dims.height === 0) return;
+    // Compare CSS pixels: canvas.width is the backing store (x devicePixelRatio).
+    const canvas = map.getCanvas();
+    if (
+      canvas.clientWidth === Math.round(dims.width) &&
+      canvas.clientHeight === Math.round(dims.height)
+    ) {
+      return;
+    }
+    map.resize();
+  }, []);
 
   // Flag an upcoming view transition as programmatic so the settle handler never
   // mistakes an auto-fit/cluster-expand animation for a user pan (which would loop).
@@ -1003,6 +1034,9 @@ export default function AlphaMap({
           dimsRef.current = { width, height };
           // First non-zero measure releases the initial-bounds report effect.
           if (width > 0 && height > 0 && !dimsReady) setDimsReady(true);
+          // The basemap does not measure itself — hand it deck's box. Also covers the
+          // mobile List/Map toggle, where the pane goes display:none and back.
+          syncBasemapSize();
         }}
         onDragStart={() => { setPopup(null); setCatchmentHover(null); setHexHover(null); setZoningHover(null); }}
         onDragEnd={handleDragEnd}
@@ -1025,7 +1059,16 @@ export default function AlphaMap({
         }}
         getCursor={({ isHovering }) => (isDrawing ? "crosshair" : isHovering ? "pointer" : "grab")}
       >
-        <Map mapboxAccessToken={mapboxToken} mapStyle="mapbox://styles/mapbox/dark-v11" reuseMaps attributionControl={false}>
+        <Map
+          ref={mapRef}
+          mapboxAccessToken={mapboxToken}
+          mapStyle="mapbox://styles/mapbox/dark-v11"
+          reuseMaps
+          attributionControl={false}
+          // deck measures before this child exists on a cold mount, so onResize alone
+          // can fire too early to reach the map; re-sync once the map is up.
+          onLoad={syncBasemapSize}
+        >
           {/* 3D building extrusions — only in Explore mode, so the value-columns
               read against a real cityscape (dark massing + faint cyan rim). */}
           {mapMode === "3d" && (
