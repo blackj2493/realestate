@@ -732,6 +732,8 @@ export interface TransformResult {
     hasSecondarySuitePotential: boolean;
     calculatedDOM?: number;
     primaryImageUrl?: string;
+    /** 240px cover photo; card surfaces read `thumbnailUrl || primaryImageUrl`. */
+    thumbnailUrl?: string;
     ListOfficeName?: string;
     EntryTimestamp?: number;
     PublicRemarks?: string;
@@ -1176,7 +1178,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // correctness — which is why this is only ever SET, never written as ''. An
   // empty string would still be falsy, but writing one on every listing without
   // a thumb would grow ~100k docs for nothing.
-  if (raw.thumbnailUrl) typesensePayload.thumbnailUrl = raw.thumbnailUrl;
+  // enrichListingsWithMedia stamps this onto the listing; `raw` is loosely typed here.
+  const coverThumb = (raw as { thumbnailUrl?: string }).thumbnailUrl;
+  if (coverThumb) typesensePayload.thumbnailUrl = coverThumb;
   typesensePayload.ListOfficeName = raw.ListOfficeName || '';
   typesensePayload.PublicRemarks = raw.PublicRemarks || '';
   if (mediaUrls.length > 0) typesensePayload.RawImages = mediaUrls;
