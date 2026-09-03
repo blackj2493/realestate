@@ -1171,6 +1171,12 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   // targetGrossYield emit removed 2026-06-10: its filter consumers went in PR #13; storing it in Typesense is dead weight.
   if (metrics.calculatedDOM !== null) typesensePayload.calculatedDOM = metrics.calculatedDOM;
   typesensePayload.primaryImageUrl = primaryThumbnailUrl || '';
+  // The 240px cover thumb, when the media pass fetched one. Card surfaces read
+  // `thumbnailUrl || primaryImageUrl`, so an absent value costs bytes and never
+  // correctness — which is why this is only ever SET, never written as ''. An
+  // empty string would still be falsy, but writing one on every listing without
+  // a thumb would grow ~100k docs for nothing.
+  if (raw.thumbnailUrl) typesensePayload.thumbnailUrl = raw.thumbnailUrl;
   typesensePayload.ListOfficeName = raw.ListOfficeName || '';
   typesensePayload.PublicRemarks = raw.PublicRemarks || '';
   if (mediaUrls.length > 0) typesensePayload.RawImages = mediaUrls;

@@ -106,10 +106,17 @@ describe('fetchMediaForKeys — size-variant fallback', () => {
     return vi.fn().mockImplementation(async (url: string) => {
       const filter = decodeURIComponent(new URL(url).searchParams.get('$filter') ?? '');
       const size = /ImageSizeDescription eq '([^']+)'/.exec(filter)?.[1] ?? '';
-      onSize?.(size);
+      // The cover-thumb pass rides the same chunk loop but is NOT part of the
+      // size-variant ladder, so it must not show up in the ladder these tests
+      // assert on. It is the request that bounds Order — nothing else does.
+      const orderCap = /Order lt (\d+)/.exec(filter)?.[1];
+      if (!orderCap) onSize?.(size);
       const keys = [...filter.matchAll(/ResourceRecordKey eq '([^']+)'/g)].map((m) => m[1]);
       const rows = dataset.filter(
-        (r) => r.ImageSizeDescription === size && keys.includes(r.ResourceRecordKey)
+        (r) =>
+          r.ImageSizeDescription === size &&
+          keys.includes(r.ResourceRecordKey) &&
+          (orderCap === undefined || (r.Order ?? Infinity) < Number(orderCap))
       );
       return fakeResponse({ value: rows });
     });
@@ -197,7 +204,12 @@ describe('fetchMediaForKeys — size-variant fallback', () => {
       'fetch',
       vi.fn().mockImplementation(async (url: string) => {
         const filter = decodeURIComponent(new URL(url).searchParams.get('$filter') ?? '');
-        sizes.push(/ImageSizeDescription eq '([^']+)'/.exec(filter)?.[1] ?? '');
+        // Ignore the cover-thumb request (the only one that bounds Order): it is
+        // a separate, best-effort pass, not a rung on the fallback ladder this
+        // test guards. It fires for every chunk by design, failure included.
+        if (!/Order lt \d+/.test(filter)) {
+          sizes.push(/ImageSizeDescription eq '([^']+)'/.exec(filter)?.[1] ?? '');
+        }
         return fakeResponse('bad request', { ok: false, status: 400 });
       })
     );
@@ -215,5 +227,80 @@ describe('fetchMediaForKeys — size-variant fallback', () => {
     await fetchMediaForKeys(['K1'], 'tok');
     expect(sizes).toEqual(['Medium', 'Large', 'Largest', 'Thumbnail']);
     expect(sizes).not.toContain('LargestNoWatermark');
+  });
+});
+
+describe('fetchMediaForKeys — cover thumb (the 240px card image)', () => {
+  /**
+   * The ledger card is 144x112 but renders `primaryImageUrl`, the 960x960 'Medium'
+   * variant — a median 155 KB, and the LCP element on /properties. The size is inside
+   * the imgproxy signature so the URL cannot be shrunk; the small image only exists as
+   * a separate 'Thumbnail' URL. These tests pin the three properties that make fetching
+   * it safe to run inside the daily sync.
+   */
+  function coverFetch(rows: any[], opts: { thumbFails?: boolean } = {}) {
+    return vi.fn().mockImplementation(async (url: string) => {
+      const filter = decodeURIComponent(new URL(url).searchParams.get('$filter') ?? '');
+      const isThumbPass = /Order lt \d+/.test(filter);
+      if (isThumbPass && opts.thumbFails) {
+        // 400, not 500: fetchWithRetry backs off on 5xx and would outrun the timeout.
+        return fakeResponse('boom', { ok: false, status: 400 });
+      }
+      const size = /ImageSizeDescription eq '([^']+)'/.exec(filter)?.[1] ?? '';
+      const cap = /Order lt (\d+)/.exec(filter)?.[1];
+      return fakeResponse({
+        value: rows.filter(
+          (r) =>
+            r.ImageSizeDescription === size &&
+            (cap === undefined || (r.Order ?? Infinity) < Number(cap))
+        ),
+      });
+    });
+  }
+
+  const rec = (size: string, order: number, id = `${size}-${order}`) => ({
+    ResourceRecordKey: 'K1',
+    MediaURL: `https://cdn/K1-${size}-${order}.jpg`,
+    MediaObjectID: id,
+    ImageSizeDescription: size,
+    Order: order,
+  });
+
+  it('returns the LOWEST-Order Thumbnail as the cover, not whichever arrived first', async () => {
+    // AMPRE returns several rows inside the Order window; the cover is the one
+    // selectPrimaryImage would pick, which is the lowest Order.
+    vi.stubGlobal(
+      'fetch',
+      coverFetch([rec('Medium', 0), rec('Thumbnail', 1), rec('Thumbnail', 0)])
+    );
+
+    const { thumbs } = await fetchMediaForKeys(['K1'], 'tok');
+    expect(thumbs.get('K1')).toBe('https://cdn/K1-Thumbnail-0.jpg');
+  });
+
+  it('keeps the Thumbnail OUT of the media array, so the gallery never shows a 240px photo', async () => {
+    // media[] feeds collectMediaUrls → media_urls → the gallery. A Thumbnail leaking
+    // in would show the cover twice, the second time at a quarter of the resolution.
+    vi.stubGlobal(
+      'fetch',
+      coverFetch([rec('Medium', 0), rec('Medium', 1), rec('Thumbnail', 0)])
+    );
+
+    const { media, thumbs } = await fetchMediaForKeys(['K1'], 'tok');
+    const urls = (media.get('K1') ?? []).map((m) => m.MediaURL);
+    expect(urls).toEqual(['https://cdn/K1-Medium-0.jpg', 'https://cdn/K1-Medium-1.jpg']);
+    expect(urls).not.toContain(thumbs.get('K1'));
+  });
+
+  it('a failed thumb pass costs bytes, never correctness — media survives and the key is not failed', async () => {
+    // The whole point of a separate pass: no thumb means the card falls back to
+    // primaryImageUrl. Marking the key failed would instead strand a listing that
+    // has perfectly good photos.
+    vi.stubGlobal('fetch', coverFetch([rec('Medium', 0)], { thumbFails: true }));
+
+    const { media, failedKeys, thumbs } = await fetchMediaForKeys(['K1'], 'tok');
+    expect(media.get('K1')?.length).toBe(1);
+    expect(failedKeys.has('K1')).toBe(false);
+    expect(thumbs.has('K1')).toBe(false);
   });
 });
