@@ -141,3 +141,41 @@ export function cityHubSlug(city: string): string {
 export function cityHubResolves(city: string): boolean {
   return cityHubSlug(city).length > 0;
 }
+
+// ── Address pages (Phase 4) ────────────────────────────────────────────────────
+
+/** The minimum a sold/off-market record needs to address its public page. */
+export interface AddressPathInput {
+  /** The record's ListingKey (Typesense `id` on the sold collection). */
+  id?: string | null;
+  /** UnparsedAddress — the full address; only the part before the first comma is used. */
+  address?: string | null;
+  /** TRREB City value, district code and all ("Toronto C08"). */
+  city?: string | null;
+  /** Province slug; defaults to "on" (the only province the feed covers). */
+  prov?: string | null;
+}
+
+/**
+ * Public address-page path: /address/{prov}/{city}/{street-slug}-{KEY}.
+ *
+ * ONE builder for every producer of these URLs — /addresses/sitemap.xml, the city hub's
+ * sold-links block, and the address page's own nearby links. They were separate before
+ * 2026-09-02, which is how the sitemap ended up as the only crawl path into a tree whose
+ * URL shape nothing else could reproduce. A link that disagrees with the sitemap is worse
+ * than no link, so the shape lives here and nowhere else.
+ *
+ * Returns null when there is no key or no city slug — either one yields a URL that cannot
+ * resolve, and it is better to drop the link than to emit a 404.
+ */
+export function buildAddressPath(p: AddressPathInput): string | null {
+  const key = (p.id || "").trim();
+  if (!key) return null;
+
+  const citySlug = cityHubSlug(p.city || "") || slugify(p.city || "");
+  if (!citySlug) return null; // can't build a clean URL without a city
+
+  const prov = slugify(p.prov || "on") || "on";
+  const street = slugify((p.address || "").split(",")[0]);
+  return `/address/${prov}/${citySlug}/${street ? `${street}-${key}` : key}`;
+}
