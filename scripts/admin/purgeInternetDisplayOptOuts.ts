@@ -94,7 +94,13 @@ async function presentInCollection(
       .documents()
       .search({
         q: '*',
-        query_by: 'id',
+        // NOT 'id'. Typesense rejects it outright — "Cannot use `id` as a query by
+        // field" — and the first version of this script swallowed that 400 per chunk,
+        // found zero documents, and printed a confident "nothing to remove" while
+        // deleting nothing. query_by is only required syntactically here; q:'*' means
+        // it is never actually queried, so any indexed string field in BOTH
+        // collections does. `City` is one.
+        query_by: 'City',
         filter_by: `id:=[${chunk.join(',')}]`,
         include_fields: 'id',
         per_page: DELETE_CHUNK,
@@ -159,8 +165,13 @@ async function main() {
     return;
   }
 
-  const removedProps = propsLive.length ? await deleteFromCollection(ts, PROPERTIES_COLLECTION, propsLive) : 0;
-  const removedSold = soldLive.length ? await deleteFromCollection(ts, SOLD_LISTINGS_COLLECTION, soldLive) : 0;
+  // Delete against the FULL candidate set from Postgres, never the presence-checked
+  // subset. The presence check exists to report a number; if it breaks again, the delete
+  // must not quietly become a no-op with it. Deleting an id the collection does not hold
+  // is free — filter_by matches nothing and num_deleted counts only real removals, which
+  // is the honest figure either way.
+  const removedProps = propsKeys.length ? await deleteFromCollection(ts, PROPERTIES_COLLECTION, propsKeys) : 0;
+  const removedSold = soldKeys.length ? await deleteFromCollection(ts, SOLD_LISTINGS_COLLECTION, soldKeys) : 0;
   console.log(`\n🗑️  Deleted ${removedProps} from ${PROPERTIES_COLLECTION}, ${removedSold} from ${SOLD_LISTINGS_COLLECTION}`);
   console.log(
     'The listing page reads Supabase, not the index — getListingDetail gates it ' +
