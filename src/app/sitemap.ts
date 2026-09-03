@@ -5,6 +5,7 @@ import {
   neighbourhoodHubsForSitemap,
   COMMERCIAL_ACTIVE_FILTER,
 } from "@/lib/listings/cityHubs";
+import { buildListingPath } from "@/lib/listings/listingPath";
 import { LIVE_TRACKERS } from "@/lib/data/trackers";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
 
@@ -12,7 +13,7 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.
 
 // Refresh daily (matches the ETL cadence). NOTE: `listings` is NOT active-only — Query B
 // upserts Closed (sold) payloads here, and Terminated/Expired/Suspended rows stay
-// frozen-Active — so this sitemap DOES emit their /properties/{key} URLs. That is safe:
+// frozen-Active — so this sitemap DOES emit their listing URLs. That is safe:
 // the listing page resolves the TRUE status and sets robots:noindex for every non-active
 // listing (see properties/[id] generateMetadata), so sold/off-market pages are
 // discoverable but never indexed, and all VOW numbers (close price, sold DOM) are gated
@@ -95,6 +96,71 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
   ];
 }
 
+/**
+ * A listing row, flattened for URL building. The street fields live inside `full_payload`
+ * (the table denormalizes only city/sub-type/price), so they are pulled out with
+ * PostgREST's `alias:col->>Key` projection rather than by selecting the whole JSONB —
+ * 45,000 full payloads would be a needless detoast on every rebuild.
+ */
+interface ListingSitemapRow {
+  listing_key: string | null;
+  synced_at: string | null;
+  street_number: string | null;
+  street_name: string | null;
+  street_suffix: string | null;
+  street_dir_prefix: string | null;
+  street_dir_suffix: string | null;
+  unit_number: string | null;
+  apartment_number: string | null;
+  unparsed_address: string | null;
+  payload_city: string | null;
+  state_or_province: string | null;
+}
+
+const LISTING_SELECT = [
+  "listing_key",
+  "synced_at",
+  "street_number:full_payload->>StreetNumber",
+  "street_name:full_payload->>StreetName",
+  "street_suffix:full_payload->>StreetSuffix",
+  "street_dir_prefix:full_payload->>StreetDirPrefix",
+  "street_dir_suffix:full_payload->>StreetDirSuffix",
+  "unit_number:full_payload->>UnitNumber",
+  "apartment_number:full_payload->>ApartmentNumber",
+  "unparsed_address:full_payload->>UnparsedAddress",
+  "payload_city:full_payload->>City",
+  "state_or_province:full_payload->>StateOrProvince",
+].join(", ");
+
+/**
+ * The URL to sitemap for one listing — the DESCRIPTIVE canonical
+ * (/property/{prov}/{city}/{address}-{KEY}), which is exactly what the listing page's own
+ * `alternates.canonical` and JSON-LD emit (see properties/[id] listingCanonical).
+ *
+ * Before 2026-09-02 this emitted the legacy /properties/{KEY} form instead. Every one of
+ * those 45,000 URLs then canonicalised to a path that appeared in NEITHER sitemap, so the
+ * whole listing tree was declared under URLs Google is told to discard. Fall back to the
+ * legacy path only when the payload cannot form a slug — same fallback the page uses, so
+ * the two can never disagree.
+ */
+function listingPath(row: ListingSitemapRow): string {
+  return (
+    buildListingPath({
+      ListingKey: row.listing_key,
+      StreetNumber: row.street_number,
+      StreetName: row.street_name,
+      StreetSuffix: row.street_suffix,
+      StreetDirPrefix: row.street_dir_prefix,
+      StreetDirSuffix: row.street_dir_suffix,
+      UnitNumber: row.unit_number,
+      ApartmentNumber: row.apartment_number,
+      UnparsedAddress: row.unparsed_address,
+      City: row.payload_city,
+      StateOrProvince: row.state_or_province,
+    }) ?? `/properties/${row.listing_key}`
+  );
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1 },
@@ -132,16 +198,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const supabase = getServiceRoleClient();
-    const rows: { listing_key: string | null; synced_at: string | null }[] = [];
+    const rows: ListingSitemapRow[] = [];
     for (let from = 0; rows.length < MAX_URLS; from += PAGE) {
       const { data, error } = await supabase
         .from("listings")
-        .select("listing_key, synced_at")
+        .select(LISTING_SELECT)
         .order("synced_at", { ascending: false })
         .order("listing_key") // deterministic tie-break so range pagination never skips/dups
         .range(from, from + PAGE - 1);
       if (error || !data) break;
-      rows.push(...data);
+      rows.push(...(data as unknown as ListingSitemapRow[]));
       if (data.length < PAGE) break;
     }
 
@@ -149,7 +215,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .slice(0, MAX_URLS)
       .filter((row) => row.listing_key)
       .map((row) => ({
-        url: `${SITE_URL}/properties/${row.listing_key}`,
+        url: `${SITE_URL}${listingPath(row)}`,
         lastModified: row.synced_at ? new Date(row.synced_at) : undefined,
         changeFrequency: "daily" as const,
         priority: 0.7,
