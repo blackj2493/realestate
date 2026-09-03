@@ -1,0 +1,52 @@
+name: Seller Opt-Out Purge
+
+# Removes search documents for listings whose seller set "Distribute to Internet" (or
+# "Display Address on Internet") to No on the board.
+#
+# WHY THIS IS A RECURRING JOB, NOT A ONE-OFF CLEANUP. The code gates in
+# src/lib/compliance/internetDisplay.ts stop an opted-out listing from ENTERING either
+# Typesense collection. They cannot remove a document for a listing that opts out AFTER
+# it was already indexed — the sync simply stops upserting it, and the stale document
+# sits there serving a page until sold_listings prunes it at 180 days. A seller who asks
+# for removal today would wait up to six months. This job closes that window to a day.
+#
+# The listing page needs no equivalent job: getListingDetail reads Supabase and gates on
+# every request, so it goes dark the moment the flag arrives.
+#
+# Runs at 09:53 UTC — after the 03:17 sync has ingested the day's flag changes and after
+# the 09:00 Wednesday backfill, before the 10:41 data-health canary.
+#
+# The dry run (no --apply) doubles as the canary: a healthy system finds nothing to
+# delete, because the gates caught it upstream. This job runs WITH --apply, so a non-zero
+# delete count in the log is the signal that a seller opted out after indexing.
+on:
+  # NOT scheduled by GitHub — it defers and drops `schedule` triggers without backfilling
+  # them, and a missed run here means an opted-out listing stays up another day. Supabase
+  # pg_cron POSTs a workflow_dispatch instead; see
+  # supabase/migrations/136_pg_cron_optout_purge.sql. To change the time, edit cron.job in
+  # the database, NOT this file.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  optout-purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # match daily-sync (@supabase/realtime-js needs Node >=22)
+
+      - name: Purge opted-out documents
+        # Three full jsonb scans (the flags are inside the payload, unindexed) then a
+        # chunked Typesense delete. Reads Postgres, writes only to the search index —
+        # it never touches a listings, raw_vow_sold or raw_vow_delisted row.
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+        run: npx tsx scripts/admin/purgeInternetDisplayOptOuts.ts --apply

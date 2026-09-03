@@ -8,9 +8,15 @@
  * until something removes it. That is this script.
  *
  * Truth lives in Postgres, not in the index:
- *   listings.full_payload        → the `properties` collection + the listing page
- *   raw_vow_sold.raw_payload     → the `sold_listings` collection
- *   raw_vow_delisted.raw_payload → the `sold_listings` collection
+ *   listings.full_payload    → the `properties` collection + the listing page
+ *   raw_vow_sold.raw_payload → the `sold_listings` collection
+ *
+ * `raw_vow_delisted` is NOT a source here, and cannot be: migration 035 gave it no
+ * raw_payload column on purpose (a slim 12-month archive; the full payload stays
+ * fetchable from the feed). So there is nothing in that table to read a flag off.
+ * De-listed keys are still covered, because the vault keeps a `listings` row for every
+ * status — that row carries the payload, and the query below reads it. The gate in
+ * extractDelistedRecord is what keeps new opt-outs out of the archive in the first place.
  *
  * ONLY an explicit 'false' counts. A payload that never carried the field is not an
  * opt-out, and treating it as one would empty the index — see internetDisplay.ts.
@@ -126,8 +132,6 @@ async function main() {
   console.log(`  listings:         ${fromListings.size} opted out`);
   const fromSold = await optedOutKeys(c, 'raw_vow_sold', 'raw_payload', true);
   console.log(`  raw_vow_sold:     ${fromSold.size} opted out`);
-  const fromDelisted = await optedOutKeys(c, 'raw_vow_delisted', 'raw_payload', true);
-  console.log(`  raw_vow_delisted: ${fromDelisted.size} opted out`);
   await c.end();
 
   const ts = tsClient();
@@ -138,8 +142,9 @@ async function main() {
   console.log(`\n${PROPERTIES_COLLECTION}: ${propsLive.length} opted-out document(s) live`);
   if (propsLive.length) console.log(`  ${propsLive.slice(0, 20).join(', ')}${propsLive.length > 20 ? ' …' : ''}`);
 
-  // `sold_listings` — the public /address page. Fed by both vault tables.
-  const soldKeys = [...new Set([...fromSold, ...fromDelisted, ...fromListings])];
+  // `sold_listings` — the public /address page. The sold vault plus every opted-out
+  // `listings` row, which is how de-listed keys reach this set (see the header).
+  const soldKeys = [...new Set([...fromSold, ...fromListings])];
   const soldLive = soldKeys.length ? await presentInCollection(ts, SOLD_LISTINGS_COLLECTION, soldKeys) : [];
   console.log(`${SOLD_LISTINGS_COLLECTION}: ${soldLive.length} opted-out document(s) live`);
   if (soldLive.length) console.log(`  ${soldLive.slice(0, 20).join(', ')}${soldLive.length > 20 ? ' …' : ''}`);
