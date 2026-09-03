@@ -115,9 +115,11 @@ async function alterCollection() {
     console.log('   (dry-run — skipping alter; the patch counts below are still real)');
     return;
   }
-  await ts.collections(COLLECTION).update({ fields: [def] } as unknown as Parameters<
-    ReturnType<typeof ts.collections<string>>['update']
-  >[0]);
+  // The client's update() signature is a collection-schema delta; only `fields` is
+  // needed here, so cast through unknown rather than restate the whole schema type.
+  await ts
+    .collections(COLLECTION)
+    .update({ fields: [def] } as unknown as Record<string, unknown> as never);
   console.log('   ✅ collection altered');
 }
 
