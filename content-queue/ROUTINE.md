@@ -142,8 +142,71 @@ roughly monthly, not daily. When you do, the first tweet still carries a chart.
 
 ## Video (9:16)
 
-Hook in the first three seconds. Screen-record the live tracker as the proof — never
-an abstract animation. Founder on camera for the disclosure. Text card close.
+**Faceless.** The screen recording carries the whole frame and a synthetic voice reads
+the script over it. No founder on camera. The audience for a data terminal reads a
+talking head as an advert and a screen recording as a demonstration, and the
+disclosure lands as well spoken as it does spoken to a lens — see below.
+
+### What may be on screen
+
+**Never a real listing.** Not a pin, not a ledger row, not an address, not a price.
+IDX §6.2(a) and VOW §6.2(a) both bar use of feed data "in connection with any website
+(other than display on [the subscriber's own site]) ... or internet posting,
+advertising ... promotional material or any other display, distribution, publication
+or republication to the public", and VOW §6.2(r) bars syndication "by any means". A
+clip that is fine inside the Feature Guide is republication the moment it is uploaded
+to YouTube, Instagram or TikTok — the in-app clip library is recorded under a
+justification that does not travel off our own site.
+
+Two sources are cleared:
+
+- **The public `/data/*` trackers** — region-level aggregates, the same posture the X
+  charts already run on, and the aggregates-only wall above applies unchanged.
+- **A synthetic `PPDEMO` fixture** — the unlocked lane in `scripts/demos/README.md`,
+  where every dollar figure is scaled, every date shifted and every identity replaced.
+  Nothing in that frame is MLS data.
+
+Anything else is not filmable yet. Say so in the draft and put it in the anomaly note
+rather than specifying a shot that cannot legally be recorded. The lane each feature
+falls in is catalogued in `content-queue/video/SERIES-PLAN.md`.
+
+### AI tools
+
+**Voice synthesis and editing only.** Never hand a recording, a listing payload, or
+anything derived from the feed to an AI System for transformation — VOW §6.2(a) names
+this explicitly ("providing any content retrieved or derived from the Services or VOW
+Data Feed to any AI System for any purpose") and CLAUDE.md §4 restates it. Scripts are
+written by hand; the synthetic voice reads them and does nothing else. That includes
+auto-captioning and auto-cutting tools, which ingest the footage to work.
+
+### The disclosure
+
+Still required on video. Delivered two ways at once: a full-screen text card held for
+at least two seconds, **and** read aloud in the voiceover, verbatim. Not a caption
+laid over a busy frame — it needs its own beat. Being off camera removes the face, not
+the obligation; the account carries a licensed realtor's name either way.
+
+Never let a synthetic presenter deliver it. An AI face making property claims under a
+licence is a professional-conduct exposure, not a stylistic call.
+
+### Shape
+
+- 35–45 seconds. One feature per video, one job per video.
+- Hook in the first three seconds — the result first, never "in this video I'll show".
+- Real cursor, real click, real result. Never an abstract animation.
+- Burned-in captions for the full runtime; most of the audience watches muted, and an
+  uncaptioned video is one they scroll past before the voice reaches the point.
+- `pureproperty.ca` watermarked bottom-right for the whole runtime, for the same
+  reason the chart carries it: a re-uploaded clip carries no link at all.
+- Text card close naming the one thing to do next.
+
+### You cannot record it — specify it
+
+Same rule as the chart spec, for the same reason: you run sandboxed with no egress and
+cannot open the site, so **never describe a clip as though you produced it**. Write a
+shot list precise enough to record without a judgement call — the route, the lane
+(aggregate or `PPDEMO`), each cursor action in order, the on-screen text per beat, and
+the exact voiceover line. The per-video format is `content-queue/video/SCRIPT-TEMPLATE.md`.
 
 ## LinkedIn
 
@@ -261,6 +324,10 @@ Write `content-queue/YYYY-MM-DD.md` containing:
    highlight, overlay title, watermark) and then the post text with its alt text.
    A post with no chart spec is an incomplete draft — the operator cannot ship it
    without going back to work out what to screenshot.
+   The video draft under `(c)` carries a **shot list** in the same spirit — route,
+   lane, cursor actions, on-screen text and voiceover line per beat — plus the
+   disclosure card. A video draft that is only narration is incomplete for the same
+   reason: nobody can record it without redoing the thinking.
 6. A self-score out of 100 per draft with one line of reasoning.
 7. An anomaly note at the bottom for any angle deliberately left undrafted, and why.
 

@@ -124,6 +124,54 @@ describe('content routine contract', () => {
     expect(x.toLowerCase()).toMatch(/cannot make the image|specify it/);
   });
 
+  it('keeps video faceless, and keeps the disclosure obligation that survives it', () => {
+    // Going off camera is a format choice; the disclosure is a licensing obligation.
+    // The failure mode this guards is dropping the second along with the first, which
+    // would put unattributed property claims out under a licensed realtor's account.
+    const video = CONTRACT.slice(CONTRACT.indexOf('## Video'), CONTRACT.indexOf('## LinkedIn'));
+    expect(video.toLowerCase()).toContain('faceless');
+    expect(video.toLowerCase()).toContain('text card');
+    expect(video.toLowerCase()).toContain('verbatim');
+    // A synthetic presenter reading a licensed professional's claims is the one
+    // faceless option that is worse than being on camera.
+    expect(video.toLowerCase()).toMatch(/never let a synthetic presenter/);
+  });
+
+  it('keeps the never-a-real-listing wall that separates video from the in-app clips', () => {
+    // The whole reason this section exists. The in-app clip library is recorded under
+    // the "display on Subscriber Website" carve-out, which does not reach YouTube.
+    // Lose this and the obvious next step -- reposting an existing demo clip -- is a
+    // licence breach that looks like reusing an asset we already made.
+    const video = CONTRACT.slice(CONTRACT.indexOf('## Video'), CONTRACT.indexOf('## LinkedIn'));
+    expect(video.toLowerCase()).toContain('never a real listing');
+    expect(video).toMatch(/§6\.2\(a\)/);
+    expect(video).toContain('PPDEMO');
+  });
+
+  it('confines AI tooling on video to voice and edit, never ingestion', () => {
+    // VOW 6.2(a) bars providing anything derived from the feed to an AI System for any
+    // purpose. Auto-captioning and auto-cutting tools ingest the footage to work, so
+    // the ban has to be stated in terms of tools someone would otherwise reach for.
+    const video = CONTRACT.slice(CONTRACT.indexOf('## Video'), CONTRACT.indexOf('## LinkedIn'));
+    expect(video.toLowerCase()).toMatch(/voice synthesis and editing only/);
+    expect(video.toLowerCase()).toMatch(/auto-captioning|auto-cutting/);
+  });
+
+  it('keeps the watermark on video for the same reason as the chart', () => {
+    // A re-uploaded clip carries no link, exactly like a screenshotted chart.
+    const video = CONTRACT.slice(CONTRACT.indexOf('## Video'), CONTRACT.indexOf('## LinkedIn'));
+    expect(video).toContain('pureproperty.ca');
+    expect(video.toLowerCase()).toContain('watermarked');
+  });
+
+  it('reminds the routine it cannot record the clip, only specify it', () => {
+    // Same sandbox as the chart spec. Without this it writes "clip showing..." as
+    // though it had recorded one, and the operator gets a script with no shot list.
+    const video = CONTRACT.slice(CONTRACT.indexOf('## Video'), CONTRACT.indexOf('## LinkedIn'));
+    expect(video.toLowerCase()).toMatch(/cannot record it|specify it/);
+    expect(video.toLowerCase()).toContain('shot list');
+  });
+
   it('makes the routine choose one post rather than hand over a menu', () => {
     // The failure this prevents already happened: two weeks of runs produced fourteen
     // unreviewed PRs and zero posts. The drafts were fine — thirteen options a day
