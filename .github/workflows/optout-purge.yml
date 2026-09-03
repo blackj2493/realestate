@@ -42,6 +42,9 @@ jobs:
         with:
           node-version: '22' # match daily-sync (@supabase/realtime-js needs Node >=22)
 
+      - name: Install Dependencies
+        run: npm ci
+
       - name: Purge opted-out documents
         # Three full jsonb scans (the flags are inside the payload, unindexed) then a
         # chunked Typesense delete. Reads Postgres, writes only to the search index —
