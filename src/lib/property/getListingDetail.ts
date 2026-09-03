@@ -273,8 +273,38 @@ async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null
  * Internet" opt-out (see the gate in getListingDetail) changes what an existing key
  * resolves to, so entries cached before this deploy would keep serving an opted-out
  * listing for up to an hour — on exactly the listings a removal request waits on.
+ *
+ * v11 is another deliberate VALUE bump. The relist promotion now refuses a close that
+ * belongs to an opted-out sibling, so an affected key resolves to "delisted" where it
+ * previously resolved to "sold" — and a stale entry would keep publishing the SOLD label
+ * the bump exists to remove.
  */
-export const DETAIL_SHAPE_VERSION = "v10-internet-display-optout";
+export const DETAIL_SHAPE_VERSION = "v11-optout-relist-promotion";
+
+/**
+ * Has this listing key's seller switched "Distribute to Internet" off? One indexed PK
+ * lookup. Used to decide whether a sibling campaign's close may settle another key's
+ * page. Fails CLOSED on an error: if we cannot prove the sibling is displayable, we do
+ * not promote on it.
+ */
+async function isKeyDisplayOptedOut(
+  supabase: ReturnType<typeof getServiceRoleClient>,
+  listingKey: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from("listings")
+      .select("full_payload")
+      .eq("listing_key", listingKey)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return false; // no row at all — nothing to suppress, promote as before
+    return isListingDisplayOptedOut(data.full_payload);
+  } catch (err) {
+    console.error(`[getListingDetail] opt-out lookup failed for ${listingKey}:`, err);
+    return true; // fail closed
+  }
+}
 
 export interface ListingDetail {
   listing_key: string;
@@ -854,8 +884,18 @@ export const getListingDetail = cache(
         campaignHistory.events,
         /lease/i.test(String(payload["TransactionType"] ?? "")) ? "Lease" : "Sale"
       );
+      // The sibling campaign that settles this page may itself be opted out. Promoting
+      // on it republishes the exact record the seller asked us to stop showing, under a
+      // different key — and the SOLD label lands in UNGATED metadata, so it reaches the
+      // title and any scraper. 188 Maplehurst is the live case: C13661766 opted out and
+      // went dark, and its close still flipped C13010562's page to SOLD.
+      const closeOptedOut =
+        close && close.listingKey !== listing.listing_key
+          ? await isKeyDisplayOptedOut(supabase, close.listingKey)
+          : false;
       if (
         close &&
+        !closeOptedOut &&
         close.listingKey !== listing.listing_key &&
         (status.delistedDate == null || close.closeDateISO >= status.delistedDate)
       ) {

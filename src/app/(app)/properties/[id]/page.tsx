@@ -20,6 +20,7 @@ import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import { isDemoListingKey } from "@/lib/demo/demoListing";
 import { isCommercialProperty } from "@/lib/filters/fundamentals";
 import { buildListingPath, cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
+import { buildListingMetaTitle, showsListPrice } from "@/lib/listings/listingMetaTitle";
 import { formatRegionParts } from "@/lib/regions/formatRegionLabel";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
@@ -255,22 +256,27 @@ export async function generateMetadata({
   const address = p.UnparsedAddress || detail.city || "Listing";
   const price = p.ListPrice || 0;
   const canonical = listingCanonical(id, p);
-  const statusSuffix =
-    detail.status.kind === "sold"
-      ? ` — ${detail.status.label}`
-      : detail.status.kind === "delisted"
-        ? " — Off Market"
-        : detail.status.kind === "unavailable"
-          ? " — No Longer Available"
-          : "";
-  const title = `${address} — ${formatPrice(price)}${statusSuffix} | PureProperty`;
+  // The ask belongs in metadata ONLY while the listing is live. Beside a SOLD label it
+  // reads as the sale price and is not one — see listingMetaTitle.ts for the measured
+  // cases and for why the real close price cannot take its place here.
+  const title = buildListingMetaTitle({
+    address,
+    listPrice: price,
+    statusKind: detail.status.kind,
+    // `label` lives only on the sold variant of the union.
+    statusLabel: detail.status.kind === "sold" ? detail.status.label : "",
+    formatPrice,
+  });
+  const listedAt = showsListPrice(detail.status.kind, price)
+    ? ` listed at ${formatPrice(price)}`
+    : "";
   // Commercial has no beds/baths — the residential fallback would fabricate
   // "0 bed, 0 bath Office" (commercial-gap Phase 0).
   const fallbackDescription = isCommercialProperty(p.PropertyType)
-    ? `${address}. ${p.PropertySubType || "Commercial property"} listed at ${formatPrice(price)}.`
+    ? `${address}. ${p.PropertySubType || "Commercial property"}${listedAt}.`
     : `${address}. ${p.BedroomsTotal ?? 0} bed, ${p.BathroomsTotalInteger ?? 0} bath ${
         p.PropertySubType || "home"
-      } listed at ${formatPrice(price)}.`;
+      }${listedAt}.`;
   const description = cleanDescription(p.PublicRemarks) || fallbackDescription;
   // Frozen-Active payloads (Terminated/Expired/Suspended) must noindex too — trust
   // the resolved status, not the stale payload field.
