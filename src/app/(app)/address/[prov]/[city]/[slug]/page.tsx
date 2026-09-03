@@ -280,14 +280,23 @@ export default async function AddressPage({
     notFound();
   }
 
-  // Owner decision (2026-07-23): the FULL sold report (/properties/{key} — sold hero,
-  // analytics, tour) ALWAYS wins while its listings row renders. This keyed /address
-  // view only serves records beyond that archive, so every arrival path (search,
-  // header bar, sitemap, old links, profile chips) redirects to the full report.
-  if (await hasFullListingRow(pub.id)) redirect(`/properties/${pub.id}`);
-
-  // Server-side auth decision. The VOW fetch is gated behind this.
+  // Server-side auth decision. The VOW fetch is gated behind this, and it also decides
+  // whether the full-report redirect below fires.
   const { isConsumer } = await getConsumer();
+
+  // Owner decision (2026-07-23): the FULL sold report (/properties/{key} — sold hero,
+  // analytics, tour) wins while its listings row renders, so every in-app arrival path
+  // (search, header bar, old links, profile chips) lands on the full report.
+  //
+  // It fires for a SIGNED-IN consumer ONLY. /properties/{key} resolves the true status
+  // and sets robots:noindex on every non-active listing, so redirecting the anonymous
+  // path pointed this INDEXABLE page at a NOINDEX one — measured 2026-09-02, that was
+  // 66% of the 45,000 URLs in /addresses/sitemap.xml, i.e. the whole sold-address search
+  // surface. The redirect also resolves after the shell has streamed, so Next degrades it
+  // to a meta-refresh inside an HTTP 200: Googlebot got a 200 carrying ~705 characters of
+  // nav and footer. Anonymous keeps the compliant public render (address + neighbourhood
+  // context + redacted teaser) — staying here exposes no VOW value that the redirect hid.
+  if (isConsumer && (await hasFullListingRow(pub.id))) redirect(`/properties/${pub.id}`);
 
   const cityName = pub.city || deslugCity(city);
   const provLabel = prov.toUpperCase();
