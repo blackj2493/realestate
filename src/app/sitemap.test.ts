@@ -32,15 +32,29 @@ const NON_LISTING = 3 + 3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length;
 function supabaseReturningSlices(dataset: { listing_key: string; synced_at: string }[]) {
   let from = 0;
   let to = 0;
-  const q: Record<string, unknown> = {};
-  for (const m of ['from', 'select', 'order']) q[m] = vi.fn(() => q);
-  q.range = vi.fn((f: number, t: number) => {
-    from = f;
-    to = t;
-    return q;
+  // `range` and `then` are EXPLICIT — the test reads range's call arguments, and the
+  // thenable is the paging behaviour under test. Every other builder method is proxied
+  // rather than enumerated: a hard-coded list quietly asserts that production will
+  // never call a method it does not know, and that is exactly what reddened main when
+  // #450 added `.eq` to two AVM readers.
+  const spies: Record<string, ReturnType<typeof vi.fn>> = {};
+  const base: Record<string, unknown> = {
+    range: vi.fn((f: number, t: number) => {
+      from = f;
+      to = t;
+      return q;
+    }),
+    then: (resolve: (v: unknown) => unknown) =>
+      Promise.resolve(resolve({ data: dataset.slice(from, to + 1), error: null })),
+  };
+  const q: Record<string, unknown> = new Proxy(base, {
+    get(target, prop) {
+      if (typeof prop === 'symbol') return Reflect.get(target, prop);
+      if (prop in target) return target[prop];
+      spies[prop] ??= vi.fn(() => q);
+      return spies[prop];
+    },
   });
-  q.then = (resolve: (v: unknown) => unknown) =>
-    Promise.resolve(resolve({ data: dataset.slice(from, to + 1), error: null }));
   return q as unknown as ReturnType<typeof getServiceRoleClient> & { range: ReturnType<typeof vi.fn> };
 }
 
@@ -68,9 +82,19 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
   });
 
   it('still emits the static routes when the DB read fails', async () => {
-    const q: Record<string, unknown> = {};
-    for (const m of ['from', 'select', 'order', 'range']) q[m] = vi.fn(() => q);
-    q.then = (resolve: (v: unknown) => unknown) => Promise.resolve(resolve({ data: null, error: new Error('boom') }));
+    // Proxied for the same reason as above — any builder method chains.
+    const spies: Record<string, ReturnType<typeof vi.fn>> = {};
+    const base: Record<string, unknown> = {
+      then: (resolve: (v: unknown) => unknown) => Promise.resolve(resolve({ data: null, error: new Error('boom') })),
+    };
+    const q: Record<string, unknown> = new Proxy(base, {
+      get(target, prop) {
+        if (typeof prop === 'symbol') return Reflect.get(target, prop);
+        if (prop in target) return target[prop];
+        spies[prop] ??= vi.fn(() => q);
+        return spies[prop];
+      },
+    });
     vi.mocked(getServiceRoleClient).mockReturnValue(q as unknown as ReturnType<typeof getServiceRoleClient>);
 
     const entries = await sitemap();
