@@ -323,29 +323,46 @@ async function fetchCoverThumbs(
   const filter =
     `${keyFilter} and ResourceName eq 'Property'` +
     ` and ImageSizeDescription eq 'Thumbnail' and Order lt ${COVER_THUMB_MAX_ORDER}`;
-  const url =
-    `${API_BASE_URL}/Media?$filter=${encodeURIComponent(filter)}` +
-    `&$orderby=ResourceRecordKey,Order&$top=${MEDIA_PAGE_SIZE}`;
-  const result: FetchResult<any> = await fetchWithRetry<any>(url, {
-    method: 'GET',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!result.success || !result.data) {
-    console.warn(`   ⚠️  Cover-thumb fetch failed (non-fatal): ${result.error}`);
-    return false;
-  }
+
   // A listing can return several rows inside the Order window, so keep the
   // lowest Order — the same record selectPrimaryImage would call the cover.
   const bestOrder = new Map<string, number>();
-  for (const m of (result.data.value || []) as any[]) {
-    const lk = m?.ResourceRecordKey;
-    if (!lk || !m.MediaURL || m.MediaStatus === 'Deleted') continue;
-    const order = m.Order ?? Number.POSITIVE_INFINITY;
-    const prev = bestOrder.get(lk);
-    if (prev === undefined || order < prev) {
-      bestOrder.set(lk, order);
-      out.set(lk, m.MediaURL);
+
+  // PAGE WITH $skip, exactly like fetchChunkAtSize. The Order window does NOT make
+  // one page enough: measured on live data, ~7 rows per listing satisfy `Order lt 2`
+  // (AMPRE repeats an Order across MediaObjectIDs), so a 25-key chunk clears the
+  // 100-record cap and the response is truncated. Because the rows are ordered by
+  // ResourceRecordKey, that truncation drops whole listings off the TAIL of the
+  // chunk — silently, since a short read looks identical to "no thumbnail exists".
+  // The first version of this function did exactly that and left 5,901 of 97,491
+  // documents without a thumb; a spot check found Thumbnail rows at Order 0 for 6
+  // of 10 supposedly-missing listings. This is the same bug the /Media fetcher
+  // above was rewritten to fix — see its `$skip` comment.
+  for (let skip = 0; ; skip += MEDIA_PAGE_SIZE) {
+    const url =
+      `${API_BASE_URL}/Media?$filter=${encodeURIComponent(filter)}` +
+      `&$orderby=ResourceRecordKey,Order&$top=${MEDIA_PAGE_SIZE}&$skip=${skip}`;
+    const result: FetchResult<any> = await fetchWithRetry<any>(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!result.success || !result.data) {
+      console.warn(`   ⚠️  Cover-thumb fetch failed (non-fatal): ${result.error}`);
+      return false;
     }
+    const records: any[] = result.data.value || [];
+    for (const m of records) {
+      const lk = m?.ResourceRecordKey;
+      if (!lk || !m.MediaURL || m.MediaStatus === 'Deleted') continue;
+      const order = m.Order ?? Number.POSITIVE_INFINITY;
+      const prev = bestOrder.get(lk);
+      if (prev === undefined || order < prev) {
+        bestOrder.set(lk, order);
+        out.set(lk, m.MediaURL);
+      }
+    }
+    if (records.length < MEDIA_PAGE_SIZE) break; // short page → no more rows
+    await sleep(MEDIA_REQUEST_DELAY_MS);
   }
   return true;
 }

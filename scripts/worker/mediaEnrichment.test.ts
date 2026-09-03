@@ -304,3 +304,45 @@ describe('fetchMediaForKeys — cover thumb (the 240px card image)', () => {
     expect(thumbs.has('K1')).toBe(false);
   });
 });
+
+describe('fetchCoverThumbs — $skip paging (the 5,901-document truncation)', () => {
+  /**
+   * AMPRE caps every /Media response at 100 records and sends no nextLink. The Order
+   * window does not make one page enough: ~7 rows per listing satisfy `Order lt 2`
+   * (AMPRE repeats an Order across MediaObjectIDs), so a 25-key chunk clears the cap.
+   * Rows come back ordered by ResourceRecordKey, so truncation drops whole listings off
+   * the TAIL — and a short read is indistinguishable from "no thumbnail exists".
+   *
+   * The first version of this pass did not page, and left 5,901 of 97,491 documents
+   * without a thumb. This pins the fix: the LAST key in an over-long chunk must resolve.
+   */
+  it('resolves the last listing in a chunk whose rows overflow one page', async () => {
+    const keys = Array.from({ length: 25 }, (_, i) => `K${String(i).padStart(2, '0')}`);
+    // 7 qualifying rows each = 175 rows across 25 keys → two pages.
+    const all = keys.flatMap((k) =>
+      Array.from({ length: 7 }, (_, j) => ({
+        ResourceRecordKey: k,
+        MediaURL: `https://cdn/${k}-thumb-${j}.jpg`,
+        ImageSizeDescription: 'Thumbnail',
+        Order: j === 0 ? 0 : 1,
+      }))
+    );
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string) => {
+        const u = new URL(url);
+        const skip = Number(u.searchParams.get('$skip') ?? 0);
+        const top = Number(u.searchParams.get('$top') ?? 100);
+        return fakeResponse({ value: all.slice(skip, skip + top) });
+      })
+    );
+
+    const { thumbs } = await fetchMediaForKeys(keys, 'tok');
+    // Every key, not just the ones that fit on page one.
+    expect(thumbs.size).toBe(25);
+    expect(thumbs.get('K24')).toBe('https://cdn/K24-thumb-0.jpg');
+    // Still the lowest Order, not merely the last row seen.
+    expect(thumbs.get('K00')).toBe('https://cdn/K00-thumb-0.jpg');
+  });
+});
