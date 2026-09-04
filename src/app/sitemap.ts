@@ -5,7 +5,6 @@ import {
   neighbourhoodHubsForSitemap,
   COMMERCIAL_ACTIVE_FILTER,
 } from "@/lib/listings/cityHubs";
-import { buildListingPath } from "@/lib/listings/listingPath";
 import { LIVE_TRACKERS } from "@/lib/data/trackers";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
 
@@ -24,7 +23,6 @@ export const revalidate = 86400;
 const PAGE = 1000; // PostgREST hard-caps a single response at 1000 rows — must paginate
 const MAX_URLS = 45_000; // headroom under the 50k-URL sitemap protocol limit
 const HUB_MIN = 5; // don't sitemap a city hub that would render thin (the hub noindexes < 3)
-const ADDRESS_CONCURRENCY = 6; // in-flight address chunks — 98s sequential, 44s at 6
 
 /**
  * Crawlable city-hub URLs (/property/on/{city}) — the internal-link entry points to
@@ -97,167 +95,64 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
   ];
 }
 
-/**
- * A listing row, flattened for URL building. The street fields live inside `full_payload`
- * (the table denormalizes only city/sub-type/price), so they are pulled out with
- * PostgREST's `alias:col->>Key` projection rather than by selecting the whole JSONB.
- *
- * They are fetched BY PRIMARY KEY, never alongside an offset — see listingRows().
- */
+/** One listing row. `sitemap_path` is precomputed (migration 138); everything else the
+ *  sitemap needs is a real column, so this select never touches full_payload. */
 interface ListingSitemapRow {
   listing_key: string | null;
   synced_at: string | null;
-  street_number: string | null;
-  street_name: string | null;
-  street_suffix: string | null;
-  street_dir_prefix: string | null;
-  street_dir_suffix: string | null;
-  unit_number: string | null;
-  apartment_number: string | null;
-  unparsed_address: string | null;
-  payload_city: string | null;
-  state_or_province: string | null;
+  sitemap_path: string | null;
 }
 
-/** Cheap: real columns, so a page stays ~600ms however deep the offset goes. */
-const KEY_SELECT = "listing_key, synced_at";
-
-/** Expensive: ten jsonb extractions = a detoast per row. ONLY ever used with .in(). */
-const ADDRESS_SELECT = [
-  "listing_key",
-  "street_number:full_payload->>StreetNumber",
-  "street_name:full_payload->>StreetName",
-  "street_suffix:full_payload->>StreetSuffix",
-  "street_dir_prefix:full_payload->>StreetDirPrefix",
-  "street_dir_suffix:full_payload->>StreetDirSuffix",
-  "unit_number:full_payload->>UnitNumber",
-  "apartment_number:full_payload->>ApartmentNumber",
-  "unparsed_address:full_payload->>UnparsedAddress",
-  "payload_city:full_payload->>City",
-  "state_or_province:full_payload->>StateOrProvince",
-].join(", ");
-
-/** Run `fn` over `items` with at most `n` in flight. Keeps the wall clock sane without
- *  opening 45 PostgREST connections at once. */
-async function pool<T, R>(items: T[], n: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(n, items.length) }, async () => {
-      for (;;) {
-        const i = next++;
-        if (i >= items.length) return;
-        out[i] = await fn(items[i]);
-      }
-    })
-  );
-  return out;
-}
+const LISTING_SELECT = "listing_key, synced_at, sitemap_path";
 
 /**
- * Every listing this sitemap should declare, in two passes.
+ * Every listing this sitemap declares.
  *
- * WHY TWO. Selecting the jsonb address fields WITH an offset degrades as the offset
- * grows — a detoast per row, on top of a deepening scan. Measured against production
- * on 2026-09-03, one 1,000-row page of exactly the query this used to run:
+ * ONE cheap pass. It used to extract ten address fields out of full_payload to build the
+ * canonical path — a detoast per row — and that broke production twice:
  *
- *     offset      0    710ms
- *     offset  5,000  2,318ms
- *     offset 10,000  2,770ms
- *     offset 15,000  6,142ms
- *     offset 19,000  6,379ms     <- closing on the 8s statement timeout
+ *   * Paired with offset paging it degraded with depth (710ms at offset 0, 6.4s at
+ *     19,000), tripped the 8s statement timeout around row 14,000, and the loop read the
+ *     timeout as "no more rows". The live sitemap carried 13,998 of 45,000 for two days.
+ *   * Rewritten as a by-primary-key second pass it was correct locally (45,000/45,000,
+ *     worst chunk 2.3s) and still failed on Vercel, whose builder runs this alongside 57
+ *     other prerenders hammering the same database: the chunks timed out under that
+ *     contention and the route blew the 60s prerender cap. One build passed and the next
+ *     failed on identical code.
  *
- * On Vercel it tripped that timeout around row 14,000, and the loop could not tell a
- * timeout from "no more rows": it broke, returned what it had, and the live sitemap
- * silently carried 13,998 of 45,000 listing URLs. A 69% loss that nothing reported.
+ * Migration 138 moved the path into a column, which is what migrations 104 and 137 did
+ * for the same reason. There is no paging strategy that fixes a per-row detoast.
  *
- * So: page the KEYS with flat columns only (cheap at any offset), then fetch the address
- * fields BY PRIMARY KEY in chunks. A PK lookup pays the detoast without the scan, and
- * its cost does not grow — worst chunk 2.3s across all 45. ~44s for the full 45,000 at
- * CONCURRENCY 6, versus ~40s to produce the broken 13,998.
- *
- * An error is NEVER treated as exhaustion. That conflation is the whole bug.
+ * An error is never treated as exhaustion — that conflation is what hid the 69% shortfall.
  */
 async function listingRows(
   supabase: ReturnType<typeof getServiceRoleClient>
 ): Promise<ListingSitemapRow[]> {
-  // PASS 1 — the keys, newest-synced first. Sequential: each page's range depends on the
-  // previous page being full, and this pass is only ~19s.
-  const keyed: { listing_key: string; synced_at: string | null }[] = [];
-  for (let from = 0; keyed.length < MAX_URLS; from += PAGE) {
+  const rows: ListingSitemapRow[] = [];
+  for (let from = 0; rows.length < MAX_URLS; from += PAGE) {
     const { data, error } = await supabase
       .from("listings")
-      .select(KEY_SELECT)
+      .select(LISTING_SELECT)
       .order("synced_at", { ascending: false })
       .order("listing_key") // deterministic tie-break so range pagination never skips/dups
       .range(from, from + PAGE - 1);
     if (error) {
       // Loudly, and stop — but never silently, and never as if the table simply ended.
-      console.error(`[sitemap] listing key page failed at offset ${from}: ${error.message}`);
+      console.error(`[sitemap] listing page failed at offset ${from}: ${error.message}`);
       break;
     }
     if (!data || data.length === 0) break;
-    keyed.push(...(data as unknown as { listing_key: string; synced_at: string | null }[]));
+    rows.push(...(data as unknown as ListingSitemapRow[]));
     if (data.length < PAGE) break;
   }
 
-  // PASS 2 — address fields for exactly those keys. No offset anywhere in here.
-  const chunks: string[][] = [];
-  for (let i = 0; i < keyed.length; i += PAGE) {
-    chunks.push(keyed.slice(i, i + PAGE).map((r) => r.listing_key).filter(Boolean));
+  const unresolved = rows.filter((r) => !r.sitemap_path).length;
+  if (unresolved > 0) {
+    // Not fatal — those rows still ship under /properties/{KEY} — but it means the
+    // backfill has not reached them or the ingester stopped writing the column.
+    console.warn(`[sitemap] ${unresolved} listing(s) have no sitemap_path; using the legacy path`);
   }
-  const fetched = await pool(chunks, ADDRESS_CONCURRENCY, async (chunk) => {
-    const { data, error } = await supabase.from("listings").select(ADDRESS_SELECT).in("listing_key", chunk);
-    if (error) {
-      console.error(`[sitemap] address chunk failed (${chunk.length} keys): ${error.message}`);
-      return [];
-    }
-    return (data ?? []) as unknown as Omit<ListingSitemapRow, "synced_at">[];
-  });
-
-  const byKey = new Map(fetched.flat().map((r) => [r.listing_key, r]));
-  // Pass 1 is the source of truth for WHICH listings ship. A key whose address chunk
-  // failed still gets a URL — buildListingPath falls back to /properties/{KEY} — because
-  // dropping it would reintroduce the silent shortfall by another route.
-  const rows = keyed.map((k) => ({ ...(byKey.get(k.listing_key) ?? { listing_key: k.listing_key }), synced_at: k.synced_at })) as ListingSitemapRow[];
-
-  const missing = keyed.length - byKey.size;
-  if (missing > 0) console.warn(`[sitemap] ${missing} listing(s) fell back to the legacy path — address fetch incomplete`);
   return rows;
-}
-
-/**
- * The URL to sitemap for one listing — the DESCRIPTIVE canonical
- * (/property/{prov}/{city}/{address}-{KEY}), which is exactly what the listing page's own
- * `alternates.canonical` and JSON-LD emit (see properties/[id] listingCanonical).
- *
- * Before 2026-09-02 this emitted the legacy /properties/{KEY} form instead. Every one of
- * those 45,000 URLs then canonicalised to a path that appeared in NEITHER sitemap, so the
- * whole listing tree was declared under URLs Google is told to discard. Fall back to the
- * legacy path only when the payload cannot form a slug — same fallback the page uses, so
- * the two can never disagree.
- */
-function listingPath(row: ListingSitemapRow): string {
-  // No address row (its chunk failed) -> the LEGACY path, deliberately. buildListingPath
-  // degrades city to "on" when it has none, which would emit /property/on/on/{KEY}: a URL
-  // that resolves but is not the canonical one, so Google would be told to discard it.
-  // /properties/{KEY} is the form the page itself falls back to, so the two still agree.
-  if (!row.unparsed_address && !row.street_name) return `/properties/${row.listing_key}`;
-  return (
-    buildListingPath({
-      ListingKey: row.listing_key,
-      StreetNumber: row.street_number,
-      StreetName: row.street_name,
-      StreetSuffix: row.street_suffix,
-      StreetDirPrefix: row.street_dir_prefix,
-      StreetDirSuffix: row.street_dir_suffix,
-      UnitNumber: row.unit_number,
-      ApartmentNumber: row.apartment_number,
-      UnparsedAddress: row.unparsed_address,
-      City: row.payload_city,
-      StateOrProvince: row.state_or_province,
-    }) ?? `/properties/${row.listing_key}`
-  );
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -302,7 +197,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .slice(0, MAX_URLS)
       .filter((row) => row.listing_key)
       .map((row) => ({
-        url: `${SITE_URL}${listingPath(row)}`,
+        // The precomputed canonical, or the legacy path when it was never computed —
+        // the same fallback properties/[id] uses, so the two can never disagree.
+        url: `${SITE_URL}${row.sitemap_path || `/properties/${row.listing_key}`}`,
         lastModified: row.synced_at ? new Date(row.synced_at) : undefined,
         changeFrequency: "daily" as const,
         priority: 0.7,
