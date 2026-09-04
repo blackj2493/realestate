@@ -30,34 +30,22 @@ const NON_LISTING = 3 + 3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length;
 interface Row {
   listing_key: string;
   synced_at: string;
-  [k: string]: string | null;
+  sitemap_path: string | null;
 }
 
 /**
- * Two-pass stub. The route pages KEYS with flat columns and an offset, then fetches the
- * address fields BY KEY with `.in()` — so this dispatches on which call shape it was
- * handed, exactly as PostgREST would.
- *
- * `keyPageError` fires on the Nth key page, standing in for the statement timeout that
- * silently truncated the live sitemap to 13,998 of 45,000 URLs.
+ * `pageError` fires on the Nth page, standing in for the statement timeout that silently
+ * truncated the live sitemap to 13,998 of 45,000 URLs.
  */
-function supabaseTwoPass(dataset: Row[], opts: { keyPageError?: number; addressError?: boolean } = {}) {
-  const calls = {
-    selects: [] as string[],
-    rangedSelects: [] as string[],
-    ranges: [] as [number, number][],
-    inChunks: [] as number[],
-  };
-  let keyPages = 0;
+function supabaseStub(dataset: Row[], opts: { pageError?: number } = {}) {
+  const calls = { selects: [] as string[], ranges: [] as [number, number][] };
+  let pages = 0;
 
   const make = () => {
-    let select = '';
     let from = 0;
     let to = 0;
-    let keys: string[] | null = null;
     const q: Record<string, unknown> = {};
     q.select = vi.fn((s: string) => {
-      select = s;
       calls.selects.push(s);
       return q;
     });
@@ -66,22 +54,11 @@ function supabaseTwoPass(dataset: Row[], opts: { keyPageError?: number; addressE
       from = f;
       to = t;
       calls.ranges.push([f, t]);
-      calls.rangedSelects.push(select);
-      return q;
-    });
-    q.in = vi.fn((_col: string, chunk: string[]) => {
-      keys = chunk;
-      calls.inChunks.push(chunk.length);
       return q;
     });
     q.then = (resolve: (v: unknown) => unknown) => {
-      if (keys) {
-        if (opts.addressError) return Promise.resolve(resolve({ data: null, error: new Error('address boom') }));
-        const set = new Set(keys);
-        return Promise.resolve(resolve({ data: dataset.filter((r) => set.has(r.listing_key)), error: null }));
-      }
-      keyPages++;
-      if (opts.keyPageError && keyPages === opts.keyPageError) {
+      pages++;
+      if (opts.pageError && pages === opts.pageError) {
         return Promise.resolve(
           resolve({ data: null, error: new Error('canceling statement due to statement timeout') })
         );
@@ -91,24 +68,15 @@ function supabaseTwoPass(dataset: Row[], opts: { keyPageError?: number; addressE
     return q;
   };
 
-  // Each .from() starts a fresh builder so pass 2's chunks don't inherit pass 1's range.
   const client = { from: vi.fn(() => make()) } as unknown as ReturnType<typeof getServiceRoleClient>;
   return { client, calls };
 }
 
-const row = (i: number): Row => ({
+const row = (i: number, over: Partial<Row> = {}): Row => ({
   listing_key: `W${String(i).padStart(8, '0')}`,
   synced_at: '2026-06-10T00:00:00Z',
-  street_number: '2545',
-  street_name: 'Simcoe',
-  street_suffix: 'Street',
-  street_dir_prefix: null,
-  street_dir_suffix: null,
-  unit_number: 'PH20',
-  apartment_number: null,
-  unparsed_address: '2545 Simcoe Street PH20, Oshawa, ON L1H 7K4',
-  payload_city: 'Oshawa',
-  state_or_province: 'ON',
+  sitemap_path: `/property/on/oshawa/2545-simcoe-street-ph20-W${String(i).padStart(8, '0')}`,
+  ...over,
 });
 
 beforeEach(() => {
@@ -122,12 +90,12 @@ afterEach(() => vi.restoreAllMocks());
 describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
   it('emits ALL listings when there are more than 1000 (pages with .range)', async () => {
     const dataset = Array.from({ length: 2500 }, (_, i) => row(i));
-    const { client, calls } = supabaseTwoPass(dataset);
+    const { client, calls } = supabaseStub(dataset);
     vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
     const entries = await sitemap();
     expect(entries.length).toBe(NON_LISTING + 2500);
-    // PAGE must be <= 1000 (PostgREST hard cap) and the key pass must have paged >= 3 times
+    // PAGE must be <= 1000 (PostgREST hard cap) and the loop must have paged >= 3 times
     expect(calls.ranges.length).toBe(3);
     const [f0, t0] = calls.ranges[0];
     expect(t0 - f0 + 1).toBeLessThanOrEqual(1000);
@@ -135,7 +103,7 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
 
   it('still emits the static routes when the DB read fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { client } = supabaseTwoPass([], { keyPageError: 1 });
+    const { client } = supabaseStub([], { pageError: 1 });
     vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
     const entries = await sitemap();
@@ -143,7 +111,7 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
   });
 
   it('emits /commercial/on/{slug} hubs counted over the commercial population', async () => {
-    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseTwoPass([row(1)]).client);
+    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseStub([row(1)]).client);
     vi.mocked(cityHubsWithInventory).mockImplementation(
       async (_min: number, _extraFilter?: string, baseFilter?: string) =>
         baseFilter === COMMERCIAL_ACTIVE_FILTER ? [{ slug: 'mississauga', count: 382 }] : []
@@ -158,8 +126,8 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
 });
 
 describe('sitemap — listings are declared under their canonical URL', () => {
-  it('emits /property/{prov}/{city}/{address}-{KEY}, not the legacy /properties/{KEY}', async () => {
-    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseTwoPass([row(1)]).client);
+  it('emits the precomputed canonical, not the legacy /properties/{KEY}', async () => {
+    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseStub([row(1)]).client);
 
     const entries = await sitemap();
     const listing = entries.find((e) => e.url.includes('W00000001'));
@@ -171,40 +139,47 @@ describe('sitemap — listings are declared under their canonical URL', () => {
     expect(entries.some((e) => e.url.includes('/properties/W00000001'))).toBe(false);
   });
 
-  it('never pairs the jsonb address fields with an offset', async () => {
-    const { client, calls } = supabaseTwoPass(Array.from({ length: 1500 }, (_, i) => row(i)));
+  it('NEVER touches full_payload — that detoast broke production twice', async () => {
+    const { client, calls } = supabaseStub([row(1)]);
     vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
     await sitemap();
-    // THE regression. Selecting ten `full_payload->>` fields alongside .range() degrades
-    // with depth and hit the 8s statement timeout around row 14,000 in production, which
-    // the loop read as "no more rows" — the live sitemap carried 13,998 of 45,000.
-    // The ranged pass must stay flat; the detoast rides on .in() only.
-    for (const s of calls.rangedSelects) expect(s).not.toContain('full_payload');
-    expect(calls.selects.some((s) => s.includes('street_name:full_payload->>StreetName'))).toBe(true);
-    expect(calls.inChunks.length).toBeGreaterThan(0);
+    // Extracting address fields from jsonb here degraded with offset depth, tripped the
+    // 8s statement timeout at ~row 14,000 (live sitemap: 13,998 of 45,000), and blew the
+    // 60s prerender cap on Vercel even after a by-key rewrite. Migration 138 moved the
+    // path into a column so this select stays flat. It must stay flat.
+    for (const s of calls.selects) expect(s).not.toContain('full_payload');
+    expect(calls.selects[0]).toContain('sitemap_path');
+  });
+
+  it('falls back to /properties/{KEY} when sitemap_path was never computed', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseStub([row(2, { sitemap_path: null })]).client);
+
+    const entries = await sitemap();
+    // A resolvable URL beats a wrong one, and it is the same fallback the listing page
+    // uses, so the sitemap and the canonical tag can never disagree.
+    expect(entries.some((e) => e.url.endsWith('/properties/W00000002'))).toBe(true);
+  });
+
+  it('warns when rows are missing a path instead of shipping them quietly', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseStub([row(1), row(2, { sitemap_path: null })]).client);
+
+    await sitemap();
+    // Means the backfill has not reached them, or the ingester stopped writing the column.
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('no sitemap_path'));
   });
 
   it('reports a truncating error instead of passing it off as the end of the table', async () => {
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    // 2,500 rows available, but the SECOND key page times out.
-    const { client } = supabaseTwoPass(Array.from({ length: 2500 }, (_, i) => row(i)), { keyPageError: 2 });
+    // 2,500 rows available, but the SECOND page times out.
+    const { client } = supabaseStub(Array.from({ length: 2500 }, (_, i) => row(i)), { pageError: 2 });
     vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
     const entries = await sitemap();
     expect(entries.length).toBe(NON_LISTING + 1000); // short, as it must be
     // ...but never silently. Silence is what let a 69% shortfall sit live.
-    expect(err).toHaveBeenCalledWith(expect.stringContaining('listing key page failed'));
-  });
-
-  it('keeps a URL for a listing whose address chunk failed, rather than dropping it', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { client } = supabaseTwoPass([row(1)], { addressError: true });
-    vi.mocked(getServiceRoleClient).mockReturnValue(client);
-
-    const entries = await sitemap();
-    // Falls back to the legacy path — dropping it would reintroduce the same shortfall.
-    expect(entries.some((e) => e.url.endsWith('/properties/W00000001'))).toBe(true);
+    expect(err).toHaveBeenCalledWith(expect.stringContaining('listing page failed'));
   });
 });

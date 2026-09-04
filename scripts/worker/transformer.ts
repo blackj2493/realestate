@@ -24,6 +24,7 @@ import { resolveRatioPrice, fetchMillRate } from './services/ratioPriceCalculato
 import { calculateFinancialMetrics } from './services/financialMetrics';
 import { processBuilderMetrics } from '@/services/BuilderAnalyticsEngine';
 import { resolveLocation } from './resolveLocation';
+import { buildListingPath } from '@/lib/listings/listingPath';
 import { assignSchools } from '@/lib/schools/nearestSchools';
 import { assignAmenities } from '@/lib/amenities/nearestAmenities';
 import { selectPrimaryImage, collectMediaUrls } from '@/lib/etl/selectPrimaryImage';
@@ -674,6 +675,10 @@ export interface TransformResult {
     suite_rent_est: number | null;
     suite_rent_tier: string | null;
     property_hash: string;
+    // Descriptive canonical path (migration 138). Precomputed here so /sitemap.xml reads
+    // one cheap column instead of extracting ten address fields out of full_payload —
+    // that detoast timed out at build and silently truncated the live sitemap to 31%.
+    sitemap_path: string | null;
     // Flat dimension columns (migration 045) — let region_active_aggregates floor on
     // beds/baths/parking/frontage/basement WITHOUT detoasting full_payload. Mirror the
     // same values extracted for Typesense below; basement_tier is the canonical 1-9 tier.
@@ -1041,6 +1046,22 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     needs_geocoding: geo.needsGeocoding,
     city: raw.City || null,
     city_region: raw.CityRegion || null,
+    // Same builder the listing page uses for alternates.canonical, so the sitemap and the
+    // canonical tag cannot disagree. null when the payload can't form a slug; the reader
+    // then falls back to /properties/{key}, exactly as the page does.
+    sitemap_path: buildListingPath({
+      ListingKey: raw.ListingKey,
+      StreetNumber: raw.StreetNumber,
+      StreetName: raw.StreetName,
+      StreetSuffix: raw.StreetSuffix,
+      StreetDirPrefix: raw.StreetDirPrefix,
+      StreetDirSuffix: raw.StreetDirSuffix,
+      UnitNumber: raw.UnitNumber,
+      ApartmentNumber: raw.ApartmentNumber,
+      UnparsedAddress: raw.UnparsedAddress,
+      City: raw.City,
+      StateOrProvince: raw.StateOrProvince,
+    }),
     property_sub_type: raw.PropertySubType || null,
     list_price: raw.ListPrice || 0,
     extrapolated_cap_rate: proForma.extrapolated_cap_rate,
