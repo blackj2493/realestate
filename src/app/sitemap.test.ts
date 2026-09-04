@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@/lib/supabase/client', () => ({
   getServiceRoleClient: vi.fn(),
@@ -27,27 +27,75 @@ import sitemap from './sitemap';
 // one per live finding. Derived from the registries so it stays correct as pages ship.
 const NON_LISTING = 3 + 3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length;
 
-type Row = Record<string, string | null>;
-
-/** Chainable stub whose range(from, to) returns a slice of `dataset`,
- *  mimicking PostgREST range pagination (then-only thenable). */
-function supabaseReturningSlices(dataset: Row[]) {
-  let from = 0;
-  let to = 0;
-  const q: Record<string, unknown> = {};
-  for (const m of ['from', 'select', 'order']) q[m] = vi.fn(() => q);
-  q.range = vi.fn((f: number, t: number) => {
-    from = f;
-    to = t;
-    return q;
-  });
-  q.then = (resolve: (v: unknown) => unknown) =>
-    Promise.resolve(resolve({ data: dataset.slice(from, to + 1), error: null }));
-  return q as unknown as ReturnType<typeof getServiceRoleClient> & { range: ReturnType<typeof vi.fn> };
+interface Row {
+  listing_key: string;
+  synced_at: string;
+  [k: string]: string | null;
 }
 
-// The street fields arrive flattened out of full_payload by LISTING_SELECT's
-// `alias:col->>Key` projection, so the fixture mirrors that shape, not the raw JSONB.
+/**
+ * Two-pass stub. The route pages KEYS with flat columns and an offset, then fetches the
+ * address fields BY KEY with `.in()` — so this dispatches on which call shape it was
+ * handed, exactly as PostgREST would.
+ *
+ * `keyPageError` fires on the Nth key page, standing in for the statement timeout that
+ * silently truncated the live sitemap to 13,998 of 45,000 URLs.
+ */
+function supabaseTwoPass(dataset: Row[], opts: { keyPageError?: number; addressError?: boolean } = {}) {
+  const calls = {
+    selects: [] as string[],
+    rangedSelects: [] as string[],
+    ranges: [] as [number, number][],
+    inChunks: [] as number[],
+  };
+  let keyPages = 0;
+
+  const make = () => {
+    let select = '';
+    let from = 0;
+    let to = 0;
+    let keys: string[] | null = null;
+    const q: Record<string, unknown> = {};
+    q.select = vi.fn((s: string) => {
+      select = s;
+      calls.selects.push(s);
+      return q;
+    });
+    q.order = vi.fn(() => q);
+    q.range = vi.fn((f: number, t: number) => {
+      from = f;
+      to = t;
+      calls.ranges.push([f, t]);
+      calls.rangedSelects.push(select);
+      return q;
+    });
+    q.in = vi.fn((_col: string, chunk: string[]) => {
+      keys = chunk;
+      calls.inChunks.push(chunk.length);
+      return q;
+    });
+    q.then = (resolve: (v: unknown) => unknown) => {
+      if (keys) {
+        if (opts.addressError) return Promise.resolve(resolve({ data: null, error: new Error('address boom') }));
+        const set = new Set(keys);
+        return Promise.resolve(resolve({ data: dataset.filter((r) => set.has(r.listing_key)), error: null }));
+      }
+      keyPages++;
+      if (opts.keyPageError && keyPages === opts.keyPageError) {
+        return Promise.resolve(
+          resolve({ data: null, error: new Error('canceling statement due to statement timeout') })
+        );
+      }
+      return Promise.resolve(resolve({ data: dataset.slice(from, to + 1), error: null }));
+    };
+    return q;
+  };
+
+  // Each .from() starts a fresh builder so pass 2's chunks don't inherit pass 1's range.
+  const client = { from: vi.fn(() => make()) } as unknown as ReturnType<typeof getServiceRoleClient>;
+  return { client, calls };
+}
+
 const row = (i: number): Row => ({
   listing_key: `W${String(i).padStart(8, '0')}`,
   synced_at: '2026-06-10T00:00:00Z',
@@ -63,39 +111,39 @@ const row = (i: number): Row => ({
   state_or_province: 'ON',
 });
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // clearAllMocks keeps implementations, so the commercial case's hub stub would leak
+  // one extra URL into every test declared after it. Reset it to the module default.
+  vi.mocked(cityHubsWithInventory).mockImplementation(async () => []);
+});
+afterEach(() => vi.restoreAllMocks());
 
 describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
   it('emits ALL listings when there are more than 1000 (pages with .range)', async () => {
     const dataset = Array.from({ length: 2500 }, (_, i) => row(i));
-    const stub = supabaseReturningSlices(dataset);
-    vi.mocked(getServiceRoleClient).mockReturnValue(stub);
+    const { client, calls } = supabaseTwoPass(dataset);
+    vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
     const entries = await sitemap();
-    // static + /data routes + every listing. Hub routes are [] here: searchListings throws
-    // without a Typesense key, caught best-effort.
     expect(entries.length).toBe(NON_LISTING + 2500);
-    // PAGE must be ≤ 1000 (PostgREST hard cap) and the loop must have paged ≥ 3 times
-    expect(stub.range).toHaveBeenCalledTimes(3);
-    const [f0, t0] = stub.range.mock.calls[0];
+    // PAGE must be <= 1000 (PostgREST hard cap) and the key pass must have paged >= 3 times
+    expect(calls.ranges.length).toBe(3);
+    const [f0, t0] = calls.ranges[0];
     expect(t0 - f0 + 1).toBeLessThanOrEqual(1000);
   });
 
   it('still emits the static routes when the DB read fails', async () => {
-    const q: Record<string, unknown> = {};
-    for (const m of ['from', 'select', 'order', 'range']) q[m] = vi.fn(() => q);
-    q.then = (resolve: (v: unknown) => unknown) => Promise.resolve(resolve({ data: null, error: new Error('boom') }));
-    vi.mocked(getServiceRoleClient).mockReturnValue(q as unknown as ReturnType<typeof getServiceRoleClient>);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { client } = supabaseTwoPass([], { keyPageError: 1 });
+    vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
     const entries = await sitemap();
-    // static + /data routes survive a DB failure (listing read is what fails).
     expect(entries.length).toBe(NON_LISTING);
   });
 
   it('emits /commercial/on/{slug} hubs counted over the commercial population', async () => {
-    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseReturningSlices([row(1)]));
-    // Only the commercial-population call yields a hub; every residential-tree call
-    // (default base) stays empty — proving the URL comes from the commercial branch.
+    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseTwoPass([row(1)]).client);
     vi.mocked(cityHubsWithInventory).mockImplementation(
       async (_min: number, _extraFilter?: string, baseFilter?: string) =>
         baseFilter === COMMERCIAL_ACTIVE_FILTER ? [{ slug: 'mississauga', count: 382 }] : []
@@ -111,7 +159,7 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
 
 describe('sitemap — listings are declared under their canonical URL', () => {
   it('emits /property/{prov}/{city}/{address}-{KEY}, not the legacy /properties/{KEY}', async () => {
-    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseReturningSlices([row(1)]));
+    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseTwoPass([row(1)]).client);
 
     const entries = await sitemap();
     const listing = entries.find((e) => e.url.includes('W00000001'));
@@ -123,24 +171,40 @@ describe('sitemap — listings are declared under their canonical URL', () => {
     expect(entries.some((e) => e.url.includes('/properties/W00000001'))).toBe(false);
   });
 
-  it('selects the street fields out of full_payload rather than the whole JSONB', async () => {
-    const stub = supabaseReturningSlices([row(1)]);
-    vi.mocked(getServiceRoleClient).mockReturnValue(stub);
+  it('never pairs the jsonb address fields with an offset', async () => {
+    const { client, calls } = supabaseTwoPass(Array.from({ length: 1500 }, (_, i) => row(i)));
+    vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
     await sitemap();
-    const select = (stub as unknown as { select: ReturnType<typeof vi.fn> }).select.mock.calls[0][0] as string;
-    expect(select).toContain('street_name:full_payload->>StreetName');
-    // Pulling the whole payload would detoast 45,000 rows on every daily rebuild.
-    expect(select).not.toMatch(/(^|[\s,])full_payload([\s,]|$)/);
+    // THE regression. Selecting ten `full_payload->>` fields alongside .range() degrades
+    // with depth and hit the 8s statement timeout around row 14,000 in production, which
+    // the loop read as "no more rows" — the live sitemap carried 13,998 of 45,000.
+    // The ranged pass must stay flat; the detoast rides on .in() only.
+    for (const s of calls.rangedSelects) expect(s).not.toContain('full_payload');
+    expect(calls.selects.some((s) => s.includes('street_name:full_payload->>StreetName'))).toBe(true);
+    expect(calls.inChunks.length).toBeGreaterThan(0);
   });
 
-  it('falls back to /properties/{KEY} when the payload cannot form a slug', async () => {
-    // A key that fails buildListingPath's KEY_RE — the one field it cannot synthesize.
-    vi.mocked(getServiceRoleClient).mockReturnValue(
-      supabaseReturningSlices([{ ...row(2), listing_key: 'not-a-key' }])
-    );
+  it('reports a truncating error instead of passing it off as the end of the table', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // 2,500 rows available, but the SECOND key page times out.
+    const { client } = supabaseTwoPass(Array.from({ length: 2500 }, (_, i) => row(i)), { keyPageError: 2 });
+    vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
     const entries = await sitemap();
-    expect(entries.some((e) => e.url.endsWith('/properties/not-a-key'))).toBe(true);
+    expect(entries.length).toBe(NON_LISTING + 1000); // short, as it must be
+    // ...but never silently. Silence is what let a 69% shortfall sit live.
+    expect(err).toHaveBeenCalledWith(expect.stringContaining('listing key page failed'));
+  });
+
+  it('keeps a URL for a listing whose address chunk failed, rather than dropping it', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { client } = supabaseTwoPass([row(1)], { addressError: true });
+    vi.mocked(getServiceRoleClient).mockReturnValue(client);
+
+    const entries = await sitemap();
+    // Falls back to the legacy path — dropping it would reintroduce the same shortfall.
+    expect(entries.some((e) => e.url.endsWith('/properties/W00000001'))).toBe(true);
   });
 });
