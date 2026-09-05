@@ -47,6 +47,23 @@ describe("/addresses/sitemap/{n}.xml", () => {
     expect(rows[0].url).toContain("/address/on/oshawa/");
   });
 
+  it.each([
+    ["a plain number", 3],
+    ["a numeric string", "3"],
+    ["the raw URL segment", "3.xml"],
+    ["a PROMISE of the segment (Next 16 async params)", Promise.resolve("3.xml")],
+    ["a promise of a number", Promise.resolve(3)],
+    ["an object carrying it", { id: "3.xml" }],
+  ])("resolves the shard index from %s", async (_label, id) => {
+    vi.mocked(getSoldSitemapShard).mockResolvedValue([]);
+
+    // Next TYPES this `number` and production handed it, in turn, a Promise (logged as
+    // `{}`) and then "3.xml". Both multiplied to NaN and shipped seven EMPTY shards
+    // while the build reported success. Accept every shape rather than trust the type.
+    await sitemap({ id: id as unknown as number });
+    expect(vi.mocked(getSoldSitemapShard).mock.calls[0][0]).toBe(3 * SHARD_URLS);
+  });
+
   it("reads the id from the RAW URL SEGMENT (\"3.xml\"), not as a number", async () => {
     vi.mocked(getSoldSitemapShard).mockResolvedValue([]);
 

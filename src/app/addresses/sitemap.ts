@@ -44,16 +44,43 @@ export async function generateSitemaps(): Promise<{ id: number }[]> {
   return Array.from({ length: ADDRESS_SITEMAP_SHARDS }, (_, id) => ({ id }));
 }
 
-export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
-  // Next types this `number` and hands it the RAW URL SEGMENT: "0.xml", not 0. Multiplying
-  // that by SHARD_URLS gives NaN, .range(NaN, NaN) fails, and every one of the seven
-  // shards shipped EMPTY to production on 2026-09-05 while the build reported success.
-  // parseInt stops at the dot, so it reads both "0.xml" and a real 0.
-  const shard = Number.parseInt(String(id), 10);
+/**
+ * The shard index, out of whatever Next actually hands this route.
+ *
+ * Next TYPES this param `number`. Production said otherwise, twice:
+ *   - `JSON.stringify(id)` logged `{}` — it is a PROMISE (Next 16 made these async), and
+ *     `String(promise)` is "[object Promise]", which parses to NaN.
+ *   - Awaited, the value is the raw URL segment "0.xml", not 0.
+ * Either one made the offset NaN, `.range(NaN, NaN)` fail, and all seven shards ship
+ * EMPTY while the build reported success — three deploys running.
+ *
+ * So: await it, then parse leniently. parseInt stops at the dot, so "0.xml", "0" and 0
+ * all read alike, and an object shape degrades to NaN and is rejected rather than
+ * silently querying offset 0.
+ */
+async function shardIndex(id: unknown): Promise<number | null> {
+  const resolved = await id;
+  const raw =
+    resolved !== null && typeof resolved === "object"
+      ? ((resolved as Record<string, unknown>).id ?? Object.values(resolved as object)[0])
+      : resolved;
+  const shard = Number.parseInt(String(raw), 10);
   if (!Number.isFinite(shard) || shard < 0 || shard >= ADDRESS_SITEMAP_SHARDS) {
-    console.error(`[sitemap] address shard id ${JSON.stringify(id)} is not a shard index — serving empty`);
-    return [];
+    // Name the SHAPE, not just the value — `{}` was all the first version printed, and
+    // that cost a deploy to work out.
+    console.error(
+      `[sitemap] address shard id is not a shard index — serving empty. ` +
+        `typeof=${typeof resolved} ctor=${(resolved as object)?.constructor?.name ?? "-"} ` +
+        `raw=${JSON.stringify(raw) ?? String(raw)} parsed=${shard}`
+    );
+    return null;
   }
+  return shard;
+}
+
+export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
+  const shard = await shardIndex(id);
+  if (shard === null) return [];
 
   const entries = await getSoldSitemapShard(shard * SHARD_URLS, SHARD_URLS, addressSitemapWindowStart());
   const out: MetadataRoute.Sitemap = [];
