@@ -12,7 +12,7 @@
  * WHY THIS FILE EXISTS AT ALL. `regionCamera()` answers for only 10 of the 15
  * `BOARD_MARKETS`: Oshawa, Whitby, Ajax, Pickering and Milton are in neither
  * `QUICK_PICK_MARKETS` nor `data/city-centroids.json`. Adding them to QUICK_PICK_MARKETS
- * would change two in-app product surfaces (AcceptTermsForm and FirstRunRegionPicker both
+ * would change two in-app product surfaces (AcceptTermsForm and MarketPicker both
  * render that list as chips), which is not this feature's call to make. So they live here,
  * layered UNDER the shared resolver: `regionCamera` still wins wherever it answers, and this
  * only fills the holes.

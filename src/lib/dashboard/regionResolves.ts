@@ -1,7 +1,7 @@
 /**
  * Does a region label actually resolve to inventory?
  *
- * `config.regions` is free text. FirstRunRegionPicker saves whatever LocationSearch
+ * `config.regions` is free text. MarketPicker saves whatever LocationSearch
  * emits, and LocationSearch's Enter path (`resolveTextTarget`) turns ANY typed string
  * into a place label — no suggestion has to be chosen. On 2026-08-08 a user typed a full
  * street address and it was stored verbatim, so `areaFilter` has been building

@@ -126,7 +126,7 @@ export interface QuickPickMarket {
 
 /**
  * One-tap markets offered wherever we ask a user to choose a starting area — the
- * /welcome first-run seed and the dashboard's FirstRunRegionPicker. Every name must
+ * /welcome first-run seed and the dashboard's MarketPicker. Every name must
  * resolve to real inventory through areaFilter above, so "Toronto", "Ottawa" and "London"
  * are GROUPS (TRREB has no single City value for any of them) that expand to their whole
  * City-group. Anything finer (Orleans, Kanata) is reached via location search, not here.

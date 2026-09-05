@@ -7,35 +7,51 @@ import LocationSearch from "@/components/CommandCenter/LocationSearch";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { QUICK_PICK_MARKETS } from "@/lib/dashboard/area";
 import { regionResolves } from "@/lib/dashboard/regionResolves";
+import { BOARDS, DEFAULT_BOARD_ORDER, type BoardId } from "@/lib/dashboard/boards";
 
 /**
- * First-run market-area picker. Shown on the dashboard when the user has no saved
- * regions yet (a direct magic-link signup never went through /apply, so nothing
- * seeds config.regions).
+ * The dashboard's ONE workspace editor: the market areas you track, and the metric boards
+ * that render under each of them.
  *
- * Auto-apply: this is a CONTROLLED, live picker — every add/remove writes straight to
- * config.regions (via onAdd/onRemove), so each area's scorecard + playlists appear in the
- * dashboard the instant it's added, and vanish when removed. There is no stage-then-commit
- * step (users were doing the work but not clicking the old "Enter your terminal" button, so
- * the dashboard stayed empty — see PostHog). "Done" just collapses this setup card; the
- * areas are already live.
+ * It used to be two panels — FirstRunRegionPicker (first run only, areas) and
+ * DashboardConfigPanel ("Customize Workspace", areas AND boards, its own typeahead). Same
+ * task, two entry points that looked nothing alike, and only one of them was reachable once
+ * you had areas. This is the merged survivor; the config panel is gone.
+ *
+ * Area edits are DELEGATED to the dashboard's own addRegion/removeRegion, never applied to
+ * `config.regions` here. Editing regions directly is exactly how an area could leave the
+ * dashboard while its nightly alert row (`market_bubbles`, a different table) kept emailing
+ * — and once the section was gone there was no bell left to mute it with. Boards go through
+ * onToggleBoard; they have no server-side twin.
+ *
+ * Auto-apply: this is a CONTROLLED, live editor — every add/remove writes straight through,
+ * so each area's scorecard + playlists appear in the dashboard the instant it is added, and
+ * vanish when removed. There is no stage-then-commit step (users were doing the work but not
+ * clicking the old "Enter your terminal" button, so the dashboard stayed empty — see
+ * PostHog). "Done" just collapses this card; everything is already live, and
+ * TrackedMarketsBar takes over as the collapsed view.
  */
 // One-tap markets — shared with the /welcome first-run seed so both surfaces offer the
 // same starting areas. See QUICK_PICK_MARKETS for why Toronto/Ottawa are groups. Only
 // the names matter here; the cameras on those entries are for the terminal's ?near= seed.
 const QUICK_PICKS = QUICK_PICK_MARKETS.map((m) => m.name);
 
-export default function FirstRunRegionPicker({
+export default function MarketPicker({
   selected,
+  boards,
   onAdd,
   onRemove,
+  onToggleBoard,
   onDone,
 }: {
   /** Live regions from config.regions (controlled). */
   selected: string[];
+  /** Live board ids from config.boards (controlled). */
+  boards: BoardId[];
   onAdd: (area: string) => void;
   onRemove: (area: string) => void;
-  /** Collapse the setup card (areas are already applied). */
+  onToggleBoard: (id: BoardId) => void;
+  /** Collapse the card (everything is already applied). */
   onDone: () => void;
 }) {
   const has = selected.length > 0;
@@ -59,8 +75,9 @@ export default function FirstRunRegionPicker({
 
   return (
     <div className="border border-dashed border-border bg-card/40 px-6 py-8 text-center">
+      {/* First run is an onboarding moment; every reopen after that is an edit. */}
       <h2 className="terminal-font text-sm font-bold uppercase tracking-widest text-foreground">
-        Set up your terminal
+        {has ? "Your workspace" : "Set up your terminal"}
       </h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
         Add the cities or neighbourhoods you invest in — each one loads into your dashboard
@@ -147,7 +164,49 @@ export default function FirstRunRegionPicker({
         </p>
       )}
 
-      {/* "Done" just collapses this card — the areas are already live in the dashboard. */}
+      {/* Boards render INSIDE each area's drill-down, so they mean nothing until at least
+          one area exists — first run stays a single decision. */}
+      {has && (
+        <div className="mx-auto mt-8 max-w-2xl border-t border-border pt-6 text-left">
+          <h3 className="terminal-font text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Metric boards
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pick the boards that appear under every area you track.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {DEFAULT_BOARD_ORDER.map((id) => {
+              const on = boards.includes(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onToggleBoard(id)}
+                  aria-pressed={on}
+                  className={cn(
+                    "flex min-h-[44px] items-center gap-2 border px-3 py-2 text-left text-xs transition-colors",
+                    on
+                      ? "border-cyan-600/60 bg-cyan-600/10 text-cyan-700 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200"
+                      : "border-border bg-card/40 text-muted-foreground hover:border-border"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-4 w-4 shrink-0 items-center justify-center border",
+                      on ? "border-cyan-500 bg-cyan-500 text-slate-950" : "border-border"
+                    )}
+                  >
+                    {on && <span className="text-[9px] font-black">✓</span>}
+                  </span>
+                  {BOARDS[id].title}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* "Done" just collapses this card — everything above is already live. */}
       <button
         type="button"
         disabled={!has}
