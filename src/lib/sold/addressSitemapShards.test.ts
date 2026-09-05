@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   ADDRESS_SITEMAP_SHARDS,
   ADDRESS_SITEMAP_WINDOW_MONTHS,
@@ -27,5 +29,21 @@ describe("shard geometry", () => {
     // Undersizing silently truncates the tail: the last shard fills and the rest of the
     // window is simply never declared, with nothing to signal it.
     expect(ADDRESS_SITEMAP_SHARDS * SHARD_URLS).toBeGreaterThan(122_866);
+  });
+});
+
+describe('the route must not be prerendered at build', () => {
+  it('declares force-dynamic and no build-time revalidate', () => {
+    // Read the source rather than import it: importing the route pulls in the live
+    // Typesense/Supabase clients. This is a static contract, so check it statically.
+    const src = readFileSync(
+      join(process.cwd(), 'src/app/addresses/sitemap.ts'),
+      'utf8'
+    );
+    // Seven EMPTY shards reached production because the build generated them alongside
+    // 57 other prerenders and the queries timed out under that contention. A build-time
+    // `revalidate` here reintroduces exactly that.
+    expect(src).toMatch(/export const dynamic = "force-dynamic"/);
+    expect(src).not.toMatch(/export const revalidate/);
   });
 });

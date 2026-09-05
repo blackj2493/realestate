@@ -21,7 +21,18 @@ import { ADDRESS_SITEMAP_SHARDS, SHARD_URLS, addressSitemapWindowStart } from "@
  * see getSoldSitemapShard. A sitemap entry publishes an address; both board switches
  * forbid exactly that.
  */
-export const revalidate = 86400;
+/**
+ * NOT prerendered at build. Next builds every shard during `next build`, where they queue
+ * behind 57 other prerenders all hitting the same database — and under that contention
+ * these queries time out. That is how seven EMPTY shards reached production while the
+ * build reported success (2026-09-05).
+ *
+ * The same contention already broke /sitemap.xml twice; there it was fixed by removing
+ * the work (migration 138). Here the work is irreducible — 121,635 rows have to be read —
+ * so it moves OFF the build instead. Rendered on request, cached for a day by the CDN
+ * headers below, and generated in isolation where nothing else is competing for Postgres.
+ */
+export const dynamic = "force-dynamic";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
