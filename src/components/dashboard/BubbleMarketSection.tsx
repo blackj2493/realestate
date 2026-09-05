@@ -412,7 +412,7 @@ export default function BubbleMarketSection({
 
       {enabledBoards.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          No boards enabled — add metrics via Customize.
+          No boards enabled — add metrics via Add Markets.
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

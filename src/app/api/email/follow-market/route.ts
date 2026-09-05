@@ -6,7 +6,7 @@
  *
  *   1. SAVE the market to the account, so next Thursday's email is about their city — and,
  *      just as importantly, so the app itself finally has a saved area for them. 305 of 432
- *      users have none, and both in-app pickers (FirstRunRegionPicker, AcceptTermsForm)
+ *      users have none, and both in-app pickers (MarketPicker, AcceptTermsForm)
  *      already exist and are not converting, because these readers stopped opening the
  *      dashboard. Reaching them in the inbox is the whole point.
  *   2. LAND them on that city, unfiltered. The redirect uses the CAMERA deep link

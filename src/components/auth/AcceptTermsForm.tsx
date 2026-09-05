@@ -12,7 +12,7 @@
  * dashboard already has content the first time the user visits it — no second setup
  * step. The chip applies on tap with no separate commit button, deliberately: the
  * dashboard's old stage-then-commit picker lost users who did the work but never
- * pressed the button (see FirstRunRegionPicker).
+ * pressed the button (see MarketPicker).
  *
  * A signup that arrived FROM a listing is not asked at all: `seedMarket` carries that
  * property's city (resolved in /welcome) and we write it silently. Asking someone who is

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Building2, Plus } from "lucide-react";
+import { Building2 } from "lucide-react";
 import {
   getConfig,
   saveConfig,
@@ -15,10 +15,9 @@ import {
   type MarketActivityLens,
 } from "@/lib/dashboard/config";
 import { fetchServerConfig, pushConfig } from "@/lib/dashboard/configSync";
-import { BOARDS } from "@/lib/dashboard/boards";
+import { BOARDS, type BoardId } from "@/lib/dashboard/boards";
 import { orderBoardsForPersona } from "@/lib/dashboard/personaDashboard";
 import MissionControlHeader from "@/components/dashboard/MissionControlHeader";
-import DashboardConfigPanel from "@/components/dashboard/DashboardConfigPanel";
 import PlaylistBoard from "@/components/dashboard/PlaylistBoard";
 import MarketActivityControls from "@/components/dashboard/MarketActivityControls";
 import MarketActivityPanel from "@/components/dashboard/MarketActivityPanel";
@@ -33,7 +32,8 @@ import BubbleSections from "@/components/dashboard/BubbleSections";
 import CityAlertBell from "@/components/dashboard/CityAlertBell";
 import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
 import { ModuleHead } from "@/components/daylight/primitives";
-import FirstRunRegionPicker from "@/components/dashboard/FirstRunRegionPicker";
+import MarketPicker from "@/components/dashboard/MarketPicker";
+import TrackedMarketsBar from "@/components/dashboard/TrackedMarketsBar";
 import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { regionArea, defaultAlertScopeForRegion } from "@/lib/dashboard/area";
@@ -52,14 +52,14 @@ export default function DashboardClient() {
     lastVisitAt: null,
   });
   const [name, setName] = useState<string | undefined>(undefined);
-  const [showConfig, setShowConfig] = useState(false);
   // The city the single-region intelligence tiles (Neighbourhood Heat + Market
   // Pulse) are focused on. Shared so both stay in sync; falls back to the first
   // configured region until the user picks another (and if the picked one is
   // later removed from the config).
   const [intelRegion, setIntelRegion] = useState<string | null>(null);
-  // The first-run setup card stays open while the user builds their workspace (regions
-  // apply live as they're added). Opened on first run (no regions), collapsed via "Done".
+  // The workspace card stays open while the user builds it (areas and boards apply live).
+  // Opened on first run (no regions), by the header button, or by the collapsed bar's ADD;
+  // collapsed via "Done".
   const [pickerOpen, setPickerOpen] = useState(false);
   // The previous-visit cutoff for the action feed. Captured + re-stamped once on
   // entry so "since last visit" compares against the PRIOR session, not now.
@@ -163,6 +163,9 @@ export default function DashboardClient() {
       const next = { ...prev, regions: prev.regions.filter((r) => r !== area) };
       saveConfig(next);
       push(next);
+      // Dropping the last area leaves nothing to show, and TrackedMarketsBar hides itself
+      // at zero — so reopen the workspace card rather than strand the user on a blank page.
+      if (next.regions.length === 0) setPickerOpen(true);
       return next;
     });
     // Keep alerts from outliving the visible area: removing a region also removes its
@@ -202,6 +205,15 @@ export default function DashboardClient() {
 
   const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
   const updatePersona = (persona: PersonaType) => update({ ...config, persona });
+  // Boards have no server-side twin the way areas do (see MarketPicker), so unlike
+  // addRegion/removeRegion this is a plain config write.
+  const toggleBoard = (id: BoardId) =>
+    update({
+      ...config,
+      boards: config.boards.includes(id)
+        ? config.boards.filter((b) => b !== id)
+        : [...config.boards, id],
+    });
 
   if (!ready) return <div className="min-h-app bg-background" aria-busy="true" />;
 
@@ -227,7 +239,9 @@ export default function DashboardClient() {
         name={name}
         persona={config.persona}
         onPersonaChange={updatePersona}
-        onToggleConfig={() => setShowConfig((v) => !v)}
+        // Toggle the one workspace card open/closed — but never let it close while the
+        // workspace is empty, which would leave a blank dashboard behind it.
+        onToggleConfig={() => setPickerOpen((v) => !v || !hasRegions)}
       />
 
       {/* Safe-area insets via max() so they only ever ADD to the existing
@@ -236,18 +250,6 @@ export default function DashboardClient() {
           indicator without changing desktop spacing. */}
       <main className="mx-auto max-w-[1600px] space-y-8 pt-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <PasskeyPrompt />
-
-        {/* Region edits go through addRegion/removeRegion, NOT onChange. Editing
-            config.regions directly is what let "Customize Workspace" remove an area from
-            the dashboard while its alert row kept emailing, with no UI left to mute it. */}
-        {showConfig && (
-          <DashboardConfigPanel
-            config={config}
-            onChange={update}
-            onAddRegion={addRegion}
-            onRemoveRegion={removeRegion}
-          />
-        )}
 
         <ActionFeed
           regions={config.regions}
@@ -258,25 +260,27 @@ export default function DashboardClient() {
 
         <WatchlistSection />
 
+        {/* Area edits go through addRegion/removeRegion, NOT a raw config write. Editing
+            config.regions directly is what let "Customize Workspace" remove an area from
+            the dashboard while its alert row kept emailing, with no UI left to mute it. */}
         {pickerOpen && (
-          <FirstRunRegionPicker
+          <MarketPicker
             selected={config.regions}
+            boards={config.boards}
             onAdd={addRegion}
             onRemove={removeRegion}
+            onToggleBoard={toggleBoard}
             onDone={() => setPickerOpen(false)}
           />
         )}
 
-        {/* Once collapsed, a slim way back into the live setup card to add more areas. */}
+        {/* Collapsed picker: the set that drives every panel below, editable in place. */}
         {!pickerOpen && hasRegions && (
-          <button
-            type="button"
-            onClick={() => setPickerOpen(true)}
-            className="terminal-font inline-flex min-h-[44px] items-center gap-1.5 border border-border bg-card px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground transition-colors hover:border-cyan-600/60 hover:text-foreground dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:text-slate-200"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add areas
-          </button>
+          <TrackedMarketsBar
+            regions={config.regions}
+            onRemove={removeRegion}
+            onEdit={() => setPickerOpen(true)}
+          />
         )}
 
         {hasRegions && (
@@ -365,7 +369,7 @@ export default function DashboardClient() {
 
                 {enabledBoards.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    No boards enabled — add metrics via Customize.
+                    No boards enabled — add metrics via Add Markets.
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

@@ -409,7 +409,7 @@ export default function LocationSearch({
               <span className="flex min-w-0 flex-1 flex-col">
                 {/* cyan-200 on the bg-cyan-500/5 tint is near-white on near-white once this
                     row renders light — and it does: LocationSearch mounts in AppHeader,
-                    FirstRunRegionPicker and AnalyticsClient, none of them dark islands. The
+                    MarketPicker and AnalyticsClient, none of them dark islands. The
                     icon one line up already carries the split; this label was missed. */}
                 <span className="truncate font-mono text-xs text-cyan-800 dark:text-cyan-200">
                   {nl.chips.map((c) => c.label).join("  ·  ")}
@@ -627,7 +627,7 @@ export default function LocationSearch({
           })}
           {/* Persistent map exit — the terminal bar's twin. Without it this bar had no way
               back to the map for an address or street query, which is most of them.
-              navigate mode only: the in-place callers (FirstRunRegionPicker,
+              navigate mode only: the in-place callers (MarketPicker,
               AnalyticsClient) are not map surfaces and have nowhere to send you. */}
           {mode === "navigate" && suggestions.length > 0 && (
             <button

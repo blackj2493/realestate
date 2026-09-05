@@ -8,6 +8,8 @@
  * `regions` skipped it:
  *
  *   • DashboardConfigPanel ("Customize Workspace") edited config.regions directly.
+ *     Gone now — MarketPicker replaced it and delegates every area edit to
+ *     addRegion / removeRegion.
  *   • /api/email/follow-market wrote a region server-side from the Data Drop chip.
  *   • AcceptTermsForm seeded a region into localStorage at signup.
  *   • A stale device pushed its whole config blob over a newer one (configSync).
