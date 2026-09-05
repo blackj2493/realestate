@@ -47,6 +47,34 @@ describe("/addresses/sitemap/{n}.xml", () => {
     expect(rows[0].url).toContain("/address/on/oshawa/");
   });
 
+  it("reads the id from the RAW URL SEGMENT (\"3.xml\"), not as a number", async () => {
+    vi.mocked(getSoldSitemapShard).mockResolvedValue([]);
+
+    // Next types this param `number` and then hands it "3.xml". Multiplying that gives
+    // NaN, and all seven shards shipped EMPTY to production because of it — while the
+    // build reported success, because the resulting query error was swallowed.
+    await sitemap({ id: "3.xml" as unknown as number });
+    expect(vi.mocked(getSoldSitemapShard).mock.calls[0][0]).toBe(3 * SHARD_URLS);
+  });
+
+  it("serves empty and says so for an id that is not a shard index", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(getSoldSitemapShard).mockResolvedValue([]);
+
+    const rows = await sitemap({ id: "nope" as unknown as number });
+    expect(rows).toEqual([]);
+    expect(getSoldSitemapShard).not.toHaveBeenCalled(); // never query on a bad offset
+    expect(err).toHaveBeenCalledWith(expect.stringContaining("not a shard index"));
+  });
+
+  it("rejects a shard index past the last file rather than querying past the end", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(getSoldSitemapShard).mockResolvedValue([]);
+
+    await sitemap({ id: `${ADDRESS_SITEMAP_SHARDS}.xml` as unknown as number });
+    expect(getSoldSitemapShard).not.toHaveBeenCalled();
+  });
+
   it("asks for its OWN slice — shard n starts at n * SHARD_URLS", async () => {
     vi.mocked(getSoldSitemapShard).mockResolvedValue([]);
 
