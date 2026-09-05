@@ -45,7 +45,17 @@ export async function generateSitemaps(): Promise<{ id: number }[]> {
 }
 
 export default async function sitemap({ id }: { id: number }): Promise<MetadataRoute.Sitemap> {
-  const entries = await getSoldSitemapShard(id * SHARD_URLS, SHARD_URLS, addressSitemapWindowStart());
+  // Next types this `number` and hands it the RAW URL SEGMENT: "0.xml", not 0. Multiplying
+  // that by SHARD_URLS gives NaN, .range(NaN, NaN) fails, and every one of the seven
+  // shards shipped EMPTY to production on 2026-09-05 while the build reported success.
+  // parseInt stops at the dot, so it reads both "0.xml" and a real 0.
+  const shard = Number.parseInt(String(id), 10);
+  if (!Number.isFinite(shard) || shard < 0 || shard >= ADDRESS_SITEMAP_SHARDS) {
+    console.error(`[sitemap] address shard id ${JSON.stringify(id)} is not a shard index — serving empty`);
+    return [];
+  }
+
+  const entries = await getSoldSitemapShard(shard * SHARD_URLS, SHARD_URLS, addressSitemapWindowStart());
   const out: MetadataRoute.Sitemap = [];
   for (const e of entries) {
     // Same builder the in-page links use — a sitemap URL the links can't reproduce is
