@@ -533,41 +533,89 @@ export async function getStreetRecordsLoose(street: string, max = 12): Promise<A
   }
 }
 
-/** One sold/off-market record reduced to the PUBLIC fields needed to build an /address URL. */
+/** One sold record reduced to the PUBLIC fields needed to build an /address URL. */
 export interface SoldSitemapEntry {
   id: string;
   city: string;
   address: string;
 }
 
+/** Sales only. raw_vow_sold mixes sales and leases; migration 104 exists so this is a
+ *  stated category and never a price threshold. */
+const SALE_TRANSACTION_TYPE = "For Sale";
+/** PostgREST hard-caps one response at 1000 rows. */
+const SITEMAP_PAGE = 1000;
+
 /**
- * PUBLIC-safe export of the sold_listings collection (the rolling ~180-day window) for the
- * /sitemap-addresses.xml route. include_fields pulls ONLY id/City/UnparsedAddress — no VOW
- * fields (not even the sold date) are fetched, so nothing sensitive enters sitemap
- * generation. Capped at `max`. Best-effort ([] on failure).
+ * One shard of the /address sitemap, read from the PERMANENT archive.
+ *
+ * This used to `.export()` the Typesense sold_listings collection and take the first
+ * `max` lines. Three things were wrong with that, measured 2026-09-02:
+ *   - `.export()` has no ordering and the route applied no filter, so the 45,000 URLs
+ *     it emitted were an arbitrary 23% slice of 199,253 documents, mixing sold, leased,
+ *     terminated, expired and suspended records. Not a recency window — just whatever
+ *     came out of the collection first.
+ *   - That collection is pruned to 180 days (SOLD_WINDOW_DAYS), while raw_vow_sold holds
+ *     268,510 sales permanently. Sold pages are meant to live forever and the read path
+ *     already resolves them (getSoldArchivePublicByKey); only DISCOVERY was bounded.
+ *   - It could not check the seller's internet-display opt-out at all.
+ *
+ * COMPLIANCE — the reason this reads flat columns and requires an explicit `false`:
+ * a sitemap entry publishes an address. Either opt-out switch forbids that. The flags
+ * live in raw_payload too, but reading them there is a detoast per row that STATEMENT
+ * TIMEOUTs past the first page, so migration 137 promoted them to columns. `.eq(col,
+ * false)` also excludes NULL, so a row the backfill has not reached yet is dropped
+ * rather than published — the safe direction to fail.
+ *
+ * Paging: the first request pays an offset to reach the shard's start, then walks by
+ * keyset on listing_key. Offsets on flat columns are cheap (~1.4s at 45,000) but they
+ * are O(offset), so only one per shard is worth paying.
+ *
+ * Best-effort: returns what it managed to read, [] on failure. A sitemap that renders
+ * short beats a route that 500s.
  */
-export async function getSoldSitemapEntries(max: number): Promise<SoldSitemapEntry[]> {
+export async function getSoldSitemapShard(
+  offset: number,
+  limit: number,
+  windowStartIso: string
+): Promise<SoldSitemapEntry[]> {
+  const out: SoldSitemapEntry[] = [];
+  let cursor: string | null = null;
+
   try {
-    const raw = (await getSoldClient()
-      .collections(SOLD_LISTINGS_COLLECTION)
-      .documents()
-      .export({ include_fields: "id,UnparsedAddress,City" })) as string;
-    const out: SoldSitemapEntry[] = [];
-    for (const line of raw.split("\n")) {
-      if (out.length >= max) break;
-      if (!line.trim()) continue;
-      try {
-        const d = JSON.parse(line) as Partial<SoldListingDocument>;
-        if (d.id) out.push({ id: d.id, city: d.City ?? "", address: d.UnparsedAddress ?? "" });
-      } catch {
-        /* skip malformed line */
+    // INSIDE the try: getServiceRoleClient THROWS when SUPABASE_SERVICE_ROLE_KEY is
+    // absent, and generateSitemaps prerenders all seven shards at build. One throw out
+    // here would fail the whole build rather than yield an empty sitemap. app/sitemap.ts
+    // has always called it inside its try for the same reason.
+    const supabase = getServiceRoleClient();
+    while (out.length < limit) {
+      const want = Math.min(SITEMAP_PAGE, limit - out.length);
+      let q = supabase
+        .from("raw_vow_sold")
+        .select("listing_key, unparsed_address, city")
+        .eq("transaction_type", SALE_TRANSACTION_TYPE)
+        .gte("purchase_contract_date", windowStartIso)
+        // Explicit false only — NULL is "not backfilled", not "not opted out".
+        .eq("internet_display_optout", false)
+        .eq("internet_address_optout", false)
+        .order("listing_key");
+
+      // First page seeks to this shard's slice; the rest walk forward from the cursor.
+      q = cursor === null ? q.range(offset, offset + want - 1) : q.gt("listing_key", cursor).limit(want);
+
+      const { data, error } = await q;
+      if (error || !data || data.length === 0) break;
+
+      for (const row of data as { listing_key: string; unparsed_address: string | null; city: string | null }[]) {
+        out.push({ id: row.listing_key, address: row.unparsed_address ?? "", city: row.city ?? "" });
       }
+      cursor = (data[data.length - 1] as { listing_key: string }).listing_key;
+      if (data.length < want) break; // exhausted
     }
-    return out;
   } catch (err) {
-    console.error("[soldByKey] sitemap export failed:", err);
-    return [];
+    console.error("[soldByKey] sitemap shard read failed:", err);
   }
+  return out;
 }
 
 /** A sold/off-market record reduced to what a public LINK needs. No VOW values. */

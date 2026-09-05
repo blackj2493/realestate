@@ -40,6 +40,7 @@ import { nextSyncCursor } from './syncCursor';
 import { describeError } from '@/lib/etl/describeError';
 import { runDelistedSync, pruneOldDelisted } from './delistedIndexer';
 import { isDelistedDealType } from '@/lib/sold/dealType';
+import { isListingDisplayOptedOut, isAddressDisplayOptedOut } from '@/lib/compliance/internetDisplay';
 import { parseLivingAreaRange } from '@/lib/condo/feeStability';
 
 // ============================================================================
@@ -98,6 +99,12 @@ interface SoldListingRecord {
   interior_tier: number;
   exterior_tier: number;
   basement_tier: number;
+  // Seller internet-display opt-out, mirrored OUT of raw_payload (migration 137).
+  // The flags live in the payload too, but reading them there is a detoast per row —
+  // fatal for the /addresses sitemap scan, which must check every row it publishes.
+  // Written here so a NULL always means "not backfilled", never "not opted out".
+  internet_display_optout: boolean;
+  internet_address_optout: boolean;
   // Full raw VOW payload (NOT NULL JSONB), minus the bulky keys carried elsewhere.
   // Powers re-scoring / future backfills.
   raw_payload: Record<string, unknown>;
@@ -310,6 +317,8 @@ export function extractSoldListingData(raw: any): SoldListingRecord | null {
       // url + caption). PrivateRemarks is dropped too: broker-only text read by nothing
       // and never displayable. Tiers above are derived from `raw` BEFORE this strip, so
       // the text they scan is still available at this point.
+      internet_display_optout: isListingDisplayOptedOut(raw),
+      internet_address_optout: isAddressDisplayOptedOut(raw),
       raw_payload: stripBulkKeys(raw),
       photos: photosFromRawMedia(raw),
     };
@@ -384,6 +393,8 @@ export async function upsertSoldListings(
         interior_tier: record.interior_tier,
         exterior_tier: record.exterior_tier,
         basement_tier: record.basement_tier,
+        internet_display_optout: record.internet_display_optout,
+        internet_address_optout: record.internet_address_optout,
         raw_payload: record.raw_payload,
         photos: record.photos,
       };
