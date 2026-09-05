@@ -604,7 +604,15 @@ export async function getSoldSitemapShard(
       q = cursor === null ? q.range(offset, offset + want - 1) : q.gt("listing_key", cursor).limit(want);
 
       const { data, error } = await q;
-      if (error || !data || data.length === 0) break;
+      if (error) {
+        // NEVER as if the table simply ended. This exact conflation shipped seven EMPTY
+        // sitemap shards to production on 2026-09-05: the build timed out on the first
+        // page, `break` returned [], and the route rendered valid XML with no URLs — so
+        // the build went green and nothing reported it.
+        console.error(`[soldByKey] sitemap shard offset=${offset} failed after ${out.length} rows: ${error.message}`);
+        break;
+      }
+      if (!data || data.length === 0) break;
 
       for (const row of data as { listing_key: string; unparsed_address: string | null; city: string | null }[]) {
         out.push({ id: row.listing_key, address: row.unparsed_address ?? "", city: row.city ?? "" });
