@@ -53,6 +53,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUMMARY_FILE: street-recap.log
+    # `shell: bash` is load-bearing: it runs every step with `-eo pipefail`, where the
+    # DEFAULT run shell is `bash -e` with NO pipefail, so `... | tee -a` exits with tee's
+    # status -- always 0. A send that failed would report a GREEN job. Found via PR #498.
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
