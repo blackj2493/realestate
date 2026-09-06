@@ -26,18 +26,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { verifyUnsubscribe } from "@/lib/alerts/unsubscribe";
-import { recordActivation } from "@/lib/analytics/activation";
 import { BOARD_MARKETS } from "@/lib/data/marketBoard";
 import { marketMapUrl } from "@/lib/dataDrop/cameras";
-import { reconcileCityAlerts } from "@/lib/dashboard/areaAlertSync";
+import { followRegion } from "@/lib/dashboard/followRegion";
 import { withUtm } from "@/lib/email/utm";
 
 export const dynamic = "force-dynamic";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
-
-/** Cap saved regions, mirroring the 10-bubble cap in migration 025. */
-const MAX_REGIONS = 10;
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -89,51 +85,16 @@ export async function GET(req: NextRequest) {
     if (!profile?.id) return NextResponse.redirect(landing, 302);
 
     const userId = profile.id as string;
-    const { data: prefs } = await sb
-      .from("dashboard_prefs")
-      .select("config")
-      .eq("user_id", userId)
-      .maybeSingle();
 
-    // MERGE, never replace. The blob also holds boards, persona and the market-activity lens;
-    // writing `{ regions }` alone would silently reset the rest of someone's dashboard.
-    const config = (prefs?.config ?? {}) as Record<string, unknown>;
-    const existing = Array.isArray(config.regions)
-      ? (config.regions as unknown[]).filter((r): r is string => typeof r === "string")
-      : [];
+    // The shared step every server-side regions writer takes: merge into config.regions,
+    // then reconcile the city alert row so the market we just saved actually emails — the
+    // one thing this chip promises. Identical call to POST /api/areas/follow, on purpose:
+    // two hand-written copies of this is how `config.regions` grew five writers that each
+    // did something slightly different (see areaAlertSync's header).
+    const followed = await followRegion(sb, userId, city, { source: "data_drop", email });
+    if (!followed.ok) console.error("[follow-market] follow failed:", followed.error);
+    else if (followed.error) console.error("[follow-market] alert reconcile failed:", followed.error);
 
-    const already = existing.some((r) => r.toLowerCase() === city.toLowerCase());
-    if (!already) {
-      const next = [...existing, city].slice(-MAX_REGIONS);
-      const nextConfig = { ...config, regions: next };
-      const { error } = await sb.from("dashboard_prefs").upsert(
-        {
-          user_id: userId,
-          config: nextConfig,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
-      if (error) {
-        console.error("[follow-market] upsert failed:", error.message);
-      } else {
-        // Saving the market has to also make it ALERT. This route writes config.regions
-        // server-side, so it never went through the dashboard's add-area path and the
-        // market it just saved would have emailed nothing — the one thing the chip
-        // promises. reconcileCityAlerts is the shared step every regions writer takes.
-        const alerts = await reconcileCityAlerts(sb, userId, nextConfig);
-        if (alerts.error) console.error("[follow-market] alert reconcile failed:", alerts.error);
-
-        // Same kind the in-app picker emits, so retention funnels see one population and the
-        // `source` tells us how much of it the email is responsible for.
-        await recordActivation({
-          kind: "save_area",
-          userId,
-          email,
-          context: { city, source: "data_drop" },
-        });
-      }
-    }
   } catch (e) {
     // Never let a bookkeeping failure strand the reader on an error page.
     console.error("[follow-market] threw:", e instanceof Error ? e.message : e);
