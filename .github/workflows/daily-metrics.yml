@@ -1,0 +1,58 @@
+name: Daily Metrics Report
+
+# The morning operator report: signups, visitors who did not sign up, returning users,
+# unsubscribes, activation, new applications, and whether last night's email actually
+# went out. One recipient (SYNC_ALERT_EMAIL).
+#
+# TIMING. Fires at 11:35 UTC — 07:35 in Toronto through the summer, 06:35 in winter. It
+# reports YESTERDAY, a complete Toronto day that closed at 04:00/05:00 UTC, so nothing it
+# reads is still moving. It also has to run after the nightly digest (~05:10 UTC) writes
+# its counters into metric_snapshots `_ops`, or the email-delivery block would report a
+# day that had not happened yet.
+#
+# TRIGGER. Same pattern as data-health.yml: NOT a GitHub `schedule`. GitHub runs schedule
+# at the lowest priority, deferred this repo's jobs by hours, and dropped two days
+# outright in August without ever backfilling. Supabase pg_cron POSTs a workflow_dispatch
+# instead — see supabase/migrations/139_pg_cron_daily_metrics.sql. To change the time,
+# edit cron.job in the database, NOT this file.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A second copy would mail the same report twice. Queue rather than cancel: a cancelled
+# run is a morning with no report at all.
+concurrency:
+  group: daily-metrics
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # Reads `auth.users` and `auth.sessions`, which PostgREST does not expose, so this
+      # needs DATABASE_URL rather than the service-role key. The session is opened
+      # read-only, and the script exits non-zero if any query fails — a report full of
+      # zeros reads exactly like a terrible day, which is the one thing it must not do.
+      - name: Send Daily Metrics Report
+        timeout-minutes: 10
+        shell: bash # -eo pipefail, so a crash cannot be masked by tee
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/dailyMetrics.ts
