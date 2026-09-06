@@ -386,7 +386,7 @@ async function main(): Promise<void> {
     .map(([k, n]) => `${k}=${n}`)
     .join(" ");
   console.log(
-    `\n   segment=${SEGMENT} considered=${considered} sent=${sent} gated=${gated} ` +
+    `\n   segment=${SEGMENT} considered=${considered} sent=${sent} NOT-SENT=${failed} gated=${gated} ` +
       `deferred-same-day=${deferredSameDay} ` +
       `out-of-segment=${outOfSegment} skipped(no payload)=${skippedNoPayload}`
   );
@@ -399,6 +399,19 @@ async function main(): Promise<void> {
     console.error(
       `❌ [data-drop] ${((skippedNoPayload / eligible) * 100).toFixed(1)}% of eligible recipients ` +
         `had no payload (max ${MAX_SKIP_SHARE * 100}%).`
+    );
+    process.exit(1);
+  }
+
+  // A rejected send is not a quiet no-op: those people got nothing this week. They keep no
+  // lifecycle stamp, so the next run retries them — but the run must go RED, because this
+  // job is unattended on a Thursday cron and nobody reads a green log.
+  if (failed > 0) {
+    const pc = pacer.stats();
+    console.error(
+      `❌ [data-drop] ${failed} recipient(s) were REJECTED by the provider ` +
+        `(retried=${pc.retries}, quotaHit=${pc.quotaHit}). No lifecycle stamp was written for ` +
+        `them, so the next run picks them up.`
     );
     process.exit(1);
   }
