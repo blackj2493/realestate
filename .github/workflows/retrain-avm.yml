@@ -14,14 +14,15 @@ name: Retrain AVM (champion/challenger)
 # run, dispatch manually with compare_only=true (compares + emails, promotes nothing). Rollback:
 # re-ingest the committed champion CSVs via scripts/worker/avm/ingest-matrices.ts.
 #
-# CADENCE: monthly (6th, 08:00 UTC). The trainer reads 36 months of raw_vow_sold, so a fresh
-# month meaningfully updates the fit.
+# CADENCE: monthly (6th, 14:00 UTC). The trainer reads 36 months of raw_vow_sold, so a fresh
+# month meaningfully updates the fit. It sat at 08:00 until migration 139 — where it shared a
+# slot with the Sunday ghost reconcile and lost the 2026-09-06 run to the contention.
 on:
   # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
   # under load, hardest at minute :00 — which is where this job used to sit. Supabase
-  # pg_cron POSTs a workflow_dispatch at 08:00 UTC on the 6th of each month; see
-  # supabase/migrations/128_pg_cron_weekly_monthly.sql. Change the time in cron.job,
-  # NOT here.
+  # pg_cron POSTs a workflow_dispatch at 14:00 UTC on the 6th of each month; see
+  # supabase/migrations/128_pg_cron_weekly_monthly.sql, retimed by 139. Change the time
+  # in cron.job, NOT here.
   workflow_dispatch:
     inputs:
       compare_only:
