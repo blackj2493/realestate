@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
-import { sendLeadFollowUp } from "@/lib/alerts/leadFollowUpEmail";
+import { sendLeadFollowUp, fetchLeadLane, type LeadIntent } from "@/lib/alerts/leadFollowUpEmail";
 import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
 
 export const dynamic = "force-dynamic";
@@ -94,7 +94,19 @@ export async function POST(req: NextRequest) {
     // SEND is now observable + non-throwing, but rendering still can throw (e.g. a missing
     // unsubscribe secret), so keep the guard — a follow-up failure must never fail capture.
     try {
-      await sendLeadFollowUp({ name, address, listingKey, email });
+      // The copy branches on sale-vs-lease and residential-vs-commercial: a tenant does
+      // not carry the property, and a commercial lease is quoted per square foot per
+      // year with TMI on top. fetchLeadLane never throws and falls back to the
+      // residential sale lane, so a classification miss still sends the old copy.
+      const lane = await fetchLeadLane(supabase, listingKey);
+      await sendLeadFollowUp({
+        name,
+        address,
+        listingKey,
+        email,
+        intent: intent as LeadIntent,
+        lane,
+      });
     } catch (fuErr) {
       console.error("[viewing-requests] lead follow-up failed (lead saved):", fuErr);
     }
