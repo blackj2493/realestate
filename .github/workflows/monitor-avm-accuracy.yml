@@ -38,6 +38,14 @@ jobs:
     env:
       SUMMARY_FILE: avm-monitor-run.log
       AVM_MAX_MEDIAN_PCT: '0.14'
+    # `shell: bash` is load-bearing, and this job is why it matters most. The DEFAULT run
+    # shell is `bash -e` with NO pipefail, so `... | tee -a` exits with tee's status --
+    # always 0. avmDriftCheck.ts signals drift by exiting 1; that exit was being swallowed,
+    # so a red DRIFT verdict reported a GREEN job and emailed "completed OK". The whole
+    # point of this workflow is to shout when the AVM has drifted, and it could not.
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
