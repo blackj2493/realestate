@@ -17,6 +17,7 @@
  */
 
 import type { Bubble } from "@/lib/bubbles/serialize";
+import { hasActiveLensFilters, type MarketActivityLens } from "./config";
 import { OTTAWA_AREAS } from "./ottawaAreas";
 // 34 rows keyed by raw feed City strings (~2KB). Imported directly rather than through
 // lib/postalCodes, which pulls in `fs` and so can't be reached from a client component.
@@ -261,11 +262,31 @@ export function isWholeCityRegion(name: string): boolean {
 
 /**
  * Default new-listing-alert scope when an area is added (engagement build plan §176).
- * Adding an area turns alerts ON by default, tiered by breadth to protect deliverability:
- *   • a WHOLE CITY → 'filtered' ("My filters only" — never a city-wide firehose)
- *   • a COMMUNITY / neighbourhood / drawn area → 'all' (every new listing; manageable volume)
+ *
+ * Adding an area turns alerts ON by default. The scope decides what the nightly email
+ * carries, so the rule reads the user's own filters FIRST:
+ *
+ *   1. Filters are set → 'filtered'. The filters are the point; an area added while a lens
+ *      is active should honour it from the first night, at ANY breadth. §176 missed this
+ *      case entirely — it tiered on how big the area was and never looked at what the user
+ *      had actually asked for.
+ *   2. No filters set → fall back to the §176 breadth tier: a WHOLE CITY takes 'filtered',
+ *      a community or neighbourhood takes 'all'.
+ *
+ * Note what case 2 CANNOT do. 'filtered' over an empty lens is not a filter at all (see
+ * hasActiveLensFilters): it delivers exactly what 'all' delivers, because buildLensClauses
+ * emits nothing and the worker falls back to the bare price floor. So the breadth tier
+ * never protected a brand-new user, whose lens is empty by definition. The email has to
+ * say so instead — which is why the digest tests `!filterLabel`, not the stored scope.
+ *
+ * `lens` stays optional so a caller with no dashboard config in hand keeps the old
+ * breadth-only behaviour rather than silently defaulting someone to 'all'.
  */
-export function defaultAlertScopeForRegion(name: string): "all" | "filtered" {
+export function defaultAlertScopeForRegion(
+  name: string,
+  lens?: MarketActivityLens
+): "all" | "filtered" {
+  if (lens && hasActiveLensFilters(lens)) return "filtered";
   return isWholeCityRegion(name) ? "filtered" : "all";
 }
 

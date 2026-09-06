@@ -38,15 +38,29 @@ export interface BubbleSection {
   bubbleId: string;
   bubbleName: string;
   total: number;
-  /** ≤ BUBBLE_EMAIL_ROW_CAP rows, newest first. Empty when collapsed. */
+  /** ≤ BUBBLE_EMAIL_ROW_CAP rows, newest first. NEVER empty — see buildBubbleSections. */
   listings: NewListingAlert[];
-  /** Bubble too noisy for rows — render a one-line count instead. */
-  collapsed: boolean;
+  /**
+   * The area produced more than BUBBLE_COLLAPSE_THRESHOLD new listings tonight. The rows
+   * still render; this only adds the line naming the full count and linking to all of it.
+   */
+  highVolume: boolean;
   /** Present when the bubble alerts on its saved filters (alert_scope 'filtered'). */
   filterLabel?: string | null;
 }
 
 export const BUBBLE_EMAIL_ROW_CAP = 6;
+/**
+ * Above this many matches a section is HIGH VOLUME: it still shows its rows, and gains a
+ * line naming the full count.
+ *
+ * It used to mean "show no rows at all" — the section rendered as a bare number and a tip.
+ * That is the worst output the digest can produce, and the busiest areas produced it every
+ * single night: Toronto enters ~143 new listings a night, Mississauga ~33, Brampton ~31,
+ * all far past this threshold. So a new user who tracked a city got "143 new listings
+ * appeared in this area" and not one home, nightly, until they unsubscribed. Six real
+ * homes plus the count is strictly more useful and no longer than the tip it replaced.
+ */
 export const BUBBLE_COLLAPSE_THRESHOLD = 20;
 
 // ── Scan order: narrowest area first ────────────────────────────────────────
@@ -157,18 +171,8 @@ export function buildBubbleSections(perBubble: BubbleMatches[]): BubbleSection[]
     const total = b.total - (b.matches.length - deduped.length);
     if (total <= 0) continue;
 
-    if (total > BUBBLE_COLLAPSE_THRESHOLD) {
-      sections.push({
-        bubbleId: b.bubbleId,
-        bubbleName: b.bubbleName,
-        total,
-        listings: [],
-        collapsed: true,
-        filterLabel: b.filterLabel ?? null,
-      });
-      continue;
-    }
-
+    // Every section shows rows, however busy the area is. The row cap already bounds the
+    // email; a high count only changes what the line under the rows says.
     const rows = [...deduped].sort((a, z) => z.entryMs - a.entryMs).slice(0, BUBBLE_EMAIL_ROW_CAP);
     if (rows.length === 0) continue;
     sections.push({
@@ -176,7 +180,7 @@ export function buildBubbleSections(perBubble: BubbleMatches[]): BubbleSection[]
       bubbleName: b.bubbleName,
       total,
       listings: rows,
-      collapsed: false,
+      highVolume: total > BUBBLE_COLLAPSE_THRESHOLD,
       filterLabel: b.filterLabel ?? null,
     });
   }

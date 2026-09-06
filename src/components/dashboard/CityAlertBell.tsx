@@ -83,7 +83,7 @@ export default function CityAlertBell({
       if (!row) {
         // Apply the tiered default (§176) so a manual opt-in matches the add-area
         // behaviour: whole city → 'filtered' (this lens), community → 'all'.
-        const scope = defaultAlertScopeForRegion(city);
+        const scope = defaultAlertScopeForRegion(city, lens);
         await create({
           name: city,
           area_type: "city",

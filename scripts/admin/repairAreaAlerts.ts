@@ -201,7 +201,7 @@ async function main() {
     const missing = regions.filter((r) => !have.has(r));
     if (missing.length) {
       for (const name of missing) {
-        const scope = defaultAlertScopeForRegion(name);
+        const scope = defaultAlertScopeForRegion(name, cfg.marketActivity);
         if (PASS.silent) {
           creates.push({
             user_id: userId,

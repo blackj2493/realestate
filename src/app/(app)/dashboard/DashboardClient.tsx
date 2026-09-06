@@ -34,6 +34,7 @@ import ActionFeed from "@/components/dashboard/actionfeed/ActionFeed";
 import { ModuleHead } from "@/components/daylight/primitives";
 import MarketPicker from "@/components/dashboard/MarketPicker";
 import TrackedMarketsBar from "@/components/dashboard/TrackedMarketsBar";
+import AlertFilterPrompt from "@/components/dashboard/AlertFilterPrompt";
 import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { regionArea, defaultAlertScopeForRegion } from "@/lib/dashboard/area";
@@ -184,7 +185,7 @@ export default function DashboardClient() {
     await useBubblesStore.getState().init(); // idempotent; sets signedIn + loads rows
     const store = useBubblesStore.getState();
     if (!store.signedIn || findCityAlert(area)) return;
-    const scope = defaultAlertScopeForRegion(area);
+    const scope = defaultAlertScopeForRegion(area, config.marketActivity);
     await store.create({
       name: area,
       area_type: "city",
@@ -203,7 +204,11 @@ export default function DashboardClient() {
     if (existing) await store.remove(existing.id);
   };
 
-  const updateLens = (lens: MarketActivityLens) => update({ ...config, marketActivity: lens });
+  // A NEW set of filters is a new question, so clear the prompt's dismissal: AlertFilterPrompt
+  // offers to apply THESE filters once, and goes quiet again the moment the user answers.
+  const updateLens = (lens: MarketActivityLens) =>
+    update({ ...config, marketActivity: lens, alertPromptDismissed: false });
+  const dismissAlertPrompt = () => update({ ...config, alertPromptDismissed: true });
   const updatePersona = (persona: PersonaType) => update({ ...config, persona });
   // Boards have no server-side twin the way areas do (see MarketPicker), so unlike
   // addRegion/removeRegion this is a plain config write.
@@ -285,6 +290,17 @@ export default function DashboardClient() {
 
         {hasRegions && (
           <MarketActivityControls lens={config.marketActivity} onChange={updateLens} />
+        )}
+
+        {/* Sits under the filters because it is ABOUT them: the areas you already saved
+            still email everything, and these filters are what would narrow them. */}
+        {hasRegions && (
+          <AlertFilterPrompt
+            regions={config.regions}
+            lens={config.marketActivity}
+            dismissed={config.alertPromptDismissed === true}
+            onDismiss={dismissAlertPrompt}
+          />
         )}
 
         {hasRegions && (
