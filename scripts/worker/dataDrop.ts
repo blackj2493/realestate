@@ -26,6 +26,7 @@ import "dotenv/config";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { SENDERS } from "@/lib/alerts/senders";
 import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
+import { createSendPacer } from "@/lib/alerts/sendPacer";
 import { SITE } from "@/lib/alerts/emailShell";
 import { marketingUnsubscribeUrl, signUnsubscribe } from "@/lib/alerts/unsubscribe";
 import { renderDataDropEmail } from "@/lib/alerts/dataDropEmail";
@@ -249,8 +250,16 @@ async function main(): Promise<void> {
   const PAGE = 1000;
   let considered = 0;
   let sent = 0;
+  let failed = 0;
   let skippedNoPayload = 0;
   let gated = 0;
+  // Paced. This is the only worker that mails the WHOLE list in one pass, so it is the one
+  // most exposed to Resend's 10 req/s per-team limit: an unpaced loop over 391 recipients
+  // gets ~100 through and the rest rejected (see sendPacer.ts and #499). Nothing is
+  // destroyed when that happens — the lifecycle row is stamped only on a confirmed send, so
+  // a rejected recipient simply has no stamp and is picked up next run — but a first send
+  // that reaches a quarter of the list is not a first send worth making.
+  const pacer = createSendPacer();
   /** Skipped because the nightly digest already reached them today. */
   let deferredSameDay = 0;
   let outOfSegment = 0;
@@ -338,7 +347,7 @@ async function main(): Promise<void> {
         },
         now
       );
-      const res = await sendTransactionalEmail({
+      const out = await pacer.send({
         kind: "data_drop",
         from: SENDERS.dataDrop.from,
         replyTo: SENDERS.dataDrop.replyTo,
@@ -351,11 +360,18 @@ async function main(): Promise<void> {
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
       });
-      if (res.sent) {
+      if (out.status === "sent") {
         await stampSent(sb, email, raw.id, messageId, lc, nowIso);
         sent++;
+        continue;
       }
+      failed++;
+      console.error(`   NOT SENT to ${email}: ${out.error}`);
+      // Out of quota: every remaining send tonight fails the same way. Stop rather than
+      // collect hundreds of identical errors; the unstamped rest go out on the next run.
+      if (out.status === "quota") break;
     }
+    if (pacer.stopped) break;
     if (profiles.length < PAGE) break;
   }
 
