@@ -58,6 +58,18 @@ export type AnalyticsEvents = {
   'watchlist_removed': { listingId: string };
   'auth_signin_started': { method?: string };
   'auth_signed_in': { method?: string };
+
+  // Installable app (src/lib/pwa). `platform` is where the install would land;
+  // `source` is which surface asked. Every event also carries the `pp_display_mode`
+  // super property (standalone vs browser) set by ServiceWorkerRegister.
+  'pwa_install_prompted': { platform: string; source: 'nudge' | 'menu' };
+  'pwa_install_outcome': {
+    platform: string;
+    source: 'nudge' | 'menu';
+    outcome: 'accepted' | 'dismissed' | 'snoozed';
+  };
+  'pwa_installed': { platform: string };
+  'pwa_update_applied': { version?: string };
 };
 
 /** Capture a typed product event. No-ops when analytics is unconfigured. */
@@ -70,6 +82,16 @@ export function track<E extends keyof AnalyticsEvents>(
     posthog.capture(event, properties);
   } catch {
     // Never let analytics throw into product code.
+  }
+}
+
+/** Attach properties to every later event from this browser (PostHog "super properties"). */
+export function registerProperties(properties: Record<string, string | number | boolean>): void {
+  if (!analyticsEnabled) return;
+  try {
+    posthog.register(properties);
+  } catch {
+    /* swallow */
   }
 }
 

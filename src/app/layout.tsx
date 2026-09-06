@@ -7,6 +7,8 @@ import WatchlistInit from "@/components/watchlist/WatchlistInit";
 import DiscoveryRoot from "@/components/discovery/DiscoveryRoot";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import PwaRoot from "@/components/pwa/PwaRoot";
+import { THEME_COLOR } from "@/lib/pwa/manifest";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const jetbrainsMono = JetBrains_Mono({
@@ -19,6 +21,12 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  applicationName: "PureProperty",
+  // Installed-app chrome on iOS (Android reads the manifest instead). `default` keeps
+  // an opaque status bar above the page rather than drawing content under the clock —
+  // not every header carries pt-safe yet (MOBILE_FULL_SITE_AUDIT), and a white bar on
+  // the light default is the smaller error for dark-mode users.
+  appleWebApp: { capable: true, title: "PureProperty", statusBarStyle: "default" },
   // Default title/description for the homepage + any page that doesn't set its own
   // (the hubs all override with absolute titles, so no template is used here).
   title: "PureProperty | Ontario Real Estate Listings & Market Intelligence",
@@ -77,7 +85,8 @@ const ORG_AND_SITE_JSONLD = {
 // vars resolve on notched phones; theme-color so the browser chrome matches the app
 // instead of flashing a mismatched band. Pinch-zoom left enabled on purpose (a11y).
 //
-// This is the LIGHT ground (#e9edf4 = --background on :root) because light is the app
+// THEME_COLOR is the LIGHT ground (#e9edf4 = --background on :root), shared with the
+// installable-app manifest (src/lib/pwa/manifest.ts), because light is the app
 // default for everyone; dark is a stored opt-in. A prefers-color-scheme media list would
 // be wrong more often than right here — it tracks the OS, and the app deliberately does
 // not, so an OS-dark user on the light default would get a navy chrome band above a pale
@@ -87,7 +96,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#e9edf4",
+  themeColor: THEME_COLOR,
 };
 
 export default function RootLayout({
@@ -112,6 +121,7 @@ export default function RootLayout({
             <WatchlistInit />
             {children}
             <DiscoveryRoot />
+            <PwaRoot />
             <Toaster />
           </PostHogProvider>
         </ThemeProvider>

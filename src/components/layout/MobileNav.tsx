@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import Logo from "@/components/Logo";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import AccountButton from "@/components/auth/AccountButton";
+import InstallAppRow from "@/components/pwa/InstallAppRow";
 import { NAV_ITEMS, MORE_NAV_ITEMS, isActive } from "./navItems";
 
 /**
@@ -85,6 +86,10 @@ export default function MobileNav({ className }: MobileNavProps) {
               );
             })}
           </nav>
+
+          {/* "Install app" — the one place a user goes looking for it. Renders only
+              where an install is possible right now, never once installed. */}
+          <InstallAppRow onAction={() => setOpen(false)} />
 
           {/* Account + theme switch live here on phones — the app header hides the
               Sign in/out button below md so the full wordmark + controls fit a
