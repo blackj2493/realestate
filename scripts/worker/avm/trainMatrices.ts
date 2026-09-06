@@ -317,24 +317,68 @@ async function main(): Promise<void> {
   }
 
   // Replace the staging challenger atomically (per-run full rebuild).
+  //
+  // The write is set-based ON PURPOSE. It used to issue one INSERT per row —
+  // models.length * (P + 1) sequential round trips, 35,400 of them at 3,540 cohorts —
+  // inside a single transaction, so the cost of the write was round-trip latency times
+  // row count and nothing else. That took 8m36s on 2026-08-30 at ~15ms a round trip. On
+  // 2026-09-06 the Weekly Ghost Reconcile started against the same database in the same
+  // second (the monthly 6th fell on its weekday), latency roughly tripled, and the step
+  // hit its 30-minute timeout with the transaction still open — a whole monthly retrain
+  // lost to a neighbour's load. unnest() makes the write O(chunks) instead of O(rows),
+  // so how busy the database is no longer decides whether the retrain finishes.
+  const CHUNK = 5_000; // rows per statement — bounds the size of one parameter array
   await client.query('BEGIN');
   try {
     await client.query('TRUNCATE avm_multiplier_matrix_staging');
     await client.query('TRUNCATE avm_audit_report_staging');
+
+    // One matrix row per (cohort × feature), flattened into parallel arrays in the same
+    // nested order the row-at-a-time loop used, so the stored rows are unchanged.
+    const mRung: string[] = [], mCity: string[] = [], mSub: string[] = [], mFeat: string[] = [];
+    const mBeta: number[] = [], mMean: number[] = [], mStd: number[] = [];
     for (const m of models) {
       for (let j = 0; j < P; j++) {
-        await client.query(
-          `INSERT INTO avm_multiplier_matrix_staging (cohort_rung, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [m.rung, m.cityRegion, m.subType, FEATURES[j], m.betas[j], m.means[j], m.stds[j]],
-        );
+        mRung.push(m.rung); mCity.push(m.cityRegion); mSub.push(m.subType); mFeat.push(FEATURES[j]);
+        mBeta.push(m.betas[j]); mMean.push(m.means[j]); mStd.push(m.stds[j]);
       }
+    }
+    for (let i = 0; i < mRung.length; i += CHUNK) {
+      const to = i + CHUNK;
       await client.query(
-        `INSERT INTO avm_audit_report_staging (cohort_rung, city_region, property_sub_type, total_sales_analyzed, model_accuracy_score, average_error_margin, base_price)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [m.rung, m.cityRegion, m.subType, m.n, m.r2, m.mae, m.basePrice],
+        `INSERT INTO avm_multiplier_matrix_staging (cohort_rung, city_region, property_sub_type, feature_name, beta, feat_mean, feat_std)
+         SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::float8[], $6::float8[], $7::float8[])`,
+        [mRung.slice(i, to), mCity.slice(i, to), mSub.slice(i, to), mFeat.slice(i, to),
+         mBeta.slice(i, to), mMean.slice(i, to), mStd.slice(i, to)],
       );
     }
+
+    // One audit row per cohort.
+    for (let i = 0; i < models.length; i += CHUNK) {
+      const s = models.slice(i, i + CHUNK);
+      await client.query(
+        `INSERT INTO avm_audit_report_staging (cohort_rung, city_region, property_sub_type, total_sales_analyzed, model_accuracy_score, average_error_margin, base_price)
+         SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::int[], $5::float8[], $6::float8[], $7::float8[])`,
+        [s.map((m) => m.rung), s.map((m) => m.cityRegion), s.map((m) => m.subType),
+         s.map((m) => m.n), s.map((m) => m.r2), s.map((m) => m.mae), s.map((m) => m.basePrice)],
+      );
+    }
+
+    // A fast write is the point; a SILENTLY SHORT one is the risk unnest introduces. Postgres
+    // pads mismatched array lengths with NULL instead of throwing, and a chunk loop that skips
+    // a slice still commits. Neither the backtest nor the promotion gate can tell a truncated
+    // challenger from a genuinely thin one — it would just score worse and lose. Count the rows
+    // before COMMIT and roll back rather than stage a partial model.
+    const { rows: [wrote] } = await client.query<{ mx: string; audit: string }>(
+      `SELECT (SELECT count(*) FROM avm_multiplier_matrix_staging) AS mx,
+              (SELECT count(*) FROM avm_audit_report_staging)      AS audit`,
+    );
+    if (Number(wrote.mx) !== mRung.length || Number(wrote.audit) !== models.length) {
+      throw new Error(
+        `Staging write is short: matrix ${wrote.mx}/${mRung.length}, audit ${wrote.audit}/${models.length}. Rolled back.`,
+      );
+    }
+
     await client.query('COMMIT');
     console.log(`\n✅ Wrote ${models.length.toLocaleString()} challenger cohorts (${models.length * P} coefficient rows) to staging.`);
   } catch (e) {

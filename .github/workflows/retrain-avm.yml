@@ -41,6 +41,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUMMARY_FILE: retrain-avm-run.log
+    # Every step below pipes into `tee` to build the summary email. GitHub's DEFAULT shell is
+    # `bash -e` with NO pipefail, so a pipeline's exit status is tee's — always 0. The trainer
+    # could exit 1 (a dead feature, an untrained rung, a short staging write) and the step would
+    # report success, letting the backtest score a stale challenger and the gate promote it.
+    # `shell: bash` is `bash --noprofile --norc -eo pipefail`, which propagates the real status.
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
