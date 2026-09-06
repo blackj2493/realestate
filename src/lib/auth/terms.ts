@@ -61,6 +61,10 @@ export async function recordTermsAcceptance(): Promise<{
    *  bump already has a non-null timestamp) — lets callers fire a welcome once. */
   firstAcceptance?: boolean;
   email?: string;
+  /** The account that accepted. Handed back so a caller doing follow-up work in the same
+   *  request (the signup region seed) does not pay for a second getCurrentUser() round
+   *  trip on the critical path — this function has already resolved the session. */
+  userId?: string;
 }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "unauthenticated" };
@@ -98,5 +102,5 @@ export async function recordTermsAcceptance(): Promise<{
     });
   }
 
-  return { ok: true, firstAcceptance, email: user.email ?? undefined };
+  return { ok: true, firstAcceptance, email: user.email ?? undefined, userId: user.id };
 }
