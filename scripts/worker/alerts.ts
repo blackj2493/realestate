@@ -24,8 +24,12 @@
  * Sold prices NEVER appear in email (the sold row is a tease linking to the
  * gated listing page); the listing brokerage is shown on every row. Relist rows
  * show only the NEW ACTIVE (IDX/public) campaign's facts.
- * Idempotent: baselines/watermarks advance only after a successful send, so a
- * Resend failure retries tomorrow instead of eating the alert.
+ * Idempotent: baselines/watermarks advance only after the provider ACCEPTS the send, so a
+ * rejection retries tomorrow instead of eating the alert. "Accepts" is load-bearing — the
+ * Resend SDK returns API errors in `{ error }` instead of throwing, so a try/catch here
+ * counted rate-limited and over-quota sends as delivered and advanced the watermark past
+ * news the subscriber never saw (2026-09, ~35 of ~124 digests a night). Every send now
+ * goes through the pacer in src/lib/alerts/sendPacer.ts, which checks that field.
  *
  * Invoke: npx tsx scripts/worker/alerts.ts
  * Env:    SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL,
@@ -34,7 +38,7 @@
  */
 
 import 'dotenv/config';
-import { Resend } from 'resend';
+import { createSendPacer, type SendPacer } from '@/lib/alerts/sendPacer';
 import Typesense, { Client } from 'typesense';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { buildAreaClause } from '@/lib/bubbles/stats';
@@ -257,9 +261,9 @@ const tsSafe = (s: string) => s.replace(/`/g, '');
 export async function runListingAlertsPhase(
   ts: Client,
   supabase: ReturnType<typeof getServiceRoleClient>,
-  resend: Resend,
+  pacer: SendPacer,
   opts: { dryRun?: boolean } = {}
-): Promise<{ processed: number; baselined: number; emailed: number; similarMatched: number }> {
+): Promise<{ processed: number; baselined: number; emailed: number; failed: number; similarMatched: number }> {
   const dryRun = !!opts.dryRun;
   const runStartIso = new Date().toISOString();
 
@@ -277,7 +281,7 @@ export async function runListingAlertsPhase(
     if (error) {
       // Pre-migration-051/052 deploys (missing table/columns) → skip the phase, never the run.
       console.warn(`[alerts] listing_alerts phase skipped: ${error.message}`);
-      return { processed: 0, baselined: 0, emailed: 0, similarMatched: 0 };
+      return { processed: 0, baselined: 0, emailed: 0, failed: 0, similarMatched: 0 };
     }
     const chunk = (data ?? []) as ListingAlertRow[];
     rows.push(...chunk);
@@ -288,7 +292,7 @@ export async function runListingAlertsPhase(
   const similarRows = rows.filter((r) => r.kind === 'similar');
   const actionable = rows.filter((r) => r.kind !== 'similar');
   if (actionable.length === 0 && similarRows.length === 0) {
-    return { processed: 0, baselined: 0, emailed: 0, similarMatched: 0 };
+    return { processed: 0, baselined: 0, emailed: 0, failed: 0, similarMatched: 0 };
   }
 
   // Current state per distinct listing (one active-index lookup each).
@@ -451,6 +455,7 @@ export async function runListingAlertsPhase(
 
   // One digest per email; advance that email's baselines only after a successful send.
   let emailed = 0;
+  let failed = 0;
   const allEmails = new Set([...changesByEmail.keys(), ...similarByEmail.keys()]);
   for (const email of allEmails) {
     const changes = changesByEmail.get(email) ?? [];
@@ -464,28 +469,32 @@ export async function runListingAlertsPhase(
       emailed++;
       continue;
     }
-    try {
-      await resend.emails.send({
-        from: FROM,
-        to: email,
-        subject,
-        html,
-        text,
-        headers: { 'List-Unsubscribe': `<${uUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
-      });
+    const out = await pacer.send({
+      kind: 'listing-alert',
+      from: FROM,
+      to: email,
+      subject,
+      html,
+      text,
+      headers: { 'List-Unsubscribe': `<${uUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+    });
+    if (out.status === 'sent') {
       emailed++;
       for (const p of patchesByEmail.get(email) ?? []) await supabase.from('listing_alerts').update(p.patch).eq('id', p.id);
-    } catch (e) {
-      console.error('[alerts] listing-alert send failed for', email, e instanceof Error ? e.message : e);
-      // No baseline advance → retried tomorrow.
+      continue;
     }
+    // Rejected. No baseline advance → retried tomorrow. A quota stop ends the phase so
+    // the rest keep their watermarks rather than collecting identical errors.
+    failed++;
+    console.error(`[alerts] listing-alert NOT SENT to ${email}: ${out.error}`);
+    if (out.status === 'quota') break;
   }
 
   console.log(
     `[alerts] listing_alerts: ${actionable.length} price/status + ${similarRows.length} similar active, ` +
-      `${baselined} baselined, ${emailed} emailed, ${similarMatched} similar matches.`
+      `${baselined} baselined, ${emailed} emailed, ${failed} NOT SENT, ${similarMatched} similar matches.`
   );
-  return { processed: actionable.length + similarRows.length, baselined, emailed, similarMatched };
+  return { processed: actionable.length + similarRows.length, baselined, emailed, failed, similarMatched };
 }
 
 interface AddressWatchRow {
@@ -511,9 +520,9 @@ interface AddressWatchRow {
 export async function runAddressWatchPhase(
   ts: Client,
   supabase: ReturnType<typeof getServiceRoleClient>,
-  resend: Resend,
+  pacer: SendPacer,
   opts: { dryRun?: boolean } = {}
-): Promise<{ processed: number; baselined: number; emailed: number }> {
+): Promise<{ processed: number; baselined: number; emailed: number; failed: number }> {
   const dryRun = !!opts.dryRun;
   const runStartIso = new Date().toISOString();
 
@@ -530,14 +539,14 @@ export async function runAddressWatchPhase(
     if (error) {
       // Pre-077/083 deploys (missing table or baseline column) → skip the phase, never the run.
       console.warn(`[alerts] address_watches phase skipped: ${error.message}`);
-      return { processed: 0, baselined: 0, emailed: 0 };
+      return { processed: 0, baselined: 0, emailed: 0, failed: 0 };
     }
     const chunk = (data ?? []) as AddressWatchRow[];
     rows.push(...chunk);
     if (chunk.length < PAGE) break;
     offset += PAGE;
   }
-  if (rows.length === 0) return { processed: 0, baselined: 0, emailed: 0 };
+  if (rows.length === 0) return { processed: 0, baselined: 0, emailed: 0, failed: 0 };
 
   // One active-index lookup per distinct address_key: search by civic number + street,
   // keep hits that pass the deterministic address matcher, prefer postal-exact then newest.
@@ -656,6 +665,7 @@ export async function runAddressWatchPhase(
   for (const p of silentPatches) await supabase.from('address_watches').update(p.patch).eq('id', p.id);
 
   let emailed = 0;
+  let failed = 0;
   for (const [email, hits] of hitsByEmail) {
     const uUrl = unsubscribeUrl(email, SITE);
     const { subject, html, text } = renderAddressWatchEmail({ hits, unsubscribeUrl: uUrl });
@@ -664,25 +674,29 @@ export async function runAddressWatchPhase(
       emailed++;
       continue;
     }
-    try {
-      await resend.emails.send({
-        from: FROM,
-        to: email,
-        subject,
-        html,
-        text,
-        headers: { 'List-Unsubscribe': `<${uUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
-      });
+    const out = await pacer.send({
+      kind: 'address-watch',
+      from: FROM,
+      to: email,
+      subject,
+      html,
+      text,
+      headers: { 'List-Unsubscribe': `<${uUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+    });
+    if (out.status === 'sent') {
       emailed++;
       for (const p of patchesByEmail.get(email) ?? []) await supabase.from('address_watches').update(p.patch).eq('id', p.id);
-    } catch (e) {
-      console.error('[alerts] address-watch send failed for', email, e instanceof Error ? e.message : e);
-      // No baseline advance → retried tomorrow.
+      continue;
     }
+    failed++;
+    console.error(`[alerts] address-watch NOT SENT to ${email}: ${out.error}`);
+    if (out.status === 'quota') break;
   }
 
-  console.log(`[alerts] address_watches: ${rows.length} active, ${baselined} baselined, ${emailed} emailed.`);
-  return { processed: rows.length, baselined, emailed };
+  console.log(
+    `[alerts] address_watches: ${rows.length} active, ${baselined} baselined, ${emailed} emailed, ${failed} NOT SENT.`
+  );
+  return { processed: rows.length, baselined, emailed, failed };
 }
 
 /**
@@ -758,7 +772,10 @@ async function main() {
   const runStartIso = new Date().toISOString();
   const supabase = getServiceRoleClient();
   const ts = getTypesense();
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  // Paced + error-checked. Resend accepted ~10 sends/second and rejected the rest of the
+  // batch; the bare SDK call reported those rejections in `{ error }` rather than throwing,
+  // so they were counted as delivered. See src/lib/alerts/sendPacer.ts.
+  const pacer = createSendPacer();
 
   // ── Watchlist phase ────────────────────────────────────────────────────────
   // PostgREST caps a single select at 1,000 rows; page through all rows so
@@ -1197,6 +1214,7 @@ async function main() {
 
   const sentUsers = new Set<string>();
   let emailed = 0;
+  let failed = 0;
   let suppressed = 0;
   // Users who actually had a renderable digest tonight. Counted HERE, not as userIds.size,
   // so the canary's invariant (sent + suppressed + fell-through = due) is exact: a user who
@@ -1228,20 +1246,30 @@ async function main() {
 
     const uUrl = marketingUnsubscribeUrl(email, SITE);
     const { subject, html, text } = renderAlertsDigest(payload, uUrl);
-    try {
-      await resend.emails.send({
-        from: FROM,
-        to: email,
-        subject,
-        html,
-        text,
-        headers: { 'List-Unsubscribe': `<${uUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
-      });
+    const out = await pacer.send({
+      kind: 'watchlist-digest',
+      from: FROM,
+      to: email,
+      subject,
+      html,
+      text,
+      headers: { 'List-Unsubscribe': `<${uUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+    });
+    if (out.status === 'sent') {
       sentUsers.add(userId);
       digested.push(email);
       emailed++;
-    } catch (e) {
-      console.error('[alerts] send failed for', userId, e instanceof Error ? e.message : e);
+      continue;
+    }
+    // NOT sent. Deliberately do NOT add to sentUsers: shouldApply() reads that set, so
+    // leaving the user out is what holds their watermark and re-alerts them tomorrow.
+    // The old code counted a rejected send as delivered and advanced the baseline, which
+    // destroyed the alert rather than delaying it.
+    failed++;
+    console.error(`[alerts] digest NOT SENT to user ${userId}: ${out.error}`);
+    if (out.status === 'quota') {
+      console.error('[alerts] stopping the digest loop — the remaining users retry tomorrow.');
+      break;
     }
   }
 
@@ -1273,24 +1301,39 @@ async function main() {
   // ── Listing-alerts phase (anonymous email-capture leads) ───────────────────
   // Independent audience/template with its own idempotent baselines; runs in the same
   // nightly invocation so no extra workflow step is needed.
-  const la = await runListingAlertsPhase(ts, supabase, resend, {});
+  const la = await runListingAlertsPhase(ts, supabase, pacer, {});
 
   // ── Address-watch phase ("Track this address" leads) ───────────────────────
-  const aw = await runAddressWatchPhase(ts, supabase, resend, {});
+  const aw = await runAddressWatchPhase(ts, supabase, pacer, {});
 
   // Durable counters so "did the digest actually go out?" is a query, not a log grep.
   await recordEmailSendMetrics(supabase, {
     [EMAIL_METRICS.digestDue]: due,
     [EMAIL_METRICS.digestSent]: emailed,
     [EMAIL_METRICS.digestSuppressed]: suppressed,
+    [EMAIL_METRICS.digestFailed]: failed + la.failed + aw.failed,
   });
 
+  const p = pacer.stats();
+  const notSent = failed + la.failed + aw.failed;
   console.log(
     `[alerts] Done. ${watch.length} watched, ${userIds.size} users with events, ${due} owed a digest, ` +
-      `${emailed} emails sent, ${suppressed} suppressed on consent. ` +
-      `Listing-alerts: ${la.emailed} emailed, ${la.baselined} baselined, ${la.similarMatched} similar matches. ` +
-      `Address-watches: ${aw.emailed} emailed, ${aw.baselined} baselined.`
+      `${emailed} emails sent, ${notSent} NOT SENT, ${suppressed} suppressed on consent. ` +
+      `Listing-alerts: ${la.emailed} emailed, ${la.failed} not sent, ${la.baselined} baselined, ${la.similarMatched} similar matches. ` +
+      `Address-watches: ${aw.emailed} emailed, ${aw.failed} not sent, ${aw.baselined} baselined.`
   );
+  console.log(
+    `[alerts] pacer: ${p.sent} accepted, ${p.failed} rejected, ${p.retries} retried, ` +
+      `${p.skippedAfterQuota} skipped after quota, quotaHit=${p.quotaHit}.`
+  );
+  // The line an operator greps for. Before this fix the run printed only the claimed count
+  // and the receipt said "ran OK" while a third of subscribers got nothing.
+  if (notSent > 0) {
+    console.error(
+      `[alerts] WARNING: ${notSent} email(s) were REJECTED by the provider and not delivered. ` +
+        `Their watermarks were left unadvanced, so they retry on the next run.`
+    );
+  }
 }
 
 // Only run the CLI when executed directly (matches sync.ts / transformer.ts).

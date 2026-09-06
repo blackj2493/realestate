@@ -32,8 +32,12 @@ export const OPS_REGION = "_ops";
 export const EMAIL_METRICS = {
   /** Users the nightly digest had something to say to (before any consent gate). */
   digestDue: "email.digest_due",
-  /** Digests actually handed to Resend without throwing. */
+  /** Digests the provider ACCEPTED. Not "did not throw": the SDK returns API errors in
+   *  `{ error }`, and counting those as sent is what hid the 2026-09 incident. */
   digestSent: "email.digest_sent",
+  /** Emails the provider REJECTED (rate limit, quota, validation). Non-zero means real
+   *  people did not get tonight's news; their watermarks were left for the next run. */
+  digestFailed: "email.digest_failed",
   /** Users with news who were skipped on consent (opt-out / stream off / paused). */
   digestSuppressed: "email.digest_suppressed",
   /** Onboarding-drip candidates examined. */
