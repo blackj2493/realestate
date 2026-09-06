@@ -100,6 +100,36 @@ export const DEFAULT_ACTIVITY_LENS: MarketActivityLens = {
   minFrontage: 0,
 };
 
+/**
+ * Does this lens actually narrow anything?
+ *
+ * WHY THIS EXISTS. `alert_scope = 'filtered'` promises the nightly email carries only the
+ * homes matching your dashboard filters. The promise is EMPTY when no filter is set:
+ * buildLensClauses returns nothing for a default lens, the worker falls back to the bare
+ * price floor, and 'filtered' delivers exactly what 'all' delivers.
+ *
+ * That made the §176 whole-city guard a no-op for the very people it was written for. A
+ * brand-new user has no filters, so their first city was a firehose whatever the column
+ * said — Toronto enters ~143 new listings a night, and the digest collapsed every one of
+ * them into a bare count. Scope alone can therefore never answer "is this area filtered?".
+ * Ask this instead, and let the answer drive both the default and what the email says.
+ *
+ * `windowDays` is deliberately NOT a filter: it sizes the dashboard's trailing window, and
+ * the worker's watermark governs "new" in email. `transactionType: 'lease'` IS one — it
+ * swaps the entire result set, and lensLabel already prints it as "For Rent".
+ */
+export function hasActiveLensFilters(lens: MarketActivityLens): boolean {
+  return (
+    lens.propertyTypes.length > 0 ||
+    lens.minBeds > 0 ||
+    lens.minBaths > 0 ||
+    lens.minGarage > 0 ||
+    lens.basement !== 'any' ||
+    lens.minFrontage > 0 ||
+    lens.transactionType === 'lease'
+  );
+}
+
 export interface DashboardConfig {
   /** Typesense `City` values (municipalities). */
   regions: string[];
@@ -114,6 +144,12 @@ export interface DashboardConfig {
    * against ("what changed since you last looked"). Null until the first stamp.
    */
   lastVisitAt: number | null;
+  /**
+   * True once the user dismissed the "apply your filters to your area emails?" prompt
+   * (AlertFilterPrompt). Cleared whenever the lens changes, so a NEW set of filters asks
+   * once more. Optional — absent from every config written before this field existed.
+   */
+  alertPromptDismissed?: boolean;
 }
 
 /**
@@ -311,6 +347,7 @@ export function normalizeConfig(raw: unknown): DashboardConfig {
     marketActivity: mergeLens(parsed.marketActivity),
     persona: isPersona(parsed.persona) ? parsed.persona : DEFAULT_PERSONA,
     lastVisitAt: typeof parsed.lastVisitAt === 'number' ? parsed.lastVisitAt : null,
+    alertPromptDismissed: parsed.alertPromptDismissed === true,
   };
 }
 

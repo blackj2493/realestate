@@ -6,7 +6,9 @@ import {
   QUICK_PICK_MARKETS,
   regionCamera,
   regionMapHref,
+  defaultAlertScopeForRegion,
 } from "./area";
+import { DEFAULT_ACTIVITY_LENS } from "./config";
 
 describe("areaFilter — region resolution", () => {
   it("expands an umbrella community to its CityRegion members (Woodbridge → East/West)", () => {
@@ -128,5 +130,24 @@ describe("regionMapHref", () => {
 
   it("URL-encodes the fallback place name", () => {
     expect(regionMapHref("St. Catharines X")).toBe("/properties?city=St.%20Catharines%20X");
+  });
+});
+
+describe("defaultAlertScopeForRegion", () => {
+  const withFilters = { ...DEFAULT_ACTIVITY_LENS, minBeds: 3 };
+
+  it("honours the user's filters at ANY breadth — the §176 tier missed this", () => {
+    expect(defaultAlertScopeForRegion("Toronto", withFilters)).toBe("filtered");
+    expect(defaultAlertScopeForRegion("Barrhaven", withFilters)).toBe("filtered");
+  });
+
+  it("falls back to the breadth tier when no filter is set", () => {
+    expect(defaultAlertScopeForRegion("Toronto", DEFAULT_ACTIVITY_LENS)).toBe("filtered");
+    expect(defaultAlertScopeForRegion("Barrhaven", DEFAULT_ACTIVITY_LENS)).toBe("all");
+  });
+
+  it("keeps the breadth-only behaviour for a caller with no lens in hand", () => {
+    expect(defaultAlertScopeForRegion("Toronto")).toBe("filtered");
+    expect(defaultAlertScopeForRegion("Barrhaven")).toBe("all");
   });
 });

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { normalizeConfig, DEFAULT_ACTIVITY_LENS, DEFAULT_PERSONA } from "./config";
+import {
+  normalizeConfig,
+  hasActiveLensFilters,
+  DEFAULT_ACTIVITY_LENS,
+  DEFAULT_PERSONA,
+} from "./config";
 import { DEFAULT_BOARD_ORDER } from "./boards";
 
 describe("normalizeConfig (shared by localStorage + dashboard_prefs jsonb)", () => {
@@ -50,5 +55,43 @@ describe("normalizeConfig (shared by localStorage + dashboard_prefs jsonb)", () 
   it("leaves a valid board set untouched, order included", () => {
     const c = normalizeConfig({ boards: ["carry", "cap_rate"] });
     expect(c.boards).toEqual(["carry", "cap_rate"]);
+  });
+});
+
+describe("hasActiveLensFilters", () => {
+  const lens = (over = {}) => ({ ...DEFAULT_ACTIVITY_LENS, ...over });
+
+  it("a default lens narrows nothing — the case that made 'filtered' a no-op", () => {
+    expect(hasActiveLensFilters(DEFAULT_ACTIVITY_LENS)).toBe(false);
+  });
+
+  it("the window is NOT a filter — it sizes the dashboard, not the email", () => {
+    expect(hasActiveLensFilters(lens({ windowDays: 90 }))).toBe(false);
+  });
+
+  it("every narrowing field counts", () => {
+    for (const over of [
+      { propertyTypes: ["detached"] },
+      { minBeds: 3 },
+      { minBaths: 2 },
+      { minGarage: 1 },
+      { basement: "finished" as const },
+      { minFrontage: 30 },
+      { transactionType: "lease" as const },
+    ]) {
+      expect(hasActiveLensFilters(lens(over))).toBe(true);
+    }
+  });
+});
+
+describe("normalizeConfig — alertPromptDismissed", () => {
+  it("defaults to false, including for every config written before the field existed", () => {
+    expect(normalizeConfig({}).alertPromptDismissed).toBe(false);
+    expect(normalizeConfig({ regions: ["Ottawa"] }).alertPromptDismissed).toBe(false);
+  });
+
+  it("only a literal true dismisses — a truthy blob value must not silence the prompt", () => {
+    expect(normalizeConfig({ alertPromptDismissed: true }).alertPromptDismissed).toBe(true);
+    expect(normalizeConfig({ alertPromptDismissed: "yes" }).alertPromptDismissed).toBe(false);
   });
 });

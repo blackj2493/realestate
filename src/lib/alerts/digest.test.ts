@@ -29,7 +29,7 @@ const baseSection = {
   bubbleId: "b1",
   bubbleName: "Pocket A",
   total: 2,
-  collapsed: false,
+  highVolume: false,
   listings: [
     {
       listing_key: "W300",
@@ -90,20 +90,26 @@ describe("renderAlertsDigest", () => {
     expect(html).toContain("NEW REALTY");
   });
 
-  it("renders overflow and collapsed bubble lines", () => {
+  it("renders the overflow line for an ordinary area", () => {
     const overflowing = { ...baseSection, total: 9 }; // 1 row shown of 9
-    const collapsed = {
+    const { html } = renderAlertsDigest(payload({ bubbles: [overflowing] }));
+    expect(html).toContain("+8 more");
+  });
+
+  it("a high-volume area names its count AND still shows its homes", () => {
+    const huge = {
       ...baseSection,
       bubbleId: "b2",
       bubbleName: "Huge Area",
-      total: 42,
-      collapsed: true,
-      listings: [],
+      total: 143,
+      highVolume: true,
     };
-    const { html } = renderAlertsDigest(payload({ bubbles: [overflowing, collapsed] }));
-    expect(html).toContain("+8 more");
-    expect(html).toContain("42 new listings");
-    expect(html).toContain("Huge Area");
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [huge] }));
+    expect(html).toContain("143 new homes came up in Huge Area");
+    expect(html).toContain("300 New St"); // the row survives — never a bare count again
+    expect(html).not.toContain("Tip: smaller areas make sharper alerts");
+    expect(text).toContain("300 New St");
+    expect(text).toContain("143 new homes in Huge Area");
   });
 
   it("renders a listing thumbnail for drops and bubbles when a photo URL is present", () => {
@@ -236,5 +242,53 @@ describe("renderAlertsDigest — section row caps", () => {
     expect(html).toContain("+3 more on your dashboard");
     expect(html).not.toContain(`${DROP_EMAIL_ROW_CAP} Drop Ave`); // first over-cap row not rendered
     expect(text).toContain("+5 more on your dashboard");
+  });
+});
+
+describe("renderAlertsDigest — the filter nudge", () => {
+  const filtered = { ...baseSection, filterLabel: "3+ bd · Detached" };
+
+  it("offers filters when an area alerted on everything", () => {
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [baseSection] }));
+    expect(html).toContain("You get every new home in Pocket A");
+    expect(html).toContain("Set my filters");
+    expect(text).toContain("You get every new home in Pocket A");
+  });
+
+  it("stays silent when every area already carries filters", () => {
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [filtered] }));
+    expect(html).toContain("filtered to: 3+ bd · Detached");
+    expect(html).not.toContain("You get every new home");
+    expect(text).not.toContain("You get every new home");
+  });
+
+  it("names only the unfiltered areas, and says it once", () => {
+    const open2 = { ...baseSection, bubbleId: "b3", bubbleName: "Pocket B" };
+    const { html } = renderAlertsDigest(payload({ bubbles: [baseSection, filtered, open2] }));
+    expect(html).toContain("You get every new home in Pocket A and Pocket B");
+    expect(html.match(/You get every new home/g)).toHaveLength(1);
+  });
+
+  it("stops naming areas past three — the list is not the point by then", () => {
+    const many = ["A", "B", "C", "D"].map((n, i) => ({
+      ...baseSection,
+      bubbleId: `b${i}`,
+      bubbleName: `Pocket ${n}`,
+    }));
+    const { html } = renderAlertsDigest(payload({ bubbles: many }));
+    expect(html).toContain("You get every new home in your areas");
+  });
+
+  it("treats a filter-less 'filtered' area as unfiltered — the query is identical", () => {
+    // alert_scope 'filtered' over an empty lens builds no clause, so the worker hands us a
+    // null label and the reader really did receive everything. Scope would lie here.
+    const emptyLens = { ...baseSection, filterLabel: null };
+    const { html } = renderAlertsDigest(payload({ bubbles: [emptyLens] }));
+    expect(html).toContain("You get every new home in Pocket A");
+  });
+
+  it("never appears in a digest with no area section at all", () => {
+    const { html } = renderAlertsDigest(payload({ drops: [baseDrop] }));
+    expect(html).not.toContain("You get every new home");
   });
 });

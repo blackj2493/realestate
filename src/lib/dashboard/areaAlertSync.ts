@@ -154,7 +154,7 @@ export async function reconcileCityAlerts(
     const missing = regions.filter((r) => !have.has(r));
     if (missing.length) {
       const rows = missing.map((name) => {
-        const scope = defaultAlertScopeForRegion(name);
+        const scope = defaultAlertScopeForRegion(name, lens);
         return {
           user_id: userId,
           name,

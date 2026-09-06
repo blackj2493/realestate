@@ -36,7 +36,7 @@ describe("buildBubbleSections", () => {
       bubble("b1", "Pocket A", [listing("W1", 1), listing("W2", 3), listing("W3", 2)]),
     ]);
     expect(sections).toHaveLength(1);
-    expect(sections[0].collapsed).toBe(false);
+    expect(sections[0].highVolume).toBe(false);
     expect(sections[0].listings.map((l) => l.listing_key)).toEqual(["W2", "W3", "W1"]);
     expect(sections[0].total).toBe(3);
   });
@@ -46,15 +46,28 @@ describe("buildBubbleSections", () => {
     const [s] = buildBubbleSections([bubble("b1", "Pocket A", many)]);
     expect(s.listings).toHaveLength(BUBBLE_EMAIL_ROW_CAP);
     expect(s.total).toBe(10);
-    expect(s.collapsed).toBe(false);
+    expect(s.highVolume).toBe(false);
   });
 
-  it("collapses chronically noisy bubbles to a count-only section", () => {
+  it("flags a noisy bubble as high volume but STILL sends rows", () => {
+    // The regression this guards: a busy area used to render as a bare count and no homes.
+    // Toronto/Mississauga/Brampton all clear this threshold every night, so that was the
+    // normal nightly email for anyone tracking a city — and the reason they unsubscribed.
     const many = Array.from({ length: BUBBLE_COLLAPSE_THRESHOLD + 1 }, (_, i) => listing(`W${i}`, i));
     const [s] = buildBubbleSections([bubble("b1", "Half of Brampton", many, many.length)]);
-    expect(s.collapsed).toBe(true);
-    expect(s.listings).toHaveLength(0);
+    expect(s.highVolume).toBe(true);
+    expect(s.listings).toHaveLength(BUBBLE_EMAIL_ROW_CAP);
     expect(s.total).toBe(BUBBLE_COLLAPSE_THRESHOLD + 1);
+  });
+
+  it("carries filterLabel through, and leaves it null when the area alerts on everything", () => {
+    const [labelled, bare] = buildBubbleSections([
+      { ...bubble("b1", "Filtered Area", [listing("W1", 1)]), filterLabel: "3+ bd · Detached" },
+      bubble("b2", "Open Area", [listing("W2", 2)]),
+    ]);
+    expect(labelled.filterLabel).toBe("3+ bd · Detached");
+    // null (not undefined) is what the digest tests to decide who needs the filter nudge.
+    expect(bare.filterLabel).toBeNull();
   });
 
   it("de-dups a listing appearing in two bubbles — first bubble wins", () => {

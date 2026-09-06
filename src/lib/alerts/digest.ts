@@ -187,14 +187,6 @@ function bubbleSectionHtml(b: BubbleSection): string {
     ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">filtered to: ${b.filterLabel}</div>`
     : "";
   const title = `<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:14px;">${b.bubbleName}</div>${filterLine}`;
-  if (b.collapsed) {
-    return `${title}
-      <div style="font-size:13px;color:#475569;margin-top:4px;">
-        ${b.total} new listings appeared in this area —
-        <a href="${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}" style="color:#0891b2;text-decoration:none;font-weight:600;">view them in the app</a>.
-        Tip: smaller areas make sharper alerts.
-      </div>`;
-  }
   const rows = b.listings
     .map(
       (l) => `
@@ -213,13 +205,62 @@ function bubbleSectionHtml(b: BubbleSection): string {
       </td></tr>`
     )
     .join("");
+  // A busy area names its full count in words rather than as a bare "+N more", because
+  // there the number IS the point: 143 is the reason to go and narrow it down.
+  const areaUrl = `${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}`;
+  const more = b.total - b.listings.length;
   const overflow =
-    b.total > b.listings.length
-      ? `<div style="font-size:12px;margin-top:6px;">
-           <a href="${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}" style="color:#0891b2;text-decoration:none;font-weight:600;">+${b.total - b.listings.length} more in ${b.bubbleName} →</a>
-         </div>`
-      : "";
+    more <= 0
+      ? ""
+      : b.highVolume
+        ? `<div style="font-size:12px;color:#475569;margin-top:6px;">
+             ${b.total} new homes came up in ${b.bubbleName}. These are the ${b.listings.length} newest —
+             <a href="${areaUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">see them all →</a>
+           </div>`
+        : `<div style="font-size:12px;margin-top:6px;">
+             <a href="${areaUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">+${more} more in ${b.bubbleName} →</a>
+           </div>`;
   return `${title}<table style="width:100%;border-collapse:collapse;">${rows}</table>${overflow}`;
+}
+
+/**
+ * "Toronto", "Toronto and Barrhaven", "Toronto, Barrhaven and Kanata", then "your areas".
+ * Past three names the sentence stops being readable and the names stop being the point.
+ */
+function nameList(names: string[]): string {
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`;
+  return "your areas";
+}
+
+/**
+ * The one line that tells a reader they can narrow this email down.
+ *
+ * WHO SEES IT. Any area that sent EVERYTHING tonight — tested as `!filterLabel`, which is
+ * null in exactly the three cases that mean "no filter was applied": alert_scope 'all',
+ * scope 'filtered' over an empty lens (the identical query — see hasActiveLensFilters),
+ * and a pre-095 snapshot the worker could not translate. That is why the test is the
+ * label and not the stored scope: no new column, and no way for the three to drift apart.
+ *
+ * ONCE PER EMAIL, not once per area. Three copies of the same advice reads as nagging, and
+ * the advice is the same whichever area prompted it.
+ *
+ * Plain language per voice.md §5.1 — this is the widest, coldest channel we have, and half
+ * of these readers have never opened the terminal. No "alert scope", no "bubble", no
+ * "lens": say what they get now, and what they get if they act.
+ */
+function filterNudgeHtml(unfilteredNames: string[]): string {
+  if (unfilteredNames.length === 0) return "";
+  return `<div style="margin-top:16px;border-left:3px solid #0891b2;background:#f8fafc;padding:10px 12px;">
+      <div style="font-size:13px;color:#334155;line-height:1.5;">
+        You get every new home in ${nameList(unfilteredNames)}.
+        Set your filters and we send only the homes that match — your price, your bedrooms, your kind of home.
+      </div>
+      <div style="font-size:12px;margin-top:6px;">
+        <a href="${SITE}/dashboard" style="color:#0891b2;text-decoration:none;font-weight:600;">Set my filters →</a>
+      </div>
+    </div>`;
 }
 
 export function renderAlertsDigest(
@@ -242,8 +283,12 @@ export function renderAlertsDigest(
       `<table style="width:100%;border-collapse:collapse;">${dropRowsHtml(dropsShown)}</table>` +
       (p.drops.length > dropsShown.length ? overflowLine(p.drops.length - dropsShown.length) : "")
     : "";
+  // Areas that carried no filter tonight — they are the ones the nudge is for.
+  const unfilteredAreas = p.bubbles.filter((b) => !b.filterLabel).map((b) => b.bubbleName);
   const bubblesSection = p.bubbles.length
-    ? sectionHeader("New in your areas") + p.bubbles.map(bubbleSectionHtml).join("")
+    ? sectionHeader("New in your areas") +
+      p.bubbles.map(bubbleSectionHtml).join("") +
+      filterNudgeHtml(unfilteredAreas)
     : "";
 
   const preheader = "Every move on your watchlist — with the read behind each one.";
@@ -292,19 +337,26 @@ export function renderAlertsDigest(
     textParts.push(
       "New in your areas:\n" +
         p.bubbles
-          .map((b) =>
-            b.collapsed
-              ? `• ${b.bubbleName}${b.filterLabel ? ` [${b.filterLabel}]` : ""}: ${b.total} new listings — view in the app`
-              : `• ${b.bubbleName}${b.filterLabel ? ` [${b.filterLabel}]` : ""} (${b.total} new):\n` +
-                b.listings
-                  .map(
-                    (l) =>
-                      `   - ${l.address}${l.price != null ? ` — ${money(l.price)}` : ""}${l.brokerage ? ` — ${l.brokerage}` : ""}\n     ${listingUrl(l.listing_key)}`
-                  )
-                  .join("\n")
+          .map(
+            (b) =>
+              `• ${b.bubbleName}${b.filterLabel ? ` [${b.filterLabel}]` : ""} (${b.total} new):\n` +
+              b.listings
+                .map(
+                  (l) =>
+                    `   - ${l.address}${l.price != null ? ` — ${money(l.price)}` : ""}${l.brokerage ? ` — ${l.brokerage}` : ""}\n     ${listingUrl(l.listing_key)}`
+                )
+                .join("\n") +
+              (b.highVolume
+                ? `\n   ${b.total} new homes in ${b.bubbleName} — see them all: ${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}`
+                : "")
           )
           .join("\n")
     );
+    if (unfilteredAreas.length) {
+      textParts.push(
+        `You get every new home in ${nameList(unfilteredAreas)}. Set your filters and we send only the homes that match — your price, your bedrooms, your kind of home.\nSet my filters: ${SITE}/dashboard`
+      );
+    }
   }
   const text =
     textParts.join("\n\n") +
