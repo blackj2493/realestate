@@ -50,13 +50,19 @@ const TEST_TO = argOf("to");
 const FORCE_SCOPE = argOf("scope"); // 'province' | 'market'
 const FORCE_REGION = argOf("region");
 /**
- * Who the real run mails. 'saved' is ramp step 1 (docs/strategy §7): the users who have a
- * saved market and therefore get the personalised payload — the best first impression, and
- * the most engaged cohort we can identify without any open history to sort by. 'all' is
- * step 2. Defaults to 'saved', so a run started without thinking about it does the smaller,
- * safer thing.
+ * Who the real run mails. 'saved' is the users with a saved market, who get a personalised
+ * payload; 'all' adds everyone else, who get the province-wide Ontario edition.
+ *
+ * DEFAULT IS 'all' (owner decision 2026-09-06). It was 'saved' for the ramp, but the ramp
+ * is over: the first send went to everybody, and a user with nothing saved is precisely the
+ * user this stream exists for — they receive no other mail once the onboarding drip expires
+ * around day 30. That was 346 of 490 considered.
+ *
+ * THIS DEFAULT IS LOAD-BEARING FOR THE CRON, not just for a forgetful operator. A `schedule`
+ * trigger passes no inputs, so the workflow adds no --segment flag and the weekly send is
+ * whatever this line says. Changing it back to 'saved' silently drops 70% of the list.
  */
-const SEGMENT = argOf("segment") === "all" ? "all" : "saved";
+const SEGMENT = argOf("segment") === "saved" ? "saved" : "all";
 const MANAGE_URL = `${SITE}/account/emails`;
 
 /** Share of recipients skipped above which the run is a FAILURE, not a quiet no-op. */
