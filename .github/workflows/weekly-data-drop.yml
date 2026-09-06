@@ -62,10 +62,13 @@ on:
       segment:
         description: 'Who to send to'
         type: choice
-        default: saved
+        default: all
         options:
-          - saved   # only users with a saved market — ramp step 1 (127 people)
-          - all     # everyone not opted out — ramp step 2
+          - all     # everyone not opted out — the weekly default since 2026-09-06
+          - saved   # only users with a saved market (~118); use to narrow a one-off send
+        # NOTE: a `schedule` run passes NO inputs, so this default does not reach the cron —
+        # the weekly audience is the SEGMENT default in scripts/worker/dataDrop.ts. Both were
+        # moved to 'all' together; changing only one is how they would drift apart.
       # scope and region shape a TEST send only. The worker reads both inside its
       # `if (TEST_TO)` branch, so they cannot alter what a real run mails — but a dispatcher
       # who does not know that would believe otherwise, so the run step fails loudly instead.
