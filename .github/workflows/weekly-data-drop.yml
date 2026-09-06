@@ -31,22 +31,24 @@ name: Weekly Data Drop
 # GitHub dropped one outright on 2026-08-28.
 #
 # ─────────────────────────────────────────────────────────────────────────────
-# THE SCHEDULE IS DELIBERATELY OFF. Uncomment the two `schedule` lines below to arm it.
+# ARMED 2026-09-06 (owner decision). The cron above runs from the DEFAULT BRANCH, so it is
+# live from the merge and the first automatic send is the next Thursday.
 #
-# GitHub runs `schedule` from the DEFAULT BRANCH, so the cron goes live the moment this
-# merges — it would mail the entire list on the next Thursday with nobody having pressed
-# anything. That is the wrong way for a first send to happen. Until it is armed, this
-# workflow runs only when someone dispatches it by hand, which is also how the ramp in
-# docs/strategy/2026-08-28-weekly-data-drop.md §7 is meant to run.
+# Of the three preconditions this block used to list, two are met by the hand send that
+# goes out the same day: a real send has gone out and been read. The third is NOT:
+#   OPEN: SENDERS.dataDrop still sends from data@pureproperty.ca, the apex domain that
+#   also carries the nightly alerts and the login mail. A `send.` subdomain keeps bulk
+#   reputation away from transactional reputation, so a bad week for this stream cannot
+#   take the alerts down with it. At this list size the exposure is small, but it grows
+#   with every recipient — see senders.ts TODO(Unit 1).
 #
-# ARM IT when all three are true:
-#   1. the send subdomain is verified in Resend and SENDERS.dataDrop points at it,
-#   2. a real send has gone out by hand and been read on a phone,
-#   3. the first ramp step (segment: saved) has been sent and looked at.
+# The ramp itself has not been skipped: `segment` still DEFAULTS to `saved`, so the
+# scheduled Thursday run mails the people with a saved market, and widening to `all` stays
+# a deliberate act.
 # ─────────────────────────────────────────────────────────────────────────────
 on:
-  # schedule:
-  #   - cron: '40 11 * * 4'
+  schedule:
+    - cron: '40 11 * * 4'
   workflow_dispatch:
     inputs:
       dry_run:
