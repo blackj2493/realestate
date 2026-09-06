@@ -188,6 +188,30 @@ export function lastDataDropAt(
 }
 
 /**
+ * The headline kind this user last led with, from the newest `data_drop:` stamp — null when
+ * they have never had one, or the stamp predates the kind being encoded in the key.
+ *
+ * The key is "data_drop:<week>:<kind>", written that way so a rotation guard needs no extra
+ * storage. Ties are broken by the stamp VALUE (an exact ISO time), not by the week label,
+ * because two keys from the same week would otherwise be unordered.
+ */
+export function lastDataDropKind(
+  sent: Record<string, string> | null | undefined
+): string | null {
+  if (!sent) return null;
+  let newest: { at: number; kind: string } | null = null;
+  for (const [k, v] of Object.entries(sent)) {
+    if (!k.startsWith("data_drop:")) continue;
+    const parts = k.split(":");
+    if (parts.length < 3) continue; // pre-rotation stamp: week only, no kind
+    const at = Date.parse(v);
+    if (!Number.isFinite(at)) continue;
+    if (!newest || at > newest.at) newest = { at, kind: parts[2] };
+  }
+  return newest?.kind ?? null;
+}
+
+/**
  * May we send this user this week's Data Drop?
  *
  * Allowed only when ALL hold: not master-unsubscribed; the `data_drop` stream is on

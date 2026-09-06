@@ -35,6 +35,7 @@ import { buildDataDropPayload, isoWeekId, type LadderTrace } from "@/lib/dataDro
 import { loadDataDropInputs, scopeRegions, MAX_DATA_AGE_HOURS } from "@/lib/dataDrop/data";
 import {
   canSendDataDrop,
+  lastDataDropKind,
   digestSentToday,
   type EmailPrefsRow,
   type LifecycleRow,
@@ -313,6 +314,8 @@ async function main(): Promise<void> {
         continue;
       }
       const built = buildDataDropPayload({
+        // Per-reader rotation: demote whatever this person led with last time.
+        avoidKind: lastDataDropKind(lc?.sent),
         regions,
         rows: inputs.rows,
         competitionByCity: inputs.competitionByCity,
