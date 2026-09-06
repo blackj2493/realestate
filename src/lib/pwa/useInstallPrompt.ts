@@ -25,7 +25,7 @@ import {
 } from "./installPlatform";
 
 /** Chrome's non-standard install event — not in lib.dom. */
-interface BeforeInstallPromptEvent extends Event {
+export interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
@@ -71,6 +71,12 @@ interface InstallPromptState extends InstallState {
   deferred: BeforeInstallPromptEvent | null;
   standalone: boolean;
   iosSheetOpen: boolean;
+  /**
+   * Where a native install stands, for the confirmation toast. Chrome's dialog closes the
+   * moment the user taps "Install", but on Android the home-screen icon (a WebAPK) can take
+   * several seconds to land, and nothing on the page said so — the user had to go and look.
+   */
+  installStage: "idle" | "installing" | "installed";
 
   hydrate: () => void;
   /** Open Chrome's native install dialog. Resolves to what the user chose. */
@@ -93,6 +99,7 @@ export const useInstallPrompt = create<InstallPromptState>((set, get) => {
     deferred: null,
     standalone: false,
     iosSheetOpen: false,
+    installStage: "idle",
 
     hydrate: () => {
       if (get().hydrated || typeof window === "undefined") return;
@@ -131,6 +138,7 @@ export const useInstallPrompt = create<InstallPromptState>((set, get) => {
         await ev.prompt();
         const { outcome } = await ev.userChoice;
         track("pwa_install_outcome", { platform, source, outcome });
+        if (outcome === "accepted") set({ installStage: "installing" });
         if (outcome === "dismissed") get().snooze();
         return outcome;
       } catch {
@@ -164,7 +172,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("appinstalled", () => {
     const s = useInstallPrompt.getState();
     track("pwa_installed", { platform: currentPlatform(false) });
-    useInstallPrompt.setState({ deferred: null, installedAt: s.installedAt ?? Date.now() });
+    useInstallPrompt.setState({ deferred: null, installedAt: s.installedAt ?? Date.now(), installStage: "installed" });
     const { visits, dismissedAt, installedAt } = useInstallPrompt.getState();
     writeDurable({ visits, dismissedAt, installedAt });
   });
