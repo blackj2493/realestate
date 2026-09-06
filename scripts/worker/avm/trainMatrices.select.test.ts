@@ -65,3 +65,35 @@ describe('trainMatrices: the SELECT feeds every trained feature', () => {
     expect(SRC).toContain('assertFeaturesTrained');
   });
 });
+
+/**
+ * The staging write used to run one INSERT per row: 3,540 cohorts × 9 features + 3,540
+ * audit rows = 35,400 sequential round trips in one transaction. Its whole cost was
+ * latency × row count, so it finished in 8m36s on a quiet database (2026-08-30) and blew
+ * the workflow's 30-minute timeout on a busy one (2026-09-06, when the Weekly Ghost
+ * Reconcile landed in the same second) — losing the month's retrain with nothing written.
+ *
+ * These are source-shape assertions, not behaviour: the write needs a live Postgres, so
+ * what a unit test can defend is that nobody quietly restores the row-at-a-time loop.
+ */
+describe('trainMatrices: the staging write stays set-based', () => {
+  const APPLY_BLOCK = SRC.slice(SRC.indexOf("await client.query('BEGIN')"), SRC.indexOf("await client.query('COMMIT')"));
+
+  it('inserts through unnest, into both staging tables', () => {
+    expect(APPLY_BLOCK).toContain('avm_multiplier_matrix_staging (cohort_rung');
+    expect(APPLY_BLOCK).toContain('avm_audit_report_staging (cohort_rung');
+    expect([...APPLY_BLOCK.matchAll(/FROM unnest\(/g)]).toHaveLength(2);
+  });
+
+  it('issues no INSERT with per-row VALUES placeholders', () => {
+    expect(APPLY_BLOCK).not.toMatch(/INSERT INTO[\s\S]{0,300}?VALUES\s*\(\s*\$1/);
+  });
+
+  it('counts the staged rows and rolls back a short write before COMMIT', () => {
+    // unnest pads mismatched array lengths with NULL rather than throwing, so a partial
+    // challenger would otherwise commit and merely lose the promotion gate on merit.
+    expect(APPLY_BLOCK).toContain('Staging write is short');
+    expect(APPLY_BLOCK).toMatch(/count\(\*\) FROM avm_multiplier_matrix_staging/);
+    expect(APPLY_BLOCK).toMatch(/count\(\*\) FROM avm_audit_report_staging/);
+  });
+});
