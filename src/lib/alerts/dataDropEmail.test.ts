@@ -134,7 +134,7 @@ describe("Data Drop subject lines", () => {
     kind: "price" as const,
     figure,
     unit: "",
-    lede: "is the middle sold price across the markets we cover.",
+    lede: "is the median sold price across the markets we cover.",
     because: "That is <b>down 5.4%</b> from a year ago.",
   });
 

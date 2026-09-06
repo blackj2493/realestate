@@ -150,7 +150,7 @@ function subjectFor(p: DataDropPayload): { subject: string; preheader: string } 
     default:
       // The province figure is a MEDIAN OF THE MARKET MEDIANS. It describes a typical
       // MARKET, not a typical HOME. `rungPrice` in payload.ts hedges its lede for exactly
-      // that reason — "the middle sold price across the markets we cover" — so the subject
+      // that reason — "the median sold price across the markets we cover" — so the subject
       // must not then make the stronger claim the lede deliberately refused. This is the
       // most-read line in the email, on the path that reaches 70.6% of the base.
       //
@@ -159,7 +159,7 @@ function subjectFor(p: DataDropPayload): { subject: string; preheader: string } 
       return {
         subject:
           p.scope === "province"
-            ? `The middle sold price across our markets is ${p.headline.figure}`
+            ? `The median sold price across our markets is ${p.headline.figure}`
             : `A typical ${r} home sold for ${p.headline.figure} last month`,
         preheader: plain(p.headline.because).slice(0, 120),
       };
@@ -292,8 +292,8 @@ function tensionBlock(p: DataDropPayload): string {
   // Name the places in the sentence too. The chart shows the shape; the sentence has to
   // survive an images-off client and a reader who only skims the bold line.
   const claim = mid
-    ? `<b>But the province-wide number hides your city.</b> ${esc(high.region)} is at ${high.pct.toFixed(0)}%. ${esc(low.region)} is at ${low.pct.toFixed(0)}%. The ${mid.pct.toFixed(0)}% average describes neither one.`
-    : `<b>But the province-wide number hides your city.</b> ${esc(high.region)} is at ${high.pct.toFixed(0)}% and ${esc(low.region)} is at ${low.pct.toFixed(0)}%.`;
+    ? `<b>The province-wide number hides your city.</b> Last month ${high.pct.toFixed(0)}% of ${esc(high.region)} sales closed above the asking price, against ${low.pct.toFixed(0)}% in ${esc(low.region)}. ${esc(mid.region)}'s ${mid.pct.toFixed(0)}% sits between them and matches neither.`
+    : `<b>The province-wide number hides your city.</b> Last month ${high.pct.toFixed(0)}% of ${esc(high.region)} sales closed above the asking price, against ${low.pct.toFixed(0)}% in ${esc(low.region)}.`;
 
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:24px 0 0;">
@@ -411,7 +411,7 @@ export function renderDataDropEmail(i: RenderInput, now = Date.now()): Rendered 
   t.push(`${p.headline.figure}${p.headline.unit} ${plain(p.headline.lede)}`, "");
   t.push(plain(p.headline.because), "");
   if (p.scope === "province" && p.spread) {
-    t.push("But the province-wide number hides your city.", "");
+    t.push("The province-wide number hides your city.", "");
     t.push("  Share of sales closing above the asking price, last month:");
     const pts = [p.spread.high, ...(p.spread.mid ? [p.spread.mid] : []), p.spread.low];
     const mx = Math.max(...pts.map((x) => x.pct)) || 1;

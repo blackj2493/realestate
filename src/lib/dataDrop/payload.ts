@@ -461,7 +461,7 @@ const rungPrice: Rung = (i) => {
     figure: compactMoney(i.row.medianPrice),
     unit: "",
     lede: province
-      ? `is the middle sold price across the markets we cover.`
+      ? `is the median sold price across the markets we cover.`
       : `is what a typical ${i.region} home sold for last month.`,
     because: isNum(yoy)
       ? `That is <b>${yoy >= 0 ? "up" : "down"} ${pct(Math.abs(yoy), 1)}</b> from a year ago.`
