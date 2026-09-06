@@ -84,6 +84,13 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          # Sends per second for the digest batch (src/lib/alerts/sendPacer.ts, default 2).
+          # Resend's limit is 10 req/s PER TEAM on every plan, not per plan tier — upgrading
+          # does not raise it, and they lift it only on request. 5 is half the ceiling, which
+          # leaves room for the onboarding step below (same team, same second) and for the
+          # retry ladder to absorb a burst rather than be the thing that trips it.
+          # Do NOT raise this to 10: at the ceiling every retry is already too late.
+          RESEND_SENDS_PER_SECOND: '5'
         run: npx tsx scripts/worker/alerts.ts 2>&1 | tee -a "$SUMMARY_FILE"
 
       # Onboarding drip — the milestone-gated welcome sequence (engagement plan WS1.2).
