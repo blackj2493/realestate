@@ -1,5 +1,14 @@
+/**
+ * Per-build id baked into the client so the service worker registers as /sw.js?v=<id>:
+ * a new deploy is a new worker, and the old cache is dropped on activate. Vercel's
+ * commit SHA in production; a timestamp locally so `next build && next start` never
+ * serves a stale worker.
+ */
+const BUILD_ID = (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 12) || `local-${Date.now()}`;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: { NEXT_PUBLIC_BUILD_ID: BUILD_ID },
   // PostHog reverse proxy. Analytics requests go to /ingest on our own domain and
   // are rewritten server-side to PostHog's US cloud — this defeats the ~20-30% of
   // ad-blockers that block calls to *.posthog.com. `skipTrailingSlashRedirect`
@@ -17,6 +26,20 @@ const nextConfig = {
     // keep them working with a permanent (308) redirect.
     return [
       { source: '/terminal', destination: '/properties', permanent: true },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        // The service worker script must never be served stale: the browser re-fetches
+        // it to detect a new build, and a CDN-cached copy would hide the update (and the
+        // kill switch) until it expired.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
     ];
   },
   images: {
