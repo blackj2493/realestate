@@ -11,6 +11,7 @@
 // single unpaginated read silently truncates the tree (dropping whole cities like
 // Vaughan whose communities land past row #1000). Both reads are therefore paged
 // with a stable ORDER BY so range pagination is deterministic.
+import { unstable_cache } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { buildCohortTree, type CohortRow, type CityRegionPair, type CohortTree } from '@/lib/avm/cohorts';
@@ -18,6 +19,38 @@ import { buildCohortTree, type CohortRow, type CityRegionPair, type CohortTree }
 let treeCache: { data: CohortTree; at: number } | null = null;
 const TREE_TTL_MS = 60 * 60 * 1000; // 1h
 const PAGE = 1000; // PostgREST caps a single response at 1000 rows.
+
+/**
+ * Data Cache key version — BUMP whenever CohortTree's SHAPE changes.
+ *
+ * unstable_cache entries outlive a deploy, so a release that adds a field to the tree would
+ * otherwise keep serving hour-old entries that lack it, with nothing failing and nothing
+ * logged. Changing a VALUE needs no bump; adding or removing a field does.
+ */
+export const COHORT_TREE_CACHE_VERSION = 'v1';
+
+/**
+ * WHY THERE ARE TWO CACHES.
+ *
+ * `treeCache` is in-process, so it dies with the lambda instance that holds it. That is the
+ * whole cache this loader used to have, and on a low-traffic public page it almost never
+ * survived to a second visitor: measured on prod 2026-09-06, three consecutive cold hits of
+ * /whats-my-home-hiding took 16.8s, 16.7s and 19.2s, and two of them then rendered an EMPTY
+ * neighbourhood picker because loadCohortTreeSafe degrades rather than 500s.
+ *
+ * Most of that time was migration 140's problem (get_distinct_cohort_cities seq-scanned 311k
+ * listings and blew the 8s PostgREST statement_timeout, twice, thanks to withRetry). But the
+ * per-instance cache is the reason EVERY cold visitor paid it instead of one. unstable_cache
+ * is shared across instances and persists, so the rebuild is now paid once per revalidate
+ * window by whoever happens to be first.
+ *
+ * Order matters: process-local first (free), Data Cache second, database last.
+ */
+function buildTreeCached(): Promise<CohortTree> {
+  return unstable_cache(buildTreeFromDb, ['avm-cohort-tree', COHORT_TREE_CACHE_VERSION], {
+    revalidate: TREE_TTL_MS / 1000,
+  })();
+}
 
 // The cold rebuild issues ~2,900 rows over several round-trips, which under IO load
 // can trip Postgres' statement_timeout (57014) or a transient network error. Those
@@ -79,16 +112,19 @@ async function fetchAllPairs(supabase: SupabaseClient): Promise<CityRegionPair[]
  * Throws on any Supabase/Postgres error (e.g. 57014 statement timeout) —
  * callers must catch, or use loadCohortTreeSafe() for public surfaces.
  */
-export async function loadCohortTree(): Promise<CohortTree> {
-  if (treeCache && Date.now() - treeCache.at < TREE_TTL_MS) return treeCache.data;
-
+async function buildTreeFromDb(): Promise<CohortTree> {
   const supabase = getServiceRoleClient();
   const [cohorts, pairs] = await Promise.all([
     withRetry(() => fetchAllAudit(supabase), 'audit'),
     withRetry(() => fetchAllPairs(supabase), 'pairs'),
   ]);
+  return buildCohortTree(cohorts, pairs);
+}
 
-  const tree = buildCohortTree(cohorts, pairs);
+export async function loadCohortTree(): Promise<CohortTree> {
+  if (treeCache && Date.now() - treeCache.at < TREE_TTL_MS) return treeCache.data;
+
+  const tree = await buildTreeCached();
   treeCache = { data: tree, at: Date.now() };
   return tree;
 }
