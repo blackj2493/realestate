@@ -5,6 +5,19 @@ vi.mock('@/lib/supabase/client', () => ({
   getServiceRoleClient: vi.fn(),
 }));
 
+// The loader now puts a SHARED Data Cache in front of the DB (the per-instance cache below
+// dies with the lambda, which is why every cold visitor used to pay the rebuild). In tests
+// unstable_cache must be a pass-through so the async fn actually runs — and we record the
+// key it was given, because the shape version living in that key is what stops a
+// post-deploy entry of the OLD shape being served for a full hour.
+const cache = vi.hoisted(() => ({ keys: [] as unknown[][] }));
+vi.mock('next/cache', () => ({
+  unstable_cache: (fn: (...a: unknown[]) => unknown, keys: unknown[]) => {
+    cache.keys.push(keys);
+    return fn;
+  },
+}));
+
 // Chainable query stub: every builder method returns itself; awaiting it
 // resolves to the given payload (minimal then-only thenable; supabase-js
 // builders are awaited, never .catch()-chained here).
@@ -83,5 +96,27 @@ describe('loadCohortTreeSafe — public-page resilience (audit CRITICAL-5)', () 
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('cohort tree cache key', () => {
+  it('carries the shape version, so a stale-shape entry cannot outlive a deploy', async () => {
+    cache.keys.length = 0;
+    const mod = await freshModule({ data: [], error: null });
+    await mod.loadCohortTreeSafe();
+
+    expect(cache.keys.length).toBeGreaterThan(0);
+    const key = cache.keys[0];
+    expect(key).toContain('avm-cohort-tree');
+    expect(key).toContain(mod.COHORT_TREE_CACHE_VERSION);
+  });
+
+  it('serves the process-local tree without re-entering the shared cache', async () => {
+    const mod = await freshModule({ data: [], error: null });
+    await mod.loadCohortTreeSafe();
+    const afterFirst = cache.keys.length;
+    await mod.loadCohortTreeSafe();
+    // Second call inside the TTL is answered in-process — free, no Data Cache round trip.
+    expect(cache.keys.length).toBe(afterFirst);
   });
 });
