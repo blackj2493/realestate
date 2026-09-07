@@ -5,23 +5,29 @@
  * /api/vow/accept-terms, then returns the user to where they were headed (`next`).
  * Mirrors the §3 attestations on /apply, but for an authenticated account.
  *
- * In `firstRun` mode (a brand-new account that arrived with no destination — see
- * /welcome) this also asks for ONE starting market and lands the user in the map
- * terminal instead of the dashboard. That single tap does double duty: it seeds
- * `?city=` so the terminal opens somewhere real, and it writes config.regions so the
- * dashboard already has content the first time the user visits it — no second setup
- * step. The chip applies on tap with no separate commit button, deliberately: the
- * dashboard's old stage-then-commit picker lost users who did the work but never
- * pressed the button (see MarketPicker).
+ * IT ALSO REQUIRES ONE STARTING MARKET, from every account, with no way past it.
  *
- * A signup that arrived FROM a listing is not asked at all: `seedMarket` carries that
- * property's city (resolved in /welcome) and we write it silently. Asking someone who is
- * three clicks into one specific home which city they care about is a question we can
- * already answer, and the interruption costs more than the answer is worth.
+ * Why it is mandatory. A saved area is the only thing that makes an account reachable:
+ * the nightly worker builds a digest for a user who owns a watchlist row or a city alert
+ * row and nobody else, so an account with no area gets no mail, ever. The market chips
+ * used to be optional, with the answer defaulting silently to Toronto — and the answer
+ * only reached localStorage anyway, so even a deliberate tap subscribed nobody. Asking
+ * plainly, once, at the one moment every account passes through is the cheapest honest
+ * way to earn permission to write to someone.
  *
- * Either way a market gets written, because either way this is the account's FIRST-EVER
- * acceptance — /welcome redirects past this form once terms are on file — and leaving
- * config.regions empty is what puts a new user on a blank dashboard.
+ * Why it is asked of EVERYONE, including a signup that arrived from a listing. We can
+ * often infer that reader's city (see seedMarket.ts) and we still do — it becomes the
+ * suggested chip, so their answer is one tap on a pre-named button rather than a search.
+ * But inference returns null whenever the destination names no place, and silently
+ * configuring an account from a URL is a worse deal for the user than a visible question:
+ * this way what we are about to save is on screen before they agree to it.
+ *
+ * The chip applies on tap with no separate commit button, deliberately: the dashboard's
+ * old stage-then-commit picker lost users who did the work but never pressed the button
+ * (see MarketPicker).
+ *
+ * The choice is persisted SERVER-SIDE by the route, not here — see seedSignupRegion for
+ * why a localStorage write plus a debounced push could not do this job.
  */
 
 import { useState, useEffect } from "react";
@@ -36,10 +42,6 @@ import {
   hasForeignWorkspace,
   resetLocalWorkspace,
 } from "@/lib/dashboard/config";
-
-/** Where an unseeded first-run user lands if they never tap a market. Matches the
- *  terminal map's INITIAL_VIEW_STATE, so the opening camera needs no correcting fly. */
-const DEFAULT_MARKET = "Toronto";
 
 function CheckRow({
   checked,
@@ -71,11 +73,11 @@ export default function AcceptTermsForm({
   seedMarket = null,
 }: {
   next: string;
-  /** Brand-new account with no destination — seed a market and open the terminal. */
+  /** Brand-new account with no destination — open the map terminal instead of `next`. */
   firstRun?: boolean;
   /**
-   * Market inferred from the page this signup came from (see seedMarket.ts). Used only
-   * when we are NOT asking — a listing-origin signup already told us where it cares about.
+   * Market inferred from the page this signup came from (see seedMarket.ts). Offered as
+   * the suggested chip so a listing-origin signup answers in one tap; never auto-applied.
    */
   seedMarket?: string | null;
 }) {
@@ -87,26 +89,32 @@ export default function AcceptTermsForm({
   const [error, setError] = useState("");
   const [market, setMarket] = useState<string | null>(null);
   // Whether a PREVIOUS account left a workspace behind in this browser's localStorage.
-  // Read after hydration (localStorage is client-only) purely so we can say so in the UI;
-  // the picker itself no longer depends on it.
+  // Read after hydration (localStorage is client-only) purely so we can say so in the UI.
   const [foreignWorkspace, setForeignWorkspace] = useState(false);
 
-  // Not gated on firstRun: a listing-origin signup writes to this same workspace, so it
-  // needs the warning too.
   useEffect(() => {
     setForeignWorkspace(hasForeignWorkspace());
   }, []);
 
+  // The inferred city first, then the standing list. A listing in Guelph is not a quick
+  // pick, so without this the one market we are most confident about is the one market
+  // the user cannot choose.
+  const choices =
+    seedMarket && !QUICK_PICK_MARKETS.some((m) => m.name === seedMarket)
+      ? [seedMarket, ...QUICK_PICK_MARKETS.map((m) => m.name)]
+      : QUICK_PICK_MARKETS.map((m) => m.name);
+
   const allChecked = notAgent && bonaFide && agree;
-  // A first-ever acceptance ALWAYS asks. An earlier version skipped the question when
-  // localStorage already held a region — but that storage is not scoped to an account.
-  // Deleting a user in Supabase (or just signing out) leaves it intact, so a genuinely
-  // new account silently inherited the previous one's city and never saw the picker.
-  const askMarket = firstRun;
+  // Both halves are required. An account with no area is an account we can never mail.
+  const ready = allChecked && market !== null;
 
   const submit = async () => {
     if (!allChecked) {
       setError("All three confirmations are required.");
+      return;
+    }
+    if (!market) {
+      setError("Choose the area you want to follow.");
       return;
     }
     setError("");
@@ -115,30 +123,27 @@ export default function AcceptTermsForm({
       const res = await fetch("/api/vow/accept-terms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Server re-verifies these — the disabled button is UX, not the security boundary.
-        body: JSON.stringify({ notAgent, bonaFide, agree }),
+        // Server re-verifies all of this — the disabled button is UX, not the security
+        // boundary — and it is the server that stores the market and creates the alert row.
+        body: JSON.stringify({ notAgent, bonaFide, agree, region: market }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Could not record your acceptance. Please try again.");
       }
 
-      // Asked (first run) or inferred from the listing they came from — either way this is
-      // the account's first-ever acceptance, so write a starting market rather than leave
-      // the dashboard empty.
-      const city = firstRun ? (market ?? DEFAULT_MARKET) : seedMarket;
-      // Best-effort: a storage failure must never block entry to the terminal.
+      // Local mirror, so the dashboard paints the right area instantly on first open. The
+      // durable copy is already written server-side by the route above; this is a cache,
+      // which is why a storage failure is swallowed rather than surfaced.
       try {
         // Clear anything a PREVIOUS account left in this browser before seeding. The
         // workspace is localStorage, not Supabase, so it survives account deletion and
-        // sign-out — leaving a new account with the old one's cities, persona and
-        // boards, and greeted by the old one's name (DashboardClient reads
-        // getProfile()?.fullName). A brand-new account starts clean on this device.
-        // Runs on BOTH paths: a listing-origin signup used to skip this and inherit it.
+        // sign-out — leaving a new account with the old one's cities, persona and boards,
+        // and greeted by the old one's name (DashboardClient reads getProfile()?.fullName).
         if (hasForeignWorkspace()) resetLocalWorkspace();
-        if (city) saveConfig({ ...getConfig(), regions: [city] });
+        saveConfig({ ...getConfig(), regions: [market] });
       } catch {
-        /* private mode / quota — never block entry over a convenience seed */
+        /* private mode / quota — never block entry over a convenience cache */
       }
 
       if (firstRun) {
@@ -148,9 +153,9 @@ export default function AcceptTermsForm({
         // bounds scope it and results follow the drag. That is the same reasoning the
         // ?lat/?lng seed already documents for address entry — reuse it rather than
         // inventing a second camera param.
-        // Non-null on this path (market ?? DEFAULT_MARKET); the fallback only satisfies
-        // the widened type shared with the inferred-seed path.
-        const cam = marketCamera(city ?? DEFAULT_MARKET);
+        // A market off the quick-pick list (the inferred chip) has no stored camera; the
+        // terminal's own INITIAL_VIEW_STATE is the right fallback, not another city's.
+        const cam = marketCamera(market);
         router.replace(
           cam ? `/properties?lat=${cam.lat}&lng=${cam.lng}&z=${cam.zoom}` : "/properties"
         );
@@ -180,53 +185,49 @@ export default function AcceptTermsForm({
         only.
       </CheckRow>
 
-      {askMarket && (
-        <div className="border-t border-border pt-4">
-          <p className="terminal-font text-[11px] uppercase tracking-wider text-muted-foreground">
-            Where do you want to start?
-          </p>
-          <div role="group" aria-label="Starting market" className="mt-3 flex flex-wrap gap-2">
-            {QUICK_PICK_MARKETS.map(({ name: city }) => {
-              const active = market === city;
-              return (
-                <button
-                  key={city}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setMarket(active ? null : city)}
-                  className={cn(
-                    "min-h-[36px] border px-3 py-1.5 text-xs transition-colors",
-                    active
-                      ? "border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-                      : "border-border bg-card text-muted-foreground hover:border-cyan-600/60 hover:text-foreground"
-                  )}
-                >
-                  {city}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            Optional — you can search any area once you&rsquo;re in, and add more later.
-          </p>
-        </div>
-      )}
-
-      {/* Inferred instead of asked. Say what we're setting up rather than silently
-          configuring someone's account behind a Terms checkbox. */}
-      {!askMarket && seedMarket && (
-        <p className="border-t border-border pt-4 text-[11px] leading-snug text-muted-foreground">
-          We&rsquo;ll set your dashboard up for{" "}
-          <span className="text-foreground">{seedMarket}</span> — change it any time.
+      <div className="border-t border-border pt-4">
+        <p className="terminal-font text-[11px] uppercase tracking-wider text-muted-foreground">
+          Which area do you want to follow?
         </p>
-      )}
+        <div role="group" aria-label="Starting market" className="mt-3 flex flex-wrap gap-2">
+          {choices.map((city) => {
+            const active = market === city;
+            return (
+              <button
+                key={city}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setMarket(active ? null : city)}
+                className={cn(
+                  "min-h-[36px] border px-3 py-1.5 text-xs transition-colors",
+                  active
+                    ? "border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                    : "border-border bg-card text-muted-foreground hover:border-cyan-600/60 hover:text-foreground"
+                )}
+              >
+                {city}
+                {city === seedMarket && !active && (
+                  <span className="ml-1.5 text-[10px] text-cyan-700 dark:text-cyan-400">
+                    suggested
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {/* Say what the choice buys them. "Pick one" with no reason reads as a form field;
+            the reason is the whole point, and it is also the consent we rely on. */}
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          We&rsquo;ll email you what sells and what comes up here. Add more areas or turn this off
+          any time.
+        </p>
+      </div>
 
-      {/* Don't wipe someone's saved setup silently — say so before it happens. Applies to
-          both paths: the inferred seed writes to this same workspace. */}
+      {/* Don't wipe someone's saved setup silently — say so before it happens. */}
       {foreignWorkspace && (
         <p className="text-[11px] leading-snug text-amber-700 dark:text-amber-300">
-          This browser still has a saved workspace from a previous account. Continuing
-          replaces it with your own.
+          This browser still has a saved workspace from a previous account. Continuing replaces it
+          with your own.
         </p>
       )}
 
@@ -247,7 +248,7 @@ export default function AcceptTermsForm({
       <button
         type="button"
         onClick={submit}
-        disabled={!allChecked || loading}
+        disabled={!ready || loading}
         className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-500 px-4 py-2.5 text-sm font-bold uppercase tracking-wider text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"
       >
         {loading ? (

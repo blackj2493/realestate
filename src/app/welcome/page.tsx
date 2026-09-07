@@ -5,15 +5,19 @@
  *
  * This is also the ONLY reliable first-run signal we have: `hasAcceptedTerms` is false
  * exactly once per account, and every sign-in funnels through here (see postSignInPath).
- * So when a brand-new account arrives with NO explicit destination, we treat it as a
- * signup rather than a navigation and hand AcceptTermsForm the first-run flow — pick one
- * market, land in the map terminal. Previously every such user was dropped on /dashboard,
- * which renders almost nothing until regions are configured (see DashboardClient's
- * `hasRegions` gate), so the highest-intent moment was spent on a setup chore.
+ * That makes it the one place where asking every new account for a starting market is
+ * possible at all — so AcceptTermsForm now REQUIRES one from everybody, because an
+ * account with no saved area is one the nightly digest can never mail (see that file, and
+ * seedSignupRegion for where the answer is stored).
  *
- * An EXPLICIT `next` (a gated listing teaser, /analytics, a shared compare link) always
- * wins — that user already told us where they were going, and returning them there with
- * the gate open is the strongest flow we have. Only intent-less signups get redirected.
+ * `firstRun` no longer decides whether we ask — only where the user LANDS. A brand-new
+ * account with no explicit destination goes to the map terminal, because /dashboard
+ * renders almost nothing until regions are configured (DashboardClient's `hasRegions`
+ * gate) and spending the highest-intent moment on a setup chore is what that change fixed.
+ *
+ * An EXPLICIT `next` (a gated listing teaser, /analytics, a shared compare link) still
+ * wins for the destination — that user already told us where they were going, and
+ * returning them there with the gate open is the strongest flow we have.
  */
 
 import { redirect } from "next/navigation";
@@ -30,13 +34,15 @@ import AcceptTermsForm from "@/components/auth/AcceptTermsForm";
 export const dynamic = "force-dynamic";
 
 /**
- * The market to seed a listing-origin signup with, inferred from where they're headed.
+ * The market to SUGGEST to a listing-origin signup, inferred from where they're headed.
  *
- * Best-effort by design: this only ever ADDS a starting city to an otherwise empty
- * workspace, so a miss costs nothing and must never block terms acceptance. The listing
- * lookup is the same cached read the listing page itself just did (unstable_cache, keyed
- * by ListingKey), so in the common flow — read listing, sign up, come back — it is a warm
- * cache hit rather than a new query on the critical path.
+ * Best-effort by design: it preselects nothing and decides nothing — it only puts a
+ * pre-named chip at the front of the picker so a reader three clicks into one home answers
+ * in one tap instead of hunting. A miss costs that convenience and nothing else, and must
+ * never block terms acceptance. The listing lookup is the same cached read the listing
+ * page itself just did (unstable_cache, keyed by ListingKey), so in the common flow —
+ * read listing, sign up, come back — it is a warm cache hit, not a new query on the
+ * critical path.
  */
 async function inferSeedMarket(explicitNext: string | null): Promise<string | null> {
   const source = marketSourceFromNext(explicitNext);
@@ -69,11 +75,12 @@ export default async function WelcomePage({
   if (!user) redirect(explicitNext ? `/login?next=${encodeURIComponent(explicitNext)}` : "/login");
   if (await hasAcceptedTerms(user.id)) redirect(safeNext);
 
-  // Not accepted + nothing worth honouring = first-ever session: offer the market seed
-  // and open the terminal. See isFirstRunEntry for why /dashboard counts as "nothing".
+  // Not accepted + nothing worth honouring = first-ever session: open the terminal rather
+  // than `next`. See isFirstRunEntry for why /dashboard counts as "nothing". Everyone is
+  // asked for a market either way — this only picks the landing page.
   const firstRun = isFirstRunEntry(explicitNext);
-  // A signup WITH a destination skips the picker, so infer its market instead of leaving
-  // the workspace empty. Only worth resolving when we're not going to ask anyway.
+  // Only a destination can name a place, so a first-run entry has nothing to infer from
+  // and we skip the lookup entirely rather than pay for a guaranteed null.
   const seedMarket = firstRun ? null : await inferSeedMarket(explicitNext);
 
   return (
@@ -93,9 +100,8 @@ export default async function WelcomePage({
             VOW Access Terms
           </h1>
           <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted-foreground">
-            {firstRun
-              ? "One step before you can view sold data and valuations — then pick where you want to start."
-              : "One step before you can view sold data and valuations. Confirm the following to unlock the terminal."}
+            One step before you can view sold data and valuations — then tell us which area
+            to follow for you.
           </p>
 
           <div className="mt-6">
