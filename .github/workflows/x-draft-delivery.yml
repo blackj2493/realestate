@@ -1,0 +1,102 @@
+name: X Draft Delivery
+
+# Sends the day's X drafts to Telegram.
+#
+# WHAT PROBLEM THIS SOLVES. The content routine has drafted X posts for every angle since
+# 2026-08-18 and opens a PR with them each morning. Nineteen of those PRs are open and
+# none has ever been merged — roughly seventy-six finished X posts nobody has read. The
+# drafting works; only the delivery was missing. The Reddit monitor's real advantage is
+# that its output arrives on a phone, so this gives the X drafts the same door.
+#
+# NOTHING IS POSTED TO X. It cannot be: X has no free API, and ROUTINE.md's posture is
+# draft-only with a human in the loop by design. This reads a PR and sends a message.
+#
+# ONE RUNNER, deliberately. The Reddit monitor learned this the expensive way — a CI job
+# and a local scheduled task both wrote the same dedupe table, so every lead was claimed
+# by whichever fired first and the other runner's alert never arrived (see
+# reddit-monitor.yml). There is no local twin of this job, and there should not be one.
+#
+# DEDUPE is a marker comment on the content PR, so a re-run or a manual dispatch will not
+# send twice, and you can see on the PR itself whether a day went out. No table, no
+# migration, nothing to drift.
+#
+# SCHEDULE. The routine opens its PR around 12:10 UTC; this runs at 12:40 UTC to give it
+# room. If the PR is late, the run finds yesterday's PR already marked and sends nothing —
+# the next day picks it up. Missing a day is a latency cost, not a lost draft, because the
+# PR stays open.
+#
+# REQUIRED SECRETS — without both, the job fails loudly rather than skipping quietly:
+#   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID   (the same chat the Reddit alerts use)
+# GITHUB_TOKEN is provided automatically and needs only read access to PRs plus write
+# access to issue comments for the marker.
+
+on:
+  schedule:
+    - cron: '40 12 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print the messages instead of sending them'
+        type: boolean
+        default: false
+      force:
+        description: 'Send again even if the PR is already marked delivered'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  # The dedupe marker is an issue comment on the content PR.
+  pull-requests: write
+
+concurrency:
+  group: x-draft-delivery
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    # `shell: bash` is load-bearing: it runs every step with `-eo pipefail`, where the
+    # DEFAULT run shell is `bash -e` with NO pipefail. Same reason reddit-monitor.yml sets
+    # it — a piped step would otherwise report a GREEN job for a failing script (PR #498).
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Deliver X drafts to Telegram
+        timeout-minutes: 5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          npx tsx scripts/marketing/xDraftDeliver.ts $ARGS
+
+      - name: Notify operator (failures only)
+        # The digest itself is the success signal. A daily "ran OK" email is how an
+        # operator learns to ignore the sender — same reasoning as reddit-monitor.yml.
+        if: failure()
+        env:
+          JOB_NAME: X Draft Delivery
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
+          SYNC_ALERT_EMAIL: ${{ secrets.SYNC_ALERT_EMAIL }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/notifyRun.ts

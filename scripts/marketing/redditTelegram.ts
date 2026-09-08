@@ -24,21 +24,16 @@
  * exists once you have messaged the bot, since bots cannot open a conversation).
  */
 import type { ScoredItem } from './redditMonitorCore';
+// One Telegram transport for every marketing alerter. This file used to carry its own
+// identical copy; two of them is how one quietly gains a fix the other never gets.
+import { escapeTelegramHtml as esc, postTelegram as post, telegramConfigured } from './telegram';
 
-const API = 'https://api.telegram.org';
+export { telegramConfigured };
 
 /** Telegram hard-caps a message at 4096 chars; leave room for the wrapper. */
 const MAX_BODY = 400;
 const MAX_DRAFT = 600;
 
-export function telegramConfigured(): boolean {
-  return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
-}
-
-/** Telegram's HTML parse mode only needs these three escaped. */
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 function truncate(s: string, n: number): string {
   const t = s.replace(/\s+/g, ' ').trim();
@@ -124,27 +119,6 @@ export function renderTelegramMessage(
   lines.push(`<a href="${esc(item.permalink)}">Open thread →</a>`);
 
   return lines.join('\n');
-}
-
-async function post(method: string, payload: unknown): Promise<{ ok: boolean; error?: string }> {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 15_000);
-  try {
-    const res = await fetch(`${API}/bot${token}/${method}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: ctrl.signal,
-    });
-    const json = (await res.json()) as { ok?: boolean; description?: string };
-    if (!res.ok || !json.ok) return { ok: false, error: json.description ?? `HTTP ${res.status}` };
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 /**
