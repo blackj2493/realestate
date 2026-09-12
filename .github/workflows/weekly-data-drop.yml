@@ -130,20 +130,34 @@ jobs:
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
           ALERTS_UNSUBSCRIBE_SECRET: ${{ secrets.ALERTS_UNSUBSCRIBE_SECRET }}
         run: |
+          # A `schedule` run carries NO inputs, and a workflow_dispatch `default:` does NOT
+          # apply to one — every `inputs.*` below arrives as the EMPTY STRING. Read them into
+          # shell vars first and re-apply the default here, because the guard compares SCOPE
+          # against "auto": interpolated raw, `"" != "auto"` was true on every cron run, so
+          # the scheduled send failed its own test-send guard and exited 1 before sending.
+          # That is what killed the first automatic Thursday send (run 34493688028,
+          # 2026-09-10, event=schedule): "scope and region apply to test sends only."
+          DRY_RUN="${{ inputs.dry_run }}"
+          TEST_TO="${{ inputs.test_to }}"
+          SEGMENT="${{ inputs.segment }}"
+          REGION="${{ inputs.region }}"
+          SCOPE="${{ inputs.scope }}"
+          SCOPE="${SCOPE:-auto}"
+
           ARGS=""
-          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry"; fi
-          if [ -n "${{ inputs.test_to }}" ]; then ARGS="$ARGS --to=${{ inputs.test_to }}"; fi
-          if [ -n "${{ inputs.segment }}" ]; then ARGS="$ARGS --segment=${{ inputs.segment }}"; fi
+          if [ "$DRY_RUN" = "true" ]; then ARGS="$ARGS --dry"; fi
+          if [ -n "$TEST_TO" ]; then ARGS="$ARGS --to=$TEST_TO"; fi
+          if [ -n "$SEGMENT" ]; then ARGS="$ARGS --segment=$SEGMENT"; fi
           # Refuse a shape override on a real run. The worker would ignore it silently, and a
           # silent no-op on a send to the whole base is the worst way to learn that.
-          if [ "${{ inputs.scope }}" != "auto" ] || [ -n "${{ inputs.region }}" ]; then
-            if [ -z "${{ inputs.test_to }}" ]; then
+          if [ "$SCOPE" != "auto" ] || [ -n "$REGION" ]; then
+            if [ -z "$TEST_TO" ]; then
               echo "::error::scope and region apply to test sends only. Set test_to, or leave scope on 'auto' and region empty."
               exit 1
             fi
           fi
-          if [ "${{ inputs.scope }}" != "auto" ]; then ARGS="$ARGS --scope=${{ inputs.scope }}"; fi
-          if [ -n "${{ inputs.region }}" ]; then ARGS="$ARGS --region=${{ inputs.region }}"; fi
+          if [ "$SCOPE" != "auto" ]; then ARGS="$ARGS --scope=$SCOPE"; fi
+          if [ -n "$REGION" ]; then ARGS="$ARGS --region=$REGION"; fi
           npx tsx scripts/worker/dataDrop.ts $ARGS 2>&1 | tee -a "$SUMMARY_FILE"
 
       # Standard notifyRun.ts convention: report on success as well as failure, so a sender

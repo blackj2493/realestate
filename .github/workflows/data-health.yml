@@ -44,6 +44,17 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # The canary calls DELIBERATELY slow things, so its client abort must sit ABOVE
+          # every server-side budget it reaches — otherwise a check can never pass and the
+          # invariant behind it goes permanently unverified.
+          #
+          # count_unpriceable_valued_estimates carries statement_timeout = 45s (migration
+          # 126: the scan costs ~23s cold against a 3.9 GB listings table, where the role
+          # budget is 8s). supabase-js aborts at 30s by default, so from the day 126 landed
+          # this check reported "unpriceable-value count unavailable (Error: Supabase
+          # request exceeded 30000ms)" every night — the CLIENT gave up 15s before the
+          # server would have. 60s clears the 45s budget with margin.
+          SUPABASE_FETCH_TIMEOUT_MS: '60000'
           # Search-only Typesense key — the onboarding-example check resolves the intro
           # email's example region against the live properties index (getTypesenseClient).
           NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY: ${{ secrets.NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY }}
