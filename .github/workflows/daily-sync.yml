@@ -227,6 +227,22 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # computeAnalyticsInitial fans all 11 slice RPCs out in PARALLEL per market, and
+          # the server-side budgets they carry go up to 90s (region_dom_distribution,
+          # region_price_cuts, region_active_aggregates). The supabase-js default abort is
+          # 30s, so the client was killing slices the database was still happy to finish —
+          # and it landed on the two biggest markets, which are the two that matter:
+          #
+          #   09-09  Ottawa  30.0s  null: stats, dom, cuts, rental
+          #   09-10  Toronto 30.0s  null: dom, rental, outcomes
+          #   09-10  Ottawa  30.0s  null: stats, dom, cuts, dynamics, rental
+          #   09-12  Ottawa  30.0s  null: stats, dom, cuts, rental
+          #
+          # Every other market finishes in 0.3-9.3s; Toronto runs 22.7-25.0s on a good
+          # night, which is 5s from the wall. The exact 30.0s is the tell — a real query
+          # does not land on a round number four nights running. 120s clears the largest
+          # server budget with margin; the step's own 30-minute timeout is the real bound.
+          SUPABASE_FETCH_TIMEOUT_MS: '120000'
         run: npx tsx scripts/admin/refresh-region-metrics.ts --apply
 
       # Multi-cut price ledger (migration 069): diff each active listing's fresh
