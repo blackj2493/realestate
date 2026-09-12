@@ -53,6 +53,7 @@ import {
   type Problem,
   type SnapshotEntry,
 } from '@/lib/data/healthChecks';
+import { checkRpcTimeouts, EXTRA_WATCHED_RPCS } from '@/lib/data/rpcTimeouts';
 import { EMAIL_METRICS, OPS_REGION } from '@/lib/ops/emailSendMetrics';
 import { searchListings } from '@/lib/typesense/client';
 import { UNPRICEABLE_EXACT, UNPRICEABLE_PATTERNS } from '@/lib/avm/normalizeType';
@@ -285,6 +286,45 @@ async function checkMigrations(): Promise<void> {
     return;
   }
   problems.push(...checkMigrationLedger(files, (data ?? []).map((r) => String((r as { filename: string }).filename))));
+}
+
+/**
+ * Declared statement_timeout on every watched RPC — the CAUSE-side sibling of every check
+ * above, which all watch outputs.
+ *
+ * WHY: `CREATE OR REPLACE FUNCTION` replaces the whole declaration, `proconfig` included, so a
+ * new body that omits the `SET statement_timeout` line DELETES the budget with no error and
+ * nothing in the diff that reads as a removal. The function then inherits authenticator's 8s.
+ * Migration 133 did exactly that to region_rental_yield's 60s; the canary then reported
+ * "Ottawa: no rental yield rows" for 13 nights while the cause sat one catalog column away,
+ * unread — and migration 135, taking its base from the live definition, carried the deletion
+ * forward, which is how this outlives the migration that caused it.
+ *
+ * PostgREST cannot select from pg_proc, hence the RPC (migration 142). The pure rules and the
+ * expected floors live in src/lib/data/rpcTimeouts.ts, unit-tested by replaying migration 133.
+ */
+async function checkRpcTimeoutHealth(): Promise<void> {
+  const sb = getServiceRoleClient();
+  // region_* is matched by prefix inside the function, so only the others are passed — and
+  // they are passed rather than hardcoded in SQL, per the migration-113 rule.
+  const { data, error } = await sb.rpc('rpc_statement_timeouts', { p_names: EXTRA_WATCHED_RPCS });
+  if (error) {
+    problems.push({
+      severity: 'warn',
+      check: 'rpc-timeouts',
+      detail: `rpc_statement_timeouts unavailable (${error.message}) — is migration 142 applied? The invariant is unchecked until this resolves.`,
+    });
+    return;
+  }
+  problems.push(
+    ...checkRpcTimeouts(
+      (data ?? []).map((r: { function_name: string; identity_args: string; statement_timeout: string | null }) => ({
+        functionName: String(r.function_name),
+        identityArgs: String(r.identity_args ?? ''),
+        statementTimeout: r.statement_timeout ?? null,
+      }))
+    )
+  );
 }
 
 /**
@@ -641,6 +681,7 @@ async function main(): Promise<void> {
     ['distress flag', checkDistressFlagHealth],
     ['sold transaction_type', checkSoldTransactionTypeHealth],
     ['migrations', checkMigrations],
+    ['rpc timeouts', checkRpcTimeoutHealth],
   ] as const) {
     try {
       await fn();
