@@ -53,7 +53,7 @@ describe("renderAlertsDigest", () => {
     const { subject } = renderAlertsDigest(
       payload({ drops: [baseDrop], statusChanges: [baseStatus], bubbles: [baseSection] })
     );
-    expect(subject).toBe("1 sold · 1 price drop · 2 new listings");
+    expect(subject).toBe("1 sold · 1 price drop · 1 pick from 2 new listings");
   });
 
   it("subject for status-only digests names the event", () => {
@@ -97,15 +97,50 @@ describe("renderAlertsDigest", () => {
     // real number is larger rather than inventing it.
     const capped = { ...baseSection, bubbleName: "All of Toronto", total: 100, capped: true, highVolume: true };
     const { subject, html, text } = renderAlertsDigest(payload({ bubbles: [capped] }));
-    expect(subject).toBe("100+ new listings");
-    expect(html).toContain("100+ new homes came up in All of Toronto");
-    expect(text).toContain("100+ new homes in All of Toronto");
+    expect(subject).toBe("1 pick from 100+ new listings");
+    expect(html).toContain("1 pick from 100+ new homes in All of Toronto today");
+    expect(text).toContain("1 pick from 100+ new homes in All of Toronto today");
   });
 
   it("leaves an uncapped count bare — no misleading plus sign", () => {
     const exact = { ...baseSection, total: 12, highVolume: false };
     const { subject } = renderAlertsDigest(payload({ bubbles: [exact] }));
-    expect(subject).toBe("12 new listings");
+    expect(subject).toBe("1 pick from 12 new listings");
+  });
+
+  it("drops the 'picks' framing when the area fit entirely into the email", () => {
+    // Nothing was chosen, so claiming a choice would be theatre.
+    const whole = { ...baseSection, total: 1, highVolume: false };
+    const { subject } = renderAlertsDigest(payload({ bubbles: [whole] }));
+    expect(subject).toBe("1 new listing");
+  });
+
+  it("prints a price cut beside a row, and nothing when there is none", () => {
+    // IDX, unlike the estimate that ORDERED these rows — the audit clears a cut's
+    // magnitude and direction for email, and the worker has already bounded it.
+    const cut = {
+      ...baseSection,
+      listings: [{ ...baseSection.listings[0], priceCut: 45_000 }],
+    };
+    const withCut = renderAlertsDigest(payload({ bubbles: [cut] }));
+    expect(withCut.html).toContain("Cut $45,000 since it listed");
+    expect(withCut.text).toContain("Cut $45,000 since it listed");
+    const without = renderAlertsDigest(payload({ bubbles: [baseSection] }));
+    expect(without.html).not.toContain("since it listed");
+  });
+
+  it("never prints an estimate, however the rows were ordered", () => {
+    // The whole compliance claim of the ranking in one assertion.
+    const ranked = {
+      ...baseSection,
+      listings: [{ ...baseSection.listings[0], score: 0.23, priceCut: null }],
+    };
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [ranked] }));
+    for (const out of [html, text]) {
+      expect(out).not.toContain("0.23");
+      expect(out).not.toMatch(/estimat/i);
+      expect(out).not.toMatch(/under (its|the) value/i);
+    }
   });
 
   it("renders the overflow line for an ordinary area", () => {
@@ -123,11 +158,11 @@ describe("renderAlertsDigest", () => {
       highVolume: true,
     };
     const { html, text } = renderAlertsDigest(payload({ bubbles: [huge] }));
-    expect(html).toContain("143 new homes came up in Huge Area");
+    expect(html).toContain("1 pick from 143 new homes in Huge Area today");
     expect(html).toContain("300 New St"); // the row survives — never a bare count again
     expect(html).not.toContain("Tip: smaller areas make sharper alerts");
     expect(text).toContain("300 New St");
-    expect(text).toContain("143 new homes in Huge Area");
+    expect(text).toContain("1 pick from 143 new homes in Huge Area today");
   });
 
   it("renders a listing thumbnail for drops and bubbles when a photo URL is present", () => {

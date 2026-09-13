@@ -8,6 +8,7 @@
  */
 
 import { isWholeCityRegion } from "@/lib/dashboard/area";
+import { comparePicks } from "./pickRank";
 
 export interface NewListingAlert {
   listing_key: string;
@@ -19,8 +20,15 @@ export interface NewListingAlert {
   brokerage: string | null;
   /** Listing thumbnail (PropTx MediaURL) for the email row; null when the feed has no photo. */
   thumb?: string | null;
-  /** EntryTimestamp (unix ms) — used only for newest-first ordering. */
+  /** EntryTimestamp (unix ms) — the tie-break once `score` has had its say. */
   entryMs: number;
+  /**
+   * How far under its estimate this one is asking (see pickRank). Orders the section and
+   * is NEVER rendered — the estimate behind it is VOW-derived. Null sorts last.
+   */
+  score?: number | null;
+  /** IDX-safe price cut, already sanity-bounded, or null. The one per-row line we print. */
+  priceCut?: number | null;
 }
 
 export interface BubbleMatches {
@@ -180,7 +188,11 @@ export function buildBubbleSections(perBubble: BubbleMatches[]): BubbleSection[]
 
     // Every section shows rows, however busy the area is. The row cap already bounds the
     // email; a high count only changes what the line under the rows says.
-    const rows = [...deduped].sort((a, z) => z.entryMs - a.entryMs).slice(0, BUBBLE_EMAIL_ROW_CAP);
+    //
+    // WHICH six, though, is the whole value of a section over a city: 268 homes came up in
+    // Toronto last night and six of them fit. comparePicks puts the best-priced first and
+    // falls back to newest, so an area with no estimates behind it is unchanged.
+    const rows = [...deduped].sort(comparePicks).slice(0, BUBBLE_EMAIL_ROW_CAP);
     if (rows.length === 0) continue;
     sections.push({
       bubbleId: b.bubbleId,
