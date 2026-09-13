@@ -1149,11 +1149,25 @@ async function main() {
           bubbleAdvances.push({ id: b.id, user_id: b.user_id, alerted: false, patch: advancePatch });
           continue;
         }
-        // The lookback window re-fetches already-alerted keys; shrink the displayed
-        // total by however many the dedup dropped (same rule buildBubbleSections uses).
-        const total = Math.max(matches.length, (res.found ?? fetched.length) - (fetched.length - matches.length));
+        // What the email calls "new" is the DEDUPED set, and nothing else.
+        //
+        // `res.found` counts the entire 72h-lookback re-scan window, and almost all of
+        // that was emailed on previous nights: a whole city returns ~1,000 documents
+        // against a dozen genuinely new ones. The old line did subtract the dedup hits,
+        // but the fetch stops at MAX_BUBBLE_FETCH, so it could only ever subtract 100 of
+        // ~1,000. That put the re-scan window in the subject line — readers got
+        // "1,541 new listings" on an email carrying six homes, and the number climbed
+        // every night as the window filled (measured 2026-09-12: 58 of 153 digests
+        // claimed four figures, median 165).
+        //
+        // `matches.length` is exact. The search sorts EntryTimestamp:desc, so the fetch
+        // holds the NEWEST MAX_BUBBLE_FETCH and everything older is already notified. The
+        // one thing the cap hides is an area that produced more than 100 tonight, and
+        // `capped` says so instead of guessing at a number.
+        const total = matches.length;
+        const capped = total === MAX_BUBBLE_FETCH;
         const list = bubbleMatchesByUser.get(b.user_id) ?? [];
-        list.push({ bubbleId: b.id, bubbleName: b.name, total, matches, filterLabel: scoped.label });
+        list.push({ bubbleId: b.id, bubbleName: b.name, total, capped, matches, filterLabel: scoped.label });
         bubbleMatchesByUser.set(b.user_id, list);
         bubbleAdvances.push({ id: b.id, user_id: b.user_id, alerted: true, patch: advancePatch });
       } catch (e) {

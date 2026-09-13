@@ -26,8 +26,13 @@ export interface NewListingAlert {
 export interface BubbleMatches {
   bubbleId: string;
   bubbleName: string;
-  /** True match count from Typesense `found` (may exceed matches.length). */
+  /**
+   * How many genuinely new listings the area produced tonight — the DEDUPED set, never
+   * the size of the worker's re-scan window. See the note beside the worker's `total`.
+   */
   total: number;
+  /** The worker's fetch cap bound, so `total` is a floor: render it "100+", not "100". */
+  capped?: boolean;
   matches: NewListingAlert[];
   /** alert_scope 'filtered': the active-filter summary ("3+ Beds · Detached") the
    *  email must show so the user can reason about what they're NOT seeing. */
@@ -38,6 +43,8 @@ export interface BubbleSection {
   bubbleId: string;
   bubbleName: string;
   total: number;
+  /** `total` is a floor (the worker's fetch cap bound) — the email renders it as "100+". */
+  capped?: boolean;
   /** ≤ BUBBLE_EMAIL_ROW_CAP rows, newest first. NEVER empty — see buildBubbleSections. */
   listings: NewListingAlert[];
   /**
@@ -179,6 +186,9 @@ export function buildBubbleSections(perBubble: BubbleMatches[]): BubbleSection[]
       bubbleId: b.bubbleId,
       bubbleName: b.bubbleName,
       total,
+      // Only a floor while it is still the whole set the worker fetched. Once a narrower
+      // area has taken rows off it, the count is exact again and the "+" would lie.
+      capped: (b.capped ?? false) && deduped.length === b.matches.length,
       listings: rows,
       highVolume: total > BUBBLE_COLLAPSE_THRESHOLD,
       filterLabel: b.filterLabel ?? null,
