@@ -47,7 +47,13 @@ export const metadata: Metadata = {
       }),
     ],
   },
-  twitter: { card: "summary_large_image", title: "PureProperty", description: "Ontario real estate, decoded for serious buyers and investors." },
+  // Card type only — the title/description are left unset ON PURPOSE. Next resolves
+  // twitter.title/description from each page's own openGraph block, but only while the
+  // root leaves them empty: a value here outranks every page below it. Pinning them meant
+  // every /data tracker shared on X rendered the same "PureProperty" headline and the
+  // generic site tagline, whichever tracker the link actually pointed at. The card IMAGE
+  // was always correct (it falls back to openGraph.images), which is what hid this.
+  twitter: { card: "summary_large_image" },
 };
 
 // Sitewide brand entity (Organization) + site (WebSite) structured data. Renders on every
