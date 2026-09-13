@@ -70,6 +70,20 @@ describe("buildBubbleSections", () => {
     expect(bare.filterLabel).toBeNull();
   });
 
+  it("fills the six rows by score, not by recency", () => {
+    // The regression this guards is the reason the section exists over a city feed. On one
+    // Toronto night only 6 of the 20 best-priced listings sat inside the newest 100, so
+    // newest-first was throwing away most of what the reader came for.
+    const rows = Array.from({ length: 12 }, (_, i) => ({ ...listing(`W${i}`, i), score: null as number | null }));
+    rows[11].score = 0.02; // newest, barely under
+    rows[0].score = 0.25; // oldest, the best home of the night
+    rows[3].score = 0.18;
+    const [s] = buildBubbleSections([bubble("b1", "All of Toronto", rows)]);
+    expect(s.listings.slice(0, 3).map((l) => l.listing_key)).toEqual(["W0", "W3", "W11"]);
+    // The unscored remainder still fills the section, newest-first.
+    expect(s.listings.slice(3).map((l) => l.listing_key)).toEqual(["W10", "W9", "W8"]);
+  });
+
   it("carries the fetch-cap flag, and drops it once de-dup makes the count exact", () => {
     // `capped` means "at least this many": the worker fetched its ceiling and could not
     // see past it. Once a narrower area takes rows off the section, the remainder IS the

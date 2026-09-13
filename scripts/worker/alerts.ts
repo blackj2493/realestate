@@ -44,6 +44,7 @@ import { getServiceRoleClient } from '@/lib/supabase/client';
 import { buildAreaClause } from '@/lib/bubbles/stats';
 import { buildTransactionClause, SALE_PRICE_FLOOR } from '@/lib/filters/fundamentals';
 import { bubbleAlertFilter } from '@/lib/alerts/bubbleFilterClause';
+import { pickScore, sanePriceCut, type PickEstimate } from '@/lib/alerts/pickRank';
 import {
   classifyStatusChange,
   isRelistScanBaseline,
@@ -95,8 +96,22 @@ const SITE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.pureproperty.ca')
  * ≥$100k today) was emailed as a new listing for sale. TransactionType says it exactly.
  */
 const SALES_FLOOR = `${buildTransactionClause('sale')} && ListPrice:>=${SALE_PRICE_FLOOR}`;
-/** §6.3b display cap — also bounds the per-bubble fetch. */
-const MAX_BUBBLE_FETCH = 100;
+/** Typesense's own per_page ceiling. */
+const BUBBLE_PAGE_SIZE = 250;
+/**
+ * Candidate pool per area per night — how many of tonight's new listings we rank before
+ * picking six. NOT a display cap: BUBBLE_EMAIL_ROW_CAP still bounds the email at six rows.
+ *
+ * 100 was too small for the one area that matters most. Toronto enters ~268 new sale
+ * listings a night (measured 2026-09-12) and 82 of 189 alerting accounts follow it, while
+ * every other subscribed area sits under 75. Ranking the newest 100 of 268 is not a
+ * sample of the best — over that same night only 6 of the 20 best-priced listings fell
+ * inside the newest 100, because recency and value are close to independent.
+ *
+ * 500 clears the busiest real area by 1.9x, so `matches.length` is the exact count
+ * everywhere in practice and the "+" in the email effectively stops appearing.
+ */
+const MAX_BUBBLE_FETCH = 500;
 
 interface WatchRow {
   id: string;
@@ -763,6 +778,53 @@ async function stampDigestSent(
   }
 }
 
+/**
+ * Score tonight's candidates so the six rows in an area section are the six best-priced
+ * ones rather than the six newest.
+ *
+ * The estimate never leaves this function. property_estimates is built from closed sales,
+ * so it is VOW-derived and follows the rule digest.ts already applies to sold prices:
+ * order by it in the email, disclose it behind the session. What the reader sees is the
+ * same address, price, beds and brokerage they see today, in a better order.
+ *
+ * One batched read per chunk against a primary-key column, and a chunk stays under
+ * PostgREST's 1000-row ceiling so nothing truncates silently. A failure is not fatal:
+ * ranking is an improvement on newest-first, not a precondition for sending, so a missing
+ * table leaves every score null and buildBubbleSections falls back to newest-first.
+ */
+const PICK_KEY_CHUNK = 400;
+
+async function attachPickScores(
+  supabase: ReturnType<typeof getServiceRoleClient>,
+  byUser: Map<string, BubbleMatches[]>
+): Promise<void> {
+  const listings = [...byUser.values()].flat().flatMap((m) => m.matches);
+  const keys = [...new Set(listings.map((l) => l.listing_key).filter(Boolean))];
+  if (keys.length === 0) return;
+
+  const byKey = new Map<string, PickEstimate>();
+  for (let i = 0; i < keys.length; i += PICK_KEY_CHUNK) {
+    const { data, error } = await supabase
+      .from('property_estimates')
+      .select('listing_key, estimated_value, confidence')
+      .in('listing_key', keys.slice(i, i + PICK_KEY_CHUNK));
+    if (error) {
+      console.warn(`[alerts] estimates unavailable (${error.message}) — picks stay newest-first`);
+      return;
+    }
+    for (const row of (data ?? []) as Array<{ listing_key: string; estimated_value: number | null; confidence: string | null }>) {
+      byKey.set(row.listing_key, { estimatedValue: row.estimated_value, confidence: row.confidence });
+    }
+  }
+
+  let scored = 0;
+  for (const l of listings) {
+    l.score = pickScore(l.price, byKey.get(l.listing_key));
+    if (l.score != null) scored += 1;
+  }
+  console.log(`[alerts] picks ranked: ${scored} of ${listings.length} candidates carry a usable estimate`);
+}
+
 async function main() {
   if (!process.env.RESEND_API_KEY) {
     console.warn('[alerts] RESEND_API_KEY not set — skipping alerts digest.');
@@ -1107,18 +1169,28 @@ async function main() {
         const scoped = b.alert_scope === 'filtered' ? bubbleAlertFilter(b.filters) : { clause: null, label: null };
         const baseClauses = scoped.clause ?? SALES_FLOOR;
 
-        const res = await ts.collections('properties').documents().search({
-          q: '*',
-          query_by: 'City',
-          filter_by: `${baseClauses} && ${areaClause} && EntryTimestamp:>${sinceMs}`,
-          sort_by: 'EntryTimestamp:desc',
-          per_page: MAX_BUBBLE_FETCH,
-          include_fields:
-            'id,UnparsedAddress,City,ListPrice,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp,primaryImageUrl',
-        });
+        // Paged because per_page tops out at BUBBLE_PAGE_SIZE and the pool has to hold a
+        // whole busy night. The payload stays small — eleven scalar fields, no RawImages
+        // (see the terminal's own lesson about that field's size).
+        const filterBy = `${baseClauses} && ${areaClause} && EntryTimestamp:>${sinceMs}`;
+        const docs: Array<Record<string, unknown>> = [];
+        for (let page = 1; docs.length < MAX_BUBBLE_FETCH; page += 1) {
+          const res = await ts.collections('properties').documents().search({
+            q: '*',
+            query_by: 'City',
+            filter_by: filterBy,
+            sort_by: 'EntryTimestamp:desc',
+            per_page: BUBBLE_PAGE_SIZE,
+            page,
+            include_fields:
+              'id,UnparsedAddress,City,ListPrice,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp,primaryImageUrl,TotalPriceDrop',
+          });
+          const hits = res.hits ?? [];
+          for (const h of hits) docs.push(h.document as Record<string, unknown>);
+          if (hits.length < BUBBLE_PAGE_SIZE) break;
+        }
 
-        const fetched: NewListingAlert[] = (res.hits ?? []).map((h) => {
-          const d = h.document as Record<string, unknown>;
+        const fetched: NewListingAlert[] = docs.map((d) => {
           const num = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
           return {
             listing_key: String(d.id ?? ''),
@@ -1132,6 +1204,10 @@ async function main() {
             // primaryImageUrl is in the properties schema, so thumbnailUrl is just a guard.
             thumb: (d.thumbnailUrl as string) || (d.primaryImageUrl as string) || null,
             entryMs: Number(d.EntryTimestamp) || 0,
+            // The one per-row line the email may print: a cut's magnitude and direction
+            // are IDX, unlike the estimate that orders these rows. Bounded because
+            // TotalPriceDrop carries relist artifacts — see sanePriceCut.
+            priceCut: sanePriceCut(num(d.TotalPriceDrop), num(d.ListPrice)),
           };
         });
         const matches = filterFreshMatches(fetched, notified);
@@ -1176,6 +1252,10 @@ async function main() {
       }
     }
   }
+
+  // Order the picks before the sections are cut to six rows. One batched read for the
+  // whole run, not one per area, and never per listing.
+  await attachPickScores(supabase, bubbleMatchesByUser);
 
   // ── Compose + send one digest per affected user ────────────────────────────
   const userIds = new Set<string>([

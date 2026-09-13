@@ -16,6 +16,8 @@ import type { NewListingAlert } from "../../src/lib/alerts/bubbleDigest";
 
 function listing(i: number, city: string): NewListingAlert {
   return {
+    // Set on the two rows below only, so the preview shows both states of the cut line.
+    priceCut: null,
     listing_key: `W${1000 + i}`,
     address: `${100 + i * 7} Sample Ave`,
     city,
@@ -35,12 +37,13 @@ const payload: DigestPayload = {
     {
       bubbleId: "b-toronto",
       bubbleName: "Toronto",
-      // The most an area can claim: the worker fetches at most MAX_BUBBLE_FETCH per area
-      // per night, so 100 is a floor and the "+" carries that. It used to print Typesense's
-      // `found` for the whole 72h re-scan window here — four figures, nightly.
-      total: 100,
-      capped: true,
-      listings: Array.from({ length: 6 }, (_, i) => listing(i, "Toronto")),
+      // Toronto's real rate, measured 2026-09-12. The pool now holds a whole night, so
+      // this is the exact count and nothing is marked as a floor. It used to print
+      // Typesense's `found` for the whole 72h re-scan window — four figures, nightly.
+      total: 268,
+      listings: Array.from({ length: 6 }, (_, i) => listing(i, "Toronto")).map((l, i) =>
+        i === 1 ? { ...l, priceCut: 45_000 } : l
+      ),
       highVolume: true,
       filterLabel: null, // alerts on everything → earns the nudge
     },
