@@ -79,9 +79,15 @@ import { renderAddressWatchEmail, type AddressWatchHit } from '@/lib/alerts/addr
 import { qualifiesAsDrop } from '@/lib/alerts/dropPolicy';
 import { findRelists, type RelistTargetFull } from '@/lib/watchlist/relistLookup';
 import { addressesMatch, parseAddress } from '@/lib/watchlist/disposition';
-import { unsubscribeUrl, marketingUnsubscribeUrl } from '@/lib/alerts/unsubscribe';
+import { unsubscribeUrl, marketingUnsubscribeUrl, emailActionUrl } from '@/lib/alerts/unsubscribe';
 import { SENDERS } from '@/lib/alerts/senders';
-import { canSendAlerts, DIGEST_MESSAGE_ID, type EmailPrefsRow } from '@/lib/email/sendPolicy';
+import {
+  alertsFrequency,
+  canSendAlerts,
+  digestDueToday,
+  DIGEST_MESSAGE_ID,
+  type EmailPrefsRow,
+} from '@/lib/email/sendPolicy';
 import { EMAIL_METRICS, recordEmailSendMetrics } from '@/lib/ops/emailSendMetrics';
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
@@ -110,8 +116,13 @@ const BUBBLE_PAGE_SIZE = 250;
  *
  * 500 clears the busiest real area by 1.9x, so `matches.length` is the exact count
  * everywhere in practice and the "+" in the email effectively stops appearing.
+ *
+ * It is a per-DAY figure. A weekly reader's watermark is held across the week, so the
+ * window grows and the pool is scaled to match — see poolCap below.
  */
 const MAX_BUBBLE_FETCH = 500;
+/** Absolute ceiling on that scaling: eight pages, enough for a held week of Toronto. */
+const MAX_BUBBLE_POOL = 2000;
 
 interface WatchRow {
   id: string;
@@ -715,6 +726,47 @@ export async function runAddressWatchPhase(
 }
 
 /**
+ * When each of these addresses last received a digest.
+ *
+ * The weekly reader's clock. stampDigestSent already writes it every night under
+ * DIGEST_MESSAGE_ID, so "once a week" needs no new timestamp column — only the preference
+ * that says to read it.
+ *
+ * Best-effort: an unreadable table returns an empty map, which makes every weekly reader
+ * due tonight. That errs towards sending, which is the right way to fail for an email the
+ * reader asked for.
+ */
+async function readLastDigestAt(
+  supabase: ReturnType<typeof getServiceRoleClient>,
+  emails: Array<string | null>
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const unique = [...new Set(emails.map((e) => (e ?? '').trim().toLowerCase()))].filter(Boolean);
+  if (!unique.length) return out;
+  const CHUNK = 400; // stays clear of PostgREST's 1000-row default cap
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    try {
+      const { data, error } = await supabase
+        .from('user_email_lifecycle')
+        .select('email, sent')
+        .in('email', unique.slice(i, i + CHUNK));
+      if (error) {
+        console.warn(`[alerts] lifecycle read failed (${error.message}) — every weekly reader is due`);
+        return out;
+      }
+      for (const row of (data ?? []) as Array<{ email: string; sent: Record<string, string> | null }>) {
+        const at = row.sent?.[DIGEST_MESSAGE_ID];
+        if (at) out.set(row.email, at);
+      }
+    } catch (e) {
+      console.warn('[alerts] lifecycle read threw — every weekly reader is due:', e instanceof Error ? e.message : e);
+      return out;
+    }
+  }
+  return out;
+}
+
+/**
  * Record that the nightly digest reached these addresses, so the weekly Data Drop can
  * stand down for anyone it already emailed today (sendPolicy.canSendDataDrop).
  *
@@ -1163,6 +1215,14 @@ async function main() {
         const watermarkMs = new Date(b.notify_since).getTime();
         const sinceMs = hasNotifiedKeys ? watermarkMs - BUBBLE_LOOKBACK_MS : watermarkMs;
 
+        // The pool has to cover whatever window the watermark actually spans. It is one
+        // night for a daily reader and up to a week for a weekly one (migration 144 holds
+        // the watermark on a skipped night), and Toronto's 268 a night becomes ~1,900 over
+        // a week. A fixed 500 there would rank the newest two days and call it the week —
+        // the same newest-slice bias the pool was widened to remove.
+        const windowDays = Math.max(1, Math.round((runStartMs - sinceMs) / 86_400_000));
+        const poolCap = Math.min(MAX_BUBBLE_POOL, MAX_BUBBLE_FETCH * windowDays);
+
         // alert_scope 'filtered': swap the bare price floor for the bubble's saved
         // filter snapshot, translated by the SAME builder the terminal search uses
         // (bubbleAlertFilter). Pre-095 snapshots translate to null → 'all' behaviour.
@@ -1174,7 +1234,7 @@ async function main() {
         // (see the terminal's own lesson about that field's size).
         const filterBy = `${baseClauses} && ${areaClause} && EntryTimestamp:>${sinceMs}`;
         const docs: Array<Record<string, unknown>> = [];
-        for (let page = 1; docs.length < MAX_BUBBLE_FETCH; page += 1) {
+        for (let page = 1; docs.length < poolCap; page += 1) {
           const res = await ts.collections('properties').documents().search({
             q: '*',
             query_by: 'City',
@@ -1241,7 +1301,7 @@ async function main() {
         // one thing the cap hides is an area that produced more than 100 tonight, and
         // `capped` says so instead of guessing at a number.
         const total = matches.length;
-        const capped = total === MAX_BUBBLE_FETCH;
+        const capped = total === poolCap;
         const list = bubbleMatchesByUser.get(b.user_id) ?? [];
         list.push({ bubbleId: b.id, bubbleName: b.name, total, capped, matches, filterLabel: scoped.label });
         bubbleMatchesByUser.set(b.user_id, list);
@@ -1289,7 +1349,14 @@ async function main() {
     try {
       const { data, error } = await supabase
         .from('email_prefs')
-        .select('user_id, alerts, cadence, pause_until')
+        // SELECT * on purpose. Naming the columns means a column this build expects but
+        // the database has not got yet fails the WHOLE read — and the failure path here
+        // treats every stream as on, so one unapplied migration would quietly email the
+        // people who pressed "pause" and the people who switched the digest off. A star
+        // cannot do that: a column that is missing is simply absent from the row, and
+        // alertsFrequency() reads an absent value as 'daily', which is the behaviour
+        // before 144. The table is one narrow row per user, and only tonight's users.
+        .select('*')
         .in('user_id', [...userIds]);
       if (error) {
         console.warn(`[alerts] email_prefs unavailable (${error.message}) — treating every stream as on`);
@@ -1306,10 +1373,18 @@ async function main() {
     }
   }
 
+  // When each address last received a digest — the clock a weekly reader runs on. Already
+  // written by stampDigestSent every night, so weekly needs no new state and no migration
+  // beyond the preference itself.
+  const lastDigestAt = await readLastDigestAt(supabase, [...emails.values()]);
+
   const sentUsers = new Set<string>();
   let emailed = 0;
   let failed = 0;
   let suppressed = 0;
+  // Weekly readers whose week is not up. Counted apart from `suppressed` because the two
+  // mean opposite things about a watermark — see the gate below.
+  let deferred = 0;
   // Users who actually had a renderable digest tonight. Counted HERE, not as userIds.size,
   // so the canary's invariant (sent + suppressed + fell-through = due) is exact: a user who
   // reaches the map but renders to nothing was never owed an email.
@@ -1338,8 +1413,31 @@ async function main() {
       continue;
     }
 
+    // Frequency (migration 144). NOT a consent gate: a weekly reader wants this email,
+    // only not tonight. So unlike a suppression we deliberately leave them OUT of
+    // sentUsers — shouldApply() reads that set, so their watermark and notified_keys are
+    // HELD and the week accumulates, instead of the weekly email carrying whatever
+    // happened to land on day seven.
+    const frequency = alertsFrequency(prefsByUser.get(userId));
+    if (
+      !digestDueToday({
+        frequency,
+        lastSentIso: lastDigestAt.get(email.trim().toLowerCase()) ?? null,
+        now: runStartMs,
+      })
+    ) {
+      deferred++;
+      continue;
+    }
+
     const uUrl = marketingUnsubscribeUrl(email, SITE);
-    const { subject, html, text } = renderAlertsDigest(payload, uUrl);
+    const { subject, html, text } = renderAlertsDigest(payload, uUrl, {
+      // Offer the switch they have NOT taken. A weekly reader gets the way back instead —
+      // /account/emails has no control for this, so the email is the only place it exists.
+      weeklyUrl: frequency === 'weekly' ? undefined : emailActionUrl(email, 'weekly', SITE),
+      dailyUrl: frequency === 'weekly' ? emailActionUrl(email, 'daily', SITE) : undefined,
+      pauseUrl: emailActionUrl(email, 'pause30', SITE),
+    });
     const out = await pacer.send({
       kind: 'watchlist-digest',
       from: FROM,
@@ -1405,6 +1503,7 @@ async function main() {
     [EMAIL_METRICS.digestDue]: due,
     [EMAIL_METRICS.digestSent]: emailed,
     [EMAIL_METRICS.digestSuppressed]: suppressed,
+    [EMAIL_METRICS.digestDeferred]: deferred,
     [EMAIL_METRICS.digestFailed]: failed + la.failed + aw.failed,
   });
 
@@ -1412,7 +1511,8 @@ async function main() {
   const notSent = failed + la.failed + aw.failed;
   console.log(
     `[alerts] Done. ${watch.length} watched, ${userIds.size} users with events, ${due} owed a digest, ` +
-      `${emailed} emails sent, ${notSent} NOT SENT, ${suppressed} suppressed on consent. ` +
+      `${emailed} emails sent, ${notSent} NOT SENT, ${suppressed} suppressed on consent, ` +
+      `${deferred} held for a weekly send. ` +
       `Listing-alerts: ${la.emailed} emailed, ${la.failed} not sent, ${la.baselined} baselined, ${la.similarMatched} similar matches. ` +
       `Address-watches: ${aw.emailed} emailed, ${aw.failed} not sent, ${aw.baselined} baselined.`
   );

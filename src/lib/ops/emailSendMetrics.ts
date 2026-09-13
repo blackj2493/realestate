@@ -40,6 +40,10 @@ export const EMAIL_METRICS = {
   digestFailed: "email.digest_failed",
   /** Users with news who were skipped on consent (opt-out / stream off / paused). */
   digestSuppressed: "email.digest_suppressed",
+  /** Weekly readers (migration 144) holding tonight's news for their weekly send. Distinct
+   *  from suppressed: nothing was dropped, and their watermarks were NOT advanced. Without
+   *  this counter a week of weekly adoption looks like a week of falling delivery. */
+  digestDeferred: "email.digest_deferred",
   /** Onboarding-drip candidates examined. */
   dripConsidered: "email.drip_considered",
   /** Onboarding-drip messages actually sent. */

@@ -41,6 +41,42 @@ export function unsubscribeUrl(email: string, siteUrl: string): string {
 }
 
 /**
+ * One-click PREFERENCE actions, for registered users, from inside the email.
+ *
+ * Unsubscribe was the only control a digest reader had. These are the ones short of it —
+ * send it weekly, or stop for a month — and they use the same HMAC-of-the-email scheme so
+ * they need no login, no token column and no session.
+ *
+ * THE ACTION IS INSIDE THE SIGNATURE. Signing the email alone would let anyone holding a
+ * "pause" link edit the query string into any other action for that address. Each link
+ * authorises exactly one thing.
+ */
+export type EmailAction = "weekly" | "daily" | "pause30";
+
+export const EMAIL_ACTIONS: readonly EmailAction[] = ["weekly", "daily", "pause30"];
+
+export function signEmailAction(email: string, action: EmailAction): string {
+  return createHmac("sha256", secret()).update(`${action}:${normEmail(email)}`).digest("base64url");
+}
+
+/** Constant-time verification; false on any mismatch, unknown action or missing input. */
+export function verifyEmailAction(email: string, action: string, sig: string): boolean {
+  if (!email || !sig) return false;
+  if (!EMAIL_ACTIONS.includes(action as EmailAction)) return false;
+  const expected = Buffer.from(signEmailAction(email, action as EmailAction));
+  const given = Buffer.from(sig);
+  return expected.length === given.length && timingSafeEqual(expected, given);
+}
+
+/** Absolute one-click URL for a single preference action. */
+export function emailActionUrl(email: string, action: EmailAction, siteUrl: string): string {
+  const base = (siteUrl || "https://www.pureproperty.ca").replace(/\/$/, "");
+  const e = encodeURIComponent(normEmail(email));
+  const s = encodeURIComponent(signEmailAction(email, action));
+  return `${base}/api/email/alert-frequency?e=${e}&a=${action}&s=${s}`;
+}
+
+/**
  * Absolute one-click marketing unsubscribe URL for REGISTERED-user promotional/nurture
  * mail (the welcome, and future nurture). Same HMAC scheme as the anonymous link, but
  * resolves to /api/email/unsubscribe, which sets profiles.marketing_opt_out. Used both in

@@ -31,6 +31,50 @@ export interface EmailPrefsRow {
   home_value?: boolean;
   cadence?: "standard" | "reduced" | "minimal";
   pause_until?: string | null;
+  /** Nightly digest frequency (migration 144). Missing or unknown means daily. */
+  alerts_frequency?: AlertsFrequency | null;
+}
+
+export type AlertsFrequency = "daily" | "weekly";
+
+/** Days a weekly reader waits between digests. */
+export const DIGEST_WEEKLY_DAYS = 7;
+
+/**
+ * Tolerance on that wait.
+ *
+ * The nightly job does not fire at the same instant every night, so a strict `>= 7 days`
+ * turns a weekly reader into an eight-day reader the first time the run starts a minute
+ * early, and the drift compounds. Half a day is far inside the gap and removes it.
+ */
+export const DIGEST_WEEKLY_SLACK_MS = 12 * 60 * 60 * 1000;
+
+/** What the reader chose. Anything unrecognised is daily — the behaviour before 144. */
+export function alertsFrequency(prefs?: EmailPrefsRow | null): AlertsFrequency {
+  return prefs?.alerts_frequency === "weekly" ? "weekly" : "daily";
+}
+
+/**
+ * Is a digest owed tonight?
+ *
+ * Separate from canSendAlerts because the two answer different questions, and the worker
+ * must treat them differently: a suppressed user's baselines still advance (they asked not
+ * to hear about it), while a weekly reader's are HELD, or their weekly email would carry
+ * one night instead of seven.
+ *
+ * A reader with no digest on record is due immediately — never make someone wait a week
+ * for their first one.
+ */
+export function digestDueToday(i: {
+  frequency: AlertsFrequency;
+  lastSentIso?: string | null;
+  now: number;
+}): boolean {
+  if (i.frequency !== "weekly") return true;
+  if (!i.lastSentIso) return true;
+  const last = Date.parse(i.lastSentIso);
+  if (!Number.isFinite(last)) return true;
+  return i.now - last >= DIGEST_WEEKLY_DAYS * 86_400_000 - DIGEST_WEEKLY_SLACK_MS;
 }
 
 export interface LifecycleRow {

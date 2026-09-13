@@ -289,9 +289,45 @@ function filterNudgeHtml(unfilteredNames: string[]): string {
     </div>`;
 }
 
+/**
+ * The one-click controls that sit BETWEEN reading the email and unsubscribing from it.
+ *
+ * Unsubscribe was the only lever in here, and 46 of 505 profiles had pulled it. Someone who
+ * wants less mail is not the same person as someone who wants none, and until now the email
+ * could not tell those two apart because it only offered the second answer.
+ *
+ * Above the legal footer, not inside it. Footer microcopy is where links go to be ignored,
+ * and the entire point of these is to be seen before the Unsubscribe beneath them.
+ */
+export interface DigestActions {
+  /** Signed one-click link that switches this reader to one email a week. */
+  weeklyUrl?: string;
+  /** The way back, for a reader already on weekly. A preference with no visible undo is a
+   *  trap, and /account/emails does not show this one. */
+  dailyUrl?: string;
+  /** Signed one-click link that stops email for 30 days. */
+  pauseUrl?: string;
+}
+
+function controlStripHtml(a: DigestActions): string {
+  const links: string[] = [];
+  if (a.weeklyUrl)
+    links.push(`<a href="${a.weeklyUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">Send this once a week instead</a>`);
+  if (a.dailyUrl)
+    links.push(`<a href="${a.dailyUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">Go back to a nightly email</a>`);
+  if (a.pauseUrl)
+    links.push(`<a href="${a.pauseUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">Pause for 30 days</a>`);
+  if (!links.length) return "";
+  return `<div style="margin-top:22px;border-top:1px solid #f1f5f9;padding-top:14px;">
+      <div style="font-size:12px;color:#64748b;">Too much email?</div>
+      <div style="font-size:13px;margin-top:4px;line-height:1.8;">${links.join(` <span style="color:#cbd5e1;">&middot;</span> `)}</div>
+    </div>`;
+}
+
 export function renderAlertsDigest(
   p: DigestPayload,
-  unsubscribeUrl?: string
+  unsubscribeUrl?: string,
+  actions: DigestActions = {}
 ): { subject: string; html: string; text: string } {
   const subject = subjectFor(p);
 
@@ -325,6 +361,7 @@ export function renderAlertsDigest(
       ${dropsSection}
       ${bubblesSection}
       <div style="margin-top:20px;">${button("Open your dashboard &rarr;", `${SITE}/dashboard`)}</div>
+      ${controlStripHtml(actions)}
       ${footer({
         intro: "You're receiving this because you saved these properties or areas on PureProperty.ca.",
         manageUrl: `${SITE}/dashboard`,
@@ -384,9 +421,14 @@ export function renderAlertsDigest(
       );
     }
   }
+  const controlLines: string[] = [];
+  if (actions.weeklyUrl) controlLines.push(`Send this once a week instead: ${actions.weeklyUrl}`);
+  if (actions.dailyUrl) controlLines.push(`Go back to a nightly email: ${actions.dailyUrl}`);
+  if (actions.pauseUrl) controlLines.push(`Pause for 30 days: ${actions.pauseUrl}`);
   const text =
     textParts.join("\n\n") +
     `\n\nOpen your dashboard: ${SITE}/dashboard` +
+    (controlLines.length ? `\n\nToo much email?\n` + controlLines.join("\n") : "") +
     (unsubscribeUrl ? `\nUnsubscribe: ${unsubscribeUrl}` : "");
 
   return { subject, html, text };
