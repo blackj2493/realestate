@@ -482,15 +482,43 @@ export const LADDER: { rank: number; kind: HeadlineKind; run: Rung }[] = [
 export interface LadderTrace {
   rank: number;
   kind: HeadlineKind;
-  result: "FIRED" | "skip";
+  /** "repeat" = it fired, but the reader led with it last time, so it was demoted. */
+  result: "FIRED" | "skip" | "repeat";
 }
 
-export function pickHeadline(i: LadderInput): { headline: Headline; trace: LadderTrace[] } | null {
+/**
+ * Pick the lead. First rung to clear its threshold wins — except one the reader had LAST
+ * TIME, which is demoted to the back of the queue rather than dropped.
+ *
+ * Demoted, never dropped, because the alternative is silence: on a quiet week the fallback
+ * rung is often the only one that fires, and a repeat beats suppressing the whole edition.
+ * A reader gets the same lead twice only when the market genuinely produced nothing else.
+ *
+ * `avoidKind` is that reader's OWN last lead (sendPolicy.lastDataDropKind), so rotation is
+ * per person. Rotating globally instead would hand everybody the same second-choice story
+ * and change nothing about how uniform the send feels.
+ */
+export function pickHeadline(
+  i: LadderInput,
+  avoidKind?: string | null
+): { headline: Headline; trace: LadderTrace[] } | null {
   const trace: LadderTrace[] = [];
+  let demoted: { headline: Headline; rung: (typeof LADDER)[number] } | null = null;
+
   for (const rung of LADDER) {
     const out = rung.run(i);
+    if (out && avoidKind && rung.kind === avoidKind) {
+      trace.push({ rank: rung.rank, kind: rung.kind, result: "repeat" });
+      demoted ??= { headline: out, rung };
+      continue;
+    }
     trace.push({ rank: rung.rank, kind: rung.kind, result: out ? "FIRED" : "skip" });
     if (out) return { headline: out, trace };
+  }
+
+  if (demoted) {
+    trace.push({ rank: demoted.rung.rank, kind: demoted.rung.kind, result: "FIRED" });
+    return { headline: demoted.headline, trace };
   }
   return null;
 }
@@ -564,6 +592,9 @@ export interface BuildInput {
   snapshots: SnapshotIndex;
   dataAsOf: string | null;
   now: number;
+  /** The headline kind this recipient led with last time, demoted so they do not get the
+   *  same story twice running. Omit for a test render or a first-ever send. */
+  avoidKind?: string | null;
 }
 
 export interface BuildResult {
@@ -586,13 +617,16 @@ export function buildDataDropPayload(i: BuildInput): BuildResult | null {
   for (const region of i.regions) {
     const row = byRegion.get(region);
     if (!row) continue;
-    const res = pickHeadline({
-      region,
-      row,
-      competition: i.competitionByCity.get(region) ?? null,
-      snapshots: i.snapshots,
-      now: i.now,
-    });
+    const res = pickHeadline(
+      {
+        region,
+        row,
+        competition: i.competitionByCity.get(region) ?? null,
+        snapshots: i.snapshots,
+        now: i.now,
+      },
+      i.avoidKind
+    );
     if (res) candidates.push({ region, res });
   }
 
@@ -638,13 +672,18 @@ export function buildDataDropPayload(i: BuildInput): BuildResult | null {
   // seven sends in ten. Its job is conversion, and the spread is what makes the ask land.
   const provinceRow = syntheticProvinceRow(i.rows);
   if (!provinceRow) return null;
-  const res = pickHeadline({
-    region: "Ontario",
-    row: provinceRow,
-    competition: i.province,
-    snapshots: i.snapshots,
-    now: i.now,
-  });
+  // The province edition is what 7 readers in 10 receive, so it is where a repeat is most
+  // visible — rotation matters more here than on the market path.
+  const res = pickHeadline(
+    {
+      region: "Ontario",
+      row: provinceRow,
+      competition: i.province,
+      snapshots: i.snapshots,
+      now: i.now,
+    },
+    i.avoidKind
+  );
   if (!res) return null;
 
   return {
