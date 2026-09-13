@@ -123,13 +123,25 @@ function subjectFor(p: DigestPayload): string {
   if (otherStatus) parts.push(`${otherStatus} status change${otherStatus === 1 ? "" : "s"}`);
   if (p.drops.length) parts.push(`${p.drops.length} price drop${p.drops.length === 1 ? "" : "s"}`);
   const newCount = p.bubbles.reduce((n, b) => n + b.total, 0);
+  const pickCount = p.bubbles.reduce((n, b) => n + b.listings.length, 0);
   // One capped section makes the whole figure a floor. Say so with a "+" rather than
   // quote a round 100 as though it were the count.
   const newCapped = p.bubbles.some((b) => b.capped);
   const newPlural = newCount === 1 && !newCapped ? "" : "s";
-  if (newCount) parts.push(`${newCount}${newCapped ? "+" : ""} new listing${newPlural}`);
+  // Lead with the choosing, not the volume. "268 new listings" is a chore in a subject
+  // line; "6 picks from 268 new listings" is the same number doing the opposite job. Only
+  // claim it where we actually chose — an area that fit entirely into the email did not.
+  if (newCount)
+    parts.push(
+      newCount > pickCount
+        ? `${pickWord(pickCount)} from ${newCount}${newCapped ? "+" : ""} new listings`
+        : `${newCount}${newCapped ? "+" : ""} new listing${newPlural}`
+    );
   return parts.join(" · ") || "Your PureProperty alerts";
 }
+
+/** "1 pick" / "6 picks" — the chosen rows, said in words. */
+const pickWord = (n: number) => `${n} pick${n === 1 ? "" : "s"}`;
 
 /** A section's count, marked as a floor when the worker's fetch cap bound. */
 const countLabel = (b: { total: number; capped?: boolean }) => `${b.total}${b.capped ? "+" : ""}`;
@@ -209,11 +221,18 @@ function bubbleSectionHtml(b: BubbleSection): string {
           ${l.price != null ? `<strong>${money(l.price)}</strong>` : ""}
           ${l.beds != null ? ` · ${l.beds} bd` : ""}${l.baths != null ? ` · ${l.baths} ba` : ""}
         </div>
+        ${
+          l.priceCut
+            ? `<div style="margin-top:4px;font-size:12px;color:#0f766e;font-weight:600;">Cut ${money(l.priceCut)} since it listed</div>`
+            : ""
+        }
       </td></tr>`
     )
     .join("");
   // A busy area names its full count in words rather than as a bare "+N more", because
-  // there the number IS the point: 143 is the reason to go and narrow it down.
+  // there the number IS the point — but it is the denominator, not the ask. The rows above
+  // it are the best-priced of the night (see pickRank), so this line says what the reader
+  // GOT out of that number instead of handing them the number to deal with.
   const areaUrl = `${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}`;
   const more = b.total - b.listings.length;
   const overflow =
@@ -221,7 +240,7 @@ function bubbleSectionHtml(b: BubbleSection): string {
       ? ""
       : b.highVolume
         ? `<div style="font-size:12px;color:#475569;margin-top:6px;">
-             ${countLabel(b)} new homes came up in ${b.bubbleName}. These are the ${b.listings.length} newest —
+             ${pickWord(b.listings.length)} from ${countLabel(b)} new homes in ${b.bubbleName} today —
              <a href="${areaUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">see them all →</a>
            </div>`
         : `<div style="font-size:12px;margin-top:6px;">
@@ -350,11 +369,11 @@ export function renderAlertsDigest(
               b.listings
                 .map(
                   (l) =>
-                    `   - ${l.address}${l.price != null ? ` — ${money(l.price)}` : ""}${l.brokerage ? ` — ${l.brokerage}` : ""}\n     ${listingUrl(l.listing_key)}`
+                    `   - ${l.address}${l.price != null ? ` — ${money(l.price)}` : ""}${l.brokerage ? ` — ${l.brokerage}` : ""}${l.priceCut ? `\n     Cut ${money(l.priceCut)} since it listed` : ""}\n     ${listingUrl(l.listing_key)}`
                 )
                 .join("\n") +
               (b.highVolume
-                ? `\n   ${countLabel(b)} new homes in ${b.bubbleName} — see them all: ${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}`
+                ? `\n   ${pickWord(b.listings.length)} from ${countLabel(b)} new homes in ${b.bubbleName} today — see them all: ${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}`
                 : "")
           )
           .join("\n")
