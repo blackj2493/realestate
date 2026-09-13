@@ -143,6 +143,37 @@ describe("renderAlertsDigest", () => {
     }
   });
 
+  it("offers the controls short of unsubscribing, in both parts", () => {
+    // Unsubscribe was the only lever in here, and 46 of 505 profiles had pulled it. Someone
+    // who wants LESS mail is not the same person as someone who wants none.
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [baseSection] }), "https://x.test/unsub", {
+      weeklyUrl: "https://x.test/weekly",
+      pauseUrl: "https://x.test/pause",
+    });
+    expect(html).toContain("Too much email?");
+    expect(html).toContain("https://x.test/weekly");
+    expect(html).toContain("https://x.test/pause");
+    expect(text).toContain("Send this once a week instead: https://x.test/weekly");
+    expect(text).toContain("Pause for 30 days: https://x.test/pause");
+  });
+
+  it("shows a weekly reader the way back, not the way they already went", () => {
+    // A preference with no visible undo is a trap, and /account/emails has no control for
+    // this one — the email is the only place it exists.
+    const { html } = renderAlertsDigest(payload({ bubbles: [baseSection] }), undefined, {
+      dailyUrl: "https://x.test/daily",
+    });
+    expect(html).toContain("Go back to a nightly email");
+    expect(html).not.toContain("once a week instead");
+  });
+
+  it("renders no control strip when no actions are passed", () => {
+    // Every existing caller, and the preview script, pass nothing.
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [baseSection] }));
+    expect(html).not.toContain("Too much email?");
+    expect(text).not.toContain("Too much email?");
+  });
+
   it("renders the overflow line for an ordinary area", () => {
     const overflowing = { ...baseSection, total: 9 }; // 1 row shown of 9
     const { html } = renderAlertsDigest(payload({ bubbles: [overflowing] }));
