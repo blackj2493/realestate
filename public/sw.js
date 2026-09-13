@@ -13,7 +13,8 @@
  *   network  — everything else: all /api, /auth, /ingest, cross-origin, RSC fetches, POST
  *
  * Versioning: registered as /sw.js?v=<build id> (ServiceWorkerRegister.tsx). A new build
- * id is a new worker, and the old cache is deleted on activate.
+ * id is a new worker, and the old cache is deleted on activate. The new worker installs and
+ * activates silently — there is no update prompt, because nothing it caches can go stale.
  *
  * KILL SWITCH: set KILL_SWITCH = true and deploy. The next check-in wipes every cache,
  * unregisters this worker and reloads open tabs, so a bad worker can never pin users.
@@ -80,6 +81,11 @@ self.addEventListener("install", function (event) {
     self.skipWaiting();
     return;
   }
+  // Take over as soon as the precache is warm, instead of queueing behind the old worker
+  // until every tab closes. Safe BECAUSE of the narrow policy above: no HTML is cached, and
+  // /_next/static/* is content-hashed, so which worker is in charge cannot change a byte the
+  // user sees. Swapping mid-session does not reload anything — activate only claims clients.
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(function (cache) {
       return fetch(OFFLINE_URL, { cache: "no-store" }).then(function (res) {
@@ -169,6 +175,8 @@ self.addEventListener("fetch", function (event) {
   event.respondWith(networkWithOfflineFallback(event.request));
 });
 
+// Manual escape hatch only. Install already calls skipWaiting, so nothing in the app posts
+// this — it is kept for promoting a worker by hand from devtools.
 self.addEventListener("message", function (event) {
   if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
