@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  alertsFrequency,
+  digestDueToday,
+  DIGEST_WEEKLY_DAYS,
+  DIGEST_WEEKLY_SLACK_MS,
   canSendAlerts,
   canSendDataDrop,
   canSendOnboarding,
@@ -303,5 +307,48 @@ describe("canSendStreetRecap", () => {
     expect(canSendStreetRecap({ monthKeyPrefix: MONTH, now: NOW, lifecycle: stale })).toBe(true);
     // The Data Drop's 21 days would have released this one and defeated the cap entirely.
     expect(RECAP_DEFERRAL_RELEASE_DAYS).toBeGreaterThan(DEFERRAL_RELEASE_DAYS);
+  });
+});
+
+describe("alertsFrequency", () => {
+  it("is daily unless the reader chose weekly", () => {
+    expect(alertsFrequency(undefined)).toBe("daily");
+    expect(alertsFrequency(null)).toBe("daily");
+    expect(alertsFrequency({})).toBe("daily");
+    expect(alertsFrequency({ alerts_frequency: "weekly" })).toBe("weekly");
+    // Anything unrecognised is the pre-144 behaviour, never a silent mute.
+    expect(alertsFrequency({ alerts_frequency: "monthly" as never })).toBe("daily");
+  });
+});
+
+describe("digestDueToday", () => {
+  const DAY = 86_400_000;
+  const now = Date.parse("2026-09-20T04:40:00Z");
+
+  it("never holds a daily reader", () => {
+    expect(digestDueToday({ frequency: "daily", lastSentIso: new Date(now - 60_000).toISOString(), now })).toBe(true);
+  });
+
+  it("sends a weekly reader their first digest immediately", () => {
+    // Making someone wait a week for the first one is how a new account learns nothing
+    // arrives.
+    expect(digestDueToday({ frequency: "weekly", lastSentIso: null, now })).toBe(true);
+    expect(digestDueToday({ frequency: "weekly", lastSentIso: "not a date", now })).toBe(true);
+  });
+
+  it("holds a weekly reader mid-week and releases them on day seven", () => {
+    const threeDays = new Date(now - 3 * DAY).toISOString();
+    expect(digestDueToday({ frequency: "weekly", lastSentIso: threeDays, now })).toBe(false);
+    const sevenDays = new Date(now - DIGEST_WEEKLY_DAYS * DAY).toISOString();
+    expect(digestDueToday({ frequency: "weekly", lastSentIso: sevenDays, now })).toBe(true);
+  });
+
+  it("does not drift into an eight-day week when the run starts early", () => {
+    // The regression this guards: a strict >= 7 days turns one early run into a skipped
+    // week, and the drift compounds every week after it.
+    const justShy = new Date(now - (DIGEST_WEEKLY_DAYS * DAY - 60_000)).toISOString();
+    expect(digestDueToday({ frequency: "weekly", lastSentIso: justShy, now })).toBe(true);
+    const wellShy = new Date(now - (DIGEST_WEEKLY_DAYS * DAY - DIGEST_WEEKLY_SLACK_MS - 60_000)).toISOString();
+    expect(digestDueToday({ frequency: "weekly", lastSentIso: wellShy, now })).toBe(false);
   });
 });
