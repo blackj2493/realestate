@@ -123,9 +123,16 @@ function subjectFor(p: DigestPayload): string {
   if (otherStatus) parts.push(`${otherStatus} status change${otherStatus === 1 ? "" : "s"}`);
   if (p.drops.length) parts.push(`${p.drops.length} price drop${p.drops.length === 1 ? "" : "s"}`);
   const newCount = p.bubbles.reduce((n, b) => n + b.total, 0);
-  if (newCount) parts.push(`${newCount} new listing${newCount === 1 ? "" : "s"}`);
+  // One capped section makes the whole figure a floor. Say so with a "+" rather than
+  // quote a round 100 as though it were the count.
+  const newCapped = p.bubbles.some((b) => b.capped);
+  const newPlural = newCount === 1 && !newCapped ? "" : "s";
+  if (newCount) parts.push(`${newCount}${newCapped ? "+" : ""} new listing${newPlural}`);
   return parts.join(" · ") || "Your PureProperty alerts";
 }
+
+/** A section's count, marked as a floor when the worker's fetch cap bound. */
+const countLabel = (b: { total: number; capped?: boolean }) => `${b.total}${b.capped ? "+" : ""}`;
 
 const sectionHeader = (title: string) =>
   `<h2 style="font-size:13px;color:#334155;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 4px;">${title}</h2>`;
@@ -214,7 +221,7 @@ function bubbleSectionHtml(b: BubbleSection): string {
       ? ""
       : b.highVolume
         ? `<div style="font-size:12px;color:#475569;margin-top:6px;">
-             ${b.total} new homes came up in ${b.bubbleName}. These are the ${b.listings.length} newest —
+             ${countLabel(b)} new homes came up in ${b.bubbleName}. These are the ${b.listings.length} newest —
              <a href="${areaUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">see them all →</a>
            </div>`
         : `<div style="font-size:12px;margin-top:6px;">
@@ -339,7 +346,7 @@ export function renderAlertsDigest(
         p.bubbles
           .map(
             (b) =>
-              `• ${b.bubbleName}${b.filterLabel ? ` [${b.filterLabel}]` : ""} (${b.total} new):\n` +
+              `• ${b.bubbleName}${b.filterLabel ? ` [${b.filterLabel}]` : ""} (${countLabel(b)} new):\n` +
               b.listings
                 .map(
                   (l) =>
@@ -347,7 +354,7 @@ export function renderAlertsDigest(
                 )
                 .join("\n") +
               (b.highVolume
-                ? `\n   ${b.total} new homes in ${b.bubbleName} — see them all: ${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}`
+                ? `\n   ${countLabel(b)} new homes in ${b.bubbleName} — see them all: ${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}`
                 : "")
           )
           .join("\n")

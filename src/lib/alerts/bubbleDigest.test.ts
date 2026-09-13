@@ -70,6 +70,23 @@ describe("buildBubbleSections", () => {
     expect(bare.filterLabel).toBeNull();
   });
 
+  it("carries the fetch-cap flag, and drops it once de-dup makes the count exact", () => {
+    // `capped` means "at least this many": the worker fetched its ceiling and could not
+    // see past it. Once a narrower area takes rows off the section, the remainder IS the
+    // whole count, and a "+" would claim more than the section can account for.
+    const many = Array.from({ length: 8 }, (_, i) => listing(`W${i}`, i));
+    const [intact] = buildBubbleSections([{ ...bubble("b1", "All of Toronto", many), capped: true }]);
+    expect(intact.capped).toBe(true);
+
+    const shared = listing("S1", 99);
+    const [narrow, broad] = buildBubbleSections([
+      bubble("b1", "Half Moon Bay", [shared]),
+      { ...bubble("b2", "All of Toronto", [shared, ...many]), capped: true },
+    ]);
+    expect(narrow.capped).toBe(false);
+    expect(broad.capped).toBe(false);
+  });
+
   it("de-dups a listing appearing in two bubbles — first bubble wins", () => {
     const shared = listing("W9", 5);
     const sections = buildBubbleSections([

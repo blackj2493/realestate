@@ -3,7 +3,7 @@
  *
  * The digest renderer is pure, so the only way to be wrong about what lands in an inbox is
  * to never open one. This builds the two shapes that matter for the filter work — a busy
- * unfiltered area (Toronto's real ~143/night) and a filtered one — and writes both the HTML
+ * unfiltered area at the worker's fetch cap and a filtered one — and writes both the HTML
  * and the plain-text twin.
  *
  *   npx tsx scripts/admin/previewDigest.ts [outDir]
@@ -35,7 +35,11 @@ const payload: DigestPayload = {
     {
       bubbleId: "b-toronto",
       bubbleName: "Toronto",
-      total: 143, // the measured live rate
+      // The most an area can claim: the worker fetches at most MAX_BUBBLE_FETCH per area
+      // per night, so 100 is a floor and the "+" carries that. It used to print Typesense's
+      // `found` for the whole 72h re-scan window here — four figures, nightly.
+      total: 100,
+      capped: true,
       listings: Array.from({ length: 6 }, (_, i) => listing(i, "Toronto")),
       highVolume: true,
       filterLabel: null, // alerts on everything → earns the nudge

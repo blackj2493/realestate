@@ -90,6 +90,24 @@ describe("renderAlertsDigest", () => {
     expect(html).toContain("NEW REALTY");
   });
 
+  it("marks a capped count as a floor, in the subject and in the section", () => {
+    // The worker stops fetching at 100 per area. Before this the subject quoted
+    // Typesense's `found` for the whole re-scan window instead — four figures on an
+    // email carrying six homes. 100 is now the most it can claim, and the "+" says the
+    // real number is larger rather than inventing it.
+    const capped = { ...baseSection, bubbleName: "All of Toronto", total: 100, capped: true, highVolume: true };
+    const { subject, html, text } = renderAlertsDigest(payload({ bubbles: [capped] }));
+    expect(subject).toBe("100+ new listings");
+    expect(html).toContain("100+ new homes came up in All of Toronto");
+    expect(text).toContain("100+ new homes in All of Toronto");
+  });
+
+  it("leaves an uncapped count bare — no misleading plus sign", () => {
+    const exact = { ...baseSection, total: 12, highVolume: false };
+    const { subject } = renderAlertsDigest(payload({ bubbles: [exact] }));
+    expect(subject).toBe("12 new listings");
+  });
+
   it("renders the overflow line for an ordinary area", () => {
     const overflowing = { ...baseSection, total: 9 }; // 1 row shown of 9
     const { html } = renderAlertsDigest(payload({ bubbles: [overflowing] }));
