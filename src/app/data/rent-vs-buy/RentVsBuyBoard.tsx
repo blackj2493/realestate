@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Readout, ReadoutCell } from "@/components/daylight/primitives";
 import { RankingTable, type RankingColumn } from "@/components/data/RankingTable";
+import { MarketLink } from "@/components/data/MarketLink";
 import { fmtCompact, fmtCurrency, fmtPercent } from "@/lib/format";
 import type { MarketRow } from "@/lib/data/marketBoard";
 
@@ -32,7 +33,7 @@ const columns: RankingColumn<Row>[] = [
     label: "Market",
     align: "left",
     sortValue: (r) => r.region,
-    render: (r) => <span className="font-semibold">{r.region}</span>,
+    render: (r) => <MarketLink region={r.region} />,
   },
   {
     key: "rent",
