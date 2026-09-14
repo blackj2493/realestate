@@ -27,6 +27,23 @@ export const metadata: Metadata = {
   // not every header carries pt-safe yet (MOBILE_FULL_SITE_AUDIT), and a white bar on
   // the light default is the smaller error for dark-mode users.
   appleWebApp: { capable: true, title: "PureProperty", statusBarStyle: "default" },
+  // Site-wide crawl grants. `max-image-preview: large` is the one that matters and the
+  // one we were missing: Google Discover only surfaces a page it may render with a full
+  // width image, so without this directive the /data trackers and findings are invisible
+  // to that channel no matter how good the chart is. It is a grant, not an instruction to
+  // index — a page that sets its own `robots` (the thin hubs, /embed, compare) replaces
+  // this object wholesale and keeps its noindex.
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   // Default title/description for the homepage + any page that doesn't set its own
   // (the hubs all override with absolute titles, so no template is used here).
   title: "PureProperty | Ontario Real Estate Listings & Market Intelligence",
