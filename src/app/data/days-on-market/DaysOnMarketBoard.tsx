@@ -3,25 +3,10 @@
 import Link from "next/link";
 import { Readout, ReadoutCell } from "@/components/daylight/primitives";
 import { RankingTable, type RankingColumn } from "@/components/data/RankingTable";
+import { MarketLink } from "@/components/data/MarketLink";
 import { fmtPercent } from "@/lib/format";
 import { cityHubSlug } from "@/lib/listings/listingPath";
 import type { MarketRow } from "@/lib/data/marketBoard";
-
-/**
- * Where a market name sends you: the map terminal, seeded with that city.
- *
- * `city` is chipUrl's existing place param — a plain place link with no structured
- * filters, documented there as a stable contract. Verified live 2026-08-17:
- * `?city=Toronto` returns 9,336 active listings and `?city=Richmond+Hill` returns 984,
- * so the TRREB district-code split ("Toronto C06") is already handled on this path.
- *
- * The map rather than the /property/{prov}/{city} hub, deliberately. The hub is a static
- * list; the map carries the same True DOM this table is about, per listing, with the
- * reported figure struck through beside it. A reader who has just learned that Richmond
- * Hill listings sit 73 days lands on the individual homes doing the sitting. The hub is
- * still linked below the table, where it does the crawl job the map cannot.
- */
-const mapHref = (region: string) => `/properties?city=${encodeURIComponent(region)}`;
 
 const DASH = "—";
 const days = (n: number | null) => (n == null ? DASH : `${n}d`);
@@ -49,14 +34,7 @@ const columns: RankingColumn<MarketRow>[] = [
     label: "Market",
     align: "left",
     sortValue: (r) => r.region,
-    render: (r) => (
-      <Link
-        href={mapHref(r.region)}
-        className="font-semibold text-[color:var(--dt-sig)] underline decoration-[color:var(--dt-sig)]/40 underline-offset-2 hover:decoration-[color:var(--dt-sig)] dark:text-cyan-400 dark:decoration-cyan-400/40 dark:hover:decoration-cyan-400"
-      >
-        {r.region}
-      </Link>
-    ),
+    render: (r) => <MarketLink region={r.region} />,
   },
   {
     key: "soldMedianDom",
