@@ -37,7 +37,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
   if (!feed || feed.readings.length === 0) notFound();
 
   const key = dataDateKey(feed.dataAsOf);
-  const headline = feed.readings[0];
+  // The market name leads the line and every reading follows once. An earlier version
+  // also promoted readings[0] into a headline clause, which printed the first reading
+  // twice ("Vaughan: Median sold price $1,158,500. Median sold price: $1,158,500 (2nd
+  // of 15 markets)") — the kind of thing a curator quotes verbatim, stutter included.
   const body = feed.readings
     .map((r) => (r.rank === "—" ? `${r.label}: ${r.value}.` : `${r.label}: ${r.value} (${r.rank} markets).`))
     .join(" ");
@@ -46,7 +49,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     {
       title: `${region} housing market — ${key}`,
       link: `${SITE_URL}/data`,
-      description: `${region}: ${headline.label} ${headline.value}. ${body} Updated nightly from MLS® data at ${SITE_URL}/data.`,
+      description: `${region} — ${body} Updated nightly from MLS® data at ${SITE_URL}/data.`,
       guid: `${SITE_URL}/data/feeds/city/${slug}#${key}`,
       isPermaLink: false,
       pubDate: feedDate(feed.dataAsOf),
