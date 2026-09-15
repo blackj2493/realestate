@@ -3,6 +3,7 @@ import { getServiceRoleClient } from "@/lib/supabase/client";
 import {
   LISTING_SHARD_URLS,
   LISTING_SITEMAP_SHARDS,
+  LISTING_ACTIVE_STATUSES,
 } from "@/lib/listings/listingSitemapShards";
 
 /**
@@ -27,13 +28,14 @@ import {
  * could appear in two shards or in none. listing_key never moves.
  */
 
-// NOTE: `listings` is NOT active-only — Query B upserts Closed (sold) payloads here, and
-// Terminated/Expired/Suspended rows stay frozen-Active — so this sitemap DOES emit their
-// URLs. That is safe: the listing page resolves the TRUE status and sets robots:noindex
-// for every non-active listing (see properties/[id] generateMetadata), so sold and
-// off-market pages are discoverable but never indexed, and all VOW numbers (close price,
-// sold DOM) are gated at render. To stop emitting them entirely, filter here by resolved
-// status (anti-join raw_vow_delisted for the frozen-Active terminated rows).
+// ON-MARKET ROWS ONLY. `listings` is not active-only — Query B upserts Closed payloads
+// into the same table — so this query filters rather than taking whatever the offset
+// lands on. The old root sitemap emitted sold rows deliberately, on the reasoning that
+// the listing page noindexes them anyway so they are "discoverable but never indexed".
+// That reasoning holds in isolation and fails on a crawl budget: 130,917 of 327,723 rows
+// are sold or leased (2026-09-15), and declaring them asks Google to fetch ~40% of this
+// sitemap only to be told to discard it — on a site where /data went two months without
+// being crawled at all. See LISTING_ACTIVE_STATUSES.
 //
 // Rendered on request rather than at build. Same reasoning as the address shards: the
 // Vercel builder runs dozens of prerenders against the same Postgres, and a paginated
@@ -103,6 +105,12 @@ async function shardRows(
     const { data, error } = await supabase
       .from("listings")
       .select(LISTING_SELECT)
+      // On-market rows only. See LISTING_ACTIVE_STATUSES: 130,917 of 327,723 rows are
+      // sold or leased, the listing page noindexes every one of them, and declaring them
+      // spends crawl budget fetching pages Google is then told to discard.
+      .in("standard_status", LISTING_ACTIVE_STATUSES as unknown as string[])
+      // Orphans are rows the feed stopped sending. They resolve to nothing worth indexing.
+      .eq("is_orphaned", false)
       .order("listing_key")
       .range(from, to);
     if (error) {
