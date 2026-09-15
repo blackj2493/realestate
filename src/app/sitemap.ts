@@ -5,8 +5,6 @@ import {
   neighbourhoodHubsForSitemap,
   COMMERCIAL_ACTIVE_FILTER,
 } from "@/lib/listings/cityHubs";
-import { LIVE_TRACKERS } from "@/lib/data/trackers";
-import { LIVE_FINDINGS } from "@/lib/data/findings";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -164,29 +162,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/property`, changeFrequency: "daily", priority: 0.9 },
   ];
 
-  // Public /data trackers (hub + each live tracker). Aggregate-statistics pages, emitted
-  // regardless of DB state (like the static routes).
-  const dataRoutes: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/data`, changeFrequency: "daily", priority: 0.8 },
-    // The press desk. Rarely changes, but it is the page we point every outreach email at,
-    // so it must be indexable and discoverable rather than a hidden landing page.
-    { url: `${SITE_URL}/data/for-journalists`, changeFrequency: "monthly", priority: 0.6 },
-    ...LIVE_TRACKERS.map((t) => ({
-      url: `${SITE_URL}/data/${t.slug}`,
-      changeFrequency: "daily" as const,
-      priority: 0.7,
-    })),
-    // Findings: dated analysis built on the trackers. lastModified is the piece's own
-    // date rather than "now" — a finding is a snapshot and claiming daily freshness on
-    // static analysis is the kind of thing that gets a sitemap discounted.
-    { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },
-    ...LIVE_FINDINGS.map((f) => ({
-      url: `${SITE_URL}/data/findings/${f.slug}`,
-      lastModified: new Date(`${f.updated ?? f.published}T12:00:00Z`),
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    })),
-  ];
+  // The /data trackers and findings MOVED OUT of this file to src/app/data/sitemap.ts
+  // (/data/sitemap.xml) on 2026-09-15. Search Console reports coverage per sitemap, and
+  // eleven high-value pages mixed into ~47,600 listing URLs were unobservable — the
+  // "discovered" count told us nothing about whether any of them had ever been crawled.
+  // They are declared in robots.ts alongside this file. Do not re-add them here: two
+  // sitemaps claiming the same URL is not an error, but it puts the number you are trying
+  // to read back out of reach.
 
   const hubRoutes = await cityHubRoutes();
 
@@ -205,9 +187,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
       }));
 
-    return [...staticRoutes, ...dataRoutes, ...hubRoutes, ...listingRoutes];
+    return [...staticRoutes, ...hubRoutes, ...listingRoutes];
   } catch {
-    // Missing env at build / DB unavailable — still emit the static + data + hub routes.
-    return [...staticRoutes, ...dataRoutes, ...hubRoutes];
+    // Missing env at build / DB unavailable — still emit the static + hub routes.
+    return [...staticRoutes, ...hubRoutes];
   }
 }
