@@ -26,6 +26,7 @@ import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/browser";
+import { track } from "@/lib/analytics/posthog";
 
 export default function VowGateOverlay({
   headline,
@@ -58,7 +59,18 @@ export default function VowGateOverlay({
     createClient()
       .auth.getSession()
       .then(({ data }) => {
-        if (active) setSignedIn(!!data.session);
+        if (!active) return;
+        const hasSession = !!data.session;
+        setSignedIn(hasSession);
+        // Top of the signup funnel: the moment someone is actually stopped by the rope.
+        // Reported only after the session check, because the two states need separating —
+        // `terms_pending` is a signed-in user one attestation from the content, and lumping
+        // them in with anonymous visitors hides a stuck cohort inside a healthy-looking
+        // number. `surface` is the pathname, so we can see WHICH locked surface converts.
+        track("auth_gate_viewed", {
+          surface: pathname ?? "unknown",
+          state: hasSession ? "terms_pending" : "anonymous",
+        });
       })
       .catch(() => {
         /* stay anon-default on any client error */
@@ -66,7 +78,7 @@ export default function VowGateOverlay({
     return () => {
       active = false;
     };
-  }, []);
+  }, [pathname]);
 
   const nextQuery = safeNext ? `?next=${encodeURIComponent(safeNext)}` : "";
   const href = signedIn ? `/welcome${nextQuery}` : `/login${nextQuery}`;
