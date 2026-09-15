@@ -36,6 +36,7 @@ import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QUICK_PICK_MARKETS, marketCamera } from "@/lib/dashboard/area";
+import { track } from "@/lib/analytics/posthog";
 import {
   getConfig,
   saveConfig,
@@ -96,6 +97,13 @@ export default function AcceptTermsForm({
     setForeignWorkspace(hasForeignWorkspace());
   }, []);
 
+  // The Terms screen is the last step and the widest gate: three attestations plus a
+  // market, every one required. Reporting the VIEW separately from the completion is what
+  // turns "signups are low" into "N reached this screen and M finished it".
+  useEffect(() => {
+    track("auth_terms_viewed", { firstRun });
+  }, [firstRun]);
+
   // The inferred city first, then the standing list. A listing in Guelph is not a quick
   // pick, so without this the one market we are most confident about is the one market
   // the user cannot choose.
@@ -109,11 +117,16 @@ export default function AcceptTermsForm({
   const ready = allChecked && market !== null;
 
   const submit = async () => {
+    // Which gate turned them back is the actionable half. "Missing market" would argue for
+    // defaulting the area; "missing confirmation" would not, and the two are
+    // indistinguishable from the completion count alone.
     if (!allChecked) {
+      track("auth_terms_blocked", { reason: "missing_confirmation" });
       setError("All three confirmations are required.");
       return;
     }
     if (!market) {
+      track("auth_terms_blocked", { reason: "missing_market" });
       setError("Choose the area you want to follow.");
       return;
     }
@@ -131,6 +144,11 @@ export default function AcceptTermsForm({
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Could not record your acceptance. Please try again.");
       }
+
+      // The bottom of the funnel. Fired once the SERVER has recorded acceptance, never on
+      // the optimistic path — a signup that only happened in this browser is not a signup,
+      // and counting it here would put the shortfall somewhere it is not.
+      track("auth_signup_completed", { market });
 
       // Local mirror, so the dashboard paints the right area instantly on first open. The
       // durable copy is already written server-side by the route above; this is a cache,

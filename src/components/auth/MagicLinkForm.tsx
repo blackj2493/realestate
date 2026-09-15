@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Mail, Loader2, KeyRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 import { postSignInPath } from "@/lib/auth/postSignInPath";
+import { track } from "@/lib/analytics/posthog";
+import { markSignInStarted } from "@/lib/analytics/authFunnel";
 
 /**
  * Passwordless sign-in via a one-time email code (Supabase OTP; length is set by
@@ -35,8 +37,16 @@ export default function MagicLinkForm({
   const doSend = async () => {
     const addr = email.trim();
     if (!addr) return;
+    // A resend is any send made while the code step is already showing. Worth separating:
+    // a high resend rate means codes are slow or landing in spam, which looks identical
+    // to "users abandon the code step" if you only count the drop.
+    const resend = step === "code";
     setStatus("sending");
     setError("");
+    if (!resend) {
+      track("auth_signin_started", { method: "email" });
+      markSignInStarted("email");
+    }
 
     const { error: err } = await createClient().auth.signInWithOtp({
       email: addr,
@@ -45,8 +55,10 @@ export default function MagicLinkForm({
 
     setStatus("idle");
     if (err) {
+      track("auth_otp_failed", { stage: "send" });
       setError(err.message);
     } else {
+      track("auth_otp_sent", { resend });
       setStep("code");
     }
   };
@@ -70,10 +82,14 @@ export default function MagicLinkForm({
     });
 
     if (err) {
+      track("auth_otp_failed", { stage: "verify" });
       setStatus("idle");
       setError(err.message || "That code is invalid or has expired.");
       return;
     }
+    // auth_signed_in is NOT fired here. The navigation below would race it, and the OAuth
+    // path could never reach this file anyway — the bridge in PostHogProvider fires it for
+    // both, keyed off the method parked by markSignInStarted. See lib/analytics/authFunnel.
     // Full navigation so middleware + server components pick up the new session cookie.
     // Route through /welcome so first-time users accept the VOW Terms before landing
     // on `next` (idempotent — accepted users pass straight through). See postSignInPath.

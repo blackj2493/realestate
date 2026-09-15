@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Fingerprint, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/browser";
 import { postSignInPath } from "@/lib/auth/postSignInPath";
+import { track } from "@/lib/analytics/posthog";
+import { markSignInStarted } from "@/lib/analytics/authFunnel";
 
 /**
  * One-click sign-in options shown above the email-code fallback on /login:
@@ -38,6 +40,11 @@ export default function SocialAuthButtons({
   const signInWithGoogle = async () => {
     setBusy("google");
     setError("");
+    // Park the method BEFORE navigating to Google — this component does not run again
+    // when the user returns. The bridge in PostHogProvider consumes it to fire
+    // auth_signed_in on the fresh document. See lib/analytics/authFunnel.
+    track("auth_signin_started", { method: "google" });
+    markSignInStarted("google");
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
       safeNext
     )}`;
@@ -56,6 +63,8 @@ export default function SocialAuthButtons({
   const signInWithPasskey = async () => {
     setBusy("passkey");
     setError("");
+    track("auth_signin_started", { method: "passkey" });
+    markSignInStarted("passkey");
     try {
       const { error: err } = await createClient().auth.signInWithPasskey();
       if (err) throw err;

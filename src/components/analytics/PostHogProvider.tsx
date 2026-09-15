@@ -29,7 +29,9 @@ import {
   analyticsEnabled,
   identifyUser,
   resetUser,
+  track,
 } from '@/lib/analytics/posthog';
+import { consumeSignInMethod } from '@/lib/analytics/authFunnel';
 
 function PostHogPageView() {
   const pathname = usePathname();
@@ -52,9 +54,29 @@ function PostHogAuthBridge() {
     if (!analyticsEnabled) return;
     const supabase = createClient();
 
-    // Identify immediately if a session already exists on mount.
+    /**
+     * Fire auth_signed_in at most once per sign-in, whatever route produced it.
+     *
+     * The guard is the PARKED METHOD, not the auth event. `onAuthStateChange` also fires
+     * on token refresh, tab focus and INITIAL_SESSION, so counting sessions here would
+     * turn one sign-in into an unbounded number and make the funnel's last step useless.
+     * consumeSignInMethod() returns non-null only when this tab started a sign-in that is
+     * now completing; a returning user with a live cookie has nothing parked and is
+     * correctly not counted.
+     */
+    const captureSignIn = () => {
+      const method = consumeSignInMethod();
+      if (method) track('auth_signed_in', { method });
+    };
+
+    // Identify immediately if a session already exists on mount. This is also the OAuth
+    // return path: Google lands on a fresh document with the session already established,
+    // so this is the only place that completion can be observed.
     void supabase.auth.getUser().then(({ data }) => {
-      if (data.user) identifyUser(data.user.id, { email: data.user.email ?? undefined });
+      if (data.user) {
+        identifyUser(data.user.id, { email: data.user.email ?? undefined });
+        captureSignIn();
+      }
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -62,6 +84,7 @@ function PostHogAuthBridge() {
         resetUser();
       } else if (session?.user) {
         identifyUser(session.user.id, { email: session.user.email ?? undefined });
+        captureSignIn();
       }
     });
 

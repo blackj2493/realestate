@@ -56,8 +56,32 @@ export type AnalyticsEvents = {
   // Watchlist / accounts.
   'watchlist_added': { listingId: string };
   'watchlist_removed': { listingId: string };
+
+  // ── Signup funnel ────────────────────────────────────────────────────────────
+  // Every step of the Velvet Rope, so a drop-off between two adjacent steps is a
+  // number instead of a guess. Wired 2026-09-15: the two `auth_*` events below had
+  // been DEFINED since this catalogue was written and were never once fired, which is
+  // why "150 visitors, 0 signups" could not be narrowed past "something is wrong".
+  //
+  // The funnel, in order:
+  //   auth_gate_viewed → auth_signin_started → auth_otp_sent → auth_signed_in
+  //   → auth_terms_viewed → auth_signup_completed
+  //
+  // Google skips auth_otp_sent by design — comparing the two paths is half the point.
+  /** Someone hit a locked VOW surface. Top of the funnel: every signup starts here. */
+  'auth_gate_viewed': { surface: string; state: 'anonymous' | 'terms_pending' };
   'auth_signin_started': { method?: string };
+  /** A one-time code was emailed. Never fires for OAuth. */
+  'auth_otp_sent': { resend: boolean };
+  /** `send` = could not email a code; `verify` = the code was wrong or expired. */
+  'auth_otp_failed': { stage: 'send' | 'verify' };
   'auth_signed_in': { method?: string };
+  /** The Terms screen rendered. Four required fields sit between here and completion. */
+  'auth_terms_viewed': { firstRun: boolean };
+  /** Submitted Terms with something missing — says WHICH gate turned them back. */
+  'auth_terms_blocked': { reason: 'missing_confirmation' | 'missing_market' };
+  /** Terms accepted and a market chosen. The account is now real and reachable. */
+  'auth_signup_completed': { market: string };
 
   // Installable app (src/lib/pwa). `platform` is where the install would land;
   // `source` is which surface asked. Every event also carries the `pp_display_mode`
