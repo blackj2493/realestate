@@ -5,7 +5,11 @@ vi.mock('@/lib/supabase/client', () => ({
 }));
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
-import { LISTING_SHARD_URLS, LISTING_SITEMAP_SHARDS } from '@/lib/listings/listingSitemapShards';
+import {
+  LISTING_SHARD_URLS,
+  LISTING_SITEMAP_SHARDS,
+  LISTING_ACTIVE_STATUSES,
+} from '@/lib/listings/listingSitemapShards';
 import sitemap, { generateSitemaps } from './sitemap';
 
 interface Row {
@@ -33,6 +37,8 @@ function supabaseStub(dataset: Row[], opts: { pageError?: number } = {}) {
       calls.selects.push(s);
       return q;
     });
+    q.in = vi.fn(() => q);
+    q.eq = vi.fn(() => q);
     q.order = vi.fn(() => q);
     q.range = vi.fn((f: number, t: number) => {
       from = f;
@@ -159,6 +165,37 @@ describe('listing sitemap — pagination and canonical URLs', () => {
     // path into a column so this select stays flat. It must stay flat.
     for (const s of calls.selects) expect(s).not.toContain('full_payload');
     expect(calls.selects[0]).toContain('sitemap_path');
+  });
+
+  it('declares ON-MARKET rows only, never sold or leased ones', async () => {
+    // 130,917 of 327,723 rows are sold or leased, and the listing page noindexes every
+    // one. Without this filter ~40% of the sitemap asks Google to fetch pages it is then
+    // told to discard — the exact crawl budget that left /data uncrawled for two months.
+    const filters: Array<[string, unknown]> = [];
+    const { client } = supabaseStub([row(1)]);
+    const wrapped = {
+      from: vi.fn(() => {
+        const q = (client as unknown as { from: () => Record<string, unknown> }).from();
+        q.in = vi.fn((col: string, vals: unknown) => {
+          filters.push([col, vals]);
+          return q;
+        });
+        q.eq = vi.fn((col: string, val: unknown) => {
+          filters.push([col, val]);
+          return q;
+        });
+        return q;
+      }),
+    } as unknown as ReturnType<typeof getServiceRoleClient>;
+    vi.mocked(getServiceRoleClient).mockReturnValue(wrapped);
+
+    await sitemap({ id: 0 });
+    const statuses = filters.find(([c]) => c === 'standard_status')?.[1] as string[];
+    expect(statuses).toEqual([...LISTING_ACTIVE_STATUSES]);
+    expect(statuses).not.toContain('sold');
+    expect(statuses).not.toContain('leased');
+    // Orphans are rows the feed stopped sending; they resolve to nothing worth indexing.
+    expect(filters).toContainEqual(['is_orphaned', false]);
   });
 
   it('orders by listing_key, so shard boundaries cannot move between renders', async () => {

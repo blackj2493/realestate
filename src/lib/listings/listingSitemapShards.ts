@@ -29,3 +29,18 @@ export const LISTING_SITEMAP_SHARDS = 3;
 
 /** Total listing URLs the sitemap can declare. Raising it means raising the shard count. */
 export const LISTING_SITEMAP_CAPACITY = LISTING_SHARD_URLS * LISTING_SITEMAP_SHARDS;
+
+/**
+ * TRREB `standard_status` values that mean the listing is still on the market.
+ *
+ * WHY THE SITEMAP FILTERS ON THIS. `listings` is not active-only: Query B upserts Closed
+ * payloads into the same table, so of 327,723 rows (2026-09-15) only 196,424 carry an
+ * on-market status and 130,917 are sold or leased. The listing page sets robots:noindex
+ * for every non-active listing, so declaring those URLs asks Google to spend crawl budget
+ * fetching pages it is then told to discard — on a site where /data went two months
+ * without being crawled at all, that budget is the scarce thing.
+ *
+ * Values are lowercase as the feed writes them. Anything not listed here — "sold",
+ * "leased", "sold conditional", "sold conditional escape" — is excluded.
+ */
+export const LISTING_ACTIVE_STATUSES = ["new", "price change", "extension"] as const;
