@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { getServiceRoleClient } from "@/lib/supabase/client";
 import {
   cityHubsWithInventory,
   neighbourhoodHubsForSitemap,
@@ -8,18 +7,15 @@ import {
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
-// Refresh daily (matches the ETL cadence). NOTE: `listings` is NOT active-only — Query B
-// upserts Closed (sold) payloads here, and Terminated/Expired/Suspended rows stay
-// frozen-Active — so this sitemap DOES emit their listing URLs. That is safe:
-// the listing page resolves the TRUE status and sets robots:noindex for every non-active
-// listing (see properties/[id] generateMetadata), so sold/off-market pages are
-// discoverable but never indexed, and all VOW numbers (close price, sold DOM) are gated
-// at render. If you ever need to stop emitting them entirely, filter here by resolved
-// status (anti-join raw_vow_delisted for the frozen-Active terminated rows).
+// Refresh daily (matches the ETL cadence).
+//
+// This file declares the STATIC and HUB routes ONLY. Listing URLs moved to
+// src/app/listings/sitemap.ts and the /data tree to src/app/data/sitemap.ts, both on
+// 2026-09-15, because this file had reached 47,646 of the protocol's 50,000-URL cap —
+// where Google rejects the entire file rather than the overflow. The note about sold and
+// terminated listings being emitted-but-noindexed moved with them, to the listings file.
 export const revalidate = 86400;
 
-const PAGE = 1000; // PostgREST hard-caps a single response at 1000 rows — must paginate
-const MAX_URLS = 45_000; // headroom under the 50k-URL sitemap protocol limit
 const HUB_MIN = 5; // don't sitemap a city hub that would render thin (the hub noindexes < 3)
 
 /**
@@ -93,66 +89,6 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
   ];
 }
 
-/** One listing row. `sitemap_path` is precomputed (migration 138); everything else the
- *  sitemap needs is a real column, so this select never touches full_payload. */
-interface ListingSitemapRow {
-  listing_key: string | null;
-  synced_at: string | null;
-  sitemap_path: string | null;
-}
-
-const LISTING_SELECT = "listing_key, synced_at, sitemap_path";
-
-/**
- * Every listing this sitemap declares.
- *
- * ONE cheap pass. It used to extract ten address fields out of full_payload to build the
- * canonical path — a detoast per row — and that broke production twice:
- *
- *   * Paired with offset paging it degraded with depth (710ms at offset 0, 6.4s at
- *     19,000), tripped the 8s statement timeout around row 14,000, and the loop read the
- *     timeout as "no more rows". The live sitemap carried 13,998 of 45,000 for two days.
- *   * Rewritten as a by-primary-key second pass it was correct locally (45,000/45,000,
- *     worst chunk 2.3s) and still failed on Vercel, whose builder runs this alongside 57
- *     other prerenders hammering the same database: the chunks timed out under that
- *     contention and the route blew the 60s prerender cap. One build passed and the next
- *     failed on identical code.
- *
- * Migration 138 moved the path into a column, which is what migrations 104 and 137 did
- * for the same reason. There is no paging strategy that fixes a per-row detoast.
- *
- * An error is never treated as exhaustion — that conflation is what hid the 69% shortfall.
- */
-async function listingRows(
-  supabase: ReturnType<typeof getServiceRoleClient>
-): Promise<ListingSitemapRow[]> {
-  const rows: ListingSitemapRow[] = [];
-  for (let from = 0; rows.length < MAX_URLS; from += PAGE) {
-    const { data, error } = await supabase
-      .from("listings")
-      .select(LISTING_SELECT)
-      .order("synced_at", { ascending: false })
-      .order("listing_key") // deterministic tie-break so range pagination never skips/dups
-      .range(from, from + PAGE - 1);
-    if (error) {
-      // Loudly, and stop — but never silently, and never as if the table simply ended.
-      console.error(`[sitemap] listing page failed at offset ${from}: ${error.message}`);
-      break;
-    }
-    if (!data || data.length === 0) break;
-    rows.push(...(data as unknown as ListingSitemapRow[]));
-    if (data.length < PAGE) break;
-  }
-
-  const unresolved = rows.filter((r) => !r.sitemap_path).length;
-  if (unresolved > 0) {
-    // Not fatal — those rows still ship under /properties/{KEY} — but it means the
-    // backfill has not reached them or the ingester stopped writing the column.
-    console.warn(`[sitemap] ${unresolved} listing(s) have no sitemap_path; using the legacy path`);
-  }
-  return rows;
-}
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1 },
@@ -170,26 +106,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // sitemaps claiming the same URL is not an error, but it puts the number you are trying
   // to read back out of reach.
 
+  // Listing URLs MOVED OUT of this file to src/app/listings/sitemap.ts
+  // (/listings/sitemap/{n}.xml) on 2026-09-15. This file had reached 47,646 of the
+  // protocol's 50,000-URL cap, and at the cap Google rejects the ENTIRE file — not the
+  // overflow — so every hub in here would have stopped being discovered at once, with a
+  // green build and no error anywhere. Listings are the part that grows with market
+  // activity, so listings are the part that left; this file is now ~28,900 and stable.
+  //
+  // Do not re-add them. Two sitemaps claiming the same URL is not an error, but it makes
+  // the per-sitemap coverage numbers in Search Console unreadable, which is half of why
+  // the split was worth doing.
   const hubRoutes = await cityHubRoutes();
 
-  try {
-    const rows = await listingRows(getServiceRoleClient());
-
-    const listingRoutes: MetadataRoute.Sitemap = rows
-      .slice(0, MAX_URLS)
-      .filter((row) => row.listing_key)
-      .map((row) => ({
-        // The precomputed canonical, or the legacy path when it was never computed —
-        // the same fallback properties/[id] uses, so the two can never disagree.
-        url: `${SITE_URL}${row.sitemap_path || `/properties/${row.listing_key}`}`,
-        lastModified: row.synced_at ? new Date(row.synced_at) : undefined,
-        changeFrequency: "daily" as const,
-        priority: 0.7,
-      }));
-
-    return [...staticRoutes, ...hubRoutes, ...listingRoutes];
-  } catch {
-    // Missing env at build / DB unavailable — still emit the static + hub routes.
-    return [...staticRoutes, ...hubRoutes];
-  }
+  return [...staticRoutes, ...hubRoutes];
 }
