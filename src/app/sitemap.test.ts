@@ -22,10 +22,11 @@ import { LIVE_TRACKERS } from '@/lib/data/trackers';
 import { LIVE_FINDINGS } from '@/lib/data/findings';
 import sitemap from './sitemap';
 
-// Non-listing routes always emitted: 3 static (/, /properties, /property) + 3 fixed /data
-// pages (the hub, /data/for-journalists, /data/findings) + one route per live tracker and
-// one per live finding. Derived from the registries so it stays correct as pages ship.
-const NON_LISTING = 3 + 3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length;
+// Non-listing routes always emitted by THIS sitemap: 3 static (/, /properties, /property).
+// The /data tree moved to its own sitemap on 2026-09-15 (src/app/data/sitemap.ts) so its
+// Search Console coverage is readable instead of buried in ~47,600 listing URLs; the
+// counts below dropped by LIVE_TRACKERS + LIVE_FINDINGS + 3 when it did.
+const NON_LISTING = 3;
 
 interface Row {
   listing_key: string;
@@ -108,6 +109,18 @@ describe('sitemap — PostgREST 1000-row pagination (audit HIGH-7)', () => {
 
     const entries = await sitemap();
     expect(entries.length).toBe(NON_LISTING);
+  });
+
+  it('declares no /data URL — that tree has its own sitemap', async () => {
+    // Two sitemaps claiming the same URL is not an error, but it puts the per-sitemap
+    // coverage number we split /data out to READ back out of reach. Guard the split.
+    vi.mocked(getServiceRoleClient).mockReturnValue(supabaseStub([row(1)]).client);
+
+    const entries = await sitemap();
+    const dataUrls = entries.filter((e) => new URL(e.url).pathname.startsWith('/data'));
+    expect(dataUrls).toEqual([]);
+    // And the tree it moved to is non-empty, so this is a split and not a deletion.
+    expect(LIVE_TRACKERS.length + LIVE_FINDINGS.length).toBeGreaterThan(0);
   });
 
   it('emits /commercial/on/{slug} hubs counted over the commercial population', async () => {

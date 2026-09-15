@@ -19,7 +19,7 @@ import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
 import { isDemoListingKey } from "@/lib/demo/demoListing";
 import { isCommercialProperty } from "@/lib/filters/fundamentals";
-import { buildListingPath, cityHubSlug, cityHubResolves } from "@/lib/listings/listingPath";
+import { buildListingPath, cityHubSlug, cityHubResolves, deslugCity } from "@/lib/listings/listingPath";
 import { buildListingMetaTitle, showsListPrice } from "@/lib/listings/listingMetaTitle";
 import { formatRegionParts } from "@/lib/regions/formatRegionLabel";
 import { resolveSalePrice } from "@/lib/avm/salePrice";
@@ -53,6 +53,7 @@ import EstimatedSaleCard from "@/components/Property/EstimatedSaleCard";
 import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import MarketDataLinks from "@/components/data/MarketDataLinks";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import CampaignHistoryChart from "@/components/CommandCenter/CampaignHistoryChart";
@@ -591,6 +592,12 @@ export default async function PropertyPage({
       ? `${cityParts.name} (${cityParts.code})`
       : cityParts.name
     : p.City;
+  // The MARKET this listing belongs to, as the /data trackers name it — "Toronto C01"
+  // collapses to "Toronto". Deliberately not cityParts.name, which is the neighbourhood
+  // ("Downtown & Waterfront") and matches no row on any tracker board. Null when the
+  // city resolves to no hub, and MarketDataLinks then falls back to province-wide copy
+  // rather than promising a comparison we cannot make.
+  const marketName = p.City && cityHubResolves(p.City) ? deslugCity(cityHubSlug(p.City)) : null;
   // Live 5-yr-fixed seed (Bank-of-Canada refreshed nightly job; cached, fallback-safe).
   const mortgageRate = await getCurrentMortgageRate();
   // Which lens opens first: investor personas → the underwrite; the Homebuyer
@@ -1626,6 +1633,12 @@ export default async function PropertyPage({
               <TypicalRents listingId={id} salesFirst={!isLease} />
             </Suspense>
           )}
+
+          {/* In-content links into the /data trackers. Placed here, in the market zone,
+              because that is where the question they answer is already on the reader's
+              mind — and because a body link with descriptive anchor text is the only
+              internal signal that moved /data at all (see MarketDataLinks' header). */}
+          <MarketDataLinks city={marketName} isLease={isLease} />
 
         <section id="history" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px]">
           {/* Mobile: default-OPEN, still collapsible behind a tap (defaultChecked).
