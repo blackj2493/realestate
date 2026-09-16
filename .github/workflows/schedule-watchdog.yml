@@ -16,6 +16,9 @@ name: Schedule Watchdog
 # has that blind spot by design — it reads the DATA's age from sync_state, and at 01:54 UTC on
 # 2026-08-28 it passed on a cursor refreshed 9h earlier by a run that had started 10h20m late.
 #
+# Since 2026-09-16 this also RE-DISPATCHES a missed job rather than only reporting it — see
+# the "Re-dispatch missed workflows" step for which jobs qualify, and why it needs a PAT.
+#
 # Deliberately dependency-free — no checkout, no npm ci — so it stays a ~15s job and cannot
 # itself be delayed by an install. Runs 4x/day at :38; a watchdog on a 4-hourly cadence
 # survives GitHub dropping one of its own triggers, which a once-daily check would not.
@@ -24,7 +27,8 @@ on:
     - cron: '38 */4 * * *'
   workflow_dispatch:
 
-# actions:read to list workflow runs; issues:write to raise the alert issue.
+# actions:read to list workflow runs; issues:write to raise the alert issue. The re-dispatch
+# step deliberately does NOT use this token — see that step.
 permissions:
   contents: read
   actions: read
@@ -33,6 +37,10 @@ permissions:
 jobs:
   watch:
     runs-on: ubuntu-latest
+    # Step-level `if` cannot read the secrets context, so the token is lifted to env purely to
+    # be tested for presence. The re-dispatch step authenticates with the secret directly.
+    env:
+      DISPATCH_PAT: ${{ secrets.WORKFLOW_DISPATCH_PAT }}
     steps:
       - name: Check every scheduled workflow for a missed or late run
         id: check
@@ -49,6 +57,12 @@ jobs:
             // (supabase/migrations/127_pg_cron_workflow_dispatch.sql). cronMinutesUtc must keep
             // matching cron.job in the database: retime a job there and retime it here too, or
             // this measures the wrong slot and reports a job late while it is on time.
+            //
+            // selfHeal marks a job this watchdog may re-dispatch unattended. Set it only where
+            // an extra run is harmless: cheap, idempotent and silent. daily-sync runs up to
+            // 300m and overlaps the estimates recompute, and nightly-emails sends a digest to
+            // real people — a spurious second run of either is worse than the miss it would be
+            // fixing, so both stay manual on purpose.
             const WATCHED = [
               { file: 'daily-sync.yml', label: 'Daily Real Estate Sync',
                 maxAgeHours: 26, cronMinutesUtc: [3 * 60 + 17], maxDelayHours: 4 },
@@ -57,12 +71,12 @@ jobs:
               { file: 'nightly-emails.yml', label: 'Nightly Emails',
                 maxAgeHours: 26 },
               { file: 'data-health.yml', label: 'Data Health Canary',
-                maxAgeHours: 26, cronMinutesUtc: [10 * 60 + 41], maxDelayHours: 6 },
+                maxAgeHours: 26, cronMinutesUtc: [10 * 60 + 41], maxDelayHours: 6, selfHeal: true },
               { file: 'content-data-snapshot.yml', label: 'Content Data Snapshot',
-                maxAgeHours: 26, cronMinutesUtc: [9 * 60 + 26], maxDelayHours: 6 },
+                maxAgeHours: 26, cronMinutesUtc: [9 * 60 + 26], maxDelayHours: 6, selfHeal: true },
               { file: 'freshness-check.yml', label: 'Data Freshness Check',
                 maxAgeHours: 12, cronMinutesUtc: [28, 6 * 60 + 28, 12 * 60 + 28, 18 * 60 + 28],
-                maxDelayHours: 6 },
+                maxDelayHours: 6, selfHeal: true },
               // COMMENTED OUT UNTIL THE CRON IS ARMED. weekly-data-drop.yml ships with its
               // schedule off, so watching it would report a missed run every four hours
               // forever — and an alert that is always firing is one nobody reads, which is
@@ -117,6 +131,7 @@ jobs:
 
             const rows = [];
             const problems = [];
+            const heal = [];
 
             for (const w of WATCHED) {
               let latest;
@@ -139,6 +154,9 @@ jobs:
               const reasons = [];
               if (ageH > w.maxAgeHours) {
                 reasons.push('MISSED: no run for ' + ageH.toFixed(1) + 'h (limit ' + w.maxAgeHours + 'h)');
+                // MISSED only, never LATE: a late job may be mid-run right now and a second
+                // dispatch would race it. A missed one has nothing to race.
+                if (w.selfHeal) heal.push(w.file);
               }
 
               let delayH = null;
@@ -194,6 +212,48 @@ jobs:
             core.setOutput('problem', problems.length ? 'true' : 'false');
             core.setOutput('report', report);
             core.setOutput('names', problems.join(', '));
+            core.setOutput('heal', heal.join(','));
+
+      # Re-fire a missed job instead of only complaining about it. On 2026-09-15 the Content
+      # Data Snapshot dispatch was lost in flight; the content routine then drafted from the
+      # previous day's figures at 10:00 UTC, and the repair was a human running one command
+      # fifteen hours later. This does the same thing within four hours, unattended.
+      #
+      # WHY A PAT AND NOT GITHUB_TOKEN — this is the trap. A workflow_dispatch made with the
+      # repository's own GITHUB_TOKEN does NOT start a run: GitHub blocks it to prevent
+      # recursive workflows. The API still answers 204, so it would look like it worked and
+      # quietly do nothing — precisely the silent failure this watchdog exists to catch. Use
+      # the same fine-grained token pg_cron holds in the Supabase Vault (Actions read+write on
+      # this repo and nothing else), added here as the WORKFLOW_DISPATCH_PAT secret.
+      #
+      # No secret set = no self-heal: the alert says so and the run still goes red, so this
+      # can never quietly become a dependency nobody knows about.
+      - name: Re-dispatch missed workflows
+        id: heal
+        if: steps.check.outputs.heal != '' && env.DISPATCH_PAT != ''
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          HEAL_FILES: ${{ steps.check.outputs.heal }}
+        with:
+          github-token: ${{ secrets.WORKFLOW_DISPATCH_PAT }}
+          script: |
+            const files = (process.env.HEAL_FILES || '').split(',').filter(Boolean);
+            const done = [];
+            for (const file of files) {
+              try {
+                await github.rest.actions.createWorkflowDispatch({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  workflow_id: file, ref: 'main',
+                });
+                done.push(file);
+                console.log('re-dispatched ' + file);
+              } catch (err) {
+                // Report and keep going — one unfixable job must not block the others.
+                console.log('could not re-dispatch ' + file + ': ' + (err.status || err.message));
+              }
+            }
+            core.setOutput('dispatched', done.join(', '));
 
       # One open issue, commented on rather than re-opened — same anti-spam shape as
       # daily-sync.yml's notify-failure job.
@@ -203,11 +263,18 @@ jobs:
         env:
           REPORT: ${{ steps.check.outputs.report }}
           NAMES: ${{ steps.check.outputs.names }}
+          HEAL_LIST: ${{ steps.check.outputs.heal }}
+          HEAL_DONE: ${{ steps.heal.outputs.dispatched }}
         with:
           script: |
             const label = 'schedule-drift';
             const runUrl = context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo +
                            '/actions/runs/' + context.runId;
+            const healNote = !process.env.HEAL_LIST
+              ? 'Nothing was eligible for automatic re-dispatch (LATE is never re-fired; daily-sync and nightly-emails are opt-out).'
+              : process.env.HEAL_DONE
+                ? 'Re-dispatched automatically: **' + process.env.HEAL_DONE + '** — look for a fresh run before doing anything by hand.'
+                : '**Self-heal did not run.** Set the WORKFLOW_DISPATCH_PAT secret (fine-grained, Actions read+write) to enable it — GITHUB_TOKEN cannot start a workflow_dispatch.';
             const body = [
               '⏰ **Schedule problem: ' + process.env.NAMES + '**',
               '',
@@ -215,10 +282,13 @@ jobs:
               process.env.REPORT,
               '```',
               '',
+              healNote,
+              '',
               'GitHub dispatches schedule triggers on a best-effort basis: it defers them under',
-              'load and drops them outright when the backlog is long enough. Re-run a missed job',
-              'now with "gh workflow run <file>". If this keeps recurring, move the affected cron',
-              'further off the top of the hour — see the WHY block in daily-sync.yml.',
+              'load and drops them outright when the backlog is long enough. A pg_cron dispatch',
+              'can also be lost in flight — `public.workflow_dispatch_log` holds the status code',
+              'GitHub returned, and outlives pg_net\'s 6h response ttl (migration 145).',
+              'Re-run a missed job by hand with "gh workflow run <file>".',
               '',
               '- Watchdog run: ' + runUrl,
               'cc @' + context.repo.owner,
@@ -251,19 +321,29 @@ jobs:
           ALERTS_FROM_EMAIL: ${{ secrets.ALERTS_FROM_EMAIL }}
           REPORT: ${{ steps.check.outputs.report }}
           NAMES: ${{ steps.check.outputs.names }}
+          HEAL_LIST: ${{ steps.check.outputs.heal }}
+          HEAL_DONE: ${{ steps.heal.outputs.dispatched }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "$RESEND_API_KEY" ] || [ -z "$SYNC_ALERT_EMAIL" ]; then
             echo "(no email sent — set RESEND_API_KEY + SYNC_ALERT_EMAIL secrets)"; exit 0
           fi
           FROM="${ALERTS_FROM_EMAIL:-PureProperty Alerts <support@pureproperty.ca>}"
+          if [ -z "$HEAL_LIST" ]; then
+            HEAL_NOTE="Nothing was eligible for automatic re-dispatch."
+          elif [ -n "$HEAL_DONE" ]; then
+            HEAL_NOTE="Re-dispatched automatically: $HEAL_DONE — look for a fresh run before doing anything by hand."
+          else
+            HEAL_NOTE="Self-heal did not run — set the WORKFLOW_DISPATCH_PAT secret (Actions read+write) to enable it."
+          fi
           # jq --arg does the escaping; never interpolate these values into JSON by hand.
           jq -n --arg from "$FROM" --arg to "$SYNC_ALERT_EMAIL" \
                 --arg subject "⏰ PureProperty · scheduled workflow missed or ran late" \
                 --arg names "$NAMES" --arg report "$REPORT" --arg url "$RUN_URL" \
+                --arg heal "$HEAL_NOTE" \
                 '{from: $from, to: $to, subject: $subject,
                   html: ("<p>⏰ Schedule problem: <b>" + $names + "</b></p><pre>" + $report
-                         + "</pre><p>GitHub defers and sometimes drops schedule triggers under load. <a href=\""
+                         + "</pre><p><b>" + $heal + "</b></p><p>GitHub defers and sometimes drops schedule triggers under load, and a pg_cron dispatch can be lost in flight — <code>public.workflow_dispatch_log</code> holds the status code GitHub returned. <a href=\""
                          + $url + "\">View the watchdog run</a>, then re-run a missed job with <code>gh workflow run &lt;file&gt;</code>.</p>")}' \
             | curl -sS -X POST https://api.resend.com/emails \
                 -H "Authorization: Bearer $RESEND_API_KEY" \
