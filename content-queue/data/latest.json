@@ -1,6 +1,6 @@
 {
   "generatedForDateUtc": "2026-09-16",
-  "dataAsOf": "2026-09-15T04:51:30.972+00:00",
+  "dataAsOf": "2026-09-16T05:40:44.024+00:00",
   "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
   "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
   "angles": [
@@ -9,7 +9,7 @@
       "region": "Brampton",
       "headline": "33% of active Brampton listings have cut their asking price",
       "figure": "33%",
-      "sampleN": 1957,
+      "sampleN": 1992,
       "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
       "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
       "context": "typical reduction 8.0%"
@@ -17,9 +17,9 @@
     {
       "kind": "days_on_market",
       "region": "Richmond Hill",
-      "headline": "The typical active Richmond Hill listing has now sat 74 days",
-      "figure": "74 days",
-      "sampleN": 1052,
+      "headline": "The typical active Richmond Hill listing has now sat 75 days",
+      "figure": "75 days",
+      "sampleN": 1074,
       "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
       "whySurprising": "Longest median true days-on-market of the markets tracked today."
     },
@@ -28,7 +28,7 @@
       "region": "Whitby",
       "headline": "Whitby is sitting at 3.0 months of supply",
       "figure": "3.0 months of supply",
-      "sampleN": 436,
+      "sampleN": 439,
       "sourceUrl": "https://www.pureproperty.ca/data/market-temperature",
       "whySurprising": "Least inventory of the 15 markets tracked today — ≈4–6 months is balanced, and below that tilts hard toward sellers."
     },
@@ -37,7 +37,7 @@
       "region": "Ottawa",
       "headline": "A 1-bed in Ottawa grosses about 6.9% rental yield",
       "figure": "6.9% gross yield",
-      "sampleN": 3986,
+      "sampleN": 4061,
       "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
       "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
     }
