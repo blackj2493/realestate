@@ -47,6 +47,7 @@ import {
 } from '@/lib/avm/calculator';
 import { fetchAnchor, fetchPeerAnchor, type AnchorResult } from '@/lib/avm/anchorService';
 import { normalizePropertySubType, isUnpriceableType, fsaOf } from '@/lib/avm/normalizeType';
+import { isTransientWriteError, writeBackoffMs, MAX_WRITE_RETRIES } from '@/lib/avm/writeRetry';
 import type { AVMInput } from '@/lib/avm/types';
 import type { RoomData } from '@/lib/room-utils';
 
@@ -106,6 +107,7 @@ const CHUNK_SIZE = 400; // rows per read page (each detoasts full_payload)
 const UPSERT_CHUNK = 200; // rows per array-upsert
 const INTER_CHUNK_DELAY_MS = 400;
 const MAX_READ_RETRIES = 5;
+/** Writes get the same retries the reads have always had — see @/lib/avm/writeRetry. */
 
 // For-sale floor + terminal statuses to exclude (mirror migration 020's active filter).
 const PRICE_FLOOR = 50000;
@@ -298,17 +300,55 @@ async function readPage(cursor: string, pageSize: number): Promise<ListingRow[] 
   }
 }
 
+/**
+ * Run one chunk write, retrying a TRANSPORT failure with the read path's backoff.
+ *
+ * Retries a timeout, a dropped stream or a 5xx — the faults that say nothing about the
+ * data. A constraint violation or a bad column is not retried: it would fail identically
+ * four more times and only delay the run.
+ *
+ * Returns the last error when every attempt failed, so the caller still counts the rows
+ * and the run still ends non-zero. The retry is here to stop LOSING writes, not to hide
+ * that one was lost.
+ */
+async function writeChunkWithRetry(
+  label: string,
+  offset: number,
+  // PromiseLike, not Promise: a PostgrestFilterBuilder is a thenable that only runs
+  // when awaited — which is precisely what makes it re-runnable on a retry.
+  run: () => PromiseLike<{ error: { message: string } | null }>
+): Promise<{ error: { message: string } | null }> {
+  let attempt = 0;
+  for (;;) {
+    const { error } = await run();
+    if (!error) return { error: null };
+
+    const transient = isTransientWriteError(error.message);
+    attempt++;
+    if (!transient || attempt > MAX_WRITE_RETRIES) {
+      console.warn(
+        `   ⚠️  ${label} chunk @${offset} failed${transient ? ` after ${MAX_WRITE_RETRIES} retries` : ' (not retryable)'}: ${error.message}`
+      );
+      return { error };
+    }
+    const backoff = writeBackoffMs(attempt);
+    console.warn(
+      `   ⏳ ${label} chunk @${offset} ${error.message} — retry ${attempt}/${MAX_WRITE_RETRIES} in ${backoff}ms…`
+    );
+    await sleep(backoff);
+  }
+}
+
 async function flush(rows: EstimateRow[]): Promise<{ ok: number; failed: number }> {
   let ok = 0;
   let failed = 0;
   for (let i = 0; i < rows.length; i += UPSERT_CHUNK) {
     const chunk = rows.slice(i, i + UPSERT_CHUNK);
-    const { error } = await sb
-      .from('property_estimates')
-      .upsert(chunk, { onConflict: 'listing_key' });
+    const { error } = await writeChunkWithRetry('upsert', i, () =>
+      sb.from('property_estimates').upsert(chunk, { onConflict: 'listing_key' })
+    );
     if (error) {
       failed += chunk.length;
-      console.warn(`   ⚠️  upsert chunk @${i} failed: ${error.message}`);
     } else {
       ok += chunk.length;
     }
@@ -324,10 +364,11 @@ async function flushDeletes(keys: string[]): Promise<{ ok: number; failed: numbe
   let failed = 0;
   for (let i = 0; i < keys.length; i += UPSERT_CHUNK) {
     const chunk = keys.slice(i, i + UPSERT_CHUNK);
-    const { error } = await sb.from('property_estimates').delete().in('listing_key', chunk);
+    const { error } = await writeChunkWithRetry('delete', i, () =>
+      sb.from('property_estimates').delete().in('listing_key', chunk)
+    );
     if (error) {
       failed += chunk.length;
-      console.warn(`   ⚠️  delete chunk @${i} failed: ${error.message}`);
     } else {
       ok += chunk.length;
     }

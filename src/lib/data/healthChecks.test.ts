@@ -677,6 +677,77 @@ describe("regression: 1,346 vacant-land listings kept May dwelling-model values 
     expect(checkUnpriceableValues({ count: 0 })).toEqual([]);
   });
 
+  it("reports the 2026-09-18 board-wide DOM fall as ONE systemic problem, not one city", () => {
+    // The real numbers. Every one of 15 markets fell; the rule warns at 20%, so only Ajax
+    // (20.8%) crossed it and the email named Ajax. The event was the whole board.
+    const before: Record<string, number> = {
+      Ajax: 48, Oshawa: 61, Whitby: 51, Burlington: 68, Mississauga: 68, Toronto: 58,
+      "Richmond Hill": 73, Pickering: 61, Brampton: 55, Hamilton: 62, Markham: 64,
+      Milton: 57, Oakville: 66, Ottawa: 59, Vaughan: 70,
+    };
+    const after: Record<string, number> = {
+      Ajax: 38, Oshawa: 50, Whitby: 42, Burlington: 56, Mississauga: 57, Toronto: 49,
+      "Richmond Hill": 62, Pickering: 52, Brampton: 47, Hamilton: 53, Markham: 55,
+      Milton: 49, Oakville: 56, Ottawa: 51, Vaughan: 60,
+    };
+    const snap = (v: Record<string, number>) =>
+      Object.entries(v).map(([region, value]) => ({ region, metric: "trueDom", value }));
+
+    const problems = checkDrift(snap(before), snap(after));
+    const cohort = problems.filter((p) => p.check === "drift-cohort");
+    expect(cohort).toHaveLength(1);
+    expect(cohort[0].detail).toContain("15 of 15 markets");
+    expect(cohort[0].detail).toContain("fell together");
+    // And the per-region row for the loudest city is GONE — one event, one alert.
+    expect(problems.filter((p) => p.check === "drift")).toHaveLength(0);
+    expect(problems.some((p) => p.detail.includes("Ajax"))).toBe(false);
+  });
+
+  it("still names a single region when only that region moved", () => {
+    // The cohort arm must not swallow the case the per-region check exists for.
+    const regions = ["Ajax", "Oshawa", "Whitby", "Burlington", "Toronto", "Markham"];
+    const before = regions.map((region) => ({ region, metric: "trueDom", value: 50 }));
+    const after = regions.map((region) => ({
+      region,
+      metric: "trueDom",
+      value: region === "Ajax" ? 20 : 50,
+    }));
+    const problems = checkDrift(before, after);
+    expect(problems.filter((p) => p.check === "drift-cohort")).toHaveLength(0);
+    expect(problems.filter((p) => p.check === "drift")).toHaveLength(1);
+    expect(problems[0].detail).toContain("Ajax");
+  });
+
+  it("does not call scattered movement systemic", () => {
+    // Same magnitudes, opposite directions: noise, not a shift. Direction is the whole
+    // discriminator — without it any busy night would trip the cohort arm.
+    const regions = ["A", "B", "C", "D", "E", "F", "G", "H"];
+    const before = regions.map((region) => ({ region, metric: "trueDom", value: 50 }));
+    const after = regions.map((region, i) => ({
+      region,
+      metric: "trueDom",
+      value: i % 2 === 0 ? 43 : 57,
+    }));
+    expect(checkDrift(before, after).filter((p) => p.check === "drift-cohort")).toHaveLength(0);
+  });
+
+  it("will not call a tiny board systemic", () => {
+    // "Most of them" is meaningless across three markets.
+    const regions = ["A", "B", "C"];
+    const before = regions.map((region) => ({ region, metric: "trueDom", value: 50 }));
+    const after = regions.map((region) => ({ region, metric: "trueDom", value: 30 }));
+    expect(checkDrift(before, after).filter((p) => p.check === "drift-cohort")).toHaveLength(0);
+  });
+
+  it("escalates a systemic move past the rule's error threshold", () => {
+    const regions = ["A", "B", "C", "D", "E", "F"];
+    const before = regions.map((region) => ({ region, metric: "trueDom", value: 100 }));
+    const after = regions.map((region) => ({ region, metric: "trueDom", value: 40 })); // −60%
+    const cohort = checkDrift(before, after).filter((p) => p.check === "drift-cohort");
+    expect(cohort).toHaveLength(1);
+    expect(cohort[0].severity).toBe("error");
+  });
+
   it("errors on the exact 2026-08-12 shape (stale values on active unpriceable listings)", () => {
     const out = checkUnpriceableValues({ count: 1346 });
     expect(out).toHaveLength(1);
