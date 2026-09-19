@@ -286,6 +286,27 @@ export function snapshotFromRows(rows: MarketRow[]): SnapshotEntry[] {
 const keyOf = (e: { region: string; metric: string }) => `${e.region}:${e.metric}`;
 
 /**
+ * Share of a rule's per-region threshold at which a move COUNTS TOWARDS a cohort.
+ *
+ * Deliberately below the per-region bar. One market moving 12% is noise; twelve markets
+ * moving 12% the same way on the same night is not, and agreement is itself the evidence.
+ */
+const COHORT_SENSITIVITY = 0.6;
+
+/** Share of reporting regions that must agree before a move is called systemic. */
+const COHORT_SHARE = 0.6;
+
+/** Fewest regions that can form a cohort — below this "most of them" means nothing. */
+const COHORT_MIN_REGIONS = 4;
+
+/** Median of a non-empty numeric array. */
+function medianOf(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+/**
  * Compare last night's snapshot with tonight's. Returns one problem per metric that moved
  * more than its threshold. A metric that appears or disappears is already covered by the
  * completeness check, so it is skipped here rather than double-reported.
@@ -298,12 +319,77 @@ export function checkDrift(prev: SnapshotEntry[], curr: SnapshotEntry[]): Proble
   const cv = new Map(curr.map((e) => [keyOf(e), e.value]));
   const regions = Array.from(new Set(curr.map((e) => e.region)));
 
+  // Metrics whose move tonight is SYSTEMIC — reported once, below, instead of once per
+  // region. Collected before the per-region loop so that loop can skip them.
+  const systemic = new Set<string>();
+
+  // ── Systemic arm: did the whole board move together? ──────────────────────
+  //
+  // The per-region thresholds cannot see this, and on 2026-09-18 that produced exactly the
+  // wrong alert. Every one of 15 markets' true days on market FELL, by 14.4% on average —
+  // but the rule warns at 20%, so only the single largest mover (Ajax, 20.8%) crossed it.
+  // The email named one city. The event was the entire board, which is a different
+  // diagnosis with a different cause: a board-wide move is the pipeline or the input
+  // population, not one region's data.
+  //
+  // Same shape as the proxy-threshold trap this codebase has hit before — a number
+  // standing in for a question nobody asked. "Is this region anomalous?" and "did
+  // everything move at once?" are separate questions, so they get separate arms.
+  for (const rule of DRIFT_RULES) {
+    const moves: number[] = [];
+    let up = 0;
+    let down = 0;
+    let reporting = 0;
+
+    for (const region of regions) {
+      if (
+        rule.monthSensitive &&
+        pv.get(`${region}:${LATEST_MONTH_KEY}`) !== cv.get(`${region}:${LATEST_MONTH_KEY}`)
+      ) {
+        continue;
+      }
+      const before = pv.get(`${region}:${rule.metric}`);
+      const after = cv.get(`${region}:${rule.metric}`);
+      if (before == null || after == null || before === 0) continue;
+      reporting++;
+
+      const signed = rule.absolute ? after - before : ((after - before) / before) * 100;
+      if (Math.abs(signed) < rule.warn * COHORT_SENSITIVITY) continue;
+      // Direction matters: noise scatters, a real systemic shift agrees.
+      if (signed > 0) up++;
+      else down++;
+      moves.push(Math.abs(signed));
+    }
+
+    if (reporting < COHORT_MIN_REGIONS) continue;
+    const agreeing = Math.max(up, down);
+    if (agreeing < Math.ceil(reporting * COHORT_SHARE)) continue;
+
+    systemic.add(rule.metric);
+    const median = medianOf(moves);
+    const unit = rule.absolute ? "pts" : "%";
+    const direction = up >= down ? "rose" : "fell";
+    out.push({
+      // One region drifting is a warning. The whole board moving together is a stronger
+      // claim about the pipeline, so it escalates on the rule's own error threshold.
+      severity: median >= rule.error ? "error" : "warn",
+      check: "drift-cohort",
+      detail:
+        `${agreeing} of ${reporting} markets: ${rule.label} ${direction} together overnight ` +
+        `(median ${median.toFixed(1)}${unit}) — a board-wide move is the pipeline or the input ` +
+        `population, not one region; check the recompute and the sold cohort before the market`,
+    });
+  }
+
   for (const region of regions) {
     const monthChanged =
       pv.get(`${region}:${LATEST_MONTH_KEY}`) !== cv.get(`${region}:${LATEST_MONTH_KEY}`);
 
     for (const rule of DRIFT_RULES) {
       if (rule.monthSensitive && monthChanged) continue; // legitimately volatile — see DRIFT_RULES
+      // Already reported once, for the whole board. Naming the loudest region again would
+      // split one event across two alerts and point the reader at the wrong scope.
+      if (systemic.has(rule.metric)) continue;
       const before = pv.get(`${region}:${rule.metric}`);
       const after = cv.get(`${region}:${rule.metric}`);
       if (before == null || after == null) continue; // null transitions → completeness check
