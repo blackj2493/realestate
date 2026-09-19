@@ -431,7 +431,7 @@ describe("buildDataDropPayload", () => {
   it("its rows describe the same place as its headline", () => {
     // A headline about Ajax over rows about Ontario is two emails in one envelope.
     const res = buildDataDropPayload({ ...base, regions: [] });
-    const led = provinceLead(base);
+    const led = provinceLead({ ...base, regions: [] });
     expect(led).not.toBeNull();
     expect(res?.payload.region).toBe(led!.region);
   });
