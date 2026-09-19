@@ -9,6 +9,7 @@ import {
   priorValue,
   synthesizeProvinceSnapshots,
   withoutSpikes,
+  provinceLead,
   
   
   type SnapshotEntry,
@@ -388,14 +389,51 @@ describe("buildDataDropPayload", () => {
   });
 
   // 305 of 432 users have saved nothing, so this is the majority path, not an edge case.
-  it("falls back to the province and carries the spread that drives the ask", () => {
+  it("leads a reader who saved nothing with the best story on the board", () => {
+    // Measured on the 2026-09-17 send, 305 of 321 recipients led with the rank-7 `price`
+    // fallback, because the Ontario aggregate's own 28-day moves sit under thresholds
+    // calibrated for one market. A reader who picked no market now gets the board's
+    // headline instead: a fact about a place rather than a fact about our arithmetic.
     const res = buildDataDropPayload({ ...base, regions: [] });
     expect(res?.payload.scope).toBe("province");
-    expect(res?.payload.region).toBe("Ontario");
+    expect(res?.payload.region).not.toBe("Ontario");
+    expect(res?.payload.headline.kind).not.toBe("price");
+  });
+
+  it("keeps the whole conversion path on a market-led province send", () => {
+    // scope stays "province" so the renderer still emits the tension block, the market
+    // chips and the spread. Leading with a market must not cost the ask.
+    const res = buildDataDropPayload({ ...base, regions: [] });
+    expect(res?.payload.scope).toBe("province");
     // Highest and lowest of the fixture's competition cells, with Ontario as the midpoint.
     expect(res?.payload.spread?.high.region).toBe("Milton");
     expect(res?.payload.spread?.low.region).toBe("Hamilton");
     expect(res?.payload.spread?.mid?.pct).toBe(18);
+  });
+
+  it("uses the aggregate when no single market has news", () => {
+    // provinceLead excludes the price rung on purpose: "a typical Ajax home sold for $X" is
+    // the same dull sentence as the province median with a narrower denominator. When the
+    // board has no news, the aggregate IS the honest thing to send.
+    const flat = base.rows.map((r) => ({ ...r, trueDom: null, activeCount: r.activeCount }));
+    const res = buildDataDropPayload({
+      ...base,
+      regions: [],
+      rows: flat,
+      competitionByCity: new Map(),
+      snapshots: new Map(),
+    });
+    expect(res?.payload.scope).toBe("province");
+    expect(res?.payload.region).toBe("Ontario");
+    expect(res?.payload.headline.kind).toBe("price");
+  });
+
+  it("its rows describe the same place as its headline", () => {
+    // A headline about Ajax over rows about Ontario is two emails in one envelope.
+    const res = buildDataDropPayload({ ...base, regions: [] });
+    const led = provinceLead(base);
+    expect(led).not.toBeNull();
+    expect(res?.payload.region).toBe(led!.region);
   });
 
   it("ignores a saved market the boards do not cover", () => {

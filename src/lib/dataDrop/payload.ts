@@ -622,6 +622,86 @@ export interface BuildInput {
   now: number;
 }
 
+/**
+ * How many markets a reader with no saved market can be led with.
+ *
+ * Every one of them is a stranger to this reader — they picked nothing — so the only
+ * defensible lead is the biggest story on the board, not the 9th biggest. Capping the
+ * candidate set keeps a thin, badly-covered market from winning on a technicality when a
+ * major one had a real move; the cap is by INVENTORY, which is the only ordering available
+ * that does not itself depend on the week's numbers.
+ */
+export const PROVINCE_CANDIDATE_MARKETS = 8;
+
+/**
+ * The markets a no-saved-market reader may be led with: the largest by active inventory.
+ *
+ * Deliberately not all 15. A reader who saved nothing gets the board's headline story, and
+ * a story from a market carrying 300 listings is a weaker claim about "Ontario" than one
+ * from a market carrying 10,000 — while being exactly as likely to produce a big percentage
+ * move, because small samples move more.
+ */
+export function provinceCandidateRegions(rows: MarketRow[]): string[] {
+  return rows
+    .filter((r) => isNum(r.activeCount) && r.activeCount! > 0)
+    .sort((a, b) => (b.activeCount ?? 0) - (a.activeCount ?? 0))
+    .slice(0, PROVINCE_CANDIDATE_MARKETS)
+    .map((r) => r.region);
+}
+
+/**
+ * Order two candidate leads: strongest rung first, then the bigger number, then the name.
+ *
+ * The last two are not decoration. Without a total order the winner depends on Map
+ * iteration order, so the lead could wobble between two equally-ranked markets from week to
+ * week for no reason a reader could see.
+ */
+function compareLeads(
+  a: { region: string; res: NonNullable<ReturnType<typeof pickHeadline>> },
+  b: { region: string; res: NonNullable<ReturnType<typeof pickHeadline>> }
+): number {
+  const rankOf = (k: HeadlineKind) => LADDER.find((l) => l.kind === k)?.rank ?? 99;
+  const byRank = rankOf(a.res.headline.kind) - rankOf(b.res.headline.kind);
+  if (byRank !== 0) return byRank;
+  const mag = (c: typeof a) =>
+    Math.abs(Number(String(c.res.headline.figure).replace(/[^0-9.-]/g, "")) || 0);
+  const byMag = mag(b) - mag(a);
+  if (byMag !== 0) return byMag;
+  return a.region.localeCompare(b.region);
+}
+
+/**
+ * The best story on the board for a reader who saved no market — or null when no single
+ * market produced one and the aggregate has to speak instead.
+ *
+ * The rank-7 price fallback is EXCLUDED here on purpose. "A typical Ajax home sold for $X"
+ * is not a better lead than the province's own median; it is the same dull sentence with a
+ * narrower denominator. This function exists to find NEWS, and if the board has none then
+ * the aggregate is the honest thing to send.
+ */
+export function provinceLead(i: BuildInput): {
+  region: string;
+  res: NonNullable<ReturnType<typeof pickHeadline>>;
+} | null {
+  const byRegion = new Map(i.rows.map((r) => [r.region, r]));
+  const candidates: { region: string; res: NonNullable<ReturnType<typeof pickHeadline>> }[] = [];
+  for (const region of provinceCandidateRegions(i.rows)) {
+    const row = byRegion.get(region);
+    if (!row) continue;
+    const res = pickHeadline({
+      region,
+      row,
+      competition: i.competitionByCity.get(region) ?? null,
+      snapshots: i.snapshots,
+      now: i.now,
+    });
+    if (res && res.headline.kind !== "price") candidates.push({ region, res });
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort(compareLeads);
+  return candidates[0];
+}
+
 export interface BuildResult {
   payload: DataDropPayload;
   trace: LadderTrace[];
@@ -653,8 +733,8 @@ export function buildDataDropPayload(i: BuildInput): BuildResult | null {
   }
 
   if (candidates.length > 0) {
-    const rankOf = (k: HeadlineKind) => LADDER.find((l) => l.kind === k)?.rank ?? 99;
-    candidates.sort((a, b) => rankOf(a.res.headline.kind) - rankOf(b.res.headline.kind));
+    // Same ordering the province lead uses — one comparator, so the two paths cannot drift.
+    candidates.sort(compareLeads);
     const win = candidates[0];
     const row = byRegion.get(win.region)!;
     const ladderInput: LadderInput = {
@@ -690,11 +770,35 @@ export function buildDataDropPayload(i: BuildInput): BuildResult | null {
     };
   }
 
-  // ── Province-wide. NOT a fallback: 70.6% of the base has saved no market, so this is
-  // seven sends in ten. Its job is conversion, and the spread is what makes the ask land.
+  // ── Province-wide aggregate. Reached ONLY when no single market had anything to say.
+  //
+  // It used to be reached by everyone with no saved market — seven sends in ten — and the
+  // result was a newsletter of levels: measured on the 2026-09-17 send, 305 of 321
+  // recipients led with `price`, the rank-7 fallback, because the Ontario aggregate's own
+  // 28-day moves sit under thresholds calibrated for one market (speed −16.4% against a 20%
+  // bar; supply +2.2% against 15%). The aggregate is not broken and the prior is not
+  // missing — a province average is just a duller thing to measure than a city.
+  //
+  // So a reader with no saved market now gets the best story on the BOARD, which is both
+  // more interesting and more honest: "Ajax homes are selling 21% faster than a month ago"
+  // is a fact about a place, where "the median across our markets is $X" is a fact about
+  // our arithmetic. The spread still rides along, so the ask to pick a market survives.
   const provinceRow = syntheticProvinceRow(i.rows);
   if (!provinceRow) return null;
-  const res = pickHeadline({
+
+  // Lead with the strongest story on the BOARD, and only fall back to the aggregate when
+  // no single market has one. The lead and the three rows come from the SAME place — an
+  // email whose headline is about Ajax and whose rows are about Ontario is two emails.
+  //
+  // scope stays "province" throughout. It is not a statement about the headline; it is what
+  // tells the renderer this reader has saved nothing, and it carries the tension block, the
+  // market chips and the spread — the entire conversion path. Only the rank-7 price subject
+  // is worded off scope, and that is the one case where the aggregate really is the subject.
+  const led = provinceLead(i);
+  const leadRegion = led?.region ?? "Ontario";
+  const leadRow = led ? byRegion.get(led.region)! : provinceRow;
+  const leadCompetition = led ? (i.competitionByCity.get(led.region) ?? null) : i.province;
+  const res = led?.res ?? pickHeadline({
     region: "Ontario",
     row: provinceRow,
     competition: i.province,
@@ -706,13 +810,13 @@ export function buildDataDropPayload(i: BuildInput): BuildResult | null {
   return {
     payload: {
       scope: "province",
-      region: "Ontario",
+      region: leadRegion,
       weekId,
       headline: res.headline,
       rows: buildRows({
-        region: "Ontario",
-        row: provinceRow,
-        competition: i.province,
+        region: leadRegion,
+        row: leadRow,
+        competition: leadCompetition,
         snapshots: i.snapshots,
         now: i.now,
       }),
