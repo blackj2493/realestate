@@ -8,6 +8,9 @@ import {
   pickHeadline,
   priorValue,
   synthesizeProvinceSnapshots,
+  withoutSpikes,
+  
+  
   type SnapshotEntry,
 } from "./payload";
 import type { MarketRow } from "@/lib/data/marketBoard";
@@ -241,6 +244,98 @@ describe("computeSpread", () => {
 
   it("returns null with fewer than three markets", () => {
     expect(computeSpread(cities([["A", 10], ["B", 40]]), 20)).toBeNull();
+  });
+});
+
+describe("one-day glitches vs real step changes", () => {
+  // Every series below is the REAL province trueDom history, inventory-weighted.
+  const day = (d: number) => `2026-09-${String(d).padStart(2, "0")}`;
+
+  it("does not let a one-night glitch void the month behind it", () => {
+    // 2026-09-10 read 40.1 between two nights of ~66. hasDiscontinuity saw a 40% jump and
+    // voided every prior whose window spanned it — which disabled leverage, speed AND
+    // supply for 28 days and dropped the ladder to its price fallback for 305 of 321
+    // recipients on 2026-09-17.
+    const list = [
+      { day: day(8), value: 58.7 },
+      { day: day(9), value: 66.8 },
+      { day: day(10), value: 40.1 }, // the glitch
+      { day: day(11), value: 65.3 },
+      { day: day(12), value: 65.3 },
+    ];
+    expect(hasDiscontinuity(list, day(8), Date.parse(`${day(12)}T00:00:00Z`))).toBe(false);
+    expect(withoutSpikes(list).map((p) => p.value)).toEqual([58.7, 66.8, 65.3, 65.3]);
+  });
+
+  it("still catches the 2026-08-14 methodology break", () => {
+    // The real one: #344/#345 shipped feed-verified liveness and the level MOVED and STAYED.
+    // This must keep voiding priors — the old and new numbers are not comparable.
+    const list = [
+      { day: "2026-08-12", value: 107.6 },
+      { day: "2026-08-13", value: 108.6 },
+      { day: "2026-08-14", value: 63.9 },
+      { day: "2026-08-15", value: 63.8 },
+      { day: "2026-08-17", value: 64.5 },
+    ];
+    expect(
+      hasDiscontinuity(list, "2026-08-12", Date.parse("2026-08-17T00:00:00Z"))
+    ).toBe(true);
+    // And the step is NOT mistaken for a spike — nothing is filtered out.
+    expect(withoutSpikes(list)).toHaveLength(list.length);
+  });
+
+  it("drops the near-zero dropout too", () => {
+    // 2026-08-16 read 1.4 between 63.8 and 64.5.
+    const list = [
+      { day: "2026-08-15", value: 63.8 },
+      { day: "2026-08-16", value: 1.4 },
+      { day: "2026-08-17", value: 64.5 },
+    ];
+    expect(withoutSpikes(list).map((p) => p.value)).toEqual([63.8, 64.5]);
+    expect(
+      hasDiscontinuity(list, "2026-08-15", Date.parse("2026-08-17T00:00:00Z"))
+    ).toBe(false);
+  });
+
+  it("will not explain away a two-stage shift", () => {
+    // Neighbours must agree before the middle reading is called a glitch; a level that
+    // walks 100 -> 70 -> 45 is a real move, not one bad night.
+    const list = [
+      { day: day(8), value: 100 },
+      { day: day(9), value: 70 },
+      { day: day(10), value: 45 },
+    ];
+    expect(withoutSpikes(list)).toHaveLength(3);
+    expect(hasDiscontinuity(list, day(8), Date.parse(`${day(10)}T00:00:00Z`))).toBe(true);
+  });
+
+  it("does not judge a reading across a coverage gap", () => {
+    // The canary can miss nights. A neighbour a week away cannot vouch for anything.
+    const list = [
+      { day: "2026-09-01", value: 66 },
+      { day: "2026-09-09", value: 40 },
+      { day: "2026-09-17", value: 65 },
+    ];
+    expect(withoutSpikes(list)).toHaveLength(3);
+  });
+
+  it("never anchors a prior to a glitch", () => {
+    // The other half of the damage: picking 40.1 as "a month ago" would have invented a
+    // 60% improvement out of a bad night.
+    const idx = new Map([
+      [
+        "Ontario:trueDom",
+        [
+          { day: "2026-08-20", value: 65.0 },
+          { day: "2026-08-21", value: 40.1 }, // glitch nearest the 28-day target
+          { day: "2026-08-22", value: 64.0 },
+          { day: "2026-09-18", value: 53.5 },
+        ],
+      ],
+    ]);
+    const prior = priorValue(idx, "Ontario", "trueDom", Date.parse("2026-09-18T00:00:00Z"));
+    expect(prior).not.toBeNull();
+    expect(prior!.value).not.toBe(40.1);
   });
 });
 

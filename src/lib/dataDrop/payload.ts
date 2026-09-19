@@ -211,6 +211,56 @@ export const MAX_OVERNIGHT_MOVE = 0.25;
  * Two consecutive captures more than 2 days apart are not treated as overnight — a canary
  * that missed nights should not be read as a discontinuity.
  */
+/**
+ * A single day's reading that jumps away from its neighbours and straight back.
+ *
+ * A methodology break and a bad night look identical over one night, and only one of them
+ * should void a month of history. The difference is what happens NEXT: a real step change
+ * moves the level and LEAVES it moved (2026-08-14, trueDom 108.6 -> 63.9 -> 63.8 -> 65.2);
+ * a glitch reverts (2026-09-10, 66.8 -> 40.1 -> 65.3, and 2026-08-16, 63.8 -> 1.4 -> 64.5).
+ *
+ * This mattered more than it looks. hasDiscontinuity voids EVERY prior whose window spans
+ * the jump, so one bad night silently disabled all three delta rungs — leverage, speed and
+ * supply — for the following 28 days, and the Data Drop's ladder fell through to its rank-7
+ * price fallback. 305 of 321 recipients got the identical "median sold price" lead on
+ * 2026-09-17 for exactly this reason. Nothing errored; the email just went boring, which is
+ * the failure shape this file's own comments warn about.
+ *
+ * Both neighbours must agree with each other before the middle reading is called a spike —
+ * otherwise a genuine two-stage shift would be explained away one night at a time.
+ */
+function isSpike(
+  list: { day: string; value: number }[],
+  k: number,
+  threshold: number
+): boolean {
+  const prev = list[k - 1];
+  const cur = list[k];
+  const next = list[k + 1];
+  if (!prev || !next || !cur) return false;
+  // Only adjacent readings can vouch for each other; across a coverage gap we cannot tell.
+  const before = (Date.parse(cur.day) - Date.parse(prev.day)) / DAY_MS;
+  const after = (Date.parse(next.day) - Date.parse(cur.day)) / DAY_MS;
+  // Strictly one night to two: a zero-day gap means two readings for the SAME day, and
+  // two values for one day are not neighbours that can vouch for each other.
+  if (before < 1 || after < 1 || before > 2 || after > 2) return false;
+  if (prev.value === 0 || cur.value === 0) return false;
+
+  const jumpedOut = Math.abs(cur.value - prev.value) / Math.abs(prev.value) > threshold;
+  const jumpedBack = Math.abs(next.value - cur.value) / Math.abs(cur.value) > threshold;
+  const neighboursAgree =
+    Math.abs(next.value - prev.value) / Math.abs(prev.value) <= threshold;
+  return jumpedOut && jumpedBack && neighboursAgree;
+}
+
+/** The series with one-day glitches dropped — what every comparison should actually read. */
+export function withoutSpikes(
+  list: { day: string; value: number }[],
+  threshold = MAX_OVERNIGHT_MOVE
+): { day: string; value: number }[] {
+  return list.filter((_, k) => !isSpike(list, k, threshold));
+}
+
 export function hasDiscontinuity(
   list: { day: string; value: number }[],
   fromDay: string,
@@ -218,7 +268,9 @@ export function hasDiscontinuity(
   threshold = MAX_OVERNIGHT_MOVE
 ): boolean {
   const fromMs = Date.parse(fromDay);
-  const window = list.filter((p) => {
+  // Drop one-day glitches BEFORE looking for a step, so a bad night cannot masquerade as a
+  // methodology break and void the month behind it.
+  const window = withoutSpikes(list, threshold).filter((p) => {
     const t = Date.parse(p.day);
     return t >= fromMs && t <= toMs;
   });
@@ -249,8 +301,12 @@ export function priorValue(
   daysAgo = 28,
   tolerance = 10
 ): { value: number; day: string } | null {
-  const list = idx.get(`${region}:${metric}`);
-  if (!list?.length) return null;
+  const raw = idx.get(`${region}:${metric}`);
+  if (!raw?.length) return null;
+  // Never anchor "a month ago" to a glitch: on 2026-09-10 the province read 40.1 between
+  // two nights of ~66, and a send that picked it would have invented a 60% improvement.
+  const list = withoutSpikes(raw);
+  if (!list.length) return null;
   const target = now - daysAgo * DAY_MS;
   let best: { day: string; value: number } | null = null;
   let bestGap = Infinity;
