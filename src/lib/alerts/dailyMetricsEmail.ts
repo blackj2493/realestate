@@ -5,9 +5,22 @@
  *
  * Reading order is deliberate: what needs you first, then the funnel, then activation,
  * then whether the mail actually went out. Numbers you cannot act on go last.
+ *
+ * EVERY LABEL NAMES ITS SOURCE (audit 2026-09-20). A row here says what the query measured,
+ * not what it would be nice to measure, and the grey note beside it carries the caveat.
+ * "Visitors" became "Listing viewers" because the table only sees listing detail pages;
+ * "Visitors who did not sign up" is gone because it subtracted accounts from browser ids.
  */
 import { shell, sectionHeader, footer, esc, MONO } from "@/lib/alerts/emailShell";
-import { attention, delta, pct, round1, subjectLine, type DailyMetricsInput } from "@/lib/ops/dailyMetrics";
+import {
+  attention,
+  delta,
+  pct,
+  round1,
+  subjectLine,
+  type DailyMetricsInput,
+  type PersonRow,
+} from "@/lib/ops/dailyMetrics";
 
 const C = {
   ink: "#0a1828",
@@ -20,6 +33,9 @@ const C = {
   watchBg: "#fffbeb",
   watchBorder: "#fde68a",
 };
+
+/** A long signup day should not produce a scroll of a hundred names. */
+const MAX_LISTED = 25;
 
 /** One headline figure: big number, trailing average, and a delta that stays quiet. */
 function stat(label: string, value: string, baseline: string, d: ReturnType<typeof delta>): string {
@@ -37,6 +53,26 @@ function row(label: string, value: string, note = ""): string {
     <td align="right" style="padding:6px 0;font-family:${MONO};font-size:13px;color:${C.ink};border-bottom:1px solid #f1f5f9;">${esc(value)}</td>
     <td align="right" style="padding:6px 0 6px 10px;font-size:11px;color:${C.muted};border-bottom:1px solid #f1f5f9;">${esc(note)}</td>
   </tr>`;
+}
+
+const hhmm = (iso: string): string => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleTimeString("en-CA", { timeZone: "America/Toronto", hour: "2-digit", minute: "2-digit" });
+};
+
+/** A list of named humans, capped so one big day cannot bury the rest of the report. */
+function people(rows: PersonRow[], emptyText: string): string {
+  if (!rows.length) return `<p style="font-size:13px;color:${C.muted};margin:0;">${esc(emptyText)}</p>`;
+  const shown = rows.slice(0, MAX_LISTED);
+  const more =
+    rows.length > shown.length
+      ? `<tr><td colspan="3" style="padding:6px 0;font-size:11px;color:${C.muted};">+ ${rows.length - shown.length} more</td></tr>`
+      : "";
+  return `<table role="presentation" width="100%" style="border-collapse:collapse;">${shown
+    .map((p) => row(p.who, hhmm(p.createdAt), p.detail ?? ""))
+    .join("")}${more}</table>`;
 }
 
 export function renderDailyMetricsEmail(m: DailyMetricsInput): {
@@ -60,16 +96,11 @@ export function renderDailyMetricsEmail(m: DailyMetricsInput): {
     : `<div style="border:1px solid ${C.rule};border-radius:6px;padding:10px 12px;margin-bottom:8px;font-size:13px;color:${C.muted};">
          Nothing needs you this morning.</div>`;
 
-  const conv = pct(m.today.signups, m.today.visitors);
-  const convPrior = pct(m.prior7.signups, m.prior7.visitors);
-
-  const leadsHtml = m.leads.length
-    ? `<table role="presentation" width="100%" style="border-collapse:collapse;">${m.leads
-        .map((l) =>
-          row(`${l.kind} · ${l.who}`, new Date(l.createdAt).toLocaleTimeString("en-CA", { timeZone: "America/Toronto", hour: "2-digit", minute: "2-digit" }), l.detail ?? "")
-        )
-        .join("")}</table>`
-    : `<p style="font-size:13px;color:${C.muted};margin:0;">No new applications.</p>`;
+  // A rough proxy only. The numerator counts accounts; the denominator counts anonymous
+  // browsers that opened a listing page. Someone can sign up without ever opening one, so
+  // this is NOT a funnel rate and the note says so.
+  const conv = pct(m.today.signups, m.today.listingViewers);
+  const convPrior = pct(m.prior7.signups, m.prior7.listingViewers);
 
   const activationHtml = m.activation.length
     ? `<table role="presentation" width="100%" style="border-collapse:collapse;">${m.activation
@@ -78,6 +109,9 @@ export function renderDailyMetricsEmail(m: DailyMetricsInput): {
     : `<p style="font-size:13px;color:${C.muted};margin:0;">No activation events recorded.</p>`;
 
   const assetless = m.totals.users - m.totals.withAnyAsset;
+  const atSignupNote = m.today.assetsAtSignup
+    ? `${round1(m.prior7.assetsSaved)} avg · ${m.today.assetsAtSignup} more came from signup`
+    : `${round1(m.prior7.assetsSaved)} avg`;
 
   const body = `
     <p style="font-size:13px;color:${C.muted};margin:0 0 14px;">Yesterday, ${esc(m.day)} (Toronto). Every user figure excludes the QA accounts.</p>
@@ -85,27 +119,33 @@ export function renderDailyMetricsEmail(m: DailyMetricsInput): {
 
     ${sectionHeader("Funnel")}
     <table role="presentation" width="100%" style="border-collapse:collapse;"><tr>
-      ${stat("Visitors", String(m.today.visitors), String(round1(m.prior7.visitors)), delta(m.today.visitors, m.prior7.visitors))}
+      ${stat("Listing viewers", String(m.today.listingViewers), String(round1(m.prior7.listingViewers)), delta(m.today.listingViewers, m.prior7.listingViewers))}
       ${stat("Signups", String(m.today.signups), String(round1(m.prior7.signups)), delta(m.today.signups, m.prior7.signups))}
       ${stat("Returning", String(m.today.returning), String(round1(m.prior7.returning)), delta(m.today.returning, m.prior7.returning))}
     </tr></table>
     <table role="presentation" width="100%" style="border-collapse:collapse;">
-      ${row("Signup conversion", `${round1(conv)}%`, `${round1(convPrior)}% avg`)}
-      ${row("Visitors who did not sign up", String(Math.max(0, m.today.visitors - m.today.signups)))}
-      ${row("Unsubscribes", String(m.today.unsubscribes), `${m.totals.optedOut} of ${m.totals.users} total (${round1(pct(m.totals.optedOut, m.totals.users))}%)`)}
+      ${row("Listing viewers measure", "listing pages only", "no homepage, search, map or analytics traffic")}
+      ${row("Returning measure", "any signed-in trace", `${m.today.returningLogins} of them re-logged in`)}
+      ${row("Signups ÷ listing viewers", `${round1(conv)}%`, `${round1(convPrior)}% avg — rough proxy, different populations`)}
+      ${row("Started signup, no account", String(m.today.abandonedSignups), `${m.totals.abandonedAllTime} all-time`)}
+      ${row("Unsubscribes", String(m.today.unsubscribes), `${m.totals.optedOut} of ${m.totals.users} opted out all-time (${round1(pct(m.totals.optedOut, m.totals.users))}%)`)}
     </table>
 
     ${sectionHeader("Activation")}
     <table role="presentation" width="100%" style="border-collapse:collapse;">
-      ${row("Areas + listings saved", String(m.today.assetsCreated), `${round1(m.prior7.assetsCreated)} avg`)}
-      ${row("Gated (VOW) reads", String(m.today.vowReads), `${round1(m.prior7.vowReads)} avg`)}
+      ${row("Areas + listings saved", String(m.today.assetsSaved), atSignupNote)}
+      ${row("Areas created by signup", String(m.today.assetsAtSignup), "signup requires one — not engagement")}
+      ${row("Gated (VOW) reads", String(m.today.vowReads), `by ${m.today.vowReaders} users · ${round1(m.prior7.vowReads)} avg`)}
       ${row("Users with nothing saved", String(assetless), `of ${m.totals.users} — these get no email after onboarding`)}
     </table>
     <div style="height:8px;"></div>
     ${activationHtml}
 
-    ${sectionHeader("Applications")}
-    ${leadsHtml}
+    ${sectionHeader("Did not finish signup")}
+    ${people(m.abandoned, "Everyone who started signup finished it.")}
+
+    ${sectionHeader("New signups")}
+    ${people(m.signups, "No signups.")}
 
     ${sectionHeader("Email delivery")}
     <table role="presentation" width="100%" style="border-collapse:collapse;">
@@ -117,25 +157,39 @@ export function renderDailyMetricsEmail(m: DailyMetricsInput): {
 
     ${footer({ intro: "Internal operations report from PureProperty.", mls: false })}`;
 
+  const listText = (rows: PersonRow[], empty: string): string =>
+    rows.length
+      ? rows
+          .slice(0, MAX_LISTED)
+          .map((p) => `  ${p.who}${p.detail ? ` · ${p.detail}` : ""}`)
+          .concat(rows.length > MAX_LISTED ? [`  + ${rows.length - MAX_LISTED} more`] : [])
+          .join("\n")
+      : `  ${empty}`;
+
   const text = [
     `${m.day} (Toronto)`,
     "",
     items.length ? items.map((a) => `[${a.severity.toUpperCase()}] ${a.text}`).join("\n") : "Nothing needs you this morning.",
     "",
-    `Visitors ${m.today.visitors} (avg ${round1(m.prior7.visitors)})`,
+    `Listing viewers ${m.today.listingViewers} (avg ${round1(m.prior7.listingViewers)}) — listing detail pages only`,
     `Signups ${m.today.signups} (avg ${round1(m.prior7.signups)})`,
-    `Returning ${m.today.returning} (avg ${round1(m.prior7.returning)})`,
-    `Signup conversion ${round1(conv)}% (avg ${round1(convPrior)}%)`,
-    `Unsubscribes ${m.today.unsubscribes} — ${m.totals.optedOut}/${m.totals.users} total`,
+    `Returning ${m.today.returning} (avg ${round1(m.prior7.returning)}) — ${m.today.returningLogins} via re-login`,
+    `Signups per listing viewer ${round1(conv)}% (avg ${round1(convPrior)}%) — rough proxy, different populations`,
+    `Started signup, no account ${m.today.abandonedSignups} (${m.totals.abandonedAllTime} all-time)`,
+    `Unsubscribes ${m.today.unsubscribes} — ${m.totals.optedOut}/${m.totals.users} opted out all-time`,
     "",
-    `Areas+listings saved ${m.today.assetsCreated}; VOW reads ${m.today.vowReads}`,
+    `Areas+listings saved ${m.today.assetsSaved} (${m.today.assetsAtSignup} more created by signup)`,
+    `VOW reads ${m.today.vowReads} by ${m.today.vowReaders} users`,
     `Users with nothing saved ${assetless} of ${m.totals.users}`,
     m.activation.length
       ? m.activation.map((a) => `  ${a.kind}: ${a.count}`).join("\n")
       : "  No activation events recorded.",
     "",
-    `Applications: ${m.leads.length}`,
-    ...m.leads.map((l) => `  ${l.kind} · ${l.who}${l.detail ? ` · ${l.detail}` : ""}`),
+    `Did not finish signup: ${m.abandoned.length}`,
+    listText(m.abandoned, "Everyone who started signup finished it."),
+    "",
+    `New signups: ${m.signups.length}`,
+    listText(m.signups, "No signups."),
     "",
     `Digests sent ${m.email.digestSent}, rejected ${m.email.digestFailed}, suppressed ${m.email.digestSuppressed}, failures ${m.email.sendFailures}`,
   ].join("\n");
@@ -143,7 +197,7 @@ export function renderDailyMetricsEmail(m: DailyMetricsInput): {
   return {
     subject: subjectLine(m),
     html: shell({
-      preheader: `${m.today.signups} signups, ${m.today.visitors} visitors, ${m.today.unsubscribes} unsubscribes.`,
+      preheader: `${m.today.signups} signups, ${m.today.listingViewers} listing viewers, ${m.today.unsubscribes} unsubscribes.`,
       headerLabel: "DAILY REPORT",
       body,
     }),
