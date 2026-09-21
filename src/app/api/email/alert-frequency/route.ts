@@ -12,10 +12,24 @@
  * Auth is the same HMAC-of-the-email the unsubscribe routes use, with the ACTION folded
  * into the signature so one link cannot be edited into another. GET only: these are
  * human-clicked footer links, not an RFC 8058 one-click target, and they are idempotent.
+ *
+ * IT ALSO SERVES THE TWO RECOVERY ACTIONS. Measured over the eight days after the in-email
+ * controls shipped: 14 readers unsubscribed, 2 paused, and 0 chose weekly. The links are
+ * not broken — both pauses landed — they are simply at the bottom of a long email while the
+ * mail client renders its own Unsubscribe button beside the sender name, which is a place
+ * this codebase cannot reach. So `resub_weekly` / `resub_daily` are offered where intent is
+ * highest and we previously had nothing to say: the unsubscribe confirmation page. They
+ * clear `profiles.marketing_opt_out` as well as setting a cadence, which is why they are
+ * separate actions — see RESUBSCRIBE_ACTIONS.
  */
 import { NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/client";
-import { verifyEmailAction, type EmailAction } from "@/lib/alerts/unsubscribe";
+import {
+  frequencyForAction,
+  isResubscribe,
+  verifyEmailAction,
+  type EmailAction,
+} from "@/lib/alerts/unsubscribe";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +47,14 @@ const DONE: Record<EmailAction, { title: string; body: string }> = {
   pause30: {
     title: `Paused for ${PAUSE_DAYS} days.`,
     body: "We won't email you until then. Your saved homes and areas stay exactly as they are.",
+  },
+  resub_weekly: {
+    title: "You're back on — once a week.",
+    body: "One email a week with the best of what came up in your areas. You can stop again at any time, from any email.",
+  },
+  resub_daily: {
+    title: "You're back on — every night.",
+    body: "You'll get the day's picks again each morning. You can stop again at any time, from any email.",
   },
 };
 
@@ -56,9 +78,43 @@ async function apply(email: string, action: EmailAction): Promise<boolean> {
     const userId = (profile as { id?: string } | null)?.id;
     if (!userId) return false;
 
+    // RE-CONSENT FIRST, and only for the two recovery actions. A reader arriving here from
+    // the unsubscribe confirmation page is opted out, so writing a cadence without clearing
+    // the master switch would store a preference that canSendAlerts then ignores — a
+    // control that reports success and changes nothing, which is the failure this whole
+    // series has been unpicking.
+    //
+    // ORDER MATTERS. If the opt-out clears and the cadence write then fails, the reader is
+    // subscribed at their old frequency: more email than they asked for, but email they did
+    // just ask for. The reverse order would leave them opted out with a preference nobody
+    // reads, and the page would have lied. Neither is free; this one is recoverable.
+    //
+    // `marketing_opt_out_at` is deliberately NOT cleared — with 147's
+    // `marketing_resubscribed_at` beside it the row keeps the whole consent sequence, which
+    // is what CASL asks you to be able to show.
+    if (isResubscribe(action)) {
+      const resub: Record<string, unknown> = {
+        marketing_opt_out: false,
+        marketing_resubscribed_at: new Date().toISOString(),
+      };
+      let { error: optErr } = await sb.from("profiles").update(resub).eq("id", userId);
+      if (optErr && /marketing_resubscribed_at/.test(optErr.message)) {
+        // 147 not applied yet. Honour the consent the reader just gave rather than refuse
+        // it over the audit column — same posture as the 146 fallback below.
+        console.warn("[email/alert-frequency] migration 147 not applied — resubscribing without the stamp");
+        delete resub.marketing_resubscribed_at;
+        ({ error: optErr } = await sb.from("profiles").update(resub).eq("id", userId));
+      }
+      if (optErr) {
+        console.error("[email/alert-frequency] resubscribe failed:", optErr.message);
+        return false;
+      }
+    }
+
     const patch: Record<string, unknown> = { user_id: userId, updated_at: new Date().toISOString() };
-    if (action === "weekly" || action === "daily") {
-      patch.alerts_frequency = action;
+    const frequency = frequencyForAction(action);
+    if (frequency) {
+      patch.alerts_frequency = frequency;
       // Migration 146. 144's column defaults to 'daily', so the VALUE cannot say whether a
       // reader chose it or some other write filled the row in — two of the three rows in
       // production were created by a pause click. This stamp is the only thing that can,
