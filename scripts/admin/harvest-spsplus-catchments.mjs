@@ -1,9 +1,14 @@
 /**
  * harvest-spsplus-catchments.mjs — boards whose "School Finder" is the proprietary
- * SPS Plus product (api.spsplus.ca, page-embedded api-key). Per-school Regular-Track
- * boundary: GetSchoolList → per school GetSchoolProgramGradeBoundary (RT, gradeRanges[0].low).
+ * SPS Plus product (api.spsplus.ca, page-embedded api-key). Per-school, per-program
+ * boundary: GetSchoolList → per school GetSchoolProgramGradeBoundary (gradeRanges[0].low).
  * Covers Peel (PDSB, public) and Hamilton-Wentworth Catholic (HWCDSB). Output matches
  * the standard schema; load-school-catchments.ts merges it.
+ *
+ * v1 asked only for programTypeCode=RT, so every French Immersion zone was skipped —
+ * and 70 of Peel's 253 schools run FI. PROGRAMS below is an allow-list, because the
+ * same endpoint also serves specialty streams (ESL, SHSM, Truck, EHS*) that are NOT
+ * attendance catchments and must never render as one.
  *
  * Keys live in the boards' public locator pages (re-scrape if they rotate); no open
  * license — confirm reuse terms with each board.
@@ -18,6 +23,9 @@ const OUT = join(HERE, "school-catchments-spsplus.geojson");
 const BASE = "https://api.spsplus.ca/api/v3/Search";
 const YEAR = "2025";
 const CONCURRENCY = 6;
+
+/** SPS Plus programTypeCode → our canonical program. Allow-list, not a filter. */
+const PROGRAMS = { RT: "regular", FI: "french_immersion" };
 
 const TENANTS = [
   { boardCode: "PDSB", board: "Peel DSB", system: "public", key: "00f4b315-24e5-4a05-8894-91148c612e0e", source: "https://www.peelschools.org/school-finder" },
@@ -41,14 +49,14 @@ async function jget(url, key, tries = 3) {
   }
 }
 
-async function boundaryFor(school, key) {
-  const rt = (school.programTypes || []).find((p) => p.programTypeCode === "RT");
-  if (!rt) return null;
-  const grade = rt.gradeRanges?.[0]?.low;
+async function boundaryFor(school, key, code) {
+  const prog = (school.programTypes || []).find((p) => p.programTypeCode === code);
+  if (!prog) return null;
+  const grade = prog.gradeRanges?.[0]?.low;
   if (grade == null) return null;
   const url =
     `${BASE}/GetSchoolProgramGradeBoundary?schoolId=${school.schoolId}` +
-    `&programTypeCode=RT&gradeCode=${encodeURIComponent(grade)}&schoolYear=${YEAR}`;
+    `&programTypeCode=${encodeURIComponent(code)}&gradeCode=${encodeURIComponent(grade)}&schoolYear=${YEAR}`;
   let res;
   try {
     res = await jget(url, key);
@@ -80,24 +88,32 @@ const features = [];
 for (const tenant of TENANTS) {
   const schools = await jget(`${BASE}/GetSchoolList?schoolYear=${YEAR}`, tenant.key);
   console.log(`${tenant.boardCode}: ${schools.length} schools`);
-  let ok = 0, skip = 0;
+  const tally = {};
+  let skip = 0;
   await pool(schools, CONCURRENCY, async (s) => {
-    const geom = await boundaryFor(s, tenant.key);
-    if (!geom) { skip++; return; }
-    features.push({
-      type: "Feature",
-      geometry: geom,
-      properties: {
-        boardCode: tenant.boardCode, board: tenant.board, system: tenant.system, language: "english",
-        panel: s.schoolTypeName === "Secondary" ? "secondary" : "elementary",
-        year: "2025-2026", school_name: s.schoolName, source: tenant.source,
-      },
-    });
-    ok++;
+    let any = false;
+    for (const [code, program] of Object.entries(PROGRAMS)) {
+      const geom = await boundaryFor(s, tenant.key, code);
+      if (!geom) continue;
+      features.push({
+        type: "Feature",
+        geometry: geom,
+        properties: {
+          boardCode: tenant.boardCode, board: tenant.board, system: tenant.system, language: "english",
+          panel: s.schoolTypeName === "Secondary" ? "secondary" : "elementary",
+          program, grades: null,
+          year: "2025-2026", school_name: s.schoolName, source: tenant.source,
+        },
+      });
+      tally[program] = (tally[program] || 0) + 1;
+      any = true;
+    }
+    if (!any) skip++;
   });
-  console.log(`  ${tenant.boardCode}: ${ok} boundaries, ${skip} skipped`);
+  console.log(`  ${tenant.boardCode}: ${JSON.stringify(tally)}, ${skip} schools with no boundary`);
 }
 
 writeFileSync(OUT, JSON.stringify({ type: "FeatureCollection", features }));
 const byBoard = features.reduce((a, f) => ((a[f.properties.boardCode] = (a[f.properties.boardCode] || 0) + 1), a), {});
-console.log(`\nSPS Plus total: ${features.length} ${JSON.stringify(byBoard)} → ${OUT.replace(HERE, ".")}`);
+const byProgram = features.reduce((a, f) => ((a[f.properties.program] = (a[f.properties.program] || 0) + 1), a), {});
+console.log(`\nSPS Plus total: ${features.length} ${JSON.stringify(byBoard)} ${JSON.stringify(byProgram)} → ${OUT.replace(HERE, ".")}`);

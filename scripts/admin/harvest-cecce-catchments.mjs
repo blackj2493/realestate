@@ -74,6 +74,10 @@ for (const spec of FILES) {
         system: "catholic",
         language: "french",
         panel: spec.panel,
+        // A French-language board teaches in French throughout; "French Immersion" is
+        // an English-board program and does not apply here. These are regular zones.
+        program: "regular",
+        grades: null,
         year: "2024-2025",
         school_name: nameIdx >= 0 ? feat.p[nameIdx] : null,
         source: SOURCE,

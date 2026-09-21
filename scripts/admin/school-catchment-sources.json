@@ -9,6 +9,7 @@
       "harvestable_keyed": "Boundaries exist behind a non-ArcGIS proprietary API that can be harvested per-school but has no open license."
     },
     "harvestNotes": "Field schemas are heterogeneous per board. panelMode='field' => one service split by panelField values; 'layer' => one layer per panel; 'fixed' => whole service is one panel; 'none' => combined (not panel-split). School names must be fuzzy-joined to data/ontario-schools.json to attach EQAO scores (no shared id).",
+    "programNotes": "PANEL and PROGRAM are two independent axes. panel = elementary|secondary|combined. program = regular|french_immersion|extended_french. A board publishes the program axis in one of three shapes, and the registry names which: (1) programField + programValues maps a column value to a canonical program on the SAME layer — an unmapped value (Arts, IB, gifted) is DROPPED, so the map never shows a specialty zone as a home catchment; (2) programLayers[] lists extra layers, each with its own explicit panel + program; (3) deriveProgramZones[] names a column on the REGULAR rows that holds the program school each regular zone feeds (TCDSB) — the harvester groups the regular polygons by that column and emits one dissolved zone per program school. Every emitted feature carries an explicit program; nothing defaults silently.",
     "licenseWarning": "MOST sources carry NO explicit open-data license — merely shared 'public' in a board ArcGIS Online org. Commercial reuse is legally ambiguous; confirm terms/attribution per board. Exceptions: Region of Waterloo = OGL-style; Windsor (GECDSB/WECDSB) Borealis files = CC BY-NC-SA 4.0 (NON-COMMERCIAL — excluded).",
     "liveValidation": {
       "testedOn": "2026-06-15",
@@ -25,6 +26,23 @@
         "Paginate with resultOffset if a count exceeds maxRecordCount (seen as low as 1000).",
         "Request outSR=4326 explicitly — native SRs vary (UTM 26918, WebMercator 3857)."
       ]
+    },
+    "programValidation": {
+      "testedOn": "2026-09-21",
+      "why": "A reader reported that St Cyril's French Immersion zone is far bigger than the map showed. It was: the harvester dropped every French Immersion boundary on purpose, and the three FI-ish rows that did load carried a panel value no RPC could match.",
+      "findings": {
+        "YRDSB": "Layer 29 GONE (400 'layer not found'); moved to 28. PROGRAM on layer 28 = Regular Track 410, French Immersion 42, Arts 4, IB 5, null 216.",
+        "HDSB": "Option_Prog = ENG 39 / FI 39 — half the layer was discarded.",
+        "YCDSB": "MapServer layer 2 = 'FI Boundaries', 14 elementary zones, token-free.",
+        "TVDSB": "Layer 10 = 'Elementary FI Boundaries' (11); layer 13 = 'Secondary FI Boundaries' (5).",
+        "HWDSB": "Three FI services: elem grades 1-4 (13), elem grades 5-8 (1), secondary (2).",
+        "HCDSB": "elem FI 96, elem EXFI 80, sec FI 32, sec EXFI 51.",
+        "TCDSB": "No FI layer. FAB2023 rows carry F23_FI_BDR (18 FI schools) and N_EF_BDRY (17 Extended French) — dissolve the regular zones by those columns.",
+        "PDSB/HWCDSB": "SPS Plus exposes programTypeCode=FI; 70 of 253 Peel schools list it. The harvester only ever asked for RT.",
+        "DPCDSB": "The 'frenchService' is Extended French, not French Immersion (Panel = 'Elementary - Extended French' 11, 'Secondary - Extended French' 6).",
+        "DCDSB": "Layer 5 = Regular Track (11), layer 3 = French Immersion (3); both elementary, both previously mis-filed as panels.",
+        "TDSB": "No French Immersion anywhere on the public path — see fallback[].TDSB."
+      }
     }
   },
 
@@ -32,13 +50,14 @@
     {
       "boardCode": "YRDSB", "board": "York Region DSB", "system": "public", "language": "english",
       "status": "verified_open", "coverage": "full", "year": "current",
-      "service": "https://services.arcgis.com/RFHWU0rfXmpzrbn0/arcgis/rest/services/FullLayers_ForOnline/FeatureServer/29",
+      "service": "https://services.arcgis.com/RFHWU0rfXmpzrbn0/arcgis/rest/services/FullLayers_ForOnline/FeatureServer/28",
       "panelMode": "field", "panelField": "ED_LEVEL", "panelValues": {"elementary": "Elementary", "secondary": "Secondary"},
       "schoolNameField": "SCHOOLNAME",
-      "programField": "PROGRAM", "keepPrograms": ["Regular Track"],
+      "programField": "PROGRAM",
+      "programValues": {"Regular Track": "regular", "French Immersion": "french_immersion"},
       "license": "unspecified (YRDSB Planning AGOL org, public share)",
       "sourcePage": "https://experience.arcgis.com/experience/9edb0ffdaf5b46f2aa3af56d2dae0f17",
-      "notes": "689 incl 226 holding/null rows — filtered by panel match."
+      "notes": "LAYER ID MOVED 29 -> 28 (re-verified 2026-09-21; /29 now answers 'layer not found', and the loader DELETEs before it inserts, so a harvest against the stale id would have wiped all 410 York boundaries). 677 rows: PROGRAM = Regular Track 410, French Immersion 42, Arts 4, IB 5, null 216. Arts/IB stay unmapped on purpose — they are specialty zones, not home catchments."
     },
     {
       "boardCode": "YCDSB", "board": "York Catholic DSB", "system": "catholic", "language": "english",
@@ -48,19 +67,23 @@
         "elementary": {"url": "https://locator.ycdsb.ca/appserver/rest/services/SchoolLocator/School_Locator_Map/MapServer/1", "schoolNameField": "SCHNAME"},
         "secondary": {"url": "https://locator.ycdsb.ca/appserver/rest/services/SchoolLocator/School_Locator_Map/MapServer/5", "schoolNameField": "SCHNAME"}
       },
+      "programLayers": [
+        {"panel": "elementary", "program": "french_immersion", "url": "https://locator.ycdsb.ca/appserver/rest/services/SchoolLocator/School_Locator_Map/MapServer/2", "schoolNameField": "SCHNAME"}
+      ],
       "license": "unspecified (YCDSB public ArcGIS Server /appserver/)",
       "sourcePage": "https://locator.ycdsb.ca/schoollocator/",
-      "notes": "The /arcgis/ WebAppBuilder services are token-locked (HTTP 499) — RED HERRING. The live app uses the token-free /appserver/ MapServer (layer 1 elem, 5 sec, 2 FI). Self-hosted ArcGIS Server; field names may be qualified — spatial match labels regardless."
+      "notes": "The /arcgis/ WebAppBuilder services are token-locked (HTTP 499) — RED HERRING. The live app uses the token-free /appserver/ MapServer (layer 1 elem, 5 sec, 2 FI). Self-hosted ArcGIS Server; field names are qualified (ARCGISADMIN.Bndry_Elem_FI.SCHNAME) — pickName's suffix match handles that. Layer 2 = 'FI Boundaries', 14 elementary FI zones, verified 2026-09-21."
     },
     {
       "boardCode": "HDSB", "board": "Halton DSB", "system": "public", "language": "english",
       "status": "verified_open", "coverage": "full", "year": "current",
       "service": "https://services5.arcgis.com/e0gAxpJEEEPzcOG4/arcgis/rest/services/Current_Boundaries/FeatureServer/0",
       "panelMode": "none", "schoolNameField": "Sch_Name",
-      "programField": "Option_Prog", "keepPrograms": ["ENG"],
+      "programField": "Option_Prog",
+      "programValues": {"ENG": "regular", "FI": "french_immersion"},
       "license": "unspecified (HDSB AGOL org, public share)",
       "sourcePage": "https://www.arcgis.com/apps/dashboards/5334dcd4a3ab4de2b9771adad5a9ec0b",
-      "notes": "Not split by panel; Option_Prog distinguishes English vs French Immersion."
+      "notes": "Not split by panel; Option_Prog distinguishes English vs French Immersion. Exactly half the layer is FI (ENG 39 / FI 39, verified 2026-09-21) — keepPrograms:['ENG'] used to discard all 39."
     },
     {
       "boardCode": "HCDSB", "board": "Halton Catholic DSB", "system": "catholic", "language": "english",
@@ -70,17 +93,28 @@
         "elementary": {"url": "https://services1.arcgis.com/Z2ZyXpStrYRDJ1cf/arcgis/rest/services/Elementary_School_Boundaries/FeatureServer/0", "schoolNameField": "SCH_NAM"},
         "secondary": {"url": "https://services1.arcgis.com/Z2ZyXpStrYRDJ1cf/arcgis/rest/services/Secondary_School_Boundaries/FeatureServer/0", "schoolNameField": "SchoolName"}
       },
+      "programLayers": [
+        {"panel": "elementary", "program": "french_immersion", "url": "https://services1.arcgis.com/Z2ZyXpStrYRDJ1cf/arcgis/rest/services/Elementary_French_Immersion_Boundary/FeatureServer/0", "schoolNameField": "SCH_NAM"},
+        {"panel": "elementary", "program": "extended_french", "url": "https://services1.arcgis.com/Z2ZyXpStrYRDJ1cf/arcgis/rest/services/Elementary_Extended_French_Immersion_Boundary/FeatureServer/0", "schoolNameField": "SCH_NAM"},
+        {"panel": "secondary", "program": "french_immersion", "url": "https://services1.arcgis.com/Z2ZyXpStrYRDJ1cf/arcgis/rest/services/Secondary_French_Immersion/FeatureServer/0", "schoolNameField": "SCH_NAM"},
+        {"panel": "secondary", "program": "extended_french", "url": "https://services1.arcgis.com/Z2ZyXpStrYRDJ1cf/arcgis/rest/services/Secondary_Extended_French_Immersion_Boundary/FeatureServer/0", "schoolNameField": "SCH_NAM"}
+      ],
       "license": "unspecified (HCDSB AGOL org, public share)",
-      "sourcePage": "https://schoolplanning.hcdsb.org/find-your-school/"
+      "sourcePage": "https://schoolplanning.hcdsb.org/find-your-school/",
+      "notes": "FI/EXFI counts (verified 2026-09-21): elem FI 96, elem EXFI 80, sec FI 32, sec EXFI 51. The counts exceed the school count because HCDSB splits a program zone into several polygons per school; the loader already tolerates many zones per school_id."
     },
     {
       "boardCode": "TCDSB", "board": "Toronto Catholic DSB", "system": "catholic", "language": "english",
       "status": "verified_open", "coverage": "elementary_only", "year": "2023",
       "service": "https://services3.arcgis.com/i9SIJZvRhal6cvaG/arcgis/rest/services/FAB2023/FeatureServer/0",
       "panelMode": "fixed", "panelFixed": "elementary", "schoolNameField": "School",
+      "deriveProgramZones": [
+        {"program": "french_immersion", "field": "F23_FI_BDR", "panel": "elementary"},
+        {"program": "extended_french", "field": "N_EF_BDRY", "panel": "elementary"}
+      ],
       "license": "unspecified (public item)",
       "sourcePage": "https://www.tcdsb.org/page/school-locator",
-      "notes": "Elementary only (FAB = Fixed Attendance Boundaries). Secondary is PDF-only => fallback."
+      "notes": "Elementary only (FAB = Fixed Attendance Boundaries). Secondary is PDF-only => fallback. TCDSB publishes NO separate FI polygon layer; instead each regular row names its program school in F23_FI_BDR (French Immersion) and N_EF_BDRY (Extended French), so a program zone is the dissolved union of the regular zones that feed it. Verified 2026-09-21: 18 distinct FI schools, 17 Extended French. Example — St Cyril's FI zone is 11 regular zones (57.6 km2), against a 3.2 km2 median regular zone and the 19.6 km2 circle we drew instead."
     },
     {
       "boardCode": "DPCDSB", "board": "Dufferin-Peel Catholic DSB", "system": "catholic", "language": "english",
@@ -88,9 +122,18 @@
       "service": "https://services5.arcgis.com/OTdNpvC9YulsqUyQ/arcgis/rest/services/School_Locator_Boundaries_2023_2024_NEW/FeatureServer/0",
       "panelMode": "field", "panelField": "Panel", "panelValues": {"elementary": "Elementary", "secondary": "Secondary"},
       "schoolNameField": "School_Nam",
-      "frenchService": "https://services5.arcgis.com/OTdNpvC9YulsqUyQ/arcgis/rest/services/French_Boundary_2023_2024_final/FeatureServer/0",
+      "programLayers": [
+        {
+          "program": "extended_french",
+          "url": "https://services5.arcgis.com/OTdNpvC9YulsqUyQ/arcgis/rest/services/French_Boundary_2023_2024_final/FeatureServer/0",
+          "schoolNameField": "SADesc",
+          "panelField": "Panel",
+          "panelValues": {"elementary": "Elementary - Extended French", "secondary": "Secondary - Extended French"}
+        }
+      ],
       "license": "unspecified (public items)",
-      "sourcePage": "https://dpcdsb.maps.arcgis.com/apps/instant/lookup/index.html?appid=a9a3fbd4e6504f6b9a13bb7b26276d84"
+      "sourcePage": "https://dpcdsb.maps.arcgis.com/apps/instant/lookup/index.html?appid=a9a3fbd4e6504f6b9a13bb7b26276d84",
+      "notes": "The old `frenchService` key landed 17 rows under the bogus panel 'french', which no RPC filter could ever match. Verified 2026-09-21: that service is EXTENDED FRENCH, not French Immersion — Panel = 'Elementary - Extended French' (11) + 'Secondary - Extended French' (6). It now carries its real panel and program. DPCDSB publishes no open FI layer (French_Immersion_Under_Review is a proposal, deliberately not harvested)."
     },
     {
       "boardCode": "OCSB", "board": "Ottawa Catholic SB", "system": "catholic", "language": "english",
@@ -142,20 +185,24 @@
         "elementary": {"url": "https://services3.arcgis.com/xa1UBgwOXoenQ2Ob/arcgis/rest/services/2024_Elementary_Boundaries/FeatureServer/0", "schoolNameField": "SchoolName"},
         "secondary": {"url": "https://services3.arcgis.com/xa1UBgwOXoenQ2Ob/arcgis/rest/services/2025_HWDSB_Secondary_Boundaries/FeatureServer/0", "schoolNameField": "SchoolName"}
       },
+      "programLayers": [
+        {"panel": "elementary", "program": "french_immersion", "url": "https://services3.arcgis.com/xa1UBgwOXoenQ2Ob/arcgis/rest/services/2025_HWDSB_FI_Elementary_Boundaries_Grades1to4/FeatureServer/0", "schoolNameField": "SchoolName", "grades": "1-4"},
+        {"panel": "elementary", "program": "french_immersion", "url": "https://services3.arcgis.com/xa1UBgwOXoenQ2Ob/arcgis/rest/services/2025_FI_Elementary_Boundaries_Grades_5to8/FeatureServer/0", "schoolNameField": "SchoolName", "grades": "5-8"},
+        {"panel": "secondary", "program": "french_immersion", "url": "https://services3.arcgis.com/xa1UBgwOXoenQ2Ob/arcgis/rest/services/2025_HWDSB_French_Immersion_Secondary_Boundaries/FeatureServer/0", "schoolNameField": "SchoolName"}
+      ],
       "license": "unspecified (public items)",
-      "sourcePage": "https://www.hwdsb.on.ca/school-boundary-maps"
+      "sourcePage": "https://www.hwdsb.on.ca/school-boundary-maps",
+      "notes": "FI counts (verified 2026-09-21): elem grades 1-4 = 13, elem grades 5-8 = 1, secondary = 2. HWDSB splits elementary FI by grade band, so one address can sit in two FI zones with different schools — `grades` carries that distinction through to the map label."
     },
     {
       "boardCode": "UGDSB", "board": "Upper Grand DSB", "system": "public", "language": "english",
-      "status": "verified_open", "coverage": "full", "year": "2021-2022",
-      "panelMode": "layer",
-      "layers": {
-        "elementary": {"url": "https://services3.arcgis.com/ihgd0mpMDUZffRye/arcgis/rest/services/ELEM_RT_Bounds_2021_22/FeatureServer/0", "schoolNameField": "NAME"},
-        "secondary": {"url": "https://services3.arcgis.com/ihgd0mpMDUZffRye/arcgis/rest/services/SEC_RT_Bounds_2021_22/FeatureServer/0", "schoolNameField": "NAME"}
-      },
+      "status": "verified_open", "coverage": "elementary_only", "year": "current",
+      "service": "https://services3.arcgis.com/ihgd0mpMDUZffRye/arcgis/rest/services/Attendance_Boundaries/FeatureServer/0",
+      "panelMode": "fixed", "panelFixed": "elementary", "schoolNameField": "NAME",
+      "where": "Type='Attendance Area'",
       "license": "unspecified (public item)",
       "sourcePage": "https://www.ugdsb.ca/page/school-locator",
-      "notes": "Current combined layer School_Locator_24_25 has no clean elem/sec field (Type = boundary-type: Attendance/Development/Option/Grandparented). Using the cleanly panel-split 2021/22 Regular-Track layers instead — real boundaries, slightly older."
+      "notes": "SERVICE ROTATED (re-verified 2026-09-21): ELEM_RT_Bounds_2021_22 and SEC_RT_Bounds_2021_22 were DELETED and now answer HTTP 400 — the second board in this registry to move in three months, after YRDSB. Replacement layer 'Attendance_Bounds_Realigned' holds 147 rows, of which only 75 are Type='Attendance Area'; the other 72 are Development Areas (future subdivisions, no school yet) and Option Areas, which the `where` clause excludes. Program is 'RT ELEM' throughout and no Attendance Area carries a secondary Track, so UGDSB SECONDARY coverage is no longer published openly — those schools now fall back to the proximity circle. No FI layer."
     },
     {
       "boardCode": "TVDSB", "board": "Thames Valley DSB", "system": "public", "language": "english",
@@ -165,9 +212,13 @@
         "elementary": {"url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/TVDSB_Interactive_Map_WFL1/FeatureServer/9", "schoolNameField": "SchoolName"},
         "secondary": {"url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/TVDSB_Interactive_Map_WFL1/FeatureServer/12", "schoolNameField": "SchoolName"}
       },
+      "programLayers": [
+        {"panel": "elementary", "program": "french_immersion", "url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/TVDSB_Interactive_Map_WFL1/FeatureServer/10", "schoolNameField": "SchoolName"},
+        {"panel": "secondary", "program": "french_immersion", "url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/TVDSB_Interactive_Map_WFL1/FeatureServer/13", "schoolNameField": "SchoolName"}
+      ],
       "license": "unspecified (public item; hosted by Watson & Associates)",
       "sourcePage": "https://www.tvdsb.ca/en/schools/find-my-local-school.aspx",
-      "notes": "Layer 9/12 = Regular Track. 10/13 = French Immersion (not harvested in v1)."
+      "notes": "Layer 9/12 = Regular Track. Layer 10 = 'Elementary FI Boundaries' (11), layer 13 = 'Secondary FI Boundaries' (5) — both verified 2026-09-21 and now harvested."
     },
     {
       "boardCode": "SCDSB", "board": "Simcoe County DSB", "system": "public", "language": "english",
@@ -185,12 +236,14 @@
       "status": "verified_open", "coverage": "partial_oshawa_only", "year": "2025",
       "panelMode": "layer",
       "layers": {
-        "regular": {"url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/Oshawa_Attendance_Area_Map_WFL3/FeatureServer/5", "schoolNameField": "SchoolName"},
-        "french_immersion": {"url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/Oshawa_Attendance_Area_Map_WFL3/FeatureServer/3", "schoolNameField": "SchoolName"}
+        "elementary": {"url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/Oshawa_Attendance_Area_Map_WFL3/FeatureServer/5", "schoolNameField": "SchoolName"}
       },
+      "programLayers": [
+        {"panel": "elementary", "program": "french_immersion", "url": "https://services9.arcgis.com/f8lLPHShq1QkdT5J/arcgis/rest/services/Oshawa_Attendance_Area_Map_WFL3/FeatureServer/3", "schoolNameField": "SchoolName"}
+      ],
       "license": "unspecified (consultant-hosted)",
       "sourcePage": "https://www.dcdsb.ca/our-schools/boundary-reviews/oshawa-program-and-boundary-study/oshawa-boundary-maps/",
-      "notes": "OSHAWA ONLY. Rest of board is fallback."
+      "notes": "OSHAWA ONLY. Rest of board is fallback. The two layer keys used to be 'regular' and 'french_immersion' — those are PROGRAMS, and writing them into the panel column hid all 14 rows from the viewport RPC. Verified 2026-09-21: layer 5 = 'Status Quo: Regular Track Attendance Areas' (11), layer 3 = 'Status Quo: French Immersion Attendance Areas' (3). Both are elementary."
     },
     {
       "boardCode": "LDCSB", "board": "London District Catholic SB", "system": "catholic", "language": "english",
@@ -226,16 +279,20 @@
   ],
 
   "fallback": [
-    {"boardCode": "TDSB", "board": "Toronto DSB", "system": "public", "language": "english", "status": "harvested_kml", "marketImportance": "HIGHEST", "addressLookup": "https://www.tdsb.on.ca/Find-your/School/By-Map", "notes": "NOW HARVESTED via scripts/admin/harvest-tdsb-catchments.mjs (492 official boundaries: 431 elementary + 61 secondary). No ArcGIS — boundaries served as KML from a DNN getBounds endpoint (token-free); schools enumerated from By-School-Name directory pages, folder/id per school from ByMap.aspx?focusonschool=. These ARE TDSB's official boundaries; confirm reuse terms with TDSB."},
+    {"boardCode": "TDSB", "board": "Toronto DSB", "system": "public", "language": "english", "status": "harvested_kml", "marketImportance": "HIGHEST", "addressLookup": "https://www.tdsb.on.ca/Find-your/School/By-Map", "frenchImmersion": "unavailable",
+      "notes": "NOW HARVESTED via scripts/admin/harvest-tdsb-catchments.mjs (492 official boundaries: 431 elementary + 61 secondary). No ArcGIS — boundaries served as KML from a DNN getBounds endpoint (token-free); schools enumerated from By-School-Name directory pages, folder/id per school from ByMap.aspx?focusonschool=. These ARE TDSB's official boundaries; confirm reuse terms with TDSB. FRENCH IMMERSION IS NOT AVAILABLE on this path — investigated 2026-09-21: getBounds exposes only folder=Elementary and folder=Intermediate, the By-Map page never mentions French Immersion, and the TDSB AGOL org publishes gifted-program boundaries but no FI layer. Toronto public FI needs a separate source (Tier B probing of the French-programs finder). The map must say so rather than draw a circle."},
     {"boardCode": "PDSB", "board": "Peel DSB", "system": "public", "language": "english", "status": "harvestable_keyed", "marketImportance": "HIGH",
-      "api": "https://api.spsplus.ca/api/v3/Search/GetSchoolProgramGradeBoundary?schoolId=<GUID>&programTypeCode=RT&gradeCode=<g>&schoolYear=2025",
+      "api": "https://api.spsplus.ca/api/v3/Search/GetSchoolProgramGradeBoundary?schoolId=<GUID>&programTypeCode=<RT|FI>&gradeCode=<g>&schoolYear=2025",
       "apiHeaders": {"x-api-key": "00f4b315-24e5-4a05-8894-91148c612e0e", "x-api-version": "3.0"},
-      "harvestFlow": "GetSchoolList?schoolYear=2025 (253 schools) -> per school GetSchoolProgramGrades -> GetSchoolProgramGradeBoundary (escaped GeoJSON).",
+      "harvestFlow": "GetSchoolList?schoolYear=2025 (253 schools) -> per school GetSchoolProgramGrades -> GetSchoolProgramGradeBoundary per program (escaped GeoJSON).",
+      "spsProgramCodes": {"RT": "regular", "FI": "french_immersion"},
       "sourcePage": "https://www.peelschools.org/school-finder",
-      "notes": "NOW HARVESTED via scripts/admin/harvest-spsplus-catchments.mjs (246 Regular-Track boundaries: 215 elementary + 31 secondary). Proprietary SPS Plus product; no open license — confirm reuse terms with PDSB."},
+      "notes": "Harvested by scripts/admin/harvest-spsplus-catchments.mjs. The harvester asked only for programTypeCode=RT, so every French Immersion zone was skipped; verified 2026-09-21 that 70 of the 253 schools list an FI program and that GetSchoolProgramGradeBoundary returns FI geometry (37 KB for Bramalea SS). Other programTypeCode values (ESL, SHSM, Truck, EHS*) are specialty streams, NOT catchments — spsProgramCodes is an allow-list, so they stay out. Proprietary SPS Plus product; no open license — confirm reuse terms with PDSB."},
     {"boardCode": "DDSB", "board": "Durham DSB", "system": "public", "language": "english", "status": "fallback", "notes": "Investigated 2026-06-15: UNHARVESTABLE. eSolutions locator is points-only (and currently HTTP 500); DSTS BusPlanner is login-gated (OEN); AGOL org private; only PDF review maps. Circle fallback."},
     {"boardCode": "OCDSB", "board": "Ottawa-Carleton DSB", "system": "public", "language": "english", "status": "fallback", "notes": "Investigated 2026-06-15: UNHARVESTABLE. No service; .NET locator throws 500; boundaries published only as per-school GeoPDF rasters (no vector geometry). City of Ottawa open data has NO catchments. Circle fallback."},
-    {"boardCode": "HWCDSB", "board": "Hamilton-Wentworth Catholic DSB", "system": "catholic", "language": "english", "status": "harvested_spsplus", "notes": "NOW HARVESTED via scripts/admin/harvest-spsplus-catchments.mjs (56 boundaries). Same SPS Plus vendor as Peel, different api-key (in the locator page HTML). No open license — confirm reuse terms with HWCDSB."},
+    {"boardCode": "HWCDSB", "board": "Hamilton-Wentworth Catholic DSB", "system": "catholic", "language": "english", "status": "harvested_spsplus",
+      "spsProgramCodes": {"RT": "regular", "FI": "french_immersion"},
+      "notes": "Harvested via scripts/admin/harvest-spsplus-catchments.mjs (56 Regular-Track boundaries). Same SPS Plus vendor as Peel, different api-key (in the locator page HTML). FI now requested alongside RT. No open license — confirm reuse terms with HWCDSB."},
     {"boardCode": "CECCE", "board": "Conseil des écoles catholiques du Centre-Est", "system": "catholic", "language": "french", "status": "harvested_cartovista", "notes": "NOW HARVESTED via scripts/admin/harvest-cecce-catchments.mjs (42 elem named + 12 sec). CartoVista static JSON (delta-encoded spherical Mercator) decoded directly. No open license — confirm reuse terms with CECCE."},
     {"boardCode": "UCDSB", "board": "Upper Canada DSB", "system": "public", "language": "english", "status": "fallback", "notes": "Investigated 2026-06-15: UNHARVESTABLE. STEO BusPlanner (transportation.steo.ca) injects boundary polygons into the result page but is reCAPTCHA-walled (server-enforced); the open autocomplete returns street-name strings only. Circle fallback (or CAPTCHA-solver, not pursued)."},
     {"boardCode": "GECDSB", "board": "Greater Essex County DSB", "system": "public", "language": "english", "status": "fallback",

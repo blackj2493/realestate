@@ -20,6 +20,7 @@ import { Slider } from "@/components/ui/slider";
 import {
   useCommandCenterStore,
   type SchoolLevel,
+  type SchoolProgram,
   type SchoolSystem,
 } from "@/lib/stores/commandCenterStore";
 
@@ -40,6 +41,11 @@ const SYSTEMS: { id: SchoolSystem; label: string }[] = [
   { id: "public", label: "Public" },
   { id: "catholic", label: "Catholic" },
   { id: "either", label: "Either" },
+];
+const PROGRAMS: { id: SchoolProgram; label: string; hint: string }[] = [
+  { id: "regular", label: "Regular", hint: "The home catchment — the school an address is assigned to by default." },
+  { id: "french_immersion", label: "French Immersion", hint: "One immersion school serves several regular catchments, so this zone is much larger." },
+  { id: "extended_french", label: "Extended French", hint: "A part-day French stream. Published by a few boards only." },
 ];
 
 const segBtn = (selected: boolean) =>
@@ -127,6 +133,39 @@ export default function SchoolFilter() {
         {school.system === "either" ? "public + catholic" : school.system}). Boundaries
         change yearly — verify with the board.
       </p>
+
+      {/* Program — the second axis. Drawn one at a time: a French Immersion zone covers
+          several regular zones, so showing both stacks unrelated boundaries. */}
+      {school.showZones && (
+        <div className="mb-4">
+          <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Program
+          </label>
+          <div className="flex gap-1.5">
+            {PROGRAMS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                title={p.hint}
+                onClick={() => setSchool({ program: p.id, enabled: true })}
+                className={segBtn(school.program === p.id)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[9px] leading-tight text-muted-foreground">
+            {PROGRAMS.find((p) => p.id === school.program)?.hint}
+            {school.program !== "regular" && (
+              <>
+                {" "}
+                Not every board publishes this zone. Where a board does not, the map says
+                so rather than draw one.
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Level */}
       <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">

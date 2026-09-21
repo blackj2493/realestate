@@ -136,6 +136,11 @@ await pool(schools, CONCURRENCY, async (s) => {
       system: "public",
       language: "english",
       panel: s.level === "Secondary" ? "secondary" : "elementary",
+      // getBounds serves only folder=Elementary and folder=Intermediate — no French
+      // Immersion anywhere on this path (verified 2026-09-21), so every row is regular.
+      // The map states that gap instead of drawing a circle in its place.
+      program: "regular",
+      grades: null,
       year: "2025-2026",
       school_name: s.name,
       source: "https://www.tdsb.on.ca/Find-your/School/By-Map",

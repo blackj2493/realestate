@@ -1,9 +1,9 @@
 /**
  * harvest-school-catchments.mjs — Tier A of SCHOOL_BOUNDARIES_SOLUTION_2026-06-14.md.
  *
- * Reads the verified registry (data/school-catchment-sources.json) and pulls each
+ * Reads the verified registry (scripts/admin/school-catchment-sources.json) and pulls each
  * board's attendance-boundary polygons from its ArcGIS REST endpoint as GeoJSON,
- * normalizes them into one FeatureCollection, and writes data/school-catchments.geojson.
+ * normalizes them into one FeatureCollection, and writes school-catchments.geojson.
  *
  * Handles the gotchas surfaced by the 2026-06-15 live validation:
  *   - drops rows with null geometry AND rows whose panel discriminator is null
@@ -12,6 +12,18 @@
  *   - uses the per-board panelMode mapping (never infers panel from a generic field),
  *   - paginates defensively (maxRecordCount seen as low as 1000),
  *   - always requests outSR=4326 (native SRs vary: UTM 26918, WebMercator 3857).
+ *
+ * PANEL and PROGRAM are two independent axes and every emitted feature carries both.
+ * v1 kept only the regular track, which threw away every French Immersion boundary —
+ * and FI zones are far larger than the regular zone of the same school, so the map
+ * understated them badly. The three registry shapes (see _meta.programNotes):
+ *   - programField + programValues  → one layer split by a column (YRDSB, HDSB).
+ *     An unmapped value (Arts, IB) is dropped: a specialty zone is not a catchment.
+ *   - programLayers[]               → extra layers, each with its own panel + program.
+ *   - deriveProgramZones[]          → TCDSB publishes no FI layer; each regular row
+ *     instead names the program school it feeds, so a program zone is the dissolved
+ *     union of its feeder zones. We emit the members as one MultiPolygon and flag
+ *     `dissolve`, and load-school-catchments.ts runs ST_UnaryUnion to drop the seams.
  *
  * Run:  node scripts/admin/harvest-school-catchments.mjs
  * Pure read/transform → writes one local GeoJSON file. No DB writes (that's the next step).
@@ -43,13 +55,16 @@ async function fetchJson(url, tries = 3) {
   }
 }
 
-/** Pull every feature from an ArcGIS layer as GeoJSON, paginating until exhausted. */
-async function pullGeoJSON(serviceUrl) {
+/** Pull every feature from an ArcGIS layer as GeoJSON, paginating until exhausted.
+ *  `where` lets a board's entry exclude rows the service mixes in beside real
+ *  catchments — UGDSB's layer carries 67 Development Areas (future subdivisions with
+ *  no school yet) and 5 Option Areas alongside its 75 attendance areas. */
+async function pullGeoJSON(serviceUrl, where = "1=1") {
   const feats = [];
   let offset = 0;
   for (let guard = 0; guard < 50; guard++) {
     const url =
-      `${serviceUrl}/query?where=1%3D1&outFields=*&returnGeometry=true` +
+      `${serviceUrl}/query?where=${encodeURIComponent(where)}&outFields=*&returnGeometry=true` +
       `&outSR=4326&geometryPrecision=5&f=geojson&resultOffset=${offset}&resultRecordCount=${PAGE}`;
     const g = await fetchJson(url);
     const batch = (g && g.features) || [];
@@ -61,14 +76,34 @@ async function pullGeoJSON(serviceUrl) {
 }
 
 const norm = (s) => (s == null ? "" : String(s).trim());
+const lower = (s) => norm(s).toLowerCase();
+
+/** Read a field that a self-hosted ArcGIS Server may qualify (ARCGISADMIN.Table.COL). */
+function readField(props, field) {
+  if (!field) return "";
+  if (norm(props[field]) !== "") return norm(props[field]);
+  for (const k of Object.keys(props))
+    if (k.endsWith("." + field) && norm(props[k]) !== "") return norm(props[k]);
+  return "";
+}
 
 function pickName(props, nameField) {
-  if (nameField && norm(props[nameField]) !== "") return norm(props[nameField]);
+  const direct = readField(props, nameField);
+  if (direct !== "") return direct;
   for (const k of Object.keys(props)) {
     if (/name|school|sch_|nom/i.test(k) && typeof props[k] === "string" && props[k].trim())
       return props[k].trim();
   }
   return null;
+}
+
+/** Lower-cased {raw column value → canonical program} map, or null when the board
+ *  does not split one layer by program. */
+function programMap(spec) {
+  if (!spec) return null;
+  const m = {};
+  for (const [raw, program] of Object.entries(spec)) m[lower(raw)] = program;
+  return m;
 }
 
 /** Expand a board registry entry into concrete fetch jobs (one per panel/layer/service). */
@@ -80,33 +115,58 @@ function jobsFor(board) {
     language: board.language,
     year: board.year || null,
     source: board.sourcePage || null,
-    // Keep only regular home catchments — drop French Immersion / Arts / IB program
-    // boundaries that share the same layer and overlap (large) the regular zones.
-    programField: board.programField || null,
-    keepPrograms: board.keepPrograms || null,
   };
   const jobs = [];
+
+  // ── the board's home (regular-track) boundaries ──────────────────────────────
+  // `program` stays null only when programField splits the same layer by program.
+  const splitByProgram = board.programField && board.programValues;
+  const reg = {
+    ...base,
+    program: splitByProgram ? null : "regular",
+    programField: splitByProgram ? board.programField : null,
+    valueToProgram: programMap(board.programValues),
+    isBaseLayer: true, // deriveProgramZones reads the rows of this layer
+  };
+
   if (board.panelMode === "layer") {
     for (const [panel, L] of Object.entries(board.layers))
-      jobs.push({ ...base, panel, url: L.url, nameField: L.schoolNameField });
+      jobs.push({ ...reg, panel, url: L.url, nameField: L.schoolNameField, where: L.where || board.where });
   } else if (board.panelMode === "field") {
     const valueToPanel = {};
     for (const [panel, val] of Object.entries(board.panelValues || {}))
-      valueToPanel[norm(val).toLowerCase()] = panel;
+      valueToPanel[lower(val)] = panel;
     jobs.push({
-      ...base,
+      ...reg,
       panel: null,
       url: board.service,
       nameField: board.schoolNameField,
       panelField: board.panelField,
       valueToPanel,
+      where: board.where,
     });
-    if (board.frenchService)
-      jobs.push({ ...base, panel: "french", url: board.frenchService, nameField: board.schoolNameField });
   } else if (board.panelMode === "fixed") {
-    jobs.push({ ...base, panel: board.panelFixed, url: board.service, nameField: board.schoolNameField });
+    jobs.push({ ...reg, panel: board.panelFixed, url: board.service, nameField: board.schoolNameField, where: board.where });
   } else {
-    jobs.push({ ...base, panel: "combined", url: board.service, nameField: board.schoolNameField });
+    jobs.push({ ...reg, panel: "combined", url: board.service, nameField: board.schoolNameField, where: board.where });
+  }
+
+  // ── extra program layers (French Immersion / Extended French) ────────────────
+  for (const L of board.programLayers || []) {
+    const valueToPanel = {};
+    for (const [panel, val] of Object.entries(L.panelValues || {})) valueToPanel[lower(val)] = panel;
+    jobs.push({
+      ...base,
+      program: L.program,
+      panel: L.panelField ? null : L.panel,
+      panelField: L.panelField || null,
+      valueToPanel: L.panelField ? valueToPanel : null,
+      grades: L.grades || null,
+      url: L.url,
+      nameField: L.schoolNameField,
+      where: L.where,
+      isBaseLayer: false,
+    });
   }
   return jobs;
 }
@@ -117,50 +177,105 @@ const errors = [];
 
 console.log(`Harvesting ${registry.verified.length} verified boards →`);
 for (const board of registry.verified) {
+  // program → school name → member geometries, filled from the board's base layer
+  // when deriveProgramZones names a column (TCDSB).
+  const derived = new Map();
+  for (const dz of board.deriveProgramZones || []) derived.set(dz.program, new Map());
+
   for (const job of jobsFor(board)) {
     try {
-      const raw = await pullGeoJSON(job.url);
+      const raw = await pullGeoJSON(job.url, job.where || "1=1");
       let kept = 0, dropNullGeom = 0, dropNullPanel = 0, dropProgram = 0;
       for (const f of raw) {
         if (!f.geometry) { dropNullGeom++; continue; }
-        if (job.programField && job.keepPrograms) {
-          const pv = String(f.properties[job.programField] ?? "").trim();
-          if (!job.keepPrograms.includes(pv)) { dropProgram++; continue; } // FI/Arts/IB etc.
+
+        let program = job.program;
+        if (program == null) {
+          // Unmapped values (Arts, IB, gifted) are specialty streams, not catchments.
+          program = job.valueToProgram[lower(readField(f.properties, job.programField))] || null;
+          if (!program) { dropProgram++; continue; }
         }
+
         let panel = job.panel;
         if (panel == null && job.valueToPanel) {
-          panel = job.valueToPanel[norm(f.properties[job.panelField]).toLowerCase()] || null;
+          panel = job.valueToPanel[lower(readField(f.properties, job.panelField))] || null;
           if (!panel) { dropNullPanel++; continue; } // holding/placeholder rows
         }
+
+        const schoolName = pickName(f.properties, job.nameField);
         out.push({
           type: "Feature",
           geometry: f.geometry,
           properties: {
             boardCode: job.boardCode, board: job.board,
             system: job.system, language: job.language,
-            panel, year: job.year,
-            school_name: pickName(f.properties, job.nameField),
+            panel, program, grades: job.grades ?? null, year: job.year,
+            school_name: schoolName,
             source: job.source,
           },
         });
         kept++;
+
+        // Collect this regular zone under whichever program school it feeds.
+        if (job.isBaseLayer) {
+          for (const dz of board.deriveProgramZones || []) {
+            const target = readField(f.properties, dz.field);
+            if (!target) continue;
+            const byName = derived.get(dz.program);
+            if (!byName.has(target)) byName.set(target, { panel: dz.panel, parts: [] });
+            byName.get(target).parts.push(f.geometry);
+          }
+        }
       }
       console.log(
-        `  ${job.boardCode.padEnd(7)} ${(job.panel || "field-split").padEnd(12)}` +
+        `  ${job.boardCode.padEnd(7)} ${(job.panel || "field-split").padEnd(12)} ${(job.program || "field-split").padEnd(16)}` +
         ` kept=${String(kept).padStart(3)}  dropNullGeom=${dropNullGeom}  dropNullPanel=${dropNullPanel}  dropProgram=${dropProgram}`
       );
     } catch (e) {
-      errors.push({ board: job.boardCode, panel: job.panel, url: job.url, error: String(e.message || e) });
-      console.log(`  ${job.boardCode.padEnd(7)} ${(job.panel || "field-split").padEnd(12)} ERROR ${e.message || e}`);
+      errors.push({ board: job.boardCode, panel: job.panel, program: job.program, url: job.url, error: String(e.message || e) });
+      console.log(`  ${job.boardCode.padEnd(7)} ${(job.panel || "field-split").padEnd(12)} ${(job.program || "field-split").padEnd(16)} ERROR ${e.message || e}`);
     }
+  }
+
+  // ── dissolved program zones (TCDSB) ─────────────────────────────────────────
+  for (const dz of board.deriveProgramZones || []) {
+    const byName = derived.get(dz.program);
+    let emitted = 0;
+    for (const [schoolName, { panel, parts }] of byName) {
+      const coords = [];
+      for (const g of parts) {
+        if (g.type === "Polygon") coords.push(g.coordinates);
+        else if (g.type === "MultiPolygon") coords.push(...g.coordinates);
+      }
+      if (!coords.length) continue;
+      out.push({
+        type: "Feature",
+        geometry: { type: "MultiPolygon", coordinates: coords },
+        properties: {
+          boardCode: board.boardCode, board: board.board,
+          system: board.system, language: board.language,
+          panel: panel ?? dz.panel, program: dz.program, grades: null, year: board.year || null,
+          school_name: schoolName,
+          source: board.sourcePage || null,
+          // Members share edges; PostGIS unions them at load time so the zone reads
+          // as one boundary rather than a stack of feeder outlines.
+          dissolve: true,
+          member_zones: parts.length,
+        },
+      });
+      emitted++;
+    }
+    console.log(`  ${board.boardCode.padEnd(7)} ${"derived".padEnd(12)} ${dz.program.padEnd(16)} kept=${String(emitted).padStart(3)}  (dissolved from ${dz.field})`);
   }
 }
 
 writeFileSync(OUT, JSON.stringify({ type: "FeatureCollection", features: out }));
 const byPanel = out.reduce((a, f) => ((a[f.properties.panel] = (a[f.properties.panel] || 0) + 1), a), {});
+const byProgram = out.reduce((a, f) => ((a[f.properties.program] = (a[f.properties.program] || 0) + 1), a), {});
 const named = out.filter((f) => f.properties.school_name).length;
 console.log("\n──────── TOTAL ────────");
 console.log("features written :", out.length, "→", OUT.replace(ROOT, "."));
 console.log("by panel         :", JSON.stringify(byPanel));
+console.log("by program       :", JSON.stringify(byProgram));
 console.log("with school_name :", named, "/", out.length);
 console.log("errors           :", errors.length ? JSON.stringify(errors) : 0);
