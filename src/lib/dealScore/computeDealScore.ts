@@ -137,6 +137,9 @@ export interface DealScoreInput {
     rangeLow: number;
     rangeHigh: number;
     medianCloseRatio: number;
+    /** Median close as a share of the AVM comp mid, for this market and gap depth. Well
+     *  under 1. The Price pillar deflates the comp value by it — see pricePillar. */
+    closeVsCompMid: number;
   } | null;
   /** Upside signals (builders / value-add). All optional. */
   lotSqft?: number | null;
@@ -340,7 +343,17 @@ interface Pillar {
 
 function pricePillar(input: DealScoreInput, listPrice: number | null): Pillar | null {
   if (!listPrice || !input.avmEstimate || !(input.avmEstimate.estimatedValue > 0)) return null;
-  const est = input.avmEstimate.estimatedValue;
+  const raw = input.avmEstimate.estimatedValue;
+  const comp = input.competitive ?? null;
+  // A home listed low to draw offers shows a huge apparent discount to comps, and this
+  // pillar used to hand it a flat 100/100 for exactly that — at 0.55 weight on the default
+  // persona, the heaviest input to the grade. That discount is not value. Measured on
+  // 41,541 held-out sales, these close at a median of ~82% of the comp mid and only ~5%
+  // ever reach it, because the gap is mostly model error on that specific home. So deflate
+  // the comp value by the SAME measured share the Estimated Sale card publishes, and score
+  // against what the home actually realises. A genuine bargain — no under-listing pattern —
+  // is scored exactly as before.
+  const est = comp ? raw * comp.closeVsCompMid : raw;
   const discountPct = ((est - listPrice) / est) * 100;
   const points = interpolate(discountPct, PRICE_ANCHORS);
   const absPct = Math.abs(discountPct);
@@ -348,12 +361,16 @@ function pricePillar(input: DealScoreInput, listPrice: number | null): Pillar | 
   // Relative to recent comparable sales — NOT a competing dollar "estimate" (that word is
   // reserved for the headline Estimated Sale Price). Same source feeds the breakdown AND
   // "The Read" catch.
-  const detail =
+  const base =
     discountPct >= 0.5
       ? `Listed ${absPct.toFixed(1)}% below comparable sales (${conf})`
       : discountPct <= -0.5
         ? `Listed ${absPct.toFixed(1)}% above comparable sales (${conf})`
         : `Priced in line with comparable sales (${conf})`;
+  // Say the yardstick moved, or this reads as contradicting the card's "% below comps".
+  const detail = comp
+    ? `${base} — measured against what homes listed this way actually close at, not the raw comp figure`
+    : base;
   return {
     key: "price",
     label: "Value vs Comps",

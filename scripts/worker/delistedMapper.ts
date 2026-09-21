@@ -12,6 +12,7 @@ import {
 import type { SoldListingDocument } from '../../src/lib/typesense/soldListingsSchema';
 import { isAnyInternetDisplayOptedOut } from '../../src/lib/compliance/internetDisplay';
 import { parsePostalFromAddress } from './parsePostal';
+import { sanitizeOriginalListPrice } from '@/lib/listing/originalListPrice';
 
 function toInt(v: unknown): number {
   const n = Number(v);
@@ -131,7 +132,10 @@ export function extractDelistedRecord(
     expiration_date: isoDateOrNull(raw.ExpirationDate),
     listing_contract_date: isoDateOrNull(raw.ListingContractDate),
     list_price: numOrNull(raw.ListPrice),
-    original_list_price: numOrNull(raw.OriginalListPrice),
+    original_list_price: sanitizeOriginalListPrice(
+      numOrNull(raw.OriginalListPrice),
+      numOrNull(raw.ListPrice),
+    ),
     days_on_market: numOrNull(raw.DaysOnMarket),
     unparsed_address: address,
     city: raw.City || null,
@@ -186,6 +190,10 @@ export function toDelistedDocument(r: DelistedRecord): SoldListingDocument | nul
     DealType: r.deal_type,
     DaysOnMarket: toInt(r.days_on_market),
     TransactionType: r.transaction_type ?? '',
-    OriginalListPrice: toInt(r.original_list_price),
+    // Second guard on the read side: rows written before the ingest guard existed are
+    // still in the table, and a reindex must not carry them into the search document.
+    OriginalListPrice: toInt(
+      sanitizeOriginalListPrice(numOrNull(r.original_list_price), numOrNull(r.list_price)),
+    ),
   };
 }
