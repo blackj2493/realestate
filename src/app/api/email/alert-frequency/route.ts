@@ -59,6 +59,12 @@ async function apply(email: string, action: EmailAction): Promise<boolean> {
     const patch: Record<string, unknown> = { user_id: userId, updated_at: new Date().toISOString() };
     if (action === "weekly" || action === "daily") {
       patch.alerts_frequency = action;
+      // Migration 146. 144's column defaults to 'daily', so the VALUE cannot say whether a
+      // reader chose it or some other write filled the row in — two of the three rows in
+      // production were created by a pause click. This stamp is the only thing that can,
+      // and it is written for BOTH actions: "go back to a nightly email" is a decision, and
+      // it is the one that has to survive the derived cadence in digestCadence.ts.
+      patch.alerts_frequency_chosen_at = new Date().toISOString();
     } else {
       patch.pause_until = new Date(Date.now() + PAUSE_DAYS * 86_400_000).toISOString();
     }
@@ -66,11 +72,24 @@ async function apply(email: string, action: EmailAction): Promise<boolean> {
     // Upsert on user_id, never a blind insert: most readers have no row yet (migration
     // 106's model is that a missing row means every stream is on).
     const { error } = await sb.from("email_prefs").upsert(patch, { onConflict: "user_id" });
-    if (error) {
-      console.error("[email/alert-frequency] upsert failed:", error.message);
+    if (!error) return true;
+
+    // Naming a column the database has not got yet fails the WHOLE write, and this one is
+    // reached from a link in an email — a reader who pressed "send this weekly" would get
+    // "this link couldn't be verified" for as long as 146 sat unapplied. The PREFERENCE is
+    // the part that matters; the intent stamp only decides whether a default may later
+    // apply. So drop the stamp and write the preference rather than lose both.
+    if (/alerts_frequency_chosen_at/.test(error.message)) {
+      console.warn("[email/alert-frequency] migration 146 not applied — writing without the intent stamp");
+      delete patch.alerts_frequency_chosen_at;
+      const retry = await sb.from("email_prefs").upsert(patch, { onConflict: "user_id" });
+      if (!retry.error) return true;
+      console.error("[email/alert-frequency] upsert failed:", retry.error.message);
       return false;
     }
-    return true;
+
+    console.error("[email/alert-frequency] upsert failed:", error.message);
+    return false;
   } catch (err) {
     console.error("[email/alert-frequency] threw:", err);
     return false;
