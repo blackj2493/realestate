@@ -23,6 +23,7 @@
  */
 import { Resend } from "resend";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { undeliverableReason } from "@/lib/email/deliverability";
 
 export interface SendEmailInput {
   /** Stable label for the email type, e.g. 'welcome', 'confirmation:listing-alerts'. */
@@ -67,6 +68,23 @@ async function recordFailure(kind: string, reason: string, to: string | string[]
 
 export async function sendTransactionalEmail(input: SendEmailInput): Promise<SendResult> {
   const { kind, to, from, subject, html, text, replyTo, headers } = input;
+
+  // Deliverability backstop. Every sender in the repo funnels through here, so this is the
+  // one place that can promise the provider never sees an address that cannot receive mail.
+  // A bounce is charged to the SENDING DOMAIN, and this one also carries sign-in codes —
+  // see src/lib/email/deliverability.ts for the run that made this necessary.
+  //
+  // A worker should have filtered its own audience long before this (the counts belong in
+  // its receipt, not in a failure table). Reaching here means one did not, so the row this
+  // records is the signal that a recipient query needs fixing — it should stay near zero.
+  const firstTo = Array.isArray(to) ? to[0] : to;
+  const undeliverable = undeliverableReason(firstTo);
+  if (undeliverable) {
+    const reason = `undeliverable:${undeliverable}`;
+    console.error(`[email] BLOCKED kind=${kind} reason=${reason} — not handed to the provider`);
+    await recordFailure(kind, reason, to);
+    return { sent: false, error: reason };
+  }
 
   if (!process.env.RESEND_API_KEY) {
     // The exact hole that hid the 2026-07 incident: a missing key with no signal.

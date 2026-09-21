@@ -40,6 +40,7 @@ import {
 } from "@/lib/alerts/onboardingEmails";
 import { buildExampleAreaData, buildSaveHomeListings, EXAMPLE_REGION } from "@/lib/alerts/onboardingData";
 import { canSendOnboarding, type EmailPrefsRow, type LifecycleRow } from "@/lib/email/sendPolicy";
+import { undeliverableReason } from "@/lib/email/deliverability";
 import { EMAIL_METRICS, recordEmailSendMetrics } from "@/lib/ops/emailSendMetrics";
 
 const DAY = 86_400_000;
@@ -193,6 +194,8 @@ async function main(): Promise<void> {
 
   let sent = 0;
   let considered = 0;
+  /** Addresses that can never receive mail — see the gate in the profile loop. */
+  let undeliverableSkipped = 0;
 
   // ── Account population: load all profiles (paged, like the alerts worker) ──────
   const PAGE = 1000;
@@ -211,8 +214,23 @@ async function main(): Promise<void> {
 
     for (const p of profiles) {
       const email = (p.email as string | null)?.trim().toLowerCase();
+      // Recorded BEFORE the deliverability gate: this set exists to stop the anonymous-lead
+      // pass re-mailing an address that already has an account, and that is true whether or
+      // not the drip can reach it.
       if (email) accountEmails.add(email);
       if (!email || !p.created_at) continue;
+
+      // The drip pages the whole `profiles` table, so it inherits every synthetic row in
+      // it — 98 `@pureproperty-qa.test` accounts as of 2026-09-21, each one a guaranteed
+      // hard bounce charged to the domain that carries sign-in codes. Counted apart from
+      // `considered`: an address that cannot receive mail was never a candidate.
+      // See src/lib/email/deliverability.ts.
+      const undeliverable = undeliverableReason(email);
+      if (undeliverable) {
+        undeliverableSkipped++;
+        continue;
+      }
+
       considered++;
 
       const createdMs = Date.parse(p.created_at as string);
@@ -302,6 +320,12 @@ async function main(): Promise<void> {
       const email = (lead.email as string | null)?.trim().toLowerCase();
       if (!email || seenLead.has(email) || accountEmails.has(email)) continue; // account exists → not abandoned
       seenLead.add(email);
+      // Same gate as the account pass — a lead address is typed by hand, so this is where
+      // a typo'd or reserved domain enters. See src/lib/email/deliverability.ts.
+      if (undeliverableReason(email)) {
+        undeliverableSkipped++;
+        continue;
+      }
       considered++;
 
       const days = (now - Date.parse(lead.created_at as string)) / DAY;
@@ -332,7 +356,10 @@ async function main(): Promise<void> {
     });
   }
 
-  console.log(`[onboarding] Done. considered=${considered}, sent=${sent}${DRY ? " (dry run)" : ""}.`);
+  console.log(
+    `[onboarding] Done. considered=${considered}, sent=${sent}, ` +
+      `undeliverable=${undeliverableSkipped}${DRY ? " (dry run)" : ""}.`
+  );
 }
 
 // Only run the CLI when executed directly (matches alerts.ts / sync.ts).

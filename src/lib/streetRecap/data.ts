@@ -12,6 +12,7 @@
  * mailing list.
  */
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { isDeliverable } from "@/lib/email/deliverability";
 import type { SoldAgg, ActiveAgg, TypeRow, RecapScope } from "./payload";
 
 type SB = ReturnType<typeof getServiceRoleClient>;
@@ -135,7 +136,13 @@ export async function loadRecapAudience(sb: SB): Promise<Recipient[]> {
     });
   }
 
-  return [...byEmail.values()];
+  // One deliverability gate for the whole stream, applied where the audience is built
+  // rather than at the send site — a recipient who can never receive mail should not reach
+  // the payload builder, the scope collection, or the no-payload share that decides whether
+  // this run fails. Both sources feed it: a `reno_lookups` row inherits whatever address the
+  // account carries, and an `address_watches` row is typed by hand on a listing page.
+  // See src/lib/email/deliverability.ts.
+  return [...byEmail.values()].filter((r) => isDeliverable(r.email));
 }
 
 // ── Aggregates ───────────────────────────────────────────────────────────────

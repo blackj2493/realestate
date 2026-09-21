@@ -39,6 +39,7 @@ import {
   type EmailPrefsRow,
   type LifecycleRow,
 } from "@/lib/email/sendPolicy";
+import { undeliverableReason } from "@/lib/email/deliverability";
 
 const argOf = (name: string): string | null => {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -269,6 +270,9 @@ async function main(): Promise<void> {
   /** Skipped because the nightly digest already reached them today. */
   let deferredSameDay = 0;
   let outOfSegment = 0;
+  /** Addresses that can never receive mail — see the block in the loop below. */
+  let undeliverableSkipped = 0;
+  const undeliverableReasons = new Map<string, number>();
   const kindCounts = new Map<string, number>();
 
   for (let offset = 0; ; offset += PAGE) {
@@ -286,6 +290,24 @@ async function main(): Promise<void> {
     for (const raw of profiles as Profile[]) {
       const email = raw.email?.trim().toLowerCase();
       if (!email) continue;
+
+      // DELIVERABILITY, BEFORE CONSENT. This worker is the only one that mails the whole
+      // `profiles` table, so it is the only one exposed to every synthetic row in it — and
+      // on 2026-09-21 that was 98 `@pureproperty-qa.test` accounts. `.test` can never
+      // resolve, so every send hard-bounced: one run posted a bounce rate above 30% against
+      // the domain that also carries sign-in codes.
+      //
+      // Counted APART from `considered`, because an address that cannot receive mail was
+      // never a candidate for this week's send. Folding it into the denominator would bury
+      // the problem inside a healthy-looking eligibility rate — which is exactly how it
+      // survived four sends. See src/lib/email/deliverability.ts.
+      const undeliverable = undeliverableReason(email);
+      if (undeliverable) {
+        undeliverableSkipped++;
+        undeliverableReasons.set(undeliverable, (undeliverableReasons.get(undeliverable) ?? 0) + 1);
+        continue;
+      }
+
       considered++;
 
       const prefs = await loadPrefs(sb, raw.id);
@@ -385,10 +407,15 @@ async function main(): Promise<void> {
     .sort((a, b) => b[1] - a[1])
     .map(([k, n]) => `${k}=${n}`)
     .join(" ");
+  const undeliverableSpread = [...undeliverableReasons.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, n]) => `${k}=${n}`)
+    .join(" ");
   console.log(
     `\n   segment=${SEGMENT} considered=${considered} sent=${sent} NOT-SENT=${failed} gated=${gated} ` +
       `deferred-same-day=${deferredSameDay} ` +
-      `out-of-segment=${outOfSegment} skipped(no payload)=${skippedNoPayload}`
+      `out-of-segment=${outOfSegment} skipped(no payload)=${skippedNoPayload} ` +
+      `undeliverable=${undeliverableSkipped}${undeliverableSpread ? ` (${undeliverableSpread})` : ""}`
   );
   console.log(`   headline kinds: ${spread || "(none)"}`);
 
