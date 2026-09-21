@@ -946,7 +946,13 @@ export const getListingDetail = cache(
       // recommend an under-ask offer on a listing the card calls a bidding-war setup.
       competitive:
         status.kind === "active" && typeof listPrice === "number" && listPrice > 0
-          ? detectCompetitive(listPrice, estimate)
+          ? detectCompetitive(
+              listPrice,
+              estimate,
+              // Same city source the close/list ratio uses above — picks which market's
+              // measured over-ask rates the Suggested Move is allowed to quote.
+              listing.city ?? (typeof payload["City"] === "string" ? (payload["City"] as string) : null),
+            )
           : null,
     });
     const originalPrice =

@@ -545,6 +545,9 @@ export default async function PropertyPage({
     isActive: status.kind === "active",
     expectedSale: view.expectedSale,
     estimate: view.estimate,
+    // Decides WHICH market's measured "priced to compete" rates apply. IDX-public, so it
+    // comes off the raw payload rather than the VOW-gated view.
+    city: typeof p.City === "string" ? p.City : null,
   });
   const dom = p.DaysOnMarket ?? calculateDaysOnMarket(p.OriginalEntryTimestamp);
   // True DOM (stitched across relists) from the Temporal Distress Engine; falls back to raw DOM.

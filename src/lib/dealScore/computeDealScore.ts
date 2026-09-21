@@ -123,11 +123,13 @@ export interface DealScoreInput {
   /** Cohort close/list ratio (e.g. 0.985) — market softness + hot-market detection. */
   closeListRatio?: number | null;
   /**
-   * "Priced to compete" signal (detectCompetitive in avm/salePrice): a threshold-shaped
-   * ask deliberately set below the comp band. When present, the offer band floors at the
-   * ask instead of quoting the cohort-ratio under-ask figure — that ratio does not apply
-   * to hold-offers listings, and quoting it made the Suggested Move contradict the
-   * Estimated Sale card's over-ask framing on the same page.
+   * "Priced to compete" signal (detectCompetitive in avm/salePrice): an ask whose SHAPE
+   * matches a measured under-listing pattern and which sits below the comp band. When
+   * present, the offer band floors at the ask instead of quoting the cohort-ratio under-ask
+   * figure — that ratio does not apply to hold-offers listings, and quoting it made the
+   * Suggested Move contradict the Estimated Sale card's over-ask framing on the same page.
+   * overAskRate/medianCloseRatio arrive already resolved to the listing's MARKET; never
+   * substitute a constant for them, the GTA and non-GTA numbers differ by ~32pp.
    */
   competitive?: {
     belowCompsPct: number;
@@ -501,7 +503,7 @@ function computeOfferBand(
     // headline right above calls "priced to draw competing offers". A buyer reading the
     // aside as the instruction bids under a hold-offers ask and loses on offer night.
     // "median close ≈ ask" is the same phrasing The Read's price line uses, so the two
-    // surfaces now render COMPETITIVE_MEDIAN_CLOSE_RATIO identically.
+    // surfaces render the fired bucket's medianCloseRatio identically.
     return {
       aggressive: listPrice,
       likelyClose: compLikely,

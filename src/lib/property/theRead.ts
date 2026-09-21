@@ -117,7 +117,11 @@ export function buildTheRead(view: ListingDetail, flags: DiligenceFlag[] = []): 
   // must branch on this first.
   const comp =
     view.status?.kind === "active" && listPrice > 0
-      ? detectCompetitive(listPrice, view.estimate)
+      ? detectCompetitive(
+          listPrice,
+          view.estimate,
+          typeof p.City === "string" ? p.City : null,
+        )
       : null;
 
   // ── THESIS per persona (null-guarded clauses degrade cleanly in lite) ──
