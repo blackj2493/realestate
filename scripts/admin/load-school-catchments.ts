@@ -176,10 +176,17 @@ function readFC(p: string): CatchmentFeature[] {
 // `d` (dissolve) is true only for zones the harvester assembled from feeder polygons.
 // ST_UnaryUnion merges the shared edges so the zone renders as one outline; it runs on
 // those rows alone, so no existing geometry changes shape.
+//
+// Order matters, and getting it wrong throws. ST_UnaryUnion on the raw parsed geometry
+// dies with "TopologyException: side location conflict" — a board's feeder polygons are
+// not individually valid, and adjacent feeders trace their shared street to coordinates
+// that differ in the last decimal. So: make valid, keep polygons only, snap to the 1e-5
+// grid the service already serves (geometryPrecision=5, ~1 m) so those near-coincident
+// edges land on identical vertices, and only then union.
 const GEOM_EXPR =
-  "ST_Multi(ST_CollectionExtract(ST_MakeValid(" +
-  "CASE WHEN d THEN ST_UnaryUnion(ST_SetSRID(ST_GeomFromGeoJSON(g), 4326))" +
-  "     ELSE ST_SetSRID(ST_GeomFromGeoJSON(g), 4326) END), 3))";
+  "ST_Multi(ST_CollectionExtract(CASE WHEN d THEN ST_UnaryUnion(ST_ReducePrecision(" +
+  "  ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(g), 4326)), 3), 0.00001))" +
+  " ELSE ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(g), 4326)) END, 3))";
 
 async function main() {
   const DATABASE_URL = process.env.DATABASE_URL || process.env.DIRECT_DB_URL;
