@@ -22,9 +22,20 @@ import { SITE } from "@/lib/alerts/emailShell";
 
 export const dynamic = "force-dynamic";
 
-async function optOut(email: string, sig: string): Promise<boolean> {
+/**
+ * Opt out, and say WHICH DOOR they came through.
+ *
+ * The recovery offer below can only ever reach a reader who clicked the footer link, because
+ * the mail client's own one-click button calls POST and renders nothing. So the share of
+ * unsubscribes arriving by POST is the ceiling on what this page can do — and without this
+ * line, a quarter with zero recoveries is indistinguishable between "nobody wants back" and
+ * "nobody ever saw the offer". Greppable prefix, no new table: the counts are small and the
+ * question is answered by a log search, not by a schema.
+ */
+async function optOut(email: string, sig: string, via: "footer" | "one-click"): Promise<boolean> {
   if (!verifyUnsubscribe(email, sig)) return false;
   const e = email.trim().toLowerCase();
+  console.log(`[email/unsubscribe] via=${via}`);
   try {
     const sb = getServiceRoleClient();
     // Case-insensitive exact match on the stored email; idempotent.
@@ -92,7 +103,7 @@ function confirmationPage(ok: boolean, recovery: { weekly: string; daily: string
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("e") || "";
-  const ok = await optOut(email, searchParams.get("s") || "");
+  const ok = await optOut(email, searchParams.get("s") || "", "footer");
   // Signed per-action, like every other one-click link: the action is inside the HMAC, so a
   // recovery link cannot be edited into any other action for this address. Only built after
   // a VERIFIED opt-out, so this page never hands out a resubscribe link for an address
@@ -111,6 +122,6 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
-  const ok = await optOut(searchParams.get("e") || "", searchParams.get("s") || "");
+  const ok = await optOut(searchParams.get("e") || "", searchParams.get("s") || "", "one-click");
   return NextResponse.json({ ok }, { status: ok ? 200 : 400 });
 }
