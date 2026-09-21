@@ -10,6 +10,7 @@
 
 "use client";
 
+import { sanitizeOriginalListPrice } from "@/lib/listing/originalListPrice";
 import React from "react";
 import { BedDouble, Bath, Car, Layers, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -70,7 +71,8 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
     const status = layerStatus(doc);
     const isLeased = doc.compKind === "leased";
     const isDelisted = isDelistedDealType(doc.compKind);
-    const delta = isDelisted ? null : soldVsAsk(doc.ListPrice, doc.OriginalListPrice ?? null);
+    const originalAsk = sanitizeOriginalListPrice(doc.OriginalListPrice, doc.ListPrice);
+    const delta = isDelisted ? null : soldVsAsk(doc.ListPrice, originalAsk);
     // De-listed: ListPrice = final ask, OriginalListPrice = original ask → the
     // cut the seller made during the failed campaign.
     const askCut =

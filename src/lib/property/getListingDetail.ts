@@ -46,6 +46,7 @@ import { normalizeCampaign, type RawVowCampaign } from "@/lib/campaignHistory/no
 import { getCloseListRatio } from "@/lib/property/getCloseListRatio";
 import { computeExpectedSale, type ExpectedSale } from "@/lib/avm/expectedSale";
 import { detectCompetitive } from "@/lib/avm/salePrice";
+import { sanitizeOriginalListPrice } from "@/lib/listing/originalListPrice";
 import {
   resolveListingStatus,
   fillClosePriceFromSaleHistory,
@@ -687,10 +688,14 @@ export const getListingDetail = cache(
     const payload = (listing.full_payload as Record<string, unknown>) ?? {};
     const listPrice =
       typeof payload["ListPrice"] === "number" ? (payload["ListPrice"] as number) : null;
-    const originalListPrice =
-      typeof payload["OriginalListPrice"] === "number"
-        ? (payload["OriginalListPrice"] as number)
-        : null;
+    // Sanitised here, once: the feed ships this 1000x-scaled on a handful of rows, and an
+    // unbounded value maxed the Deal Score's price-cut component on a cut that never
+    // happened (and printed a "-99% PRICE DROP" elsewhere). Everything downstream — the
+    // price timeline, computeDealScore, The Read — reads this one clean value.
+    const originalListPrice = sanitizeOriginalListPrice(
+      typeof payload["OriginalListPrice"] === "number" ? (payload["OriginalListPrice"] as number) : null,
+      listPrice,
+    );
     const {
       capRatePct: realCapRate, compMonthlyRent, rentMatchTier, rentBasis, rentSampleCount,
       suiteMonthlyRent: observedSuiteRent, suiteRentBasis, suiteRentSampleCount,

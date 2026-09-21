@@ -17,6 +17,7 @@
 import 'dotenv/config';
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
+import { sanitizeOriginalListPrice } from '@/lib/listing/originalListPrice';
 import { processBatch, SyncResult } from './sync';
 import {
   getSoldAdminClient,
@@ -293,7 +294,12 @@ export function extractSoldListingData(raw: any): SoldListingRecord | null {
       // ask→sold gap); DaysOnMarket = board time-to-sell; ListingContractDate = on-market
       // date (DoM fallback). Date is sliced to YYYY-MM-DD and validated so the `date`
       // column never chokes on a malformed/timestamp value.
-      original_list_price: numOrNull(raw.OriginalListPrice),
+      // Guarded: the feed ships this 1000x-scaled on a handful of rows, and an unbounded
+      // value renders as a "-99% PRICE DROP" downstream. See lib/listing/originalListPrice.
+      original_list_price: sanitizeOriginalListPrice(
+        numOrNull(raw.OriginalListPrice),
+        numOrNull(raw.ListPrice),
+      ),
       days_on_market: numOrNull(raw.DaysOnMarket),
       listing_contract_date:
         typeof raw.ListingContractDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw.ListingContractDate)

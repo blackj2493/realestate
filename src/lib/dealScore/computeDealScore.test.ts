@@ -172,6 +172,50 @@ describe('computeDealScore (v2 pillar/persona)', () => {
     expect(r.offerBand!.competitive).toBe(false);
   });
 
+  it('price pillar: an under-listing tactic no longer scores as if it were value', () => {
+    // 69 Upper Canada Dr shape: $688,000 ask, comps $875,005 — a 21.4% apparent discount,
+    // which used to clamp the heaviest pillar to a flat 100/100. The gap is mostly model
+    // error on that home: these close at ~82% of the comp mid and ~5% ever reach it.
+    const base = {
+      listPrice: 688_000,
+      avmEstimate: { estimatedValue: 875_005, confidence: 'MEDIUM' as const },
+      domDays: 1,
+    };
+    const competitive = {
+      belowCompsPct: (875_005 - 688_000) / 875_005,
+      overAskRate: 0.574,
+      rangeLow: 704_512,
+      rangeHigh: 776_064,
+      medianCloseRatio: 1.024,
+      closeVsCompMid: 0.822,
+    };
+    const naive = computeDealScore(base);
+    const aware = computeDealScore({ ...base, competitive });
+    const px = (r: ReturnType<typeof computeDealScore>) =>
+      r.components.find((c) => c.key === 'price')!;
+
+    expect(px(naive).points).toBe(100); // the old behaviour: maxed on the raw gap
+    expect(px(aware).points).toBeLessThan(px(naive).points);
+    // Scored against what the home actually realises (875,005 x 0.822 = ~719k vs a 688k ask),
+    // so a real but modest discount — not a perfect score.
+    expect(px(aware).points).toBeGreaterThan(50); // still genuinely below comps
+    expect(px(aware).compValue).toBe(Math.round(875_005 * 0.822));
+    expect(px(aware).detail).toMatch(/actually close at/);
+    expect(aware.score!).toBeLessThan(naive.score!);
+  });
+
+  it('price pillar: a genuine bargain with no under-listing pattern is untouched', () => {
+    const base = {
+      listPrice: 688_000,
+      avmEstimate: { estimatedValue: 760_000, confidence: 'HIGH' as const },
+      domDays: 40,
+    };
+    const r = computeDealScore(base);
+    const price = r.components.find((c) => c.key === 'price')!;
+    expect(price.compValue).toBe(760_000); // no deflation applied
+    expect(price.detail).not.toMatch(/actually close at/);
+  });
+
   it('offer band: the competitive signal floors the band at the ask, never under', () => {
     // 79 Westhampton shape: threshold $1,199,000 ask, cohort ratio 96.8%, comps ~$1.265M.
     const r = computeDealScore({
@@ -186,6 +230,7 @@ describe('computeDealScore (v2 pillar/persona)', () => {
         rangeLow: 1_199_000,
         rangeHigh: 1_264_906,
         medianCloseRatio: 0.99,
+        closeVsCompMid: 0.822,
       },
     });
     const band = r.offerBand!;
