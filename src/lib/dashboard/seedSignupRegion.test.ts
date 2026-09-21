@@ -114,7 +114,7 @@ describe("seedSignupRegion — failures are reported, never thrown", () => {
   it("writes nothing when the region is unusable", async () => {
     const { client, spies } = fakeDb();
     const out = await seedSignupRegion(client, "u1", "  ");
-    expect(out).toEqual({ region: null, seeded: false, alerted: [], error: null });
+    expect(out).toEqual({ region: null, seeded: false, alerted: [], filtered: false, error: null });
     expect(spies.select).not.toHaveBeenCalled();
     expect(spies.upsert).not.toHaveBeenCalled();
     expect(mockReconcile).not.toHaveBeenCalled();
@@ -156,5 +156,95 @@ describe("seedSignupRegion — failures are reported, never thrown", () => {
     } as unknown as SupabaseClient;
     const out = await seedSignupRegion(client, "u1", "Ottawa");
     expect(out).toMatchObject({ region: null, seeded: false, error: "network" });
+  });
+});
+
+/**
+ * The signup narrowing answer. The point of it is that reconcileCityAlerts asks
+ * defaultAlertScopeForRegion, which only returns a REAL filter when the lens narrows
+ * something — so what the seed hands the reconcile decides whether the new alert row
+ * filters or delivers the whole city.
+ */
+describe("seedSignupRegion — the narrowing answer", () => {
+  it("writes the lens and hands the narrowed config to the reconcile", async () => {
+    const { client, spies } = fakeDb({ current: null });
+    const out = await seedSignupRegion(client, "u1", "Toronto", {
+      propertyTypes: ["detached"],
+      minBeds: 3,
+    });
+
+    expect(out).toMatchObject({ region: "Toronto", seeded: true, filtered: true });
+    const written = spies.upsert.mock.calls[0][0].config as unknown as {
+      marketActivity: { propertyTypes: string[]; minBeds: number; bedsExact: boolean };
+    };
+    expect(written.marketActivity).toMatchObject({
+      propertyTypes: ["detached"],
+      minBeds: 3,
+      bedsExact: false,
+    });
+    // The reconcile must see the SAME narrowed lens, or the alert row it creates is
+    // 'filtered' over an empty lens — which delivers everything.
+    expect(mockReconcile.mock.calls[0][2]).toMatchObject({
+      regions: ["Toronto"],
+      marketActivity: { propertyTypes: ["detached"], minBeds: 3 },
+    });
+  });
+
+  it("leaves the lens untouched when the reader skips", async () => {
+    const { client, spies } = fakeDb({ current: null });
+    const out = await seedSignupRegion(client, "u1", "Toronto", { propertyTypes: [], minBeds: 0 });
+
+    expect(out.filtered).toBe(false);
+    const written = spies.upsert.mock.calls[0][0].config as unknown as {
+      marketActivity: { propertyTypes: string[]; minBeds: number };
+    };
+    expect(written.marketActivity).toMatchObject({ propertyTypes: [], minBeds: 0 });
+  });
+
+  it("behaves exactly as before when no filter is passed at all", async () => {
+    const { client } = fakeDb({ current: null });
+    const out = await seedSignupRegion(client, "u1", "Toronto");
+    expect(out).toMatchObject({ seeded: true, filtered: false });
+  });
+
+  it("never overwrites a lens somebody has already set", async () => {
+    // A second device got here first and the reader has real filters. This request is
+    // older news than they are.
+    const { client, spies } = fakeDb({
+      current: { config: { regions: [], marketActivity: { minBaths: 2 } } },
+    });
+    const out = await seedSignupRegion(client, "u1", "Toronto", {
+      propertyTypes: ["condo"],
+      minBeds: 1,
+    });
+
+    expect(out.filtered).toBe(false);
+    const written = spies.upsert.mock.calls[0][0].config as unknown as {
+      marketActivity: { propertyTypes: string[]; minBaths: number };
+    };
+    expect(written.marketActivity.propertyTypes).toEqual([]);
+    expect(written.marketActivity.minBaths).toBe(2);
+  });
+
+  it("still applies the lens when the areas were seeded by another device", async () => {
+    // The form promised this reader a narrowed email and their areas are already right —
+    // so write the lens, then reconcile, rather than drop the answer on the floor.
+    const { client, spies } = fakeDb({ current: { config: { regions: ["Toronto"] } } });
+    const out = await seedSignupRegion(client, "u1", "Toronto", {
+      propertyTypes: ["condo"],
+      minBeds: 0,
+    });
+
+    expect(out).toMatchObject({ region: "Toronto", seeded: false, filtered: true });
+    expect(spies.upsert).toHaveBeenCalledTimes(1);
+    expect(mockReconcile.mock.calls[0][2]).toMatchObject({
+      marketActivity: { propertyTypes: ["condo"] },
+    });
+  });
+
+  it("does not write at all when an existing workspace needs no lens change", async () => {
+    const { client, spies } = fakeDb({ current: { config: { regions: ["Barrhaven"] } } });
+    await seedSignupRegion(client, "u1", "Ottawa", { propertyTypes: [], minBeds: 0 });
+    expect(spies.upsert).not.toHaveBeenCalled();
   });
 });

@@ -46,12 +46,12 @@ describe("POST /api/vow/accept-terms — the region the signup form requires", (
     const res = await POST(post({ ...ATTESTED, region: "Ottawa" }));
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toMatchObject({ ok: true, region: "Ottawa", seeded: true });
-    expect(mockSeed).toHaveBeenCalledWith(expect.anything(), "u1", "Ottawa");
+    expect(mockSeed).toHaveBeenCalledWith(expect.anything(), "u1", "Ottawa", undefined);
   });
 
   it("trims before storing, so ' Ottawa ' is not a second market", async () => {
     await POST(post({ ...ATTESTED, region: "  Ottawa  " }));
-    expect(mockSeed).toHaveBeenCalledWith(expect.anything(), "u1", "Ottawa");
+    expect(mockSeed).toHaveBeenCalledWith(expect.anything(), "u1", "Ottawa", undefined);
   });
 
   it("rejects a present-but-unusable region without recording acceptance", async () => {
@@ -83,6 +83,7 @@ describe("POST /api/vow/accept-terms — a signup must never fail over the regio
       region: null,
       seeded: false,
       alerted: [],
+      filtered: false,
       error: "rls denied",
     });
     const res = await POST(post({ ...ATTESTED, region: "Ottawa" }));
@@ -120,5 +121,41 @@ describe("POST /api/vow/accept-terms — the attestation gate still comes first"
     const res = await POST(post({ ...ATTESTED, region: "Ottawa" }));
     expect(res.status).toBe(401);
     expect(mockSeed).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The optional narrowing answer. It takes neither branch of the absent-vs-invalid split the
+ * region uses: there is no shape of it worth failing a Terms acceptance over.
+ */
+describe("POST /api/vow/accept-terms — the narrowing filter", () => {
+  it("passes the filter through to the seed", async () => {
+    const filter = { propertyTypes: ["detached"], minBeds: 3 };
+    await POST(post({ ...ATTESTED, region: "Toronto", filter }));
+    expect(mockSeed).toHaveBeenCalledWith(expect.anything(), "u1", "Toronto", filter);
+  });
+
+  it("reports whether the new alert row actually filters", async () => {
+    mockSeed.mockResolvedValueOnce({
+      region: "Toronto",
+      seeded: true,
+      alerted: ["Toronto"],
+      filtered: true,
+      error: null,
+    });
+    const res = await POST(post({ ...ATTESTED, region: "Toronto", filter: { minBeds: 2 } }));
+    await expect(res.json()).resolves.toMatchObject({ ok: true, filtered: true });
+  });
+
+  it("accepts a signup that skips the question", async () => {
+    const res = await POST(post({ ...ATTESTED, region: "Toronto", filter: { propertyTypes: [], minBeds: 0 } }));
+    expect(res.status).toBe(200);
+  });
+
+  it("never fails acceptance over a malformed filter", async () => {
+    // A 400 here would be the tail wagging the dog — cleanSignupFilter reads junk as "no
+    // filter", which is exactly how signup behaved before the question existed.
+    const res = await POST(post({ ...ATTESTED, region: "Toronto", filter: "detached" }));
+    expect(res.status).toBe(200);
   });
 });

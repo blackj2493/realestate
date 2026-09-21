@@ -19,6 +19,12 @@
  *               sends the field is this build, and a bad value is a bug worth surfacing.
  * Same absent-vs-present-but-wrong split PUT /api/dashboard-config applies to
  * `baseUpdatedAt`, for the same deploy-day reason.
+ *
+ * `filter` — the optional narrowing answer beside the market — takes NEITHER branch of that
+ * split. It is validated by cleanSignupFilter, which treats "absent", "skipped" and "every
+ * value means any" identically as no filter, because all three should behave exactly as
+ * signup behaved before the question existed. There is no shape of it worth a 400: failing
+ * a Terms acceptance over a chip would be the tail wagging the dog.
  */
 
 import { NextResponse } from "next/server";
@@ -37,6 +43,7 @@ export async function POST(request: Request) {
     bonaFide?: unknown;
     agree?: unknown;
     region?: unknown;
+    filter?: unknown;
   } = {};
   try {
     body = await request.json();
@@ -63,11 +70,13 @@ export async function POST(request: Request) {
   // Seed the market AFTER acceptance, and never let it fail the response: the user's
   // actual action was accepting the Terms, and this is bookkeeping behind it.
   let seeded = false;
+  let filtered = false;
   if (region && result.userId) {
     try {
       const supabase = await createSupabaseServerClient();
-      const seed = await seedSignupRegion(supabase, result.userId, region);
+      const seed = await seedSignupRegion(supabase, result.userId, region, body.filter);
       seeded = seed.seeded;
+      filtered = seed.filtered;
       if (seed.error) console.error("[accept-terms] region seed failed:", seed.error);
     } catch (e) {
       console.error("[accept-terms] region seed threw (acceptance recorded):", e);
@@ -86,5 +95,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, region: region ?? null, seeded });
+  return NextResponse.json({ ok: true, region: region ?? null, seeded, filtered });
 }

@@ -33,6 +33,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeConfig } from "./config";
 import { reconcileCityAlerts } from "./areaAlertSync";
+import { applySignupFilter, cleanSignupFilter, isDefaultLens } from "./signupFilter";
 
 /** The same bound `cleanRegions` applies, so anything accepted here survives the reconcile. */
 const MAX_REGION_LEN = 80;
@@ -44,6 +45,13 @@ export interface SeedSignupRegionResult {
   seeded: boolean;
   /** Regions that gained a nightly-email row. */
   alerted: string[];
+  /**
+   * True when a signup answer narrowed the lens, so the new alert row is genuinely
+   * filtered rather than 'filtered' over an empty lens. Reported so the route can count it
+   * — 82.4% of existing areas send everything, and the only way to know whether that is
+   * changing is to measure the rows being created now.
+   */
+  filtered: boolean;
   /** Non-fatal. The caller reports it and still returns success. */
   error: string | null;
 }
@@ -52,6 +60,7 @@ const NOTHING: SeedSignupRegionResult = {
   region: null,
   seeded: false,
   alerted: [],
+  filtered: false,
   error: null,
 };
 
@@ -71,10 +80,12 @@ export function cleanSignupRegion(raw: unknown): string | null {
 export async function seedSignupRegion(
   supabase: SupabaseClient,
   userId: string,
-  rawRegion: unknown
+  rawRegion: unknown,
+  rawFilter?: unknown
 ): Promise<SeedSignupRegionResult> {
   const region = cleanSignupRegion(rawRegion);
   if (!region) return NOTHING;
+  const filter = cleanSignupFilter(rawFilter);
 
   try {
     const { data: current, error: readErr } = await supabase
@@ -86,20 +97,38 @@ export async function seedSignupRegion(
 
     const config = normalizeConfig(current?.config);
 
+    // The signup answer may only be written onto a lens nobody has touched. That keeps the
+    // non-destructive contract exact: writing over DEFAULT_ACTIVITY_LENS overwrites no
+    // decision, while a lens someone has already set is theirs and this request is older
+    // news than it is.
+    const canNarrow = !!filter && isDefaultLens(config.marketActivity);
+    const marketActivity = canNarrow
+      ? applySignupFilter(config.marketActivity, filter)
+      : config.marketActivity;
+
     // Already has areas — another device seeded first. Don't overwrite its choice, but DO
     // reconcile: the row can exist while its alert rows do not (that is the original bug),
-    // and this is a cheap chance to repair it.
+    // and this is a cheap chance to repair it. The lens is still worth writing, because the
+    // form promised this reader a narrowed email and their areas are already correct.
     if (config.regions.length > 0) {
-      const alerts = await reconcileCityAlerts(supabase, userId, config);
+      const next = canNarrow ? { ...config, marketActivity } : config;
+      if (canNarrow) {
+        const { error: lensErr } = await supabase
+          .from("dashboard_prefs")
+          .upsert({ user_id: userId, config: next, updated_at: new Date().toISOString() });
+        if (lensErr) return { ...NOTHING, region: config.regions[0], error: lensErr.message };
+      }
+      const alerts = await reconcileCityAlerts(supabase, userId, next);
       return {
         region: config.regions[0],
         seeded: false,
         alerted: alerts.created,
+        filtered: canNarrow,
         error: alerts.error,
       };
     }
 
-    const next = { ...config, regions: [region] };
+    const next = { ...config, regions: [region], marketActivity };
     const { error: writeErr } = await supabase
       .from("dashboard_prefs")
       .upsert({ user_id: userId, config: next, updated_at: new Date().toISOString() });
@@ -107,8 +136,20 @@ export async function seedSignupRegion(
 
     // The subscription itself. Without this the row above is just dashboard state and no
     // email is ever sent — which was the whole failure.
+    //
+    // The lens above is what decides the row's shape. reconcileCityAlerts asks
+    // defaultAlertScopeForRegion, which returns 'filtered' whenever the lens narrows
+    // anything — so a reader who answered the second question gets an alert row that
+    // actually filters, instead of the 'filtered'-over-an-empty-lens row that 49.4% of
+    // production carries and that delivers the whole city.
     const alerts = await reconcileCityAlerts(supabase, userId, next);
-    return { region, seeded: true, alerted: alerts.created, error: alerts.error };
+    return {
+      region,
+      seeded: true,
+      alerted: alerts.created,
+      filtered: canNarrow,
+      error: alerts.error,
+    };
   } catch (e) {
     return { ...NOTHING, error: e instanceof Error ? e.message : "seed failed" };
   }
