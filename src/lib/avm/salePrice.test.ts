@@ -5,6 +5,8 @@ import {
   RATIO_HIGH_CONFIDENCE_N,
   SALE_BAND_HALF_WIDTH,
   isThresholdPrice,
+  matchCompetitivePattern,
+  COMPETITIVE_PATTERNS,
   COMPETITIVE_OVER_ASK_RATE,
   COMPETITIVE_MEDIAN_CLOSE_RATIO,
 } from "./salePrice";
@@ -131,6 +133,52 @@ describe("resolveSalePrice", () => {
         estimate: avm({ estimatedValue: 0, anchorPrice: 0 }),
       })
     ).toBeNull();
+  });
+});
+
+describe("COMPETITIVE_PATTERNS", () => {
+  it("publishes an over-ask rate and a median close ratio for every pattern", () => {
+    expect(COMPETITIVE_PATTERNS.length).toBeGreaterThan(0);
+    for (const p of COMPETITIVE_PATTERNS) {
+      // A rate measured on one bucket must never be reused for another, so every entry
+      // carries its own — and both must be sane or the published copy lies.
+      expect(p.overAskRate).toBeGreaterThan(0);
+      expect(p.overAskRate).toBeLessThan(1);
+      expect(p.medianCloseRatio).toBeGreaterThan(0.8);
+      expect(p.medianCloseRatio).toBeLessThan(1.2);
+    }
+  });
+
+  it("keeps pattern names unique", () => {
+    const names = COMPETITIVE_PATTERNS.map((p) => p.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("matchCompetitivePattern returns null for a non-matching or invalid ask", () => {
+    expect(matchCompetitivePattern(1_250_000)).toBeNull(); // mid-band
+    expect(matchCompetitivePattern(0)).toBeNull();
+    expect(matchCompetitivePattern(-1)).toBeNull();
+  });
+
+  it("matchCompetitivePattern recognises the threshold ask", () => {
+    expect(matchCompetitivePattern(999_000)?.name).toBe("threshold");
+  });
+
+  it("the legacy constants stay wired to the threshold pattern (one source of truth)", () => {
+    const threshold = COMPETITIVE_PATTERNS.find((p) => p.name === "threshold")!;
+    expect(COMPETITIVE_OVER_ASK_RATE).toBe(threshold.overAskRate);
+    expect(COMPETITIVE_MEDIAN_CLOSE_RATIO).toBe(threshold.medianCloseRatio);
+  });
+
+  it("the payload quotes the FIRED pattern's own rates, not a global constant", () => {
+    const list = 999_000;
+    const c = detectCompetitive(
+      list,
+      avm({ estimatedValue: 1_258_000, lowBand: 1_180_000, highBand: 1_340_000 }),
+    )!;
+    const fired = COMPETITIVE_PATTERNS.find((p) => p.name === c.pattern)!;
+    expect(c.overAskRate).toBe(fired.overAskRate);
+    expect(c.medianCloseRatio).toBe(fired.medianCloseRatio);
   });
 });
 

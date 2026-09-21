@@ -52,23 +52,27 @@ export interface SalePriceEstimate {
   comparable: { low: number; mid: number; high: number } | null;
   /**
    * Set ONLY when the listing looks deliberately under-priced for a bidding war: the AVM
-   * comp value sits ≥ COMPETITIVE_COMP_MARGIN above the ask AND the list price is
-   * threshold-shaped (isThresholdPrice). Drives the "Priced to Compete" treatment — the
-   * card drops the "room to negotiate" framing for an at-or-above-ask range + a calibrated
-   * over-ask probability. null otherwise. Measured: scripts/admin/_thresholdPriceLift.ts.
+   * comp value sits ≥ COMPETITIVE_COMP_MARGIN above the ask AND the ask matches one of the
+   * measured under-listing price patterns (COMPETITIVE_PATTERNS). Drives the "Priced to
+   * Compete" treatment — the card drops the "room to negotiate" framing for an
+   * at-or-above-ask range + a calibrated over-ask probability. null otherwise.
+   * Measured: scripts/admin/_thresholdPriceLift.ts, scripts/admin/_askDigitLift.ts.
    */
   competitive: {
+    /** Which measured pattern fired. Every rate below is that pattern's OWN bucket — a rate
+     *  measured on the "999" bucket does not describe any other, so the payload names the
+     *  pattern rather than implying one global number. */
+    pattern: CompetitivePattern;
     /** How far the ask sits below the comp mid: (compMid − list)/compMid (e.g. 0.21). */
     belowCompsPct: number;
-    /** Over-ask base rate for this pattern (COMPETITIVE_OVER_ASK_RATE) — for the copy. */
+    /** Over-ask base rate for the fired pattern's bucket — for the copy. */
     overAskRate: number;
     /** Floor of the "likely close" range — the ask. */
     rangeLow: number;
     /** Ceiling of the "likely close" range — comp low if above the ask, else comp mid. */
     rangeHigh: number;
-    /** Measured median close/list for this bucket (COMPETITIVE_MEDIAN_CLOSE_RATIO) — the
-     *  honest "likely close" anchor for hold-offers listings; the citywide cohort ratio
-     *  does NOT apply to them. */
+    /** Measured median close/list for the fired pattern's bucket — the honest "likely close"
+     *  anchor for hold-offers listings; the citywide cohort ratio does NOT apply to them. */
     medianCloseRatio: number;
   } | null;
 }
@@ -103,18 +107,60 @@ export function isThresholdPrice(list: number): boolean {
   return list > 0 && list % 100_000 >= 95_000;
 }
 
-/** Over-ask base rate for the fired pattern (below-comps + threshold price), straight from
- *  the backtest bucket — used verbatim in the "priced to compete" copy. NOT a promise: the
- *  median of that bucket still closes ~1% UNDER ask, so the UI shows a range + probability,
- *  never a confident above-ask number. */
-export const COMPETITIVE_OVER_ASK_RATE = 0.4;
+/** Names of the measured under-listing price patterns. See COMPETITIVE_PATTERNS. */
+export type CompetitivePattern = "threshold";
 
-/** Measured median close/list for the fired pattern (same backtest bucket): the typical
+/**
+ * The measured under-listing patterns, each with the outcome rates of ITS OWN backtest
+ * bucket (below-comps ∩ pattern). Adding a pattern is a data change, not a logic change —
+ * but a new entry may only ship with rates measured on that pattern's own bucket.
+ *
+ * WHY A TABLE, not a single boolean: the previous gate recognised exactly one pattern (the
+ * "999" play) and published one pair of rates. That silently made the digit shape a
+ * REQUIREMENT for the whole signal — an ask of $688,000 sitting 28% below comps was
+ * discarded before the comp test ran, because $88,000 is not $95,000+ (memory:
+ * proxy-threshold-antipattern — a number standing in for a stated category). Splitting the
+ * table keeps each published probability tied to the population it was measured on.
+ *
+ * `test` is list-price-only and deterministic; the comp test lives in detectCompetitive.
+ */
+export const COMPETITIVE_PATTERNS: ReadonlyArray<{
+  name: CompetitivePattern;
+  test: (list: number) => boolean;
+  /** P(close > list) within below-comps ∩ this pattern. */
+  overAskRate: number;
+  /** Median close/list within the same bucket. Typically still < 1. */
+  medianCloseRatio: number;
+}> = [
+  {
+    name: "threshold",
+    test: isThresholdPrice,
+    overAskRate: 0.4,
+    medianCloseRatio: 0.99,
+  },
+];
+
+/** Over-ask base rate for the "threshold" pattern (below-comps + threshold price), straight
+ *  from the backtest bucket — used verbatim in the "priced to compete" copy. NOT a promise:
+ *  the median of that bucket still closes ~1% UNDER ask, so the UI shows a range +
+ *  probability, never a confident above-ask number. */
+export const COMPETITIVE_OVER_ASK_RATE = COMPETITIVE_PATTERNS[0].overAskRate;
+
+/** Measured median close/list for the "threshold" pattern (same backtest bucket): the typical
  *  hold-offers home still closes ~1% UNDER ask. Every consumer of the competitive signal
  *  anchors "likely close" to THIS ratio, never to the citywide cohort ratio (often 3–5%
  *  under ask) — quoting the cohort figure on a deliberately under-listed home is what made
  *  the Suggested Move contradict the card's over-ask framing. */
-export const COMPETITIVE_MEDIAN_CLOSE_RATIO = 0.99;
+export const COMPETITIVE_MEDIAN_CLOSE_RATIO = COMPETITIVE_PATTERNS[0].medianCloseRatio;
+
+/** The first pattern whose list-price shape matches, or null. Order is significance order:
+ *  the table is short and patterns are disjoint today, so first-match is unambiguous. */
+export function matchCompetitivePattern(
+  list: number,
+): (typeof COMPETITIVE_PATTERNS)[number] | null {
+  if (!(list > 0)) return null;
+  return COMPETITIVE_PATTERNS.find((p) => p.test(list)) ?? null;
+}
 
 /** The AVM comp mid must clear the ask by at least this for a listing to count as "below
  *  comps" (matches the backtest's AVM>list margin; guards against the ~11% AVM noise). */
@@ -148,14 +194,16 @@ export function detectCompetitive(
   const comparable = avmComparable(estimate);
   if (!comparable || !(listPrice > 0)) return null;
   if (estimate && estimate.confidence === "LOW") return null;
-  if (!isThresholdPrice(listPrice)) return null;
+  const pattern = matchCompetitivePattern(listPrice);
+  if (!pattern) return null;
   if (!(comparable.mid >= listPrice * (1 + COMPETITIVE_COMP_MARGIN))) return null;
   return {
+    pattern: pattern.name,
     belowCompsPct: (comparable.mid - listPrice) / comparable.mid,
-    overAskRate: COMPETITIVE_OVER_ASK_RATE,
+    overAskRate: pattern.overAskRate,
     rangeLow: listPrice,
     rangeHigh: comparable.low > listPrice ? comparable.low : comparable.mid,
-    medianCloseRatio: COMPETITIVE_MEDIAN_CLOSE_RATIO,
+    medianCloseRatio: pattern.medianCloseRatio,
   };
 }
 
