@@ -307,13 +307,52 @@ export interface DigestActions {
   dailyUrl?: string;
   /** Signed one-click link that stops email for 30 days. */
   pauseUrl?: string;
+  /**
+   * True when this weekly cadence was DERIVED rather than chosen (digestCadence.ts).
+   *
+   * Migration 144 declined to move anybody server-side, on the grounds that "a change the
+   * user did not ask for and cannot see reads as broken delivery, not as courtesy". This
+   * flag answers the second half of that sentence: the email says what it did and puts the
+   * undo one click away. Without it the cap would be exactly the silent change 144 refused
+   * to make.
+   */
+  cadenceIsDerived?: boolean;
 }
+
+/**
+ * The line a derived-weekly reader sees, above the controls.
+ *
+ * Plain language per voice.md §5.1, answering the three things a puzzled reader actually
+ * asks: what changed, why, and how to undo it. No "cadence", no "digest", no "derived" —
+ * and no apology, because nothing went wrong.
+ */
+function derivedCadenceNoteHtml(dailyUrl?: string): string {
+  const back = dailyUrl
+    ? `<div style="font-size:12px;margin-top:6px;">
+         <a href="${dailyUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">Email me every night instead &rarr;</a>
+       </div>`
+    : "";
+  return `<div style="margin-top:18px;border-left:3px solid #0891b2;background:#f8fafc;padding:10px 12px;">
+      <div style="font-size:13px;color:#334155;line-height:1.5;">
+        This is your weekly email. You follow one area and have not set any filters on it, so
+        instead of writing every night we save the week and send you the best of it at once.
+      </div>
+      ${back}
+    </div>`;
+}
+
+const DERIVED_CADENCE_TEXT =
+  "This is your weekly email. You follow one area and have not set any filters on it, so " +
+  "instead of writing every night we save the week and send you the best of it at once.";
 
 function controlStripHtml(a: DigestActions): string {
   const links: string[] = [];
   if (a.weeklyUrl)
     links.push(`<a href="${a.weeklyUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">Send this once a week instead</a>`);
-  if (a.dailyUrl)
+  // On a derived weekly the note above already carries this exact link, next to the sentence
+  // that explains why it is there. Repeating it here would be two links doing one job, and
+  // the one with the reason attached is the one worth keeping.
+  if (a.dailyUrl && !a.cadenceIsDerived)
     links.push(`<a href="${a.dailyUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">Go back to a nightly email</a>`);
   if (a.pauseUrl)
     links.push(`<a href="${a.pauseUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">Pause for 30 days</a>`);
@@ -361,6 +400,7 @@ export function renderAlertsDigest(
       ${dropsSection}
       ${bubblesSection}
       <div style="margin-top:20px;">${button("Open your dashboard &rarr;", `${SITE}/dashboard`)}</div>
+      ${actions.cadenceIsDerived ? derivedCadenceNoteHtml(actions.dailyUrl) : ""}
       ${controlStripHtml(actions)}
       ${footer({
         intro: "You're receiving this because you saved these properties or areas on PureProperty.ca.",
@@ -423,11 +463,16 @@ export function renderAlertsDigest(
   }
   const controlLines: string[] = [];
   if (actions.weeklyUrl) controlLines.push(`Send this once a week instead: ${actions.weeklyUrl}`);
-  if (actions.dailyUrl) controlLines.push(`Go back to a nightly email: ${actions.dailyUrl}`);
+  if (actions.dailyUrl && !actions.cadenceIsDerived)
+    controlLines.push(`Go back to a nightly email: ${actions.dailyUrl}`);
   if (actions.pauseUrl) controlLines.push(`Pause for 30 days: ${actions.pauseUrl}`);
   const text =
     textParts.join("\n\n") +
     `\n\nOpen your dashboard: ${SITE}/dashboard` +
+    (actions.cadenceIsDerived
+      ? `\n\n${DERIVED_CADENCE_TEXT}` +
+        (actions.dailyUrl ? `\nEmail me every night instead: ${actions.dailyUrl}` : "")
+      : "") +
     (controlLines.length ? `\n\nToo much email?\n` + controlLines.join("\n") : "") +
     (unsubscribeUrl ? `\nUnsubscribe: ${unsubscribeUrl}` : "");
 

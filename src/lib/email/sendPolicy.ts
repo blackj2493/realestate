@@ -33,6 +33,12 @@ export interface EmailPrefsRow {
   pause_until?: string | null;
   /** Nightly digest frequency (migration 144). Missing or unknown means daily. */
   alerts_frequency?: AlertsFrequency | null;
+  /**
+   * When the reader last set `alerts_frequency` themselves (migration 146). Absent means
+   * they never did — 144's column default cannot be read as a decision. See
+   * chosenAlertsFrequency.
+   */
+  alerts_frequency_chosen_at?: string | null;
 }
 
 export type AlertsFrequency = "daily" | "weekly";
@@ -49,9 +55,39 @@ export const DIGEST_WEEKLY_DAYS = 7;
  */
 export const DIGEST_WEEKLY_SLACK_MS = 12 * 60 * 60 * 1000;
 
-/** What the reader chose. Anything unrecognised is daily — the behaviour before 144. */
+/** What is STORED. Anything unrecognised is daily — the behaviour before 144. */
 export function alertsFrequency(prefs?: EmailPrefsRow | null): AlertsFrequency {
   return prefs?.alerts_frequency === "weekly" ? "weekly" : "daily";
+}
+
+/**
+ * What the reader chose THEMSELVES, or null if they never chose.
+ *
+ * `alertsFrequency` answers "what is stored"; this answers "did a person decide that". The
+ * two differ because 144's column is `not null default 'daily'`, so any other write to the
+ * row — a pause click, a save on /account/emails — fills the frequency in without anybody
+ * touching it. Two of the three production rows are exactly that shape.
+ *
+ * The distinction exists for src/lib/email/digestCadence.ts, which derives a cadence for
+ * readers who have not chosen one. It must never re-cap someone who already pressed "Go
+ * back to a nightly email" — a preference the product quietly re-applies is worse than no
+ * preference at all.
+ *
+ * TWO SOURCES OF TRUTH, DELIBERATELY ASYMMETRIC:
+ *   • 'weekly' is self-evidencing. Nothing writes it but the reader's own one-click link,
+ *     so it counts as chosen with or without migration 146's stamp. That is what stops an
+ *     unapplied migration from ever overriding a reader's weekly.
+ *   • 'daily' is ambiguous, so it counts as chosen only when the stamp is behind it.
+ *
+ * The asymmetry always errs towards honouring a stored preference over applying a default.
+ */
+export function chosenAlertsFrequency(prefs?: EmailPrefsRow | null): AlertsFrequency | null {
+  if (!prefs) return null;
+  if (prefs.alerts_frequency === "weekly") return "weekly";
+  if (prefs.alerts_frequency === "daily" && prefs.alerts_frequency_chosen_at) {
+    return Number.isFinite(Date.parse(prefs.alerts_frequency_chosen_at)) ? "daily" : null;
+  }
+  return null;
 }
 
 /**
