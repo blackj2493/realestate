@@ -673,7 +673,7 @@ export default async function PropertyPage({
     ? "What this home is likely to close at."
     : hasEstVal
       ? salePrice!.competitive
-        ? "Priced to compete — likely at or above ask."
+        ? "Listed low to draw offers — likely at or above ask."
         : salePrice!.deltaVsAskPct !== null && price > 0
           ? (
               <>
@@ -720,7 +720,7 @@ export default async function PropertyPage({
     isAuthed && hasEstVal && !salePrice!.competitive && salePrice!.deltaVsAskPct !== null && price > 0
       ? `Priced ${compactMoney(estDiff)} ${estBelow ? "below" : "above"} ask${trueDom > dom ? ` and on the market ${trueDom} days` : ""}${estBelow ? " — room to negotiate." : "."}`
       : isAuthed && hasEstVal && salePrice!.competitive
-        ? `Priced to compete${trueDom > dom ? `, though it's shown ${trueDom} days on market` : ""} — expect it to move near ask.`
+        ? `Listed low to draw offers${trueDom > dom ? `, though it's shown ${trueDom} days on market` : ""} — expect it to move near ask.`
         : "We've priced this home, graded the deal and flagged what to check — open any card below for the numbers.";
   const verdictNode = read ? (
     <div className="rounded-lg border border-cyan-500/40 bg-cyan-500/5 p-3">

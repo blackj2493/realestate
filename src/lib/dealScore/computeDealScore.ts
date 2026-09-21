@@ -489,7 +489,7 @@ function computeOfferBand(
   // When AVM-based there is no close-rate signal, so the copy must NOT claim comps support.
   const basis: "expected-sale" | "avm" = expected !== null ? "expected-sale" : "avm";
 
-  // "Priced to compete" (threshold ask below comps): the cohort close/list ratio is the
+  // "Listed low to draw offers" (a measured under-listing ask shape, below comps): the cohort close/list ratio is the
   // wrong anchor here — this bucket's measured median closes ≈1% under ask with a ~40%
   // over-ask rate (scripts/admin/_thresholdPriceLift.ts), so an under-ask band would both
   // advise losing on offer night AND contradict the Estimated Sale card's over-ask range

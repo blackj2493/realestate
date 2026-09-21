@@ -195,6 +195,10 @@ interface ResultRow {
   city_region: string | null;
   reference_date: string;
   close_price: number;
+  /** The pre-sale ask. Carried so a consumer can score the ask's SHAPE and the over-ask
+   *  outcome (close > list) straight off this file — see scripts/worker/competeRateDriftCheck.ts,
+   *  which would otherwise need a second pass over raw_vow_sold to recover it. */
+  list_price: number | null;
   estimated_value: number | null;
   log_error: number | null;
   abs_pct_error: number | null;
@@ -710,6 +714,7 @@ async function replaySale(
     city_region: cityRegion,
     reference_date: s.refDate,
     close_price: close,
+    list_price: s.list_price,
     estimated_value: est,
     log_error: logErr,
     abs_pct_error: absPct,

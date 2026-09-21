@@ -13,6 +13,14 @@ name: Monitor AVM Accuracy
 #   - If median |%err| > AVM_MAX_MEDIAN_PCT (14%; measured baseline ~11-12%, so ~2pt headroom
 #     avoids false alarms on normal variance), the drift step exits non-zero → the run goes RED
 #     and the notifier sends a FAILED "retrain due" alert.
+#   - It then re-measures the "listed low to draw offers" probabilities the listing card
+#     prints (COMPETITIVE_PATTERNS in src/lib/avm/salePrice.ts) against the SAME backtest
+#     file, and goes RED if a published rate no longer matches the data. Those rates come
+#     from an ask-SHAPE proxy for seller intent, and a proxy rots silently when the pricing
+#     convention moves — so it gets a canary rather than trust. Free: it reuses the backtest
+#     this job already ran, adding no DB load and no extra runtime.
+#     Ordering is deliberate — it runs AFTER the accuracy gate, because the compete buckets
+#     are defined by AVM-vs-ask and mean nothing if the AVM itself has drifted.
 #
 # CADENCE: monthly (3rd, 09:00 UTC). Coefficients drift slowly; monthly catches it early.
 # (Phase 2 — the champion/challenger trainer that auto-promotes a fresher matrix when it beats
@@ -38,6 +46,13 @@ jobs:
     env:
       SUMMARY_FILE: avm-monitor-run.log
       AVM_MAX_MEDIAN_PCT: '0.14'
+      # Tolerances for the published "listed low to draw offers" rates. 10pp on the over-ask
+      # probability is wide enough to ride normal sampling noise on a 6,000-sale run and
+      # narrow enough to catch a convention actually dying; 150 is the bucket size below
+      # which a bucket is reported but NOT gated (a canary that cries wolf gets muted).
+      COMPETE_MAX_DRIFT: '0.10'
+      COMPETE_MAX_RATIO_DRIFT: '0.03'
+      COMPETE_MIN_N: '150'
     # `shell: bash` is load-bearing, and this job is why it matters most. The DEFAULT run
     # shell is `bash -e` with NO pipefail, so `... | tee -a` exits with tee's status --
     # always 0. avmDriftCheck.ts signals drift by exiting 1; that exit was being swallowed,
@@ -72,10 +87,14 @@ jobs:
       - name: Assess accuracy drift
         run: npx tsx scripts/worker/avmDriftCheck.ts avm-backtest.json 2>&1 | tee -a "$SUMMARY_FILE"
 
+      # Re-measure what the listing card promises about competing offers. Same file, no DB.
+      - name: Assess compete-rate drift
+        run: npx tsx scripts/worker/competeRateDriftCheck.ts avm-backtest.json 2>&1 | tee -a "$SUMMARY_FILE"
+
       - name: Notify operator
         if: always()
         env:
-          JOB_NAME: AVM Accuracy Monitor
+          JOB_NAME: AVM Accuracy + Compete-Rate Monitor
           JOB_STATUS: ${{ job.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
