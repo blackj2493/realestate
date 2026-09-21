@@ -56,6 +56,7 @@ interface CatchmentProps {
   panel?: string | null;
   program?: string | null;
   grades?: string | null;
+  level?: string | null;
   system?: string | null;
   board?: string | null;
   year?: string | null;
@@ -82,7 +83,8 @@ const isProgramZone = (p: CatchmentProps) => (p.program ?? "regular") !== "regul
  *  immersion across two schools, so one address sits in two zones at different ages. */
 function zoneLabel(p: CatchmentProps): string {
   const base = PROGRAM_LABEL[(p.program ?? "regular") as SchoolProgram] ?? PROGRAM_LABEL.regular;
-  return p.grades ? `${base} · grades ${p.grades}` : base;
+  const band = p.grades ? `grades ${p.grades}` : p.level === "intermediate" ? "grades 6-8" : null;
+  return band ? `${base} · ${band}` : base;
 }
 
 export interface OverlayBounds {
@@ -103,6 +105,7 @@ export function useSchoolCatchmentLayers(opts: {
   const level = useCommandCenterStore((s) => s.school.level);
   const system = useCommandCenterStore((s) => s.school.system);
   const program = useCommandCenterStore((s) => s.school.program);
+  const zoneLevel = useCommandCenterStore((s) => s.school.zoneLevel);
   const targetSchool = useCommandCenterStore((s) => s.school.targetSchool);
   // Keep the gap callback out of the fetch effect's deps: a parent that passes an inline
   // arrow would otherwise re-run the request on every render. Synced in an effect (not
@@ -127,6 +130,9 @@ export function useSchoolCatchmentLayers(opts: {
       bbox: `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
       panel: level,
       program,
+      // Elementary only: secondary has no grade-band split, and sending one there would
+      // filter nothing while implying it had.
+      ...(level === "elementary" ? { level: zoneLevel } : {}),
       zoom: String(Math.round(zoom)),
     });
     if (system !== "either") params.set("system", system);
@@ -142,7 +148,7 @@ export function useSchoolCatchmentLayers(opts: {
         });
     }, 250);
     return () => clearTimeout(t);
-  }, [showZones, level, system, program, bounds, zoom]);
+  }, [showZones, level, system, program, zoneLevel, bounds, zoom]);
 
   // Selected target school: show its REAL catchment if we have it (by school_id),
   // otherwise fall back to an approximate 2.5 km proximity circle around its point.

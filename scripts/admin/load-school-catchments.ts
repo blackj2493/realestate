@@ -73,9 +73,15 @@ const EXTRA_SOURCES: Record<string, { name: string; url: string; license: string
 
 interface Geometry { type: string; coordinates: number[][][] | number[][][][] }
 type CatchmentProgram = "regular" | "french_immersion" | "extended_french";
+/** Grade band WITHIN a panel, for boards that run two tiers of elementary school.
+ *  TDSB assigns an address a JK-entry school AND a separate 6-8 middle/senior school
+ *  whose zone spans several of them, so both cover the same ground. Null where a board
+ *  has no such split, and such a row matches whatever level the caller asks for. */
+type CatchmentLevel = "junior" | "intermediate";
 interface CatchmentProps {
   boardCode: string; board: string; system: string; language: string;
   panel: string; program?: CatchmentProgram; grades?: string | null;
+  level?: CatchmentLevel | null; parts?: number;
   year: string | null; school_name: string | null; source: string | null;
   dissolve?: boolean; member_zones?: number;
 }
@@ -279,6 +285,7 @@ async function main() {
   const dissolves: boolean[] = [];
   const perBoard = new Map<string, { count: number; board: string; source: string | null }>();
   const perProgram = new Map<string, number>();
+  const perLevel = new Map<string, number>();
   let matched = 0;
   for (const f of features) {
     if (!f.geometry) continue;
@@ -292,7 +299,9 @@ async function main() {
     dissolves.push(p.dissolve === true);
     attrsArr.push(JSON.stringify({
       boardCode: p.boardCode, board: p.board, system: p.system, language: p.language,
-      panel: p.panel, program, grades: p.grades ?? null, year: p.year,
+      panel: p.panel, program, grades: p.grades ?? null,
+      ...(p.level ? { level: p.level } : {}),
+      year: p.year,
       school_name: p.school_name ?? (confident ? m?.name : null) ?? null,
       school_id: confident ? (m?.id ?? null) : null,
       score: confident ? (m?.score ?? null) : null,
@@ -304,11 +313,13 @@ async function main() {
     if (cur) cur.count++;
     else perBoard.set(p.boardCode, { count: 1, board: p.board, source: p.source });
     perProgram.set(program, (perProgram.get(program) ?? 0) + 1);
+    if (p.level) perLevel.set(p.level, (perLevel.get(p.level) ?? 0) + 1);
   }
 
   console.log(`\n🏫 load-school-catchments → geo_features`);
   console.log(`   features: ${geoms.length}   EQAO-matched: ${matched} (${Math.round((matched / geoms.length) * 100)}%)   boards: ${perBoard.size}`);
   console.log(`   by program: ${JSON.stringify(Object.fromEntries(perProgram))}`);
+  if (perLevel.size) console.log(`   by level:   ${JSON.stringify(Object.fromEntries(perLevel))}`);
   console.log("==================================================================\n");
 
   // A load that lands no French Immersion zone means a source moved or a harvester

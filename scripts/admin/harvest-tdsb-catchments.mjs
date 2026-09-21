@@ -11,6 +11,11 @@
  * Output matches the standard schema so load-school-catchments.ts merges it; the
  * EQAO join attaches the score by school name.
  *
+ * Two axes come out of the ByMap page, and both matter:
+ *   - every folder/id pair, because a catchment can be several detached pieces;
+ *   - the FOLDER itself (Elementary = JK entry, Intermediate = 6-8), because TDSB runs
+ *     a separate middle/senior school whose zone overlays several JK-entry zones.
+ *
  * Needs a browser User-Agent (the DNN pages return empty otherwise). Token-free.
  * Run: node scripts/admin/harvest-tdsb-catchments.mjs
  */
@@ -101,7 +106,8 @@ console.log(`TDSB schools enumerated: ${schools.length}`);
 const features = [];
 let withB = 0,
   noB = 0,
-  err = 0;
+  err = 0,
+  kmlPieces = 0;
 await pool(schools, CONCURRENCY, async (s) => {
   let bm;
   try {
@@ -110,23 +116,51 @@ await pool(schools, CONCURRENCY, async (s) => {
     err++;
     return;
   }
-  const fm = bm.match(/folder=([A-Za-z]+)&(?:amp;)?id=(\d+)/i);
-  if (!fm) {
+  // EVERY folder/id on the page, not just the first. A catchment can be several
+  // detached pieces, stacked on TDSB's own map as id1/id2/id3 — Baycrest has three.
+  // Matching once dropped 66 of the board's 558 pieces across 45 schools, so those
+  // homes sat outside their own school's zone on our map.
+  const pairs = [
+    ...new Map(
+      [...bm.matchAll(/folder=([A-Za-z]+)&(?:amp;)?id=(\d+)/gi)].map((m) => [`${m[1]}|${m[2]}`, { folder: m[1], id: m[2] }])
+    ).values(),
+  ];
+  if (!pairs.length) {
     noB++;
     return;
   }
-  let kml;
-  try {
-    kml = await getText(`${BOUNDS}&folder=${fm[1]}&id=${fm[2]}`);
-  } catch {
+
+  const polys = [];
+  kmlPieces += pairs.length;
+  for (const p of pairs) {
+    let kml;
+    try {
+      kml = await getText(`${BOUNDS}&folder=${p.folder}&id=${p.id}`);
+    } catch {
+      err++;
+      continue;
+    }
+    const g = kmlToGeoJSON(kml);
+    if (!g) { err++; continue; }
+    if (g.type === "Polygon") polys.push(g.coordinates);
+    else polys.push(...g.coordinates);
+  }
+  if (!polys.length) {
     err++;
     return;
   }
-  const geom = kmlToGeoJSON(kml);
-  if (!geom) {
-    err++;
-    return;
-  }
+  const geom = polys.length === 1 ? { type: "Polygon", coordinates: polys[0] } : { type: "MultiPolygon", coordinates: polys };
+
+  // The FOLDER is the grade band, and it is what stops the overlay stacking two
+  // boundaries on one address. TDSB splits elementary into a JK-entry school and a
+  // separate 6-8 middle/senior school whose zone spans several of them: 155 of 411
+  // sampled Toronto addresses fell inside two of our 'elementary' zones because both
+  // were filed under the directory's level. Verified 2026-09-21 that no school carries
+  // both folders, and that all 56 Intermediate schools are named Middle/Senior/Sr.
+  const folder = pairs[0].folder;
+  const panel = folder === "Secondary" || s.level === "Secondary" ? "secondary" : "elementary";
+  const level = panel === "secondary" ? null : folder === "Intermediate" ? "intermediate" : "junior";
+
   features.push({
     type: "Feature",
     geometry: geom,
@@ -135,7 +169,9 @@ await pool(schools, CONCURRENCY, async (s) => {
       board: "Toronto DSB",
       system: "public",
       language: "english",
-      panel: s.level === "Secondary" ? "secondary" : "elementary",
+      panel,
+      level,
+      parts: polys.length,
       // getBounds serves only folder=Elementary and folder=Intermediate — no French
       // Immersion anywhere on this path (verified 2026-09-21), so every row is regular.
       // The map states that gap instead of drawing a circle in its place.
@@ -152,4 +188,8 @@ await pool(schools, CONCURRENCY, async (s) => {
 
 writeFileSync(OUT, JSON.stringify({ type: "FeatureCollection", features }));
 const byPanel = features.reduce((a, f) => ((a[f.properties.panel] = (a[f.properties.panel] || 0) + 1), a), {});
-console.log(`\nTDSB: ${withB} boundaries ${JSON.stringify(byPanel)}, ${noB} no-catchment, ${err} errors → ${OUT.replace(HERE, ".")}`);
+const byLevel = features.reduce((a, f) => ((a[f.properties.level ?? "n/a"] = (a[f.properties.level ?? "n/a"] || 0) + 1), a), {});
+const polys = features.reduce((a, f) => a + f.properties.parts, 0);
+console.log(`\nTDSB: ${withB} boundaries ${JSON.stringify(byPanel)} level=${JSON.stringify(byLevel)}`);
+console.log(`      ${kmlPieces} KML pieces fetched (v1 fetched one per school, so it dropped ${kmlPieces - withB}), ${polys} polygons total`);
+console.log(`      ${noB} no-catchment, ${err} errors → ${OUT.replace(HERE, ".")}`);

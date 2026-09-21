@@ -10,6 +10,12 @@
  * (boards that don't split elementary/secondary) always match a panel. Best-effort:
  * any failure returns an empty collection so the overlay degrades silently.
  *
+ * `level` is the grade band inside a panel: junior (default for elementary) |
+ * intermediate | any. Only TDSB splits elementary this way — an address there has a
+ * JK-entry school AND a 6-8 middle/senior school covering the same ground — so without
+ * this the overlay stacked two boundaries on 38% of Toronto addresses. Boards with no
+ * such split always match, whichever level is asked for.
+ *
  * `program` is the second axis: regular (default) | french_immersion | extended_french.
  * A program zone overlaps the regular zones it draws from and runs several times larger,
  * so the two are never drawn together unfiltered. The default keeps a caller that omits
@@ -28,11 +34,22 @@ function parseProgram(raw: string | null): Program | null {
   return (PROGRAMS as readonly string[]).includes(raw) ? (raw as Program) : "regular";
 }
 
+const LEVELS = ["junior", "intermediate"] as const;
+type Level = (typeof LEVELS)[number];
+/** null = every level. Elementary defaults to 'junior', the JK-entry zone, because that
+ *  is the one an address is assigned by default; 'intermediate' is the 6-8 zone. */
+function parseLevel(raw: string | null, panel: string | null): Level | null {
+  if (raw === "any") return null;
+  if (raw && (LEVELS as readonly string[]).includes(raw)) return raw as Level;
+  return panel === "secondary" ? null : "junior";
+}
+
 interface CatchmentRow {
   school_name: string | null;
   panel: string | null;
   program: string | null;
   grades: string | null;
+  level: string | null;
   system: string | null;
   board: string | null;
   board_code: string | null;
@@ -67,6 +84,7 @@ function toFC(rows: CatchmentRow[]) {
           panel: r.panel,
           program: r.program ?? "regular",
           grades: r.grades,
+          level: r.level,
           system: r.system,
           board: r.board,
           boardCode: r.board_code,
@@ -97,6 +115,7 @@ export async function GET(req: NextRequest) {
         p_school_id: schoolId,
         tol: 0,
         p_program: parseProgram(sp.get("program") ?? "any"),
+        p_level: parseLevel(sp.get("level") ?? "any", null),
       });
       if (error) {
         console.error("[catchments API]", error.message);
@@ -126,6 +145,7 @@ export async function GET(req: NextRequest) {
       p_system: systemParam && systemParam !== "either" ? systemParam : null,
       tol: tolForZoom(zoom),
       p_program: parseProgram(sp.get("program")),
+      p_level: parseLevel(sp.get("level"), panel),
     });
 
     if (error) {
