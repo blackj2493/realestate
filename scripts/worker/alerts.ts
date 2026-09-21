@@ -80,6 +80,7 @@ import { qualifiesAsDrop } from '@/lib/alerts/dropPolicy';
 import { findRelists, type RelistTargetFull } from '@/lib/watchlist/relistLookup';
 import { addressesMatch, parseAddress } from '@/lib/watchlist/disposition';
 import { unsubscribeUrl, marketingUnsubscribeUrl, emailActionUrl } from '@/lib/alerts/unsubscribe';
+import { undeliverableReason } from '@/lib/email/deliverability';
 import { SENDERS } from '@/lib/alerts/senders';
 import {
   alertsFrequency,
@@ -484,6 +485,14 @@ export async function runListingAlertsPhase(
   let failed = 0;
   const allEmails = new Set([...changesByEmail.keys(), ...similarByEmail.keys()]);
   for (const email of allEmails) {
+    // These addresses are typed by hand on a listing page, with no account behind them, so
+    // this is where a reserved or malformed domain enters the list. Apply the baselines
+    // anyway: without that this row re-attempts the same guaranteed bounce every night for
+    // as long as the alert exists. See src/lib/email/deliverability.ts.
+    if (undeliverableReason(email)) {
+      for (const p of patchesByEmail.get(email) ?? []) await supabase.from('listing_alerts').update(p.patch).eq('id', p.id);
+      continue;
+    }
     const changes = changesByEmail.get(email) ?? [];
     const similar = similarByEmail.get(email) ?? [];
     const uUrl = unsubscribeUrl(email, SITE);
@@ -693,6 +702,12 @@ export async function runAddressWatchPhase(
   let emailed = 0;
   let failed = 0;
   for (const [email, hits] of hitsByEmail) {
+    // Same reasoning as the listing-alert loop above: an anonymous, hand-typed address, and
+    // the baselines still apply so a dead row stops re-attempting a guaranteed bounce.
+    if (undeliverableReason(email)) {
+      for (const p of patchesByEmail.get(email) ?? []) await supabase.from('address_watches').update(p.patch).eq('id', p.id);
+      continue;
+    }
     const uUrl = unsubscribeUrl(email, SITE);
     const { subject, html, text } = renderAddressWatchEmail({ hits, unsubscribeUrl: uUrl });
     if (dryRun) {
@@ -1382,6 +1397,10 @@ async function main() {
   let emailed = 0;
   let failed = 0;
   let suppressed = 0;
+  // Addresses that can never receive mail. Counted apart from `suppressed` because the two
+  // have different owners: a suppression is the reader's decision and needs nothing done,
+  // while this one means a bad row reached a recipient list and someone should look.
+  let undeliverableSkipped = 0;
   // Weekly readers whose week is not up. Counted apart from `suppressed` because the two
   // mean opposite things about a watermark — see the gate below.
   let deferred = 0;
@@ -1403,6 +1422,17 @@ async function main() {
 
     const email = emails.get(userId);
     if (!email) continue;
+    // Deliverability, ahead of consent. An address that can never receive mail is handled
+    // exactly like a suppression — skip the send, and STILL advance baselines by adding to
+    // sentUsers. Leaving it out would hold this user's watermark and notified_keys for the
+    // life of the account and re-attempt the same guaranteed bounce every night, which is a
+    // slow bleed charged to the domain that also carries sign-in codes.
+    // See src/lib/email/deliverability.ts.
+    if (undeliverableReason(email)) {
+      sentUsers.add(userId);
+      undeliverableSkipped++;
+      continue;
+    }
     // Consent gate: one-click unsubscribe (marketing_opt_out), the per-stream "Saved home
     // & area alerts" toggle, or an active "Pause all emails for 30 days". Skip the send but
     // STILL advance baselines (add to sentUsers) so a resubscribe or the end of a pause
@@ -1512,7 +1542,7 @@ async function main() {
   console.log(
     `[alerts] Done. ${watch.length} watched, ${userIds.size} users with events, ${due} owed a digest, ` +
       `${emailed} emails sent, ${notSent} NOT SENT, ${suppressed} suppressed on consent, ` +
-      `${deferred} held for a weekly send. ` +
+      `${undeliverableSkipped} undeliverable, ${deferred} held for a weekly send. ` +
       `Listing-alerts: ${la.emailed} emailed, ${la.failed} not sent, ${la.baselined} baselined, ${la.similarMatched} similar matches. ` +
       `Address-watches: ${aw.emailed} emailed, ${aw.failed} not sent, ${aw.baselined} baselined.`
   );
