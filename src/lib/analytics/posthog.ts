@@ -80,8 +80,15 @@ export type AnalyticsEvents = {
   'auth_terms_viewed': { firstRun: boolean };
   /** Submitted Terms with something missing — says WHICH gate turned them back. */
   'auth_terms_blocked': { reason: 'missing_confirmation' | 'missing_market' };
-  /** Terms accepted and a market chosen. The account is now real and reachable. */
-  'auth_signup_completed': { market: string };
+  /**
+   * Terms accepted and a market chosen. The account is now real and reachable.
+   *
+   * `narrowed` says whether the optional "what kind of home?" question did anything. A
+   * signup that skips it subscribes to every new listing in the city — 82.4% of existing
+   * saved areas are in that state, and the readers sitting there unsubscribe at 27.8%.
+   * Crossed against `market`, it also names which markets are handing someone a firehose.
+   */
+  'auth_signup_completed': { market: string; narrowed: boolean; homeTypes: number; minBeds: number };
 
   // Installable app (src/lib/pwa). `platform` is where the install would land;
   // `source` is which surface asked. Every event also carries the `pp_display_mode`

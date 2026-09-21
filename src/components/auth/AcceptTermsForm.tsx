@@ -28,6 +28,16 @@
  *
  * The choice is persisted SERVER-SIDE by the route, not here — see seedSignupRegion for
  * why a localStorage write plus a debounced push could not do this job.
+ *
+ * IT ALSO ASKS, OPTIONALLY, WHAT KIND OF HOME. That second question is the only thing that
+ * can make the new city alert row genuinely filtered: `alert_scope = 'filtered'` over an
+ * empty lens emits no clauses and delivers the whole city, which is what 82.4% of saved
+ * areas do today. It is optional where the area is mandatory, because the area decides
+ * whether we can mail this account at all while this only decides how much — and a second
+ * required field at the bottom of the funnel buys a narrower list at the cost of accounts.
+ * The copy beneath it names BOTH outcomes, so skipping is an informed choice rather than a
+ * surprise on night one. Budget is deliberately not asked: MarketActivityLens carries no
+ * price field, and asking a question we would then ignore is worse than not asking.
  */
 
 import { useState, useEffect } from "react";
@@ -36,6 +46,8 @@ import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QUICK_PICK_MARKETS, marketCamera } from "@/lib/dashboard/area";
+import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
+import { SIGNUP_BED_CHOICES } from "@/lib/dashboard/signupFilter";
 import { track } from "@/lib/analytics/posthog";
 import {
   getConfig,
@@ -89,6 +101,10 @@ export default function AcceptTermsForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [market, setMarket] = useState<string | null>(null);
+  // The optional narrowing answer. Empty means "everything", which is what every account
+  // gets today — see signupFilter.ts for why 82.4% of saved areas send the whole city.
+  const [homeTypes, setHomeTypes] = useState<string[]>([]);
+  const [minBeds, setMinBeds] = useState(0);
   // Whether a PREVIOUS account left a workspace behind in this browser's localStorage.
   // Read after hydration (localStorage is client-only) purely so we can say so in the UI.
   const [foreignWorkspace, setForeignWorkspace] = useState(false);
@@ -138,7 +154,15 @@ export default function AcceptTermsForm({
         headers: { "Content-Type": "application/json" },
         // Server re-verifies all of this — the disabled button is UX, not the security
         // boundary — and it is the server that stores the market and creates the alert row.
-        body: JSON.stringify({ notAgent, bonaFide, agree, region: market }),
+        body: JSON.stringify({
+          notAgent,
+          bonaFide,
+          agree,
+          region: market,
+          // Sent even when empty. The server reads "no constraint" and "skipped" the same
+          // way, so there is nothing to branch on here.
+          filter: { propertyTypes: homeTypes, minBeds },
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -148,7 +172,15 @@ export default function AcceptTermsForm({
       // The bottom of the funnel. Fired once the SERVER has recorded acceptance, never on
       // the optimistic path — a signup that only happened in this browser is not a signup,
       // and counting it here would put the shortfall somewhere it is not.
-      track("auth_signup_completed", { market });
+      // Whether the reader narrowed is the number that says if this question is working.
+      // Reported on the same event as the market so the two can be crossed: a market with a
+      // high skip rate is a market whose readers are about to get a city-wide firehose.
+      track("auth_signup_completed", {
+        market,
+        narrowed: homeTypes.length > 0 || minBeds > 0,
+        homeTypes: homeTypes.length,
+        minBeds,
+      });
 
       // Local mirror, so the dashboard paints the right area instantly on first open. The
       // durable copy is already written server-side by the route above; this is a cache,
@@ -159,7 +191,15 @@ export default function AcceptTermsForm({
         // sign-out — leaving a new account with the old one's cities, persona and boards,
         // and greeted by the old one's name (DashboardClient reads getProfile()?.fullName).
         if (hasForeignWorkspace()) resetLocalWorkspace();
-        saveConfig({ ...getConfig(), regions: [market] });
+        const local = getConfig();
+        saveConfig({
+          ...local,
+          regions: [market],
+          // Mirror the narrowing too, or the dashboard opens showing every home in the city
+          // while the email the server just subscribed them to shows the filtered set. The
+          // server copy is authoritative; this only stops the first paint disagreeing.
+          marketActivity: { ...local.marketActivity, propertyTypes: homeTypes, minBeds, bedsExact: false },
+        });
       } catch {
         /* private mode / quota — never block entry over a convenience cache */
       }
@@ -238,6 +278,72 @@ export default function AcceptTermsForm({
         <p className="mt-2 text-[11px] text-muted-foreground">
           We&rsquo;ll email you what sells and what comes up here. Add more areas or turn this off
           any time.
+        </p>
+      </div>
+
+      {/* The narrowing question. OPTIONAL — the area above is what makes an account
+          reachable at all, this only changes how much arrives. It is the only thing that can
+          make a new city alert row genuinely filtered: 'filtered' over an empty lens
+          delivers the whole city, which is what 82.4% of saved areas do today. */}
+      <div className="border-t border-border pt-4">
+        <p className="terminal-font text-[11px] uppercase tracking-wider text-muted-foreground">
+          What kind of home? <span className="normal-case tracking-normal">(optional)</span>
+        </p>
+
+        <div role="group" aria-label="Home type" className="mt-3 flex flex-wrap gap-2">
+          {PROPERTY_TYPE_OPTIONS.slice(0, 4).map((opt) => {
+            const active = homeTypes.includes(opt.key);
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() =>
+                  setHomeTypes((prev) =>
+                    prev.includes(opt.key) ? prev.filter((k) => k !== opt.key) : [...prev, opt.key]
+                  )
+                }
+                className={cn(
+                  "min-h-[36px] border px-3 py-1.5 text-xs transition-colors",
+                  active
+                    ? "border-cyan-600 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300"
+                    : "border-border bg-card text-muted-foreground hover:border-cyan-600/60 hover:text-foreground"
+                )}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div role="group" aria-label="Minimum bedrooms" className="mt-2 flex flex-wrap gap-2">
+          {SIGNUP_BED_CHOICES.map((n) => {
+            const active = minBeds === n;
+            return (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setMinBeds(n)}
+                className={cn(
+                  "min-h-[36px] border px-3 py-1.5 text-xs transition-colors",
+                  active
+                    ? "border-cyan-600 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300"
+                    : "border-border bg-card text-muted-foreground hover:border-cyan-600/60 hover:text-foreground"
+                )}
+              >
+                {n === 0 ? "Any beds" : `${n}+ beds`}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Both outcomes named, because the default is the expensive one. A reader who skips
+            this should know they chose the whole city, not discover it on night one. */}
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {homeTypes.length > 0 || minBeds > 0
+            ? "We’ll only email you homes that match. Change this any time on your dashboard."
+            : `Skip this and we’ll email you every new home in ${market ?? "your area"} — in a busy market that can be hundreds a night.`}
         </p>
       </div>
 
