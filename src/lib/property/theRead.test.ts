@@ -138,14 +138,16 @@ describe("buildTheRead", () => {
       } as unknown as Partial<ListingDetail>),
     );
     expect(r.priceRead).toMatch(/set ~11% below comparable sales/);
-    expect(r.priceRead).toMatch(/~55% sold over ask, median close ≈ ask/);
-    expect(r.priceRead).toMatch(/Expect \$899K–\$940K if offers compete/);
+    // The rate is now specific to the comp-gap DEPTH: an ~12% gap in the GTA measures 44.6%,
+    // not the 54.5% that used to be pooled across every depth.
+    expect(r.priceRead).toMatch(/~45% sold over ask, median close ≈ ask/);
+    expect(r.priceRead).toMatch(/Expect \$892K–\$964K if offers compete/);
     expect(r.priceRead).not.toMatch(/likely closes near/);
   });
 
-  it("quotes the LOCAL over-ask rate — the same ask reads 55% in the GTA, 23% outside it", () => {
-    // 41.7% of the homes this pattern fires on are outside the GTA, where the measured
-    // over-ask rate is 22.5%, not the 40% the pooled constant used to print to everyone.
+  it("quotes the LOCAL over-ask rate — the same ask reads 45% in the GTA, 20% outside it", () => {
+    // Outside the GTA the same ask shape at the same depth is a different animal: the
+    // measured median close never clears the ask, however deep the discount.
     const mk = (city: string) =>
       buildTheRead(
         base({
@@ -154,8 +156,8 @@ describe("buildTheRead", () => {
           estimate: { estimatedValue: 1_010_000, confidence: "HIGH", lowBand: 940_000, highBand: 1_080_000 },
         } as unknown as Partial<ListingDetail>),
       ).priceRead;
-    expect(mk("Toronto C12")).toMatch(/~55% sold over ask/);
-    expect(mk("London")).toMatch(/~23% sold over ask/);
+    expect(mk("Toronto C12")).toMatch(/~45% sold over ask/);
+    expect(mk("London")).toMatch(/~20% sold over ask/);
   });
 
   it("competitive listing: the THESIS drops the under-ask framing too, not just the price line", () => {

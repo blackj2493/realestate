@@ -186,24 +186,34 @@ export default function EstimatedSaleCard({
                 </span>
               </div>
               <div>
+                {/* Both endpoints are MEASURED closes for this market at this comp-gap depth
+                    — median to 75th percentile. The ceiling used to be the AVM's LOW band, a
+                    confidence-interval artifact with no outcome meaning, which read as a
+                    forecast and sat beside a "% below comps" line implying a much higher
+                    number. */}
                 <p className="text-3xl font-extrabold tracking-tight text-primary">
                   {compact(comp.rangeLow)} – {compact(comp.rangeHigh)}
                 </p>
-                {/* "near ask — above it if offers compete", not "at or above": outside the
-                    GTA the measured median of this bucket still closes ~3% UNDER ask
-                    (comp.medianCloseRatio 0.972), so an at-or-above floor overstates it
-                    there. Inside the GTA the same bucket's median is 1.011 — the phrasing
-                    holds for both, which is why it stays market-neutral. */}
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Likely closes near the {formatPrice(listPrice)} ask — above it if offers compete.
+                  Half of these close above {compact(comp.likelyClose)}; one in four clears{" "}
+                  {compact(comp.rangeHigh)}.
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-foreground/90">
-                  Listed ~{Math.round(comp.belowCompsPct * 100)}% below comparable sales. Homes priced
-                  like this sold{" "}
+                  Listed ~{Math.round(comp.belowCompsPct * 100)}% below our comparable estimate. Homes
+                  listed this way sold{" "}
                   <span className="font-semibold text-amber-600 dark:text-amber-400">
                     over ask ~{Math.round(comp.overAskRate * 100)}% of the time
                   </span>{" "}
                   — expect competing offers.
+                </p>
+                {/* The line that stops the misread. A big comp gap is mostly model error on
+                    THIS home, not headroom: these close at a median of ~82% of the comp
+                    estimate and only ~5% ever reach it. Without this, a reader sees "21%
+                    below comps" and assumes the comp figure is the destination. */}
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  A gap that size is usually our estimate running high on this particular home.
+                  Homes like it close at about {Math.round(comp.closeVsCompMid * 100)}% of that
+                  estimate — only {Math.round(comp.reachedCompMid * 100)}% reach it.
                 </p>
               </div>
             </>
