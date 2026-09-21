@@ -63,6 +63,8 @@ export interface SalePriceEstimate {
      *  measured on the "999" bucket does not describe any other, so the payload names the
      *  pattern rather than implying one global number. */
     pattern: CompetitivePattern;
+    /** Which measured market supplied the rates below. */
+    market: CompetitiveMarket;
     /** How far the ask sits below the comp mid: (compMid − list)/compMid (e.g. 0.21). */
     belowCompsPct: number;
     /** Over-ask base rate for the fired pattern's bucket — for the copy. */
@@ -108,58 +110,115 @@ export function isThresholdPrice(list: number): boolean {
 }
 
 /** Names of the measured under-listing price patterns. See COMPETITIVE_PATTERNS. */
-export type CompetitivePattern = "threshold";
+export type CompetitivePattern = "threshold" | "lucky-88";
 
 /**
- * The measured under-listing patterns, each with the outcome rates of ITS OWN backtest
- * bucket (below-comps ∩ pattern). Adding a pattern is a data change, not a logic change —
- * but a new entry may only ship with rates measured on that pattern's own bucket.
+ * The markets these rates were measured on, separately. Hold-back-offers pricing is a
+ * LOCAL convention, and the outcome gap is not subtle: on the same "999" ask sitting below
+ * comps, GTA homes closed over ask 54.5% of the time and the rest of Ontario 22.5%
+ * (scripts/admin/_askDigitLift.ts, 24mo, n=2,306 / n=1,650). One pooled number cannot
+ * describe both — see COMPETITIVE_PATTERNS.
+ */
+export type CompetitiveMarket = "gta" | "other";
+
+/**
+ * Municipalities the "gta" rates were measured on — Toronto's 416 district codes plus the
+ * four regional municipalities. Matched on the listing's City. Toronto arrives as a TRREB
+ * district string ("Toronto C12", "Toronto W05"), never bare "Toronto", so this is a prefix
+ * test, not an equality test (memory: trreb-city-taxonomy).
+ */
+const GTA_CITY_PREFIXES = [
+  "toronto",
+  // York
+  "markham", "richmond hill", "vaughan", "aurora", "newmarket", "king",
+  "whitchurch", "east gwillimbury", "georgina",
+  // Peel
+  "mississauga", "brampton", "caledon",
+  // Halton
+  "oakville", "burlington", "milton", "halton hills",
+  // Durham
+  "pickering", "ajax", "whitby", "oshawa", "clarington", "scugog", "uxbridge", "brock",
+] as const;
+
+/** Which measured market a listing's municipality belongs to. Unknown/blank → "other", the
+ *  conservative bucket: it publishes the LOWER over-ask rate, and patterns measured only in
+ *  the GTA do not fire at all. */
+export function competitiveMarketOf(city: string | null | undefined): CompetitiveMarket {
+  const c = (city ?? "").trim().toLowerCase();
+  if (!c) return "other";
+  return GTA_CITY_PREFIXES.some((p) => c.startsWith(p)) ? "gta" : "other";
+}
+
+/** Outcome rates for one pattern in one market. Both are measured on that exact bucket. */
+export interface CompetitiveRates {
+  /** P(close > list) within below-comps ∩ pattern ∩ market. */
+  overAskRate: number;
+  /** Median close/list within the same bucket. */
+  medianCloseRatio: number;
+}
+
+/**
+ * The measured under-listing patterns. Each carries the outcome rates of ITS OWN backtest
+ * bucket, PER MARKET. A null market entry means "not measured here" — the pattern simply
+ * does not fire there, rather than borrowing another market's number.
  *
- * WHY A TABLE, not a single boolean: the previous gate recognised exactly one pattern (the
- * "999" play) and published one pair of rates. That silently made the digit shape a
- * REQUIREMENT for the whole signal — an ask of $688,000 sitting 28% below comps was
- * discarded before the comp test ran, because $88,000 is not $95,000+ (memory:
- * proxy-threshold-antipattern — a number standing in for a stated category). Splitting the
- * table keeps each published probability tied to the population it was measured on.
+ * WHY A TABLE, not a single boolean + a single rate: the previous gate recognised exactly
+ * one pattern (the "999" play) and published one pooled rate to everyone. That caused two
+ * separate defects.
  *
- * `test` is list-price-only and deterministic; the comp test lives in detectCompetitive.
+ *   1. It made the digit shape a REQUIREMENT for the whole signal. An ask of $688,000
+ *      sitting 28% below comps was discarded before the comp test ran, because $88,000 is
+ *      not $95,000+ — even though $_88,000 turns out to be the STRONGEST band in the data
+ *      (memory: proxy-threshold-antipattern — a number standing in for a stated category).
+ *   2. It quoted one number to markets that behave nothing alike. 41.7% of the homes the
+ *      gate fired on are outside the GTA, where the real over-ask rate is 22.5%, not the
+ *      40% the card printed — a 17.5pp overstatement to four in ten readers.
+ *
+ * All figures: scripts/admin/_askDigitLift.ts over 238,874 closings (24mo), restricted to
+ * the 14,976 an out-of-sample AVM run priced >=5% above their ask. `test` is
+ * list-price-only and deterministic; the comp test lives in detectCompetitive.
  */
 export const COMPETITIVE_PATTERNS: ReadonlyArray<{
   name: CompetitivePattern;
   test: (list: number) => boolean;
-  /** P(close > list) within below-comps ∩ this pattern. */
-  overAskRate: number;
-  /** Median close/list within the same bucket. Typically still < 1. */
-  medianCloseRatio: number;
+  rates: Readonly<Record<CompetitiveMarket, CompetitiveRates | null>>;
 }> = [
   {
+    // The "list at 999, hold offers" play: top $5k of a $100k band.
     name: "threshold",
     test: isThresholdPrice,
-    overAskRate: 0.4,
-    medianCloseRatio: 0.99,
+    rates: {
+      gta: { overAskRate: 0.545, medianCloseRatio: 1.011 }, // n=2,306
+      other: { overAskRate: 0.225, medianCloseRatio: 0.972 }, // n=1,650
+    },
+  },
+  {
+    // $_88,000–$_88,999 ($688,000, $888,000, $1,288,800…). The GTA "lucky 8" ask. Measured
+    // over-ask 45.9% in the GTA — ahead of the "999" play — on n=233. NOT shipped outside
+    // the GTA: only 17 non-GTA closings matched, far too thin to publish a probability.
+    name: "lucky-88",
+    test: (list: number) => list > 0 && list % 100_000 >= 88_000 && list % 100_000 < 89_000,
+    rates: {
+      gta: { overAskRate: 0.459, medianCloseRatio: 0.992 }, // n=233
+      other: null, // n=17 — not measurable
+    },
   },
 ];
 
-/** Over-ask base rate for the "threshold" pattern (below-comps + threshold price), straight
- *  from the backtest bucket — used verbatim in the "priced to compete" copy. NOT a promise:
- *  the median of that bucket still closes ~1% UNDER ask, so the UI shows a range +
- *  probability, never a confident above-ask number. */
-export const COMPETITIVE_OVER_ASK_RATE = COMPETITIVE_PATTERNS[0].overAskRate;
-
-/** Measured median close/list for the "threshold" pattern (same backtest bucket): the typical
- *  hold-offers home still closes ~1% UNDER ask. Every consumer of the competitive signal
- *  anchors "likely close" to THIS ratio, never to the citywide cohort ratio (often 3–5%
- *  under ask) — quoting the cohort figure on a deliberately under-listed home is what made
- *  the Suggested Move contradict the card's over-ask framing. */
-export const COMPETITIVE_MEDIAN_CLOSE_RATIO = COMPETITIVE_PATTERNS[0].medianCloseRatio;
-
-/** The first pattern whose list-price shape matches, or null. Order is significance order:
- *  the table is short and patterns are disjoint today, so first-match is unambiguous. */
+/** The first pattern that matches BOTH the ask's shape and a market we measured it in, with
+ *  that market's rates. Returns null when no pattern applies. Order is significance order;
+ *  the patterns are disjoint today, so first-match is unambiguous. */
 export function matchCompetitivePattern(
   list: number,
-): (typeof COMPETITIVE_PATTERNS)[number] | null {
+  market: CompetitiveMarket,
+): { name: CompetitivePattern; rates: CompetitiveRates } | null {
   if (!(list > 0)) return null;
-  return COMPETITIVE_PATTERNS.find((p) => p.test(list)) ?? null;
+  for (const p of COMPETITIVE_PATTERNS) {
+    if (!p.test(list)) continue;
+    const rates = p.rates[market];
+    if (rates) return { name: p.name, rates };
+  }
+  return null;
 }
 
 /** The AVM comp mid must clear the ask by at least this for a listing to count as "below
@@ -190,20 +249,26 @@ function avmComparable(estimate: AVMResult | null): SalePriceEstimate["comparabl
 export function detectCompetitive(
   listPrice: number,
   estimate: AVMResult | null,
+  /** The listing's municipality (payload.City). Decides WHICH measured rates apply — the
+   *  same ask shape carries a 54.5% over-ask rate in the GTA and 22.5% outside it, so this
+   *  is not optional context. Null/unknown resolves to the conservative "other" bucket. */
+  city: string | null,
 ): SalePriceEstimate["competitive"] {
   const comparable = avmComparable(estimate);
   if (!comparable || !(listPrice > 0)) return null;
   if (estimate && estimate.confidence === "LOW") return null;
-  const pattern = matchCompetitivePattern(listPrice);
+  const market = competitiveMarketOf(city);
+  const pattern = matchCompetitivePattern(listPrice, market);
   if (!pattern) return null;
   if (!(comparable.mid >= listPrice * (1 + COMPETITIVE_COMP_MARGIN))) return null;
   return {
     pattern: pattern.name,
+    market,
     belowCompsPct: (comparable.mid - listPrice) / comparable.mid,
-    overAskRate: pattern.overAskRate,
+    overAskRate: pattern.rates.overAskRate,
     rangeLow: listPrice,
     rangeHigh: comparable.low > listPrice ? comparable.low : comparable.mid,
-    medianCloseRatio: pattern.medianCloseRatio,
+    medianCloseRatio: pattern.rates.medianCloseRatio,
   };
 }
 
@@ -216,8 +281,12 @@ export function resolveSalePrice(opts: {
   isActive: boolean;
   expectedSale: ExpectedSale | null;
   estimate: AVMResult | null;
+  /** The listing's municipality (payload.City) — required, because the "priced to compete"
+   *  rates are market-specific. Pass null only when the feed genuinely has no City; that
+   *  resolves to the conservative bucket rather than borrowing the GTA's numbers. */
+  city: string | null;
 }): SalePriceEstimate | null {
-  const { listPrice, isActive, expectedSale, estimate } = opts;
+  const { listPrice, isActive, expectedSale, estimate, city } = opts;
   const hasAsk = typeof listPrice === "number" && listPrice > 0;
 
   // ── Preferred path: list-anchored Expected Sale on an active listing ──────────
@@ -243,7 +312,7 @@ export function resolveSalePrice(opts: {
         "Calibrated to how comparable homes recently sold relative to asking.",
       market: { ratio, sampleSize, scope, windowMonths },
       comparable,
-      competitive: detectCompetitive(listPrice as number, estimate),
+      competitive: detectCompetitive(listPrice as number, estimate, city),
     };
   }
 

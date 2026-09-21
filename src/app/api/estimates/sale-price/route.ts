@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
           confidence: a.confidence,
         } as AVMResult)
       : null;
-    out[it.id] = resolveSalePrice({ listPrice, isActive: true, expectedSale, estimate: avmShim });
+    out[it.id] = resolveSalePrice({ listPrice, isActive: true, expectedSale, estimate: avmShim, city: it.city ?? null });
     // Mirrors getListingDetail's computeDealScore call exactly — same three fields, same
     // sources. A row with no property_estimates entry gets estimatedValue null, and the
     // scorer withholds the grade rather than renormalizing PRICE's weight away.

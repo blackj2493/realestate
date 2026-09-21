@@ -78,7 +78,7 @@ async function fetchSalePrices(
               confidence: est.confidence ?? "LOW",
             } as AVMResult)
           : null;
-      out[l.id] = resolveSalePrice({ listPrice, isActive: true, expectedSale, estimate: avmShim });
+      out[l.id] = resolveSalePrice({ listPrice, isActive: true, expectedSale, estimate: avmShim, city: l.City ?? null });
     })
   );
   return out;

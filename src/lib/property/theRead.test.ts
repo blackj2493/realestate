@@ -7,6 +7,8 @@ const base = (over: Partial<ListingDetail> = {}): ListingDetail =>
     full_payload: {
       ListPrice: 899000,
       OriginalListPrice: 929000,
+      // Selects which market's measured over-ask rates the price line may quote.
+      City: "Toronto C12",
       KitchensBelowGrade: 1,
       LotWidth: 33,
       DaysOnMarket: 11,
@@ -136,9 +138,24 @@ describe("buildTheRead", () => {
       } as unknown as Partial<ListingDetail>),
     );
     expect(r.priceRead).toMatch(/set ~11% below comparable sales/);
-    expect(r.priceRead).toMatch(/~40% sold over ask, median close ≈ ask/);
+    expect(r.priceRead).toMatch(/~55% sold over ask, median close ≈ ask/);
     expect(r.priceRead).toMatch(/Expect \$899K–\$940K if offers compete/);
     expect(r.priceRead).not.toMatch(/likely closes near/);
+  });
+
+  it("quotes the LOCAL over-ask rate — the same ask reads 55% in the GTA, 23% outside it", () => {
+    // 41.7% of the homes this pattern fires on are outside the GTA, where the measured
+    // over-ask rate is 22.5%, not the 40% the pooled constant used to print to everyone.
+    const mk = (city: string) =>
+      buildTheRead(
+        base({
+          status: { kind: "active", label: "FOR SALE" },
+          full_payload: { ListPrice: 899_000, City: city, PropertySubType: "Detached House" },
+          estimate: { estimatedValue: 1_010_000, confidence: "HIGH", lowBand: 940_000, highBand: 1_080_000 },
+        } as unknown as Partial<ListingDetail>),
+      ).priceRead;
+    expect(mk("Toronto C12")).toMatch(/~55% sold over ask/);
+    expect(mk("London")).toMatch(/~23% sold over ask/);
   });
 
   it("competitive listing: the THESIS drops the under-ask framing too, not just the price line", () => {

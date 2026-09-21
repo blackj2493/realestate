@@ -69,11 +69,14 @@ export async function GET(
 
     const listPriceRaw = (view.full_payload as Record<string, unknown> | null)?.ListPrice;
     const listPrice = typeof listPriceRaw === "number" && listPriceRaw > 0 ? listPriceRaw : null;
+    const cityRaw = (view.full_payload as Record<string, unknown> | null)?.City;
     const salePrice = resolveSalePrice({
       listPrice,
       isActive: view.status.kind === "active",
       expectedSale: view.expectedSale,
       estimate: view.estimate,
+      // Selects the market whose measured rates the "priced to compete" copy may quote.
+      city: typeof cityRaw === "string" ? cityRaw : null,
     });
 
     return NextResponse.json({

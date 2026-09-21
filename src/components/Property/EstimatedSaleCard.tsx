@@ -189,9 +189,11 @@ export default function EstimatedSaleCard({
                 <p className="text-3xl font-extrabold tracking-tight text-primary">
                   {compact(comp.rangeLow)} – {compact(comp.rangeHigh)}
                 </p>
-                {/* "near ask — above it if offers compete", not "at or above": the measured
-                    median of this bucket still closes ~1% UNDER ask, per
-                    COMPETITIVE_MEDIAN_CLOSE_RATIO — an at-or-above floor overstates it. */}
+                {/* "near ask — above it if offers compete", not "at or above": outside the
+                    GTA the measured median of this bucket still closes ~3% UNDER ask
+                    (comp.medianCloseRatio 0.972), so an at-or-above floor overstates it
+                    there. Inside the GTA the same bucket's median is 1.011 — the phrasing
+                    holds for both, which is why it stays market-neutral. */}
                 <p className="mt-1 text-xs text-muted-foreground">
                   Likely closes near the {formatPrice(listPrice)} ask — above it if offers compete.
                 </p>
