@@ -44,16 +44,46 @@ export function unsubscribeUrl(email: string, siteUrl: string): string {
  * One-click PREFERENCE actions, for registered users, from inside the email.
  *
  * Unsubscribe was the only control a digest reader had. These are the ones short of it —
- * send it weekly, or stop for a month — and they use the same HMAC-of-the-email scheme so
- * they need no login, no token column and no session.
+ * send it weekly, or stop for a month — and the ones just past it: come back at a lower
+ * volume. All use the same HMAC-of-the-email scheme, so they need no login, no token column
+ * and no session.
  *
  * THE ACTION IS INSIDE THE SIGNATURE. Signing the email alone would let anyone holding a
  * "pause" link edit the query string into any other action for that address. Each link
  * authorises exactly one thing.
  */
-export type EmailAction = "weekly" | "daily" | "pause30";
+export type EmailAction = "weekly" | "daily" | "pause30" | "resub_weekly" | "resub_daily";
 
-export const EMAIL_ACTIONS: readonly EmailAction[] = ["weekly", "daily", "pause30"];
+export const EMAIL_ACTIONS: readonly EmailAction[] = [
+  "weekly",
+  "daily",
+  "pause30",
+  "resub_weekly",
+  "resub_daily",
+];
+
+/**
+ * The two RECOVERY actions, offered only on the unsubscribe confirmation page.
+ *
+ * They are separate actions rather than a flag on `weekly` and `daily` because they do the
+ * one thing those must never do: clear `profiles.marketing_opt_out`. Every digest already
+ * sent carries a valid `weekly` link, and an unsubscribed reader who later finds an old one
+ * in their inbox must be able to press it without being put back on the list they left.
+ * Folding re-consent into an existing action would make that impossible to tell apart.
+ */
+export const RESUBSCRIBE_ACTIONS: readonly EmailAction[] = ["resub_weekly", "resub_daily"];
+
+/** True for an action that re-consents to marketing email. */
+export function isResubscribe(action: EmailAction): boolean {
+  return RESUBSCRIBE_ACTIONS.includes(action);
+}
+
+/** The digest cadence an action asks for, or null when it asks for something else. */
+export function frequencyForAction(action: EmailAction): "daily" | "weekly" | null {
+  if (action === "weekly" || action === "resub_weekly") return "weekly";
+  if (action === "daily" || action === "resub_daily") return "daily";
+  return null;
+}
 
 export function signEmailAction(email: string, action: EmailAction): string {
   return createHmac("sha256", secret()).update(`${action}:${normEmail(email)}`).digest("base64url");

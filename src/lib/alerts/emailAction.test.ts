@@ -5,6 +5,9 @@ import {
   signUnsubscribe,
   verifyEmailAction,
   EMAIL_ACTIONS,
+  RESUBSCRIBE_ACTIONS,
+  isResubscribe,
+  frequencyForAction,
 } from "./unsubscribe";
 
 beforeAll(() => {
@@ -51,5 +54,68 @@ describe("signed email actions", () => {
     expect(
       verifyEmailAction(url.searchParams.get("e")!, url.searchParams.get("a")!, url.searchParams.get("s")!)
     ).toBe(true);
+  });
+});
+
+/**
+ * The two recovery actions, offered only on the unsubscribe confirmation page. They clear
+ * `profiles.marketing_opt_out`, which no other action does — so the thing that must hold is
+ * that no OTHER action's link can ever be turned into one of these.
+ */
+describe("recovery actions", () => {
+  it("cannot be reached by editing a preference link", () => {
+    // Every digest already delivered carries a valid `weekly` link. An unsubscribed reader
+    // finding an old one must change a preference, never rejoin the list they left.
+    for (const from of ["weekly", "daily", "pause30"] as const) {
+      const sig = signEmailAction(EMAIL, from);
+      for (const to of RESUBSCRIBE_ACTIONS) {
+        expect(verifyEmailAction(EMAIL, to, sig), `${from} -> ${to}`).toBe(false);
+      }
+    }
+  });
+
+  it("cannot be edited into a preference action either", () => {
+    for (const from of RESUBSCRIBE_ACTIONS) {
+      const sig = signEmailAction(EMAIL, from);
+      for (const to of ["weekly", "daily", "pause30"] as const) {
+        expect(verifyEmailAction(EMAIL, to, sig), `${from} -> ${to}`).toBe(false);
+      }
+    }
+  });
+
+  it("cannot be signed for one address and used for another", () => {
+    const sig = signEmailAction(EMAIL, "resub_weekly");
+    expect(verifyEmailAction("someone.else@example.com", "resub_weekly", sig)).toBe(false);
+  });
+
+  it("verifies its own links", () => {
+    for (const action of RESUBSCRIBE_ACTIONS) {
+      expect(verifyEmailAction(EMAIL, action, signEmailAction(EMAIL, action))).toBe(true);
+    }
+  });
+
+  it("is listed as a known action, so an unknown string is still rejected", () => {
+    expect(EMAIL_ACTIONS).toContain("resub_weekly");
+    expect(EMAIL_ACTIONS).toContain("resub_daily");
+    expect(verifyEmailAction(EMAIL, "resub_monthly", signEmailAction(EMAIL, "resub_weekly"))).toBe(false);
+  });
+});
+
+describe("isResubscribe / frequencyForAction", () => {
+  it("names exactly the actions that re-consent", () => {
+    expect(isResubscribe("resub_weekly")).toBe(true);
+    expect(isResubscribe("resub_daily")).toBe(true);
+    expect(isResubscribe("weekly")).toBe(false);
+    expect(isResubscribe("daily")).toBe(false);
+    expect(isResubscribe("pause30")).toBe(false);
+  });
+
+  it("maps each action to the cadence it asks for", () => {
+    expect(frequencyForAction("weekly")).toBe("weekly");
+    expect(frequencyForAction("resub_weekly")).toBe("weekly");
+    expect(frequencyForAction("daily")).toBe("daily");
+    expect(frequencyForAction("resub_daily")).toBe("daily");
+    // A pause asks for no cadence at all — the route must not write one.
+    expect(frequencyForAction("pause30")).toBeNull();
   });
 });
