@@ -174,7 +174,7 @@ export default function EstimatedSaleCard({
       <CardContent>
         <div className="space-y-4">
           {/* Hero. Normally the estimate is the loudest thing (colour-coded delta). When the
-              listing is "priced to compete" (below comps + threshold ask) we drop the
+              listing is listed low to draw offers (below comps + a measured ask shape) we drop the
               below-ask / "room to negotiate" framing for a ⚡ flag + an at-or-above-ask range
               + a calibrated over-ask probability — never a promise it WILL sell over ask. */}
           {comp ? (
@@ -182,7 +182,7 @@ export default function EstimatedSaleCard({
               <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5">
                 <span className="text-[13px] leading-none">⚡</span>
                 <span className="terminal-font text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                  Priced to compete
+                  Listed low to draw offers
                 </span>
               </div>
               <div>
