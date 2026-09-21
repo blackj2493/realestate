@@ -48,6 +48,7 @@
 import * as fs from 'fs';
 import {
   COMPETITIVE_PATTERNS,
+  COMPETITIVE_GAP_RATES,
   COMPETITIVE_COMP_MARGIN,
   competitiveMarketOf,
   type CompetitiveMarket,
@@ -89,7 +90,9 @@ interface Sale {
   list: number;
   over: boolean;
   ratio: number;
+  gap: number;
   market: CompetitiveMarket;
+  eligible: boolean;
 }
 
 export interface DriftAssessment {
@@ -138,7 +141,16 @@ export function assessCompeteDrift(
     // Mirrors detectCompetitive: a LOW-confidence comp band is not evidence of under-listing.
     if (!(est > 0) || String(r.confidence).toUpperCase() === "LOW") continue;
     if (!(est >= list * (1 + COMPETITIVE_COMP_MARGIN))) continue;
-    below.push({ list, over: close > list, ratio, market: competitiveMarketOf(r.city) });
+    const market = competitiveMarketOf(r.city);
+    below.push({
+      list,
+      over: close > list,
+      ratio,
+      gap: est / list - 1,
+      market,
+      // An ask the detector would actually fire on in this market.
+      eligible: COMPETITIVE_PATTERNS.some((p) => p.test(list) && p.markets.includes(market)),
+    });
   }
 
   const lines: string[] = [];
@@ -161,27 +173,31 @@ export function assessCompeteDrift(
     other: rateOf(below.filter((s) => s.market === "other")),
   };
 
-  for (const pattern of COMPETITIVE_PATTERNS) {
-    for (const market of Object.keys(pattern.rates) as CompetitiveMarket[]) {
-      const published = pattern.rates[market];
-      if (!published) continue; // not measured in this market — nothing to guard
-      const label = `${pattern.name}/${market}`;
-      const bucket = below.filter((s) => s.market === market && pattern.test(s.list));
-      const n = bucket.length;
+  for (const market of Object.keys(COMPETITIVE_GAP_RATES) as CompetitiveMarket[]) {
+    const bands = COMPETITIVE_GAP_RATES[market];
+    for (let i = 0; i < bands.length; i++) {
+      const published = bands[i];
+      const upper = i + 1 < bands.length ? bands[i + 1].minGap : Infinity;
+      const label = `${market}/gap ${(published.minGap * 100).toFixed(0)}-${upper === Infinity ? "∞" : (upper * 100).toFixed(0)}%`;
 
+      // The bucket the published numbers describe: eligible ask shape, this market, this depth.
+      const bucket = below.filter(
+        (s2) => s2.eligible && s2.market === market && s2.gap >= published.minGap && s2.gap < upper,
+      );
+      const n = bucket.length;
       if (n === 0) {
         skipped.push(`${label}: no sales this run`);
-        lines.push(`  ${label.padEnd(20)} n=    0   — not assessed`);
+        lines.push(`  ${label.padEnd(22)} n=    0   — not assessed`);
         continue;
       }
 
-      const over = bucket.filter((s) => s.over).length / n;
-      const med = median(bucket.map((s) => s.ratio));
+      const over = bucket.filter((s2) => s2.over).length / n;
+      const med = median(bucket.map((s2) => s2.ratio));
       const dOver = over - published.overAskRate;
       const dMed = med - published.medianCloseRatio;
       const powered = n >= t.minN;
       lines.push(
-        `  ${label.padEnd(20)} n=${String(n).padStart(5)}   over-ask ${pct(over).padStart(6)} vs published ${pct(published.overAskRate).padStart(6)} (${pp(dOver)})   med c/l ${med.toFixed(3)} vs ${published.medianCloseRatio.toFixed(3)} (${dMed >= 0 ? "+" : ""}${dMed.toFixed(3)})${powered ? "" : `  (n < ${t.minN} — reported only)`}`,
+        `  ${label.padEnd(22)} n=${String(n).padStart(5)}   over-ask ${pct(over).padStart(6)} vs ${pct(published.overAskRate).padStart(6)} (${pp(dOver)})   med c/l ${med.toFixed(3)} vs ${published.medianCloseRatio.toFixed(3)} (${dMed >= 0 ? "+" : ""}${dMed.toFixed(3)})${powered ? "" : `  (n < ${t.minN} — reported only)`}`,
       );
 
       if (!powered) {
@@ -195,11 +211,12 @@ export function assessCompeteDrift(
       }
       if (Math.abs(dMed) > t.maxRatioDrift) {
         failures.push(
-          `${label}: median close/list measured ${med.toFixed(3)} but the offer band anchors to ${published.medianCloseRatio.toFixed(3)} (tolerance ${t.maxRatioDrift}, n=${n}).`,
+          `${label}: median close/list measured ${med.toFixed(3)} but the range floors at ${published.medianCloseRatio.toFixed(3)} (tolerance ${t.maxRatioDrift}, n=${n}).`,
         );
       }
     }
   }
+
   return { usable, belowComps: below.length, baseOverAsk, lines, skipped, failures };
 }
 

@@ -59,23 +59,29 @@ export interface SalePriceEstimate {
    * Measured: scripts/admin/_thresholdPriceLift.ts, scripts/admin/_askDigitLift.ts.
    */
   competitive: {
-    /** Which measured pattern fired. Every rate below is that pattern's OWN bucket — a rate
-     *  measured on the "999" bucket does not describe any other, so the payload names the
-     *  pattern rather than implying one global number. */
+    /** Which ask shape qualified the listing. */
     pattern: CompetitivePattern;
-    /** Which measured market supplied the rates below. */
+    /** Which measured market supplied the numbers below. */
     market: CompetitiveMarket;
-    /** How far the ask sits below the comp mid: (compMid − list)/compMid (e.g. 0.21). */
+    /** How far the ask sits below the comp mid: (compMid − list)/compMid. */
     belowCompsPct: number;
-    /** Over-ask base rate for the fired pattern's bucket — for the copy. */
+    /** P(close > list) for THIS market at THIS comp-gap depth. */
     overAskRate: number;
-    /** Floor of the "likely close" range — the ask. */
-    rangeLow: number;
-    /** Ceiling of the "likely close" range — comp low if above the ask, else comp mid. */
-    rangeHigh: number;
-    /** Measured median close/list for the fired pattern's bucket — the honest "likely close"
-     *  anchor for hold-offers listings; the citywide cohort ratio does NOT apply to them. */
+    /** Median close/list for the same bucket. */
     medianCloseRatio: number;
+    /** The typical outcome in dollars: ask × medianCloseRatio. The headline. */
+    likelyClose: number;
+    /** Floor of the published range — the typical close, not the ask. */
+    rangeLow: number;
+    /** Ceiling — ask × the bucket's 75th-percentile close/list. MEASURED, which is the
+     *  whole point: it used to be the AVM's low band, an artifact that read as a forecast. */
+    rangeHigh: number;
+    /** Median close as a share of the comp mid (e.g. 0.822). Below 1 because the comp gap
+     *  is largely AVM error on that home, not headroom. */
+    closeVsCompMid: number;
+    /** Share of the bucket that actually reached the comp mid (e.g. 0.054). The number that
+     *  stops a reader assuming the home will sell at the comparable estimate. */
+    reachedCompMid: number;
   } | null;
 }
 
@@ -158,71 +164,107 @@ export interface CompetitiveRates {
 }
 
 /**
- * The measured under-listing patterns. Each carries the outcome rates of ITS OWN backtest
- * bucket, PER MARKET. A null market entry means "not measured here" — the pattern simply
- * does not fire there, rather than borrowing another market's number.
+ * Which ask shapes qualify as "listed low to draw offers", and where. A pattern decides
+ * ELIGIBILITY only — the numbers come from COMPETITIVE_GAP_RATES below, because what a
+ * listing actually closes at is driven far more by HOW FAR under comps it sits than by
+ * which digit convention the seller used.
  *
- * WHY A TABLE, not a single boolean + a single rate: the previous gate recognised exactly
- * one pattern (the "999" play) and published one pooled rate to everyone. That caused two
- * separate defects.
- *
- *   1. It made the digit shape a REQUIREMENT for the whole signal. An ask of $688,000
- *      sitting 28% below comps was discarded before the comp test ran, because $88,000 is
- *      not $95,000+ — even though $_88,000 turns out to be the STRONGEST band in the data
- *      (memory: proxy-threshold-antipattern — a number standing in for a stated category).
- *   2. It quoted one number to markets that behave nothing alike. 41.7% of the homes the
- *      gate fired on are outside the GTA, where the real over-ask rate is 22.5%, not the
- *      40% the card printed — a 17.5pp overstatement to four in ten readers.
- *
- * All figures: scripts/admin/_askDigitLift.ts over 238,874 closings (24mo), restricted to
- * the 14,976 an out-of-sample AVM run priced >=5% above their ask. `test` is
- * list-price-only and deterministic; the comp test lives in detectCompetitive.
+ * `markets` is where the shape was shown to carry lift. lucky-88 is GTA-only: just 17
+ * non-GTA closings matched it, far too thin to act on.
  */
 export const COMPETITIVE_PATTERNS: ReadonlyArray<{
   name: CompetitivePattern;
   test: (list: number) => boolean;
-  rates: Readonly<Record<CompetitiveMarket, CompetitiveRates | null>>;
+  markets: readonly CompetitiveMarket[];
 }> = [
+  // The "list at 999, hold offers" play: top $5k of a $100k band.
+  { name: "threshold", test: isThresholdPrice, markets: ["gta", "other"] },
+  // $_88,000–$_88,999 ($688,000, $888,000, $1,288,800…) — the GTA "lucky 8" ask.
   {
-    // The "list at 999, hold offers" play: top $5k of a $100k band.
-    name: "threshold",
-    test: isThresholdPrice,
-    rates: {
-      gta: { overAskRate: 0.545, medianCloseRatio: 1.011 }, // n=2,306
-      other: { overAskRate: 0.225, medianCloseRatio: 0.972 }, // n=1,650
-    },
-  },
-  {
-    // $_88,000–$_88,999 ($688,000, $888,000, $1,288,800…). The GTA "lucky 8" ask. Measured
-    // over-ask 45.9% in the GTA — ahead of the "999" play — on n=233. NOT shipped outside
-    // the GTA: only 17 non-GTA closings matched, far too thin to publish a probability.
     name: "lucky-88",
     test: (list: number) => list > 0 && list % 100_000 >= 88_000 && list % 100_000 < 89_000,
-    rates: {
-      gta: { overAskRate: 0.459, medianCloseRatio: 0.992 }, // n=233
-      other: null, // n=17 — not measurable
-    },
+    markets: ["gta"],
   },
 ];
 
-/** The first pattern that matches BOTH the ask's shape and a market we measured it in, with
- *  that market's rates. Returns null when no pattern applies. Order is significance order;
- *  the patterns are disjoint today, so first-match is unambiguous. */
+/** Measured outcomes for one market at one comp-gap depth. Every figure is the observed
+ *  value for that bucket — none is derived, assumed, or carried over from another. */
+export interface CompetitiveOutcome {
+  /** Lower edge of the comp gap this row describes: (compMid/list − 1). */
+  minGap: number;
+  /** P(close > list). */
+  overAskRate: number;
+  /** Median close/list — the typical outcome. */
+  medianCloseRatio: number;
+  /** 75th-percentile close/list — the "strong outcome" end of the published range. */
+  p75CloseRatio: number;
+  /** Median close as a share of the AVM comp mid. Well under 1: see the note below. */
+  closeVsCompMid: number;
+  /** Share of this bucket that actually reached the comp mid. */
+  reachedCompMid: number;
+}
+
+/**
+ * What these listings ACTUALLY close at, by market and by how far under comps they sit.
+ *
+ * THIS TABLE EXISTS BECAUSE THE CARD WAS MISLEADING. It used to publish one over-ask rate
+ * per pattern, and set the top of its "likely close" range to the AVM's LOW band — a
+ * confidence-interval artifact, not an outcome. Shown beside "listed ~21% below comparable
+ * sales", that invited the reading that the home would close near the comp value. It does
+ * not. Measured on 41,541 held-out sales: a GTA listing 20–30% under comps closes at a
+ * median of 82.2% of the comp mid, and only 5.4% of them ever reach it. The comp gap is
+ * mostly AVM ERROR on that specific home, not headroom waiting to be captured.
+ *
+ * The depth of the gap is the real predictor, and it is strong in the GTA (over-ask climbs
+ * 40.9% → 61.0%, median close/list 0.990 → 1.050) and FLAT outside it (median close/list
+ * never clears 1.0 at any depth). Pooling those was the same mistake one layer down.
+ *
+ * Source: scripts/admin/_askDigitLift.ts + the held-out replay; every bucket n >= 248.
+ * Guarded by scripts/worker/competeRateDriftCheck.ts.
+ */
+export const COMPETITIVE_GAP_RATES: Readonly<Record<CompetitiveMarket, readonly CompetitiveOutcome[]>> = {
+  gta: [
+    { minGap: 0.05, overAskRate: 0.409, medianCloseRatio: 0.990, p75CloseRatio: 1.038, closeVsCompMid: 0.923, reachedCompMid: 0.165 }, // n=807
+    { minGap: 0.10, overAskRate: 0.446, medianCloseRatio: 0.992, p75CloseRatio: 1.072, closeVsCompMid: 0.881, reachedCompMid: 0.126 }, // n=578
+    { minGap: 0.15, overAskRate: 0.533, medianCloseRatio: 1.006, p75CloseRatio: 1.100, closeVsCompMid: 0.861, reachedCompMid: 0.092 }, // n=435
+    { minGap: 0.20, overAskRate: 0.574, medianCloseRatio: 1.024, p75CloseRatio: 1.128, closeVsCompMid: 0.822, reachedCompMid: 0.054 }, // n=521
+    { minGap: 0.30, overAskRate: 0.610, medianCloseRatio: 1.050, p75CloseRatio: 1.172, closeVsCompMid: 0.721, reachedCompMid: 0.015 }, // n=667
+  ],
+  other: [
+    { minGap: 0.05, overAskRate: 0.132, medianCloseRatio: 0.975, p75CloseRatio: 0.992, closeVsCompMid: 0.907, reachedCompMid: 0.032 }, // n=409
+    { minGap: 0.10, overAskRate: 0.199, medianCloseRatio: 0.975, p75CloseRatio: 1.000, closeVsCompMid: 0.868, reachedCompMid: 0.011 }, // n=272
+    { minGap: 0.15, overAskRate: 0.238, medianCloseRatio: 0.975, p75CloseRatio: 1.000, closeVsCompMid: 0.831, reachedCompMid: 0.004 }, // n=248
+    { minGap: 0.20, overAskRate: 0.236, medianCloseRatio: 0.971, p75CloseRatio: 1.000, closeVsCompMid: 0.780, reachedCompMid: 0.011 }, // n=276
+    { minGap: 0.30, overAskRate: 0.258, medianCloseRatio: 0.967, p75CloseRatio: 1.000, closeVsCompMid: 0.647, reachedCompMid: 0.000 }, // n=631
+  ],
+};
+
+/** The deepest band whose minGap the listing clears, or null when it does not even reach
+ *  the shallowest. Bands are ascending, so this is a scan from the bottom. */
+export function competitiveOutcomeFor(
+  market: CompetitiveMarket,
+  gap: number,
+): CompetitiveOutcome | null {
+  let hit: CompetitiveOutcome | null = null;
+  for (const band of COMPETITIVE_GAP_RATES[market]) {
+    if (gap >= band.minGap) hit = band;
+    else break;
+  }
+  return hit;
+}
+
+/** The first pattern whose shape matches and that was measured in this market, else null. */
 export function matchCompetitivePattern(
   list: number,
   market: CompetitiveMarket,
-): { name: CompetitivePattern; rates: CompetitiveRates } | null {
+): CompetitivePattern | null {
   if (!(list > 0)) return null;
-  for (const p of COMPETITIVE_PATTERNS) {
-    if (!p.test(list)) continue;
-    const rates = p.rates[market];
-    if (rates) return { name: p.name, rates };
-  }
-  return null;
+  const hit = COMPETITIVE_PATTERNS.find((p) => p.test(list) && p.markets.includes(market));
+  return hit ? hit.name : null;
 }
 
 /** The AVM comp mid must clear the ask by at least this for a listing to count as "below
- *  comps" (matches the backtest's AVM>list margin; guards against the ~11% AVM noise). */
+ *  comps" at all. Also the shallowest band in COMPETITIVE_GAP_RATES, so the two agree. */
 export const COMPETITIVE_COMP_MARGIN = 0.05;
 
 function avmComparable(estimate: AVMResult | null): SalePriceEstimate["comparable"] {
@@ -249,9 +291,7 @@ function avmComparable(estimate: AVMResult | null): SalePriceEstimate["comparabl
 export function detectCompetitive(
   listPrice: number,
   estimate: AVMResult | null,
-  /** The listing's municipality (payload.City). Decides WHICH measured rates apply — the
-   *  same ask shape carries a 54.5% over-ask rate in the GTA and 22.5% outside it, so this
-   *  is not optional context. Null/unknown resolves to the conservative "other" bucket. */
+  /** The listing's municipality (payload.City). Selects the measured market. */
   city: string | null,
 ): SalePriceEstimate["competitive"] {
   const comparable = avmComparable(estimate);
@@ -260,15 +300,23 @@ export function detectCompetitive(
   const market = competitiveMarketOf(city);
   const pattern = matchCompetitivePattern(listPrice, market);
   if (!pattern) return null;
-  if (!(comparable.mid >= listPrice * (1 + COMPETITIVE_COMP_MARGIN))) return null;
+  // How far under comps the ask sits. Drives every number below — depth matters far more
+  // than which digit convention produced the ask.
+  const gap = comparable.mid / listPrice - 1;
+  if (gap < COMPETITIVE_COMP_MARGIN) return null;
+  const outcome = competitiveOutcomeFor(market, gap);
+  if (!outcome) return null;
   return {
-    pattern: pattern.name,
+    pattern,
     market,
     belowCompsPct: (comparable.mid - listPrice) / comparable.mid,
-    overAskRate: pattern.rates.overAskRate,
-    rangeLow: listPrice,
-    rangeHigh: comparable.low > listPrice ? comparable.low : comparable.mid,
-    medianCloseRatio: pattern.rates.medianCloseRatio,
+    overAskRate: outcome.overAskRate,
+    medianCloseRatio: outcome.medianCloseRatio,
+    likelyClose: Math.round(listPrice * outcome.medianCloseRatio),
+    rangeLow: Math.round(listPrice * outcome.medianCloseRatio),
+    rangeHigh: Math.round(listPrice * outcome.p75CloseRatio),
+    closeVsCompMid: outcome.closeVsCompMid,
+    reachedCompMid: outcome.reachedCompMid,
   };
 }
 

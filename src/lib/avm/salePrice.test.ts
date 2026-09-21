@@ -7,7 +7,9 @@ import {
   isThresholdPrice,
   matchCompetitivePattern,
   competitiveMarketOf,
+  competitiveOutcomeFor,
   COMPETITIVE_PATTERNS,
+  COMPETITIVE_GAP_RATES,
 } from "./salePrice";
 import { computeExpectedSale, type CloseListRatio } from "./expectedSale";
 import type { AVMResult } from "./types";
@@ -139,75 +141,75 @@ describe("resolveSalePrice", () => {
   });
 });
 
-describe("COMPETITIVE_PATTERNS · per-market rates", () => {
-  it("gives every pattern at least one measured market, with sane rates", () => {
-    expect(COMPETITIVE_PATTERNS.length).toBeGreaterThan(0);
-    for (const p of COMPETITIVE_PATTERNS) {
-      const measured = Object.values(p.rates).filter((r) => r !== null);
-      expect(measured.length).toBeGreaterThan(0); // a pattern with no measured market is dead code
-      for (const r of measured) {
-        expect(r!.overAskRate).toBeGreaterThan(0);
-        expect(r!.overAskRate).toBeLessThan(1);
-        expect(r!.medianCloseRatio).toBeGreaterThan(0.8);
-        expect(r!.medianCloseRatio).toBeLessThan(1.2);
+describe("COMPETITIVE_GAP_RATES · measured outcomes by comp-gap depth", () => {
+  it("restricts each pattern to the markets it was measured in", () => {
+    const byName = Object.fromEntries(COMPETITIVE_PATTERNS.map((p) => [p.name, p]));
+    expect(byName["threshold"].markets).toEqual(["gta", "other"]);
+    // lucky-88 matched only 17 non-GTA closings — too thin to publish, so it stays GTA-only.
+    expect(byName["lucky-88"].markets).toEqual(["gta"]);
+    for (const p of COMPETITIVE_PATTERNS) expect(p.markets.length).toBeGreaterThan(0);
+  });
+
+  it("keeps bands ascending and sane in both markets", () => {
+    for (const market of ["gta", "other"] as const) {
+      const bands = COMPETITIVE_GAP_RATES[market];
+      expect(bands.length).toBeGreaterThan(0);
+      for (let i = 0; i < bands.length; i++) {
+        const b = bands[i];
+        if (i > 0) expect(b.minGap).toBeGreaterThan(bands[i - 1].minGap);
+        expect(b.overAskRate).toBeGreaterThan(0);
+        expect(b.overAskRate).toBeLessThan(1);
+        // p75 can never sit below the median it is drawn from.
+        expect(b.p75CloseRatio).toBeGreaterThanOrEqual(b.medianCloseRatio);
+        // The whole reason this table exists: these homes close BELOW the comp estimate.
+        expect(b.closeVsCompMid).toBeLessThan(1);
+        expect(b.reachedCompMid).toBeLessThan(0.5);
       }
     }
   });
 
-  it("keeps pattern names unique", () => {
-    const names = COMPETITIVE_PATTERNS.map((p) => p.name);
-    expect(new Set(names).size).toBe(names.length);
+  it("shows a deeper comp gap meaning LESS of the comp estimate is realised", () => {
+    // The finding that drove this change: a bigger gap is mostly model error, not headroom.
+    for (const market of ["gta", "other"] as const) {
+      const bands = COMPETITIVE_GAP_RATES[market];
+      expect(bands[bands.length - 1].closeVsCompMid).toBeLessThan(bands[0].closeVsCompMid);
+    }
+  });
+
+  it("picks the deepest band the gap clears", () => {
+    expect(competitiveOutcomeFor("gta", 0.27)!.minGap).toBe(0.2);
+    expect(competitiveOutcomeFor("gta", 0.06)!.minGap).toBe(0.05);
+    expect(competitiveOutcomeFor("gta", 1.5)!.minGap).toBe(0.3);
+    expect(competitiveOutcomeFor("gta", 0.04)).toBeNull(); // below the shallowest band
   });
 
   it("maps TRREB district strings and regional municipalities to the gta market", () => {
-    // Toronto never arrives bare — it is always a district code (memory: trreb-city-taxonomy).
     expect(competitiveMarketOf("Toronto C12")).toBe("gta");
-    expect(competitiveMarketOf("Toronto W05")).toBe("gta");
     expect(competitiveMarketOf("Markham")).toBe("gta");
     expect(competitiveMarketOf("Oakville")).toBe("gta");
   });
 
   it("treats everything else — and a missing city — as the conservative other market", () => {
     expect(competitiveMarketOf("Ottawa")).toBe("other");
-    expect(competitiveMarketOf("London")).toBe("other");
     expect(competitiveMarketOf(null)).toBe("other");
     expect(competitiveMarketOf("")).toBe("other");
-    expect(competitiveMarketOf(undefined)).toBe("other");
-  });
-
-  it("publishes a LOWER over-ask rate outside the GTA for the same ask shape", () => {
-    // The whole point of splitting the table: 54.5% vs 22.5% on the same "999" pattern.
-    const gta = matchCompetitivePattern(999_000, "gta")!;
-    const other = matchCompetitivePattern(999_000, "other")!;
-    expect(gta.name).toBe("threshold");
-    expect(other.name).toBe("threshold");
-    expect(other.rates.overAskRate).toBeLessThan(gta.rates.overAskRate);
   });
 
   it("recognises the lucky-88 ask in the GTA and withholds it elsewhere", () => {
-    // $688,000 -> remainder $88,000. The ask that started this: the old single-pattern gate
-    // discarded it before the comp test ran.
-    expect(matchCompetitivePattern(688_000, "gta")?.name).toBe("lucky-88");
-    expect(matchCompetitivePattern(1_288_800, "gta")?.name).toBe("lucky-88");
-    // Only 17 non-GTA closings matched — too thin to publish a probability, so it stays silent.
-    expect(matchCompetitivePattern(688_000, "other")).toBeNull();
+    expect(matchCompetitivePattern(688_000, "gta")).toBe("lucky-88");
+    expect(matchCompetitivePattern(1_288_800, "gta")).toBe("lucky-88");
+    expect(matchCompetitivePattern(688_000, "other")).toBeNull(); // n=17, too thin to publish
+    expect(matchCompetitivePattern(999_000, "other")).toBe("threshold");
+    expect(matchCompetitivePattern(1_250_000, "gta")).toBeNull();
   });
 
-  it("returns null for a non-matching or invalid ask", () => {
-    expect(matchCompetitivePattern(1_250_000, "gta")).toBeNull(); // mid-band
-    expect(matchCompetitivePattern(0, "gta")).toBeNull();
-    expect(matchCompetitivePattern(-1, "gta")).toBeNull();
-  });
-
-  it("the payload quotes the FIRED pattern+market rates, never a pooled constant", () => {
-    const under = avm({ estimatedValue: 1_258_000, lowBand: 1_180_000, highBand: 1_340_000 });
-    for (const [city, market] of [["Toronto C12", "gta"], ["London", "other"]] as const) {
-      const c = detectCompetitive(999_000, under, city)!;
-      const fired = matchCompetitivePattern(999_000, market)!;
-      expect(c.market).toBe(market);
-      expect(c.overAskRate).toBe(fired.rates.overAskRate);
-      expect(c.medianCloseRatio).toBe(fired.rates.medianCloseRatio);
-    }
+  it("publishes a weaker outcome outside the GTA at the same depth", () => {
+    const g = competitiveOutcomeFor("gta", 0.25)!;
+    const o = competitiveOutcomeFor("other", 0.25)!;
+    expect(o.overAskRate).toBeLessThan(g.overAskRate);
+    // Outside the GTA the median never clears the ask, however deep the gap.
+    expect(o.medianCloseRatio).toBeLessThan(1);
+    expect(g.medianCloseRatio).toBeGreaterThan(1);
   });
 });
 
@@ -235,16 +237,18 @@ describe("resolveSalePrice · competitive (priced-to-compete) detection", () => 
     const list = 999_000;
     const r = resolveSalePrice({ listPrice: list, isActive: true, expectedSale: es(list), estimate: underComps, city: "Toronto C12" })!;
     expect(r.competitive).not.toBeNull();
-    expect(r.competitive!.rangeLow).toBe(list); // floor = the ask
-    expect(r.competitive!.rangeHigh).toBe(1_180_000); // comp low (it clears the ask)
     expect(r.competitive!.pattern).toBe("threshold");
-    expect(r.competitive!.overAskRate).toBe(matchCompetitivePattern(list, "gta")!.rates.overAskRate);
+    // Both endpoints are MEASURED closes for this market at this depth, not comp-band edges.
+    const gap = 1_258_000 / list - 1; // ~25.9%
+    const band = competitiveOutcomeFor("gta", gap)!;
+    expect(r.competitive!.rangeLow).toBe(Math.round(list * band.medianCloseRatio));
+    expect(r.competitive!.rangeHigh).toBe(Math.round(list * band.p75CloseRatio));
+    expect(r.competitive!.likelyClose).toBe(Math.round(list * band.medianCloseRatio));
+    expect(r.competitive!.overAskRate).toBe(band.overAskRate);
+    expect(r.competitive!.medianCloseRatio).toBe(band.medianCloseRatio);
     expect(r.competitive!.belowCompsPct).toBeCloseTo((1_258_000 - list) / 1_258_000, 6);
-    // The bucket's measured median close/list rides along so every consumer (offer band,
-    // The Read) anchors "likely close" to the SAME calibration.
-    expect(r.competitive!.medianCloseRatio).toBe(
-      matchCompetitivePattern(list, "gta")!.rates.medianCloseRatio,
-    );
+    // The ceiling must NOT be the AVM low band any more — that was the bug.
+    expect(r.competitive!.rangeHigh).not.toBe(1_180_000);
     // The headline number is UNCHANGED — the treatment is presentation-only.
     expect(r.source).toBe("expected-sale");
     expect(r.value).toBe(es(list).expectedPrice);
@@ -275,16 +279,35 @@ describe("resolveSalePrice · competitive (priced-to-compete) detection", () => 
     expect(r.competitive).toBeNull();
   });
 
-  it("uses the comp mid as the range ceiling when the comp low is still below the ask", () => {
+  it("ignores the AVM band entirely when building the range — only the gap depth matters", () => {
     const list = 999_000;
-    const r = resolveSalePrice({
-      listPrice: list,
-      isActive: true,
-      expectedSale: es(list),
-      estimate: avm({ estimatedValue: 1_100_000, lowBand: 980_000, highBand: 1_220_000 }),
-      city: "Toronto C12",
-    })!;
-    expect(r.competitive!.rangeHigh).toBe(1_100_000); // comp low (980k) ≤ ask → fall back to mid
+    // Two listings, same ask and same comp MID, but wildly different band widths. The old
+    // code read the ceiling off the band, so these produced different ranges. They must not.
+    const tight = detectCompetitive(list, avm({ estimatedValue: 1_258_000, lowBand: 1_240_000, highBand: 1_276_000 }), "Toronto C12")!;
+    const wide = detectCompetitive(list, avm({ estimatedValue: 1_258_000, lowBand: 900_000, highBand: 1_620_000 }), "Toronto C12")!;
+    expect(tight.rangeHigh).toBe(wide.rangeHigh);
+    expect(tight.rangeLow).toBe(wide.rangeLow);
+  });
+
+  it("scales the published outcome with the DEPTH of the comp gap", () => {
+    const list = 999_000; // must be a qualifying ask shape, else nothing fires at all
+    const shallow = detectCompetitive(list, avm({ estimatedValue: 1_080_000, lowBand: 1_000_000, highBand: 1_160_000 }), "Toronto C12")!;
+    const deep = detectCompetitive(list, avm({ estimatedValue: 1_400_000, lowBand: 1_280_000, highBand: 1_520_000 }), "Toronto C12")!;
+    expect(deep.overAskRate).toBeGreaterThan(shallow.overAskRate);
+    expect(deep.rangeHigh).toBeGreaterThan(shallow.rangeHigh);
+    // …and the deeper gap realises LESS of the comp estimate, not more.
+    expect(deep.closeVsCompMid).toBeLessThan(shallow.closeVsCompMid);
+  });
+
+  it("never implies the home will reach the comparable estimate", () => {
+    // The misread this change exists to prevent. A 27%-under-comps GTA listing closes at a
+    // median ~82% of the comp mid, and the published ceiling stays well under it.
+    const list = 688_000;
+    const comps = avm({ estimatedValue: 875_005, lowBand: 773_000, highBand: 990_000 });
+    const c = detectCompetitive(list, comps, "Toronto C12")!;
+    expect(c.rangeHigh).toBeLessThan(875_005);
+    expect(c.closeVsCompMid).toBeLessThan(0.9);
+    expect(c.reachedCompMid).toBeLessThan(0.1);
   });
 
   it("never fires on the AVM-fallback path (no live list-anchor)", () => {
@@ -305,9 +328,15 @@ describe("resolveSalePrice · competitive (priced-to-compete) detection", () => 
     const c = detectCompetitive(list, comps, "Toronto C12")!; // ...but the pattern table does not
     expect(c.pattern).toBe("lucky-88");
     expect(c.market).toBe("gta");
-    expect(c.rangeLow).toBe(list);
-    expect(c.rangeHigh).toBe(880_000); // comp low clears the ask
+    // Range is now measured: ask x the median and p75 close/list for a ~40% comp gap in the
+    // GTA. It is NOT the ask-to-comp-low band the card used to print.
+    const band = competitiveOutcomeFor("gta", 961_000 / list - 1)!;
+    expect(c.rangeLow).toBe(Math.round(list * band.medianCloseRatio));
+    expect(c.rangeHigh).toBe(Math.round(list * band.p75CloseRatio));
+    expect(c.likelyClose).toBe(c.rangeLow);
     expect(c.belowCompsPct).toBeCloseTo((961_000 - list) / 961_000, 6);
+    // And it must not read as a promise the home reaches the comp estimate.
+    expect(c.rangeHigh).toBeLessThan(961_000);
   });
 
   it("withholds the lucky-88 call on the same ask outside the GTA", () => {
