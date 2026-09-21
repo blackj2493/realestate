@@ -81,10 +81,12 @@ import { findRelists, type RelistTargetFull } from '@/lib/watchlist/relistLookup
 import { addressesMatch, parseAddress } from '@/lib/watchlist/disposition';
 import { unsubscribeUrl, marketingUnsubscribeUrl, emailActionUrl } from '@/lib/alerts/unsubscribe';
 import { undeliverableReason } from '@/lib/email/deliverability';
+import { digestCadence } from '@/lib/email/digestCadence';
 import { SENDERS } from '@/lib/alerts/senders';
 import {
   alertsFrequency,
   canSendAlerts,
+  chosenAlertsFrequency,
   digestDueToday,
   DIGEST_MESSAGE_ID,
   type EmailPrefsRow,
@@ -782,6 +784,56 @@ async function readLastDigestAt(
 }
 
 /**
+ * When each of these users last WROTE their workspace — the dormancy signal behind the
+ * derived cadence (src/lib/email/digestCadence.ts).
+ *
+ * `dashboard_prefs.updated_at`, not `config.lastVisitAt`. Measured 2026-09-21, the two
+ * separate very differently: by updated_at the opt-out rate runs 8.5% inside 7 days, 22.9%
+ * at 7-30 days and 30.3% past 30, while "has a lastVisitAt stamp at all" barely separates
+ * anything (18.9% against 16.7%). Recency predicts churn; having ever visited does not.
+ *
+ * RETURNS NULL WHEN THE TABLE CANNOT BE READ, and the caller then derives nothing tonight.
+ * This is the one input where a missing value means "dormant", so an empty map on failure
+ * would silently cap every single-unfiltered-area reader at once, on the strength of a
+ * network blip. Null keeps the whole run on stored behaviour instead — the same fail-open
+ * posture as canSendAlerts, and for the same reason: never let an unreadable table decide
+ * that somebody hears from us less.
+ *
+ * A missing ROW inside a successful read is different, and genuinely does mean dormant:
+ * every signup since PR #511 writes one at terms acceptance, so no row means an account
+ * that predates it and has not been back since.
+ */
+async function readWorkspaceTouchedAt(
+  supabase: ReturnType<typeof getServiceRoleClient>,
+  userIds: string[]
+): Promise<Map<string, number> | null> {
+  const out = new Map<string, number>();
+  if (!userIds.length) return out;
+  const CHUNK = 400; // stays clear of PostgREST's 1000-row default cap
+  for (let i = 0; i < userIds.length; i += CHUNK) {
+    try {
+      const { data, error } = await supabase
+        .from('dashboard_prefs')
+        .select('user_id, updated_at')
+        .in('user_id', userIds.slice(i, i + CHUNK));
+      if (error) {
+        console.warn(`[alerts] dashboard_prefs read failed (${error.message}) — no cadence derived tonight`);
+        return null;
+      }
+      for (const row of (data ?? []) as Array<{ user_id: string; updated_at: string | null }>) {
+        const t = row.updated_at ? Date.parse(row.updated_at) : NaN;
+        if (Number.isFinite(t)) out.set(row.user_id, t);
+      }
+    } catch (e) {
+      // supabase-js REJECTS on a dropped fetch instead of returning { error }.
+      console.warn('[alerts] dashboard_prefs read threw — no cadence derived tonight:', e instanceof Error ? e.message : e);
+      return null;
+    }
+  }
+  return out;
+}
+
+/**
  * Record that the nightly digest reached these addresses, so the weekly Data Drop can
  * stand down for anyone it already emailed today (sendPolicy.canSendDataDrop).
  *
@@ -1393,6 +1445,23 @@ async function main() {
   // beyond the preference itself.
   const lastDigestAt = await readLastDigestAt(supabase, [...emails.values()]);
 
+  // ── Inputs for the derived cadence (src/lib/email/digestCadence.ts) ────────
+  // Counted over EVERY alert-enabled area the reader owns, not the ones that matched
+  // tonight: "how many areas did this person save" is the engagement signal, and a quiet
+  // night must not make a two-area reader look like a one-area reader.
+  //
+  // `anyFiltered` is read from the same builder that produces the digest's filterLabel,
+  // never from `alert_scope`. 196 of 397 enabled rows carry scope 'filtered' over a DEFAULT
+  // lens, which runs the identical query to 'all' — the column cannot answer this.
+  const areaStats = new Map<string, { count: number; anyFiltered: boolean }>();
+  for (const b of bubbleData ?? []) {
+    const s = areaStats.get(b.user_id) ?? { count: 0, anyFiltered: false };
+    s.count++;
+    if (b.alert_scope === 'filtered' && bubbleAlertFilter(b.filters).label) s.anyFiltered = true;
+    areaStats.set(b.user_id, s);
+  }
+  const workspaceTouchedAt = await readWorkspaceTouchedAt(supabase, [...userIds]);
+
   const sentUsers = new Set<string>();
   let emailed = 0;
   let failed = 0;
@@ -1404,6 +1473,9 @@ async function main() {
   // Weekly readers whose week is not up. Counted apart from `suppressed` because the two
   // mean opposite things about a watermark — see the gate below.
   let deferred = 0;
+  // Readers the cadence rule moved to weekly tonight. Printed so the operator can watch the
+  // size of that population rather than discover it months later.
+  let derivedWeekly = 0;
   // Users who actually had a renderable digest tonight. Counted HERE, not as userIds.size,
   // so the canary's invariant (sent + suppressed + fell-through = due) is exact: a user who
   // reaches the map but renders to nothing was never owed an email.
@@ -1448,7 +1520,24 @@ async function main() {
     // sentUsers — shouldApply() reads that set, so their watermark and notified_keys are
     // HELD and the week accumulates, instead of the weekly email carrying whatever
     // happened to land on day seven.
-    const frequency = alertsFrequency(prefsByUser.get(userId));
+    //
+    // The cadence is the reader's if they set one, and otherwise DERIVED: one saved area,
+    // never narrowed, workspace untouched for a week is the cell that produces 45% of all
+    // unsubscribes (27.8% of 97 users). See src/lib/email/digestCadence.ts for the numbers.
+    // `workspaceTouchedAt === null` means the table could not be read, so nothing is
+    // derived tonight and everyone keeps their stored cadence.
+    const stats = areaStats.get(userId) ?? { count: 0, anyFiltered: false };
+    const touchedAt = workspaceTouchedAt?.get(userId) ?? null;
+    const cadence = workspaceTouchedAt
+      ? digestCadence({
+          areaCount: stats.count,
+          anyFilteredArea: stats.anyFiltered,
+          workspaceAgeMs: touchedAt === null ? null : runStartMs - touchedAt,
+          chosen: chosenAlertsFrequency(prefsByUser.get(userId)),
+        })
+      : { frequency: alertsFrequency(prefsByUser.get(userId)), reason: 'chosen' as const, derived: false };
+    const frequency = cadence.frequency;
+    if (cadence.derived) derivedWeekly++;
     if (
       !digestDueToday({
         frequency,
@@ -1467,6 +1556,11 @@ async function main() {
       weeklyUrl: frequency === 'weekly' ? undefined : emailActionUrl(email, 'weekly', SITE),
       dailyUrl: frequency === 'weekly' ? emailActionUrl(email, 'daily', SITE) : undefined,
       pauseUrl: emailActionUrl(email, 'pause30', SITE),
+      // Migration 144 refused to flip anyone server-side because "a change the user did not
+      // ask for and cannot see reads as broken delivery, not as courtesy". This flag is how
+      // that constraint is met: a derived weekly SAYS so, in the email, above the footer,
+      // next to the one click that undoes it.
+      cadenceIsDerived: cadence.derived,
     });
     const out = await pacer.send({
       kind: 'watchlist-digest',
@@ -1542,7 +1636,8 @@ async function main() {
   console.log(
     `[alerts] Done. ${watch.length} watched, ${userIds.size} users with events, ${due} owed a digest, ` +
       `${emailed} emails sent, ${notSent} NOT SENT, ${suppressed} suppressed on consent, ` +
-      `${undeliverableSkipped} undeliverable, ${deferred} held for a weekly send. ` +
+      `${undeliverableSkipped} undeliverable, ${deferred} held for a weekly send ` +
+      `(${derivedWeekly} on a derived cadence). ` +
       `Listing-alerts: ${la.emailed} emailed, ${la.failed} not sent, ${la.baselined} baselined, ${la.similarMatched} similar matches. ` +
       `Address-watches: ${aw.emailed} emailed, ${aw.failed} not sent, ${aw.baselined} baselined.`
   );

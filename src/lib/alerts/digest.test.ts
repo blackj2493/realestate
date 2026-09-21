@@ -376,3 +376,58 @@ describe("renderAlertsDigest — the filter nudge", () => {
     expect(html).not.toContain("You get every new home");
   });
 });
+
+/**
+ * Migration 144 refused to move anybody server-side because "a change the user did not ask
+ * for and cannot see reads as broken delivery, not as courtesy". digestCadence.ts does move
+ * people — so these are the tests that hold up the other half of that bargain.
+ */
+describe("a derived weekly cadence explains itself", () => {
+  const actions = {
+    dailyUrl: "https://x.test/daily",
+    pauseUrl: "https://x.test/pause",
+    cadenceIsDerived: true,
+  };
+
+  it("says what changed and why, in both html and text", () => {
+    const { html, text } = renderAlertsDigest(payload({ drops: [baseDrop] }), undefined, actions);
+    expect(html).toContain("This is your weekly email.");
+    expect(html).toContain("have not set any filters on it");
+    expect(text).toContain("This is your weekly email.");
+  });
+
+  it("puts the undo one click away, beside the reason", () => {
+    const { html, text } = renderAlertsDigest(payload({ drops: [baseDrop] }), undefined, actions);
+    expect(html).toContain("Email me every night instead");
+    expect(html).toContain(actions.dailyUrl);
+    expect(text).toContain(`Email me every night instead: ${actions.dailyUrl}`);
+  });
+
+  it("does not offer the same link twice", () => {
+    // The control strip's own "Go back to a nightly email" would be a second link doing the
+    // identical job; the one carrying the explanation is the one that stays.
+    const { html, text } = renderAlertsDigest(payload({ drops: [baseDrop] }), undefined, actions);
+    expect(html).not.toContain("Go back to a nightly email");
+    expect(text).not.toContain("Go back to a nightly email");
+    expect(html.match(/x\.test\/daily/g)).toHaveLength(1);
+  });
+
+  it("stays silent for a reader who chose weekly themselves", () => {
+    const { html, text } = renderAlertsDigest(payload({ drops: [baseDrop] }), undefined, {
+      ...actions,
+      cadenceIsDerived: false,
+    });
+    expect(html).not.toContain("This is your weekly email.");
+    expect(text).not.toContain("This is your weekly email.");
+    // …and they get the ordinary control-strip undo instead.
+    expect(html).toContain("Go back to a nightly email");
+  });
+
+  it("never appears on a nightly digest", () => {
+    const { html } = renderAlertsDigest(payload({ drops: [baseDrop] }), undefined, {
+      weeklyUrl: "https://x.test/weekly",
+      pauseUrl: "https://x.test/pause",
+    });
+    expect(html).not.toContain("This is your weekly email.");
+  });
+});

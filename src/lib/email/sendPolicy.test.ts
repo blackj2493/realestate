@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   alertsFrequency,
+  chosenAlertsFrequency,
   digestDueToday,
   DIGEST_WEEKLY_DAYS,
   DIGEST_WEEKLY_SLACK_MS,
@@ -350,5 +351,51 @@ describe("digestDueToday", () => {
     expect(digestDueToday({ frequency: "weekly", lastSentIso: justShy, now })).toBe(true);
     const wellShy = new Date(now - (DIGEST_WEEKLY_DAYS * DAY - DIGEST_WEEKLY_SLACK_MS - 60_000)).toISOString();
     expect(digestDueToday({ frequency: "weekly", lastSentIso: wellShy, now })).toBe(false);
+  });
+});
+
+/**
+ * 144's column is `not null default 'daily'`, so the stored VALUE cannot say whether a
+ * person decided it. digestCadence.ts depends on telling those apart — it must never re-cap
+ * a reader who already pressed "Go back to a nightly email".
+ */
+describe("chosenAlertsFrequency", () => {
+  it("is null when the reader has no row at all", () => {
+    expect(chosenAlertsFrequency(null)).toBeNull();
+    expect(chosenAlertsFrequency(undefined)).toBeNull();
+    expect(chosenAlertsFrequency({})).toBeNull();
+  });
+
+  it("treats a bare 'daily' as nobody's decision — that is 144's column default", () => {
+    // The shape a pause click leaves behind: two of the three production rows on 2026-09-21.
+    expect(chosenAlertsFrequency({ alerts_frequency: "daily", pause_until: "2026-10-14T00:00:00Z" })).toBeNull();
+  });
+
+  it("honours 'daily' once migration 146's stamp is behind it", () => {
+    expect(
+      chosenAlertsFrequency({ alerts_frequency: "daily", alerts_frequency_chosen_at: "2026-09-20T12:00:00Z" })
+    ).toBe("daily");
+  });
+
+  it("ignores an unparseable stamp rather than inventing a decision", () => {
+    expect(
+      chosenAlertsFrequency({ alerts_frequency: "daily", alerts_frequency_chosen_at: "not a date" })
+    ).toBeNull();
+  });
+
+  it("counts 'weekly' as chosen with or without the stamp", () => {
+    // Nothing writes 'weekly' except the reader's own one-click link, so an unapplied 146
+    // can never cause us to override somebody's weekly.
+    expect(chosenAlertsFrequency({ alerts_frequency: "weekly" })).toBe("weekly");
+    expect(
+      chosenAlertsFrequency({ alerts_frequency: "weekly", alerts_frequency_chosen_at: "2026-09-20T12:00:00Z" })
+    ).toBe("weekly");
+  });
+
+  it("still reports what is STORED through alertsFrequency", () => {
+    // The two functions answer different questions and must not collapse into one.
+    const prefs = { alerts_frequency: "daily" as const };
+    expect(alertsFrequency(prefs)).toBe("daily");
+    expect(chosenAlertsFrequency(prefs)).toBeNull();
   });
 });
