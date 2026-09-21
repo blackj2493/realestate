@@ -21,23 +21,58 @@
  * shouts about every wiggle trains you to ignore it. So every headline number carries the
  * trailing 7-day average beside it, deltas are only called out past MIN_SIGNAL, and the
  * attention block stays empty on an ordinary day.
+ *
+ * ── A NAME MUST MATCH ITS QUERY (audit 2026-09-20) ─────────────────────────────
+ * The first build of this report was arithmetically correct and still misled, because
+ * three labels described something the SQL did not measure. Every rename below exists to
+ * close that gap, and each field's comment states the limit of what it can see. If you add
+ * a field, name it after the query you wrote, not after the thing you wish you could see.
  */
 
 export interface DailyCounts {
-  /** Distinct anonymous viewer ids seen in listing_views. */
-  visitors: number;
+  /** Distinct browser ids that opened a listing page they had NOT opened before.
+   *
+   *  NOT site visitors, and the difference is large. `listing_views` is written only by
+   *  SocialProofBar, which mounts on a listing DETAIL page, so the homepage, search, the
+   *  map, /analytics and /data contribute nothing. The write upserts on
+   *  (listing_key, viewer_id), so a return to the same listing never creates a second row
+   *  — over 2026-09-12..19, 1,929 of 1,971 ids appeared on exactly one day. `viewer_id` is
+   *  a localStorage UUID, so it counts browsers, and a cleared browser is a new one. The
+   *  row carries no referrer and no user agent, so a crawler that runs JS is
+   *  indistinguishable from a person. */
+  listingViewers: number;
   /** New real accounts (QA excluded). */
   signups: number;
-  /** Distinct users with a session that day, excluding that day's signups. */
+  /** Pre-existing accounts that left ANY signed-in trace that day: a gated read, a save,
+   *  an activation event, or a login. A floor, not a true count — a signed-in user who
+   *  browses without touching gated data leaves no server-side trace at all. */
   returning: number;
+  /** The subset of `returning` that re-authenticated. Supabase writes `auth.sessions` only
+   *  at login, never on a token refresh, so this alone under-reports by ~10x (2 against 23
+   *  on 2026-09-19). It was the whole of "Returning" until 2026-09-20; it survives only to
+   *  show that gap. */
+  returningLogins: number;
   /** profiles.marketing_opt_out_at fell on this day. */
   unsubscribes: number;
-  /** Rows added to watchlist + market_bubbles — the assets that make a user emailable. */
-  assetsCreated: number;
-  /** New rows in terminal_applications. */
-  applications: number;
+  /** Saves the user CHOSE to make: watchlist rows, plus market bubbles that the signup
+   *  flow did not create. Signup requires an area, so every new account is handed a bubble
+   *  within seconds; counting those made this a second signup counter (22 reported against
+   *  ~5 real on 2026-09-19).
+   *
+   *  Still a SNAPSHOT, not a log: an unsave deletes the row, so a past day's figure shrinks
+   *  after the fact. Never treat the trailing average as a fixed historical series. */
+  assetsSaved: number;
+  /** Bubbles the signup flow created for a brand-new account. Reported beside
+   *  `assetsSaved`, never added to it — it tracks signups, not engagement. */
+  assetsAtSignup: number;
+  /** /apply submissions from that day whose email STILL has no account. The genuine
+   *  abandoned signup, and the only part of that table worth acting on. */
+  abandonedSignups: number;
   /** Rows in vow_access_log — gated-data engagement. */
   vowReads: number;
+  /** Distinct users behind `vowReads`. 205 reads by 35 people is a different day from
+   *  205 reads by 205 people, and the read count alone cannot tell them apart. */
+  vowReaders: number;
 }
 
 export interface EmailHealth {
@@ -48,9 +83,10 @@ export interface EmailHealth {
   sendFailures: number;
 }
 
-export interface LeadRow {
+/** One named human, for a list the operator reads by eye. */
+export interface PersonRow {
   createdAt: string;
-  kind: string;
+  /** "Name · email", or the email alone when no name was captured. */
   who: string;
   detail?: string;
 }
@@ -63,14 +99,21 @@ export interface DailyMetricsInput {
   prior7: DailyCounts;
   activation: Array<{ kind: string; count: number }>;
   email: EmailHealth;
-  leads: LeadRow[];
+  /** Everyone who created an account on the day. They finished; they are not work. */
+  signups: PersonRow[];
+  /** Everyone who started /apply on the day and still has no account. These are work. */
+  abandoned: PersonRow[];
   /** Whole-base context, not a daily figure. */
   totals: {
     users: number;
     optedOut: number;
     /** Users with at least one watchlist row or market bubble. The rest receive NO email
-     *  after the onboarding drip expires (~day 30), which is the structural retention hole. */
+     *  after the onboarding drip expires (~day 30), which is the structural retention hole.
+     *  A signup-created bubble counts here ON PURPOSE: it does make the user emailable, so
+     *  for this question it is not noise. */
     withAnyAsset: number;
+    /** Every unconverted /apply email, not only the day's. */
+    abandonedAllTime: number;
   };
 }
 
@@ -118,14 +161,23 @@ export interface Attention {
  *
  * Ordered by how expensive it is to ignore: money and consent first, then delivery, then
  * growth.
+ *
+ * WHY THE FIRST RULE CHANGED (2026-09-20): completed applications used to head this list
+ * as "N new applications to work". They were never work. /apply writes its row seconds
+ * BEFORE the account (2-12s on 2026-09-19), so every name in that alert had already
+ * finished signing up, and the alert fired on every day with traffic. The rule now fires on
+ * the opposite case, which is rare (9 in the first four months) and genuinely actionable.
  */
 export function attention(m: DailyMetricsInput): Attention[] {
   const out: Attention[] = [];
 
-  if (m.leads.length > 0) {
+  // Someone filled the form, gave you their email, and never got an account. The only lead
+  // in this report you can still win back.
+  if (m.abandoned.length > 0) {
+    const n = m.abandoned.length;
     out.push({
       severity: "alert",
-      text: `${m.leads.length} new application${m.leads.length === 1 ? "" : "s"} to work — listed below.`,
+      text: `${n} ${n === 1 ? "person" : "people"} started signup and still ${n === 1 ? "has" : "have"} no account — listed below. Reach out, or check the signup path.`,
     });
   }
 
@@ -149,17 +201,17 @@ export function attention(m: DailyMetricsInput): Attention[] {
 
   // A digest that sends to nobody on a day with activity is the selector breaking, which
   // looks identical to a quiet night unless something says so.
-  if (m.email.digestSent === 0 && m.today.assetsCreated + m.totals.withAnyAsset > 0) {
+  if (m.email.digestSent === 0 && m.today.assetsSaved + m.totals.withAnyAsset > 0) {
     out.push({
       severity: "watch",
       text: "The nightly digest sent 0 emails. Expected on a genuinely quiet night — suspicious two nights running.",
     });
   }
 
-  if (m.today.signups === 0 && m.today.visitors >= 20) {
+  if (m.today.signups === 0 && m.today.listingViewers >= 20) {
     out.push({
       severity: "watch",
-      text: `${m.today.visitors} visitors and 0 signups. Worth checking the signup path still works.`,
+      text: `${m.today.listingViewers} listing viewers and 0 signups. Worth checking the signup path still works.`,
     });
   }
 
@@ -174,10 +226,13 @@ export function attention(m: DailyMetricsInput): Attention[] {
   return out;
 }
 
-/** One-line summary for the subject line: the two numbers worth seeing on a phone. */
+/** One-line summary for the subject line: the numbers worth seeing on a phone. */
 export function subjectLine(m: DailyMetricsInput): string {
-  const bits = [`${m.today.signups} signup${m.today.signups === 1 ? "" : "s"}`, `${m.today.visitors} visitors`];
-  if (m.leads.length) bits.unshift(`${m.leads.length} lead${m.leads.length === 1 ? "" : "s"}`);
+  const bits = [
+    `${m.today.signups} signup${m.today.signups === 1 ? "" : "s"}`,
+    `${m.today.listingViewers} viewers`,
+  ];
+  if (m.abandoned.length) bits.unshift(`${m.abandoned.length} unfinished`);
   if (m.today.unsubscribes) bits.push(`${m.today.unsubscribes} unsub`);
   return `${m.day} · ${bits.join(" · ")}`;
 }

@@ -2,13 +2,16 @@ import { describe, it, expect } from "vitest";
 import { delta, attention, subjectLine, pct, round1, type DailyMetricsInput, type DailyCounts } from "./dailyMetrics";
 
 const counts = (o: Partial<DailyCounts> = {}): DailyCounts => ({
-  visitors: 40,
+  listingViewers: 40,
   signups: 5,
-  returning: 3,
+  returning: 20,
+  returningLogins: 2,
   unsubscribes: 0,
-  assetsCreated: 4,
-  applications: 0,
+  assetsSaved: 4,
+  assetsAtSignup: 5,
+  abandonedSignups: 0,
   vowReads: 100,
+  vowReaders: 18,
   ...o,
 });
 
@@ -18,8 +21,15 @@ const model = (o: Partial<DailyMetricsInput> = {}): DailyMetricsInput => ({
   prior7: counts(),
   activation: [],
   email: { digestSent: 120, digestFailed: 0, digestSuppressed: 10, sendFailures: 0 },
-  leads: [],
-  totals: { users: 391, optedOut: 26, withAnyAsset: 300 },
+  signups: [],
+  abandoned: [],
+  totals: { users: 391, optedOut: 26, withAnyAsset: 300, abandonedAllTime: 9 },
+  ...o,
+});
+
+const person = (o: Partial<DailyMetricsInput["abandoned"][number]> = {}) => ({
+  createdAt: "2026-09-05T18:30:00Z",
+  who: "A Person · a@example.com",
   ...o,
 });
 
@@ -53,10 +63,24 @@ describe("attention", () => {
     expect(attention(model())).toEqual([]);
   });
 
-  it("leads with applications to work", () => {
-    const a = attention(model({ leads: [{ createdAt: "2026-09-05T14:00:00Z", kind: "application", who: "A" }] }));
+  it("stays silent on a day of completed signups, however many there are", () => {
+    // The regression this rewrite exists to prevent. /apply writes its row 2-12 seconds
+    // BEFORE the account, so the old "N new applications to work" alert fired on people
+    // who had already finished — every single day with traffic.
+    const a = attention(model({ signups: [person(), person(), person(), person(), person()] }));
+    expect(a).toEqual([]);
+  });
+
+  it("leads with people who started signup and never finished", () => {
+    const a = attention(model({ abandoned: [person()] }));
     expect(a[0]).toMatchObject({ severity: "alert" });
-    expect(a[0].text).toContain("1 new application");
+    expect(a[0].text).toContain("1 person started signup");
+  });
+
+  it("pluralises the unfinished-signup alert", () => {
+    const a = attention(model({ abandoned: [person(), person()] }));
+    expect(a[0].text).toContain("2 people started signup");
+    expect(a[0].text).toContain("have no account");
   });
 
   it("flags an unsubscribe spike, but not a normal trickle", () => {
@@ -76,26 +100,32 @@ describe("attention", () => {
   });
 
   it("flags traffic with no signups, but not a quiet day", () => {
-    expect(attention(model({ today: counts({ visitors: 5, signups: 0 }) })).some((x) => x.text.includes("0 signups"))).toBe(false);
-    expect(attention(model({ today: counts({ visitors: 40, signups: 0 }) })).some((x) => x.text.includes("0 signups"))).toBe(true);
+    expect(
+      attention(model({ today: counts({ listingViewers: 5, signups: 0 }) })).some((x) => x.text.includes("0 signups"))
+    ).toBe(false);
+    expect(
+      attention(model({ today: counts({ listingViewers: 40, signups: 0 }) })).some((x) => x.text.includes("0 signups"))
+    ).toBe(true);
   });
 
   it("flags the structural hole: most of the base has saved nothing", () => {
-    const a = attention(model({ totals: { users: 391, optedOut: 26, withAnyAsset: 100 } }));
+    const a = attention(model({ totals: { users: 391, optedOut: 26, withAnyAsset: 100, abandonedAllTime: 9 } }));
     expect(a.some((x) => x.text.includes("saved nothing"))).toBe(true);
   });
 });
 
 describe("subjectLine", () => {
   it("puts the two numbers worth seeing on a phone in the subject", () => {
-    expect(subjectLine(model())).toBe("2026-09-05 · 5 signups · 40 visitors");
+    expect(subjectLine(model())).toBe("2026-09-05 · 5 signups · 40 viewers");
   });
 
-  it("promotes leads and appends unsubscribes when they exist", () => {
-    const s = subjectLine(
-      model({ today: counts({ unsubscribes: 2 }), leads: [{ createdAt: "x", kind: "k", who: "w" }] })
-    );
-    expect(s).toBe("2026-09-05 · 1 lead · 5 signups · 40 visitors · 2 unsub");
+  it("promotes unfinished signups and appends unsubscribes when they exist", () => {
+    const s = subjectLine(model({ today: counts({ unsubscribes: 2 }), abandoned: [person()] }));
+    expect(s).toBe("2026-09-05 · 1 unfinished · 5 signups · 40 viewers · 2 unsub");
+  });
+
+  it("does not promote completed signups — they are not work", () => {
+    expect(subjectLine(model({ signups: [person(), person()] }))).toBe("2026-09-05 · 5 signups · 40 viewers");
   });
 
   it("singularises correctly", () => {

@@ -1,11 +1,11 @@
 /**
- * The morning operator report — how many signed up, how many looked without signing up,
- * how many left, and whether the mail actually went out.
+ * The morning operator report — how many signed up, how many came back, how many left,
+ * and whether the mail actually went out.
  *
- * WHY DIRECT pg AND NOT PostgREST: the two numbers the report is built on live in the
- * `auth` schema (`auth.users` for signups, `auth.sessions` for returning users), which
- * PostgREST does not expose. Same connection style as the other admin readers, including
- * the pooler-cert workaround.
+ * WHY DIRECT pg AND NOT PostgREST: the numbers this report is built on live in the `auth`
+ * schema (`auth.users` for signups, `auth.sessions` for logins), which PostgREST does not
+ * expose. Same connection style as the other admin readers, including the pooler-cert
+ * workaround.
  *
  * READ-ONLY BY CONSTRUCTION: the session is opened with
  * `default_transaction_read_only = on`, so a future edit to a query here cannot write.
@@ -18,6 +18,24 @@
  * aborts the run with a non-zero exit rather than mailing a report full of zeros that
  * looks like a bad day.
  *
+ * ── WHAT THE 2026-09-20 AUDIT CHANGED ──────────────────────────────────────────
+ * Every figure the old report printed reproduced exactly; three of them measured
+ * something narrower than their label claimed, so the queries — not the arithmetic —
+ * moved:
+ *
+ *   1. RETURNING was `auth.sessions` alone. Supabase writes a session row at LOGIN and
+ *      nothing on a token refresh, so a user who came back with a live session was
+ *      invisible. It read 2 on 2026-09-19; the real figure was 23. It is now a union of
+ *      five signed-in traces, with the old login-only number kept beside it.
+ *   2. AREAS + LISTINGS SAVED added every market bubble. Signup requires an area, so the
+ *      app creates one within seconds of each new account — 17 of the 18 bubbles on
+ *      2026-09-19. The headline therefore rose whenever signups rose. Signup-created
+ *      bubbles are now split out and reported separately.
+ *   3. APPLICATIONS were framed as leads to work. /apply inserts its row 2-12 SECONDS
+ *      BEFORE the account, so every name in that block had already finished. The block is
+ *      now the two lists that are actually distinct: who signed up, and who started and
+ *      never finished.
+ *
  * Invoke: npx tsx scripts/worker/dailyMetrics.ts
  * Env:    DATABASE_URL, RESEND_API_KEY, ALERTS_FROM_EMAIL, SYNC_ALERT_EMAIL
  *         METRICS_DRY_RUN=1 prints the report instead of sending it.
@@ -26,7 +44,7 @@ import 'dotenv/config';
 import pg from 'pg';
 import { renderDailyMetricsEmail } from '@/lib/alerts/dailyMetricsEmail';
 import { sendTransactionalEmail } from '@/lib/alerts/sendEmail';
-import type { DailyCounts, DailyMetricsInput, LeadRow } from '@/lib/ops/dailyMetrics';
+import type { DailyCounts, DailyMetricsInput, PersonRow } from '@/lib/ops/dailyMetrics';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // Supabase pooler cert, as the other readers
 
@@ -35,6 +53,9 @@ const FROM = process.env.ALERTS_FROM_EMAIL || 'PureProperty Alerts <alerts@purep
 const TO = process.env.SYNC_ALERT_EMAIL || '';
 const TZ = 'America/Toronto';
 const QA = `lower(u.email) not like '%@pureproperty-qa.test'`;
+
+/** A bubble created inside this window of the account is the signup flow's, not a save. */
+const SIGNUP_GRACE = `interval '5 minutes'`;
 
 /** Yesterday in Toronto, as YYYY-MM-DD. The report always covers a COMPLETE day. */
 function reportDay(now = new Date()): string {
@@ -47,6 +68,12 @@ const n = (v: unknown): number => {
   const x = Number(v);
   return Number.isFinite(x) ? x : 0;
 };
+
+/** "Name · email", or the email alone. Never an empty string. */
+const who = (name: unknown, email: unknown): string =>
+  [typeof name === 'string' ? name.trim() : '', typeof email === 'string' ? email.trim() : '']
+    .filter(Boolean)
+    .join(' · ') || 'unknown';
 
 async function main(): Promise<void> {
   const day = reportDay();
@@ -81,6 +108,17 @@ async function main(): Promise<void> {
     return out;
   };
 
+  /** The 8-day Toronto bound, reused by every windowed query including the hand-written
+   *  ones. Written against whichever timestamp column is passed in. */
+  const between = (col: string) => `
+      ${col} >= (($1::date - 7)::text || ' 00:00')::timestamp at time zone '${TZ}'
+      and ${col} < (($1::date + 1)::text || ' 00:00')::timestamp at time zone '${TZ}'`;
+
+  /** The reported day alone, for the lists and the point-in-time reads. */
+  const onDay = (col: string) => `
+      ${col} >= ($1::text || ' 00:00')::timestamp at time zone '${TZ}'
+      and ${col} < (($1::date + 1)::text || ' 00:00')::timestamp at time zone '${TZ}'`;
+
   /** Daily COUNT(*) over the 8-day window, bounded in Toronto time. `extra` carries the
    *  QA-account filter for anything joined to auth.users; tables keyed only by user_id
    *  (watchlist, bubbles, vow reads) need no filter because the QA accounts never used
@@ -88,59 +126,139 @@ async function main(): Promise<void> {
   const win = (col: string, tbl: string, join = '', extra = '') => `
     select to_char(date(${col} at time zone '${TZ}'), 'YYYY-MM-DD') as day, count(*) as v
     from ${tbl} ${join}
-    where ${col} >= (($1::date - 7)::text || ' 00:00')::timestamp at time zone '${TZ}'
-      and ${col} < (($1::date + 1)::text || ' 00:00')::timestamp at time zone '${TZ}'
+    where ${between(col)}
       ${extra}
     group by 1`;
 
+  /** Every signed-in trace a returning user can leave, each arm bounded so the union never
+   *  scans a whole table. auth.sessions is LAST on purpose: it is the weakest of the five
+   *  and the one that used to stand alone. */
+  const returningArms = `
+      select user_id, accessed_at as ts from vow_access_log where ${between('accessed_at')}
+      union all select user_id, occurred_at from activation_events where user_id is not null and ${between('occurred_at')}
+      union all select user_id, created_at from watchlist where ${between('created_at')}
+      union all select user_id, created_at from market_bubbles where ${between('created_at')}
+      union all select user_id, created_at from auth.sessions where ${between('created_at')}`;
+
   // Sequential, not Promise.all: one pg Client serialises queries anyway and warns that
-  // overlapping them is deprecated in pg@9. Eight short reads cost nothing in a cron.
-  const [visitors, signups, unsubs, watch, bubbles, apps, vow, returning] = await seq([
+  // overlapping them is deprecated in pg@9. Short reads cost nothing in a cron.
+  const [
+    listingViewers,
+    signups,
+    unsubs,
+    watch,
+    bubblesSaved,
+    bubblesAtSignup,
+    abandoned,
+    vow,
+    vowReaders,
+    returning,
+    returningLogins,
+  ] = await seq([
+    // Distinct browsers that opened a listing they had not opened before. The upsert on
+    // (listing_key, viewer_id) means created_at is the FIRST sighting, never a revisit.
     () => series(`select to_char(date(created_at at time zone '${TZ}'), 'YYYY-MM-DD') as day, count(distinct viewer_id) as v
             from listing_views
-            where created_at >= (($1::date - 7)::text || ' 00:00')::timestamp at time zone '${TZ}'
-              and created_at < (($1::date + 1)::text || ' 00:00')::timestamp at time zone '${TZ}'
+            where ${between('created_at')}
             group by 1`),
     () => series(win('u.created_at', 'auth.users u', '', `and ${QA}`)),
     () => series(win('p.marketing_opt_out_at', 'profiles p', 'join auth.users u on u.id = p.id', `and ${QA}`)),
     () => series(win('created_at', 'watchlist')),
-    () => series(win('created_at', 'market_bubbles')),
-    () => series(win('created_at', 'terminal_applications')),
+    // A deliberate area save: the account already existed when the bubble appeared. LEFT
+    // JOIN so a bubble whose owner is gone still counts as a save rather than vanishing.
+    () => series(`select to_char(date(b.created_at at time zone '${TZ}'), 'YYYY-MM-DD') as day, count(*) as v
+            from market_bubbles b left join auth.users u on u.id = b.user_id
+            where ${between('b.created_at')}
+              and (u.created_at is null or b.created_at - u.created_at > ${SIGNUP_GRACE})
+            group by 1`),
+    // The area the signup flow hands a new account. Counted, shown, never added to saves.
+    () => series(`select to_char(date(b.created_at at time zone '${TZ}'), 'YYYY-MM-DD') as day, count(*) as v
+            from market_bubbles b join auth.users u on u.id = b.user_id
+            where ${between('b.created_at')}
+              and b.created_at - u.created_at <= ${SIGNUP_GRACE}
+            group by 1`),
+    // Started /apply, still has no account. Distinct by email because the form can be
+    // submitted twice, and evaluated NOW — a late converter drops out of the count.
+    () => series(`select to_char(date(a.created_at at time zone '${TZ}'), 'YYYY-MM-DD') as day,
+              count(distinct lower(a.email)) as v
+            from terminal_applications a
+            where a.email is not null
+              and not exists (select 1 from auth.users u where lower(u.email) = lower(a.email))
+              and ${between('a.created_at')}
+            group by 1`),
     () => series(win('accessed_at', 'vow_access_log')),
-    // Returning = a session that day from someone who did NOT sign up that day.
-    () => series(`select to_char(date(s.created_at at time zone '${TZ}'), 'YYYY-MM-DD') as day, count(distinct s.user_id) as v
+    () => series(`select to_char(date(accessed_at at time zone '${TZ}'), 'YYYY-MM-DD') as day,
+              count(distinct user_id) as v
+            from vow_access_log
+            where ${between('accessed_at')}
+            group by 1`),
+    // Returning: a pre-existing account with ANY signed-in trace on the day.
+    () => series(`select to_char(date(ev.ts at time zone '${TZ}'), 'YYYY-MM-DD') as day,
+              count(distinct ev.user_id) as v
+            from (${returningArms}) ev
+            join auth.users u on u.id = ev.user_id
+            where ${QA}
+              and date(u.created_at at time zone '${TZ}') < date(ev.ts at time zone '${TZ}')
+            group by 1`),
+    // The old measure, kept as the honest sub-figure: they typed a password again.
+    () => series(`select to_char(date(s.created_at at time zone '${TZ}'), 'YYYY-MM-DD') as day,
+              count(distinct s.user_id) as v
             from auth.sessions s join auth.users u on u.id = s.user_id
             where ${QA}
-              and date(u.created_at at time zone '${TZ}') <> date(s.created_at at time zone '${TZ}')
-              and s.created_at >= (($1::date - 7)::text || ' 00:00')::timestamp at time zone '${TZ}'
-              and s.created_at < (($1::date + 1)::text || ' 00:00')::timestamp at time zone '${TZ}'
+              and date(u.created_at at time zone '${TZ}') < date(s.created_at at time zone '${TZ}')
+              and ${between('s.created_at')}
             group by 1`),
   ]);
 
   const activation = (
     await c.query(
       `select kind, count(*)::int as count from activation_events
-       where occurred_at >= ($1::text || ' 00:00')::timestamp at time zone '${TZ}'
-         and occurred_at < (($1::date + 1)::text || ' 00:00')::timestamp at time zone '${TZ}'
+       where ${onDay('occurred_at')}
        group by 1 order by 2 desc`,
       [day]
     )
   ).rows.map((r) => ({ kind: String(r.kind), count: n(r.count) }));
 
-  const leads: LeadRow[] = (
+  // Who signed up. A name comes from the OAuth profile, or failing that from the /apply
+  // form; plenty of email signups give neither, so the email stands alone.
+  const signupRows: PersonRow[] = (
     await c.query(
-      `select created_at, applicant_type, full_name, email, regions from terminal_applications
-       where created_at >= ($1::text || ' 00:00')::timestamp at time zone '${TZ}'
-         and created_at < (($1::date + 1)::text || ' 00:00')::timestamp at time zone '${TZ}'
-       order by created_at`,
+      `select u.created_at, u.email,
+              coalesce(p.full_name,
+                (select a.full_name from terminal_applications a
+                  where lower(a.email) = lower(u.email) and a.full_name is not null
+                  order by a.created_at limit 1)) as full_name,
+              p.signup_intent
+       from auth.users u left join profiles p on p.id = u.id
+       where ${QA} and ${onDay('u.created_at')}
+       order by u.created_at`,
       [day]
     )
   ).rows.map((r) => ({
     createdAt: new Date(r.created_at).toISOString(),
-    kind: String(r.applicant_type ?? 'application'),
-    who: [r.full_name, r.email].filter(Boolean).join(' · ') || 'unknown',
-    detail: Array.isArray(r.regions) ? r.regions.join(', ') : (r.regions ?? undefined),
+    who: who(r.full_name, r.email),
+    detail: r.signup_intent ? String(r.signup_intent) : undefined,
   }));
+
+  // Who started and never finished. DISTINCT ON keeps the first submission per email so a
+  // double-submit is one person in the list.
+  const abandonedRows: PersonRow[] = (
+    await c.query(
+      `select distinct on (lower(a.email)) a.created_at, a.full_name, a.email, a.regions
+       from terminal_applications a
+       where a.email is not null
+         and not exists (select 1 from auth.users u where lower(u.email) = lower(a.email))
+         and ${onDay('a.created_at')}
+       order by lower(a.email), a.created_at`,
+      [day]
+    )
+  )
+    .rows.map((r) => ({
+      createdAt: new Date(r.created_at).toISOString(),
+      who: who(r.full_name, r.email),
+      detail: Array.isArray(r.regions) && r.regions.length ? r.regions.join(', ') : undefined,
+    }))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
   const totals = (
     await c.query(`
@@ -150,7 +268,11 @@ async function main(): Promise<void> {
           where ${QA} and p.marketing_opt_out)::int as opted_out,
         (select count(*) from (
             select user_id from watchlist union select user_id from market_bubbles
-         ) a join auth.users u on u.id = a.user_id where ${QA})::int as with_any_asset`)
+         ) a join auth.users u on u.id = a.user_id where ${QA})::int as with_any_asset,
+        (select count(distinct lower(a.email)) from terminal_applications a
+          where a.email is not null
+            and not exists (select 1 from auth.users u where lower(u.email) = lower(a.email))
+         )::int as abandoned_all_time`)
   ).rows[0];
 
   // Email counters written by alerts.ts into the reserved _ops region.
@@ -165,9 +287,7 @@ async function main(): Promise<void> {
   const sendFailures = n(
     (
       await c.query(
-        `select count(*) as v from email_send_failures
-         where occurred_at >= ($1::text || ' 00:00')::timestamp at time zone '${TZ}'
-           and occurred_at < (($1::date + 1)::text || ' 00:00')::timestamp at time zone '${TZ}'`,
+        `select count(*) as v from email_send_failures where ${onDay('occurred_at')}`,
         [day]
       )
     ).rows[0]?.v
@@ -176,13 +296,16 @@ async function main(): Promise<void> {
   await c.end();
 
   const counts = (k: 'today' | 'prior7'): DailyCounts => ({
-    visitors: visitors[k],
+    listingViewers: listingViewers[k],
     signups: signups[k],
     returning: returning[k],
+    returningLogins: returningLogins[k],
     unsubscribes: unsubs[k],
-    assetsCreated: watch[k] + bubbles[k],
-    applications: apps[k],
+    assetsSaved: watch[k] + bubblesSaved[k],
+    assetsAtSignup: bubblesAtSignup[k],
+    abandonedSignups: abandoned[k],
     vowReads: vow[k],
+    vowReaders: vowReaders[k],
   });
 
   const model: DailyMetricsInput = {
@@ -196,11 +319,13 @@ async function main(): Promise<void> {
       digestSuppressed: opsVal('email.digest_suppressed'),
       sendFailures,
     },
-    leads,
+    signups: signupRows,
+    abandoned: abandonedRows,
     totals: {
       users: n(totals?.users),
       optedOut: n(totals?.opted_out),
       withAnyAsset: n(totals?.with_any_asset),
+      abandonedAllTime: n(totals?.abandoned_all_time),
     },
   };
 
