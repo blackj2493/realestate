@@ -134,6 +134,46 @@ export const BUBBLE_LOOKBACK_MS = 72 * 60 * 60 * 1000;
 /** How long an alerted key stays in notified_keys before pruning. */
 export const NOTIFIED_KEY_RETENTION_MS = 10 * 24 * 60 * 60 * 1000;
 
+/**
+ * Where the new-listing search actually starts: the lookback, floored at the moment the
+ * reader saved the area.
+ *
+ * THE INCIDENT (2026-09-21). Two accounts signed up on the evening of the 20th, received
+ * their first ever digest at 09:22 the next morning, and unsubscribed 16 and 57 minutes
+ * later. Both clicked it first. The subject read "6 picks from 358 new listings".
+ *
+ * A brand-new area is baselined SILENTLY on the first run that sees it: `notify_since` is
+ * set, nothing is emailed, and — because nothing was fetched — `notified_keys` stays empty.
+ * The next run then searches `notify_since − 72h` against that empty dedup set, so the first
+ * real digest carries a THREE-DAY backlog. In Toronto that is 358 listings. The silent
+ * baseline exists precisely to prevent backlog dumps, and the lookback defeated it on the
+ * one run where it mattered most.
+ *
+ * So: never reach back past `created_at`. Nobody should be emailed about a listing that
+ * entered the market before they asked to follow the area — the standing inventory is what
+ * the dashboard is for, and this email's entire claim is that it carries what is NEW.
+ *
+ * THE 72h LOOKBACK IS UNTOUCHED for every established area, where `created_at` is far in the
+ * past. It exists because EntryTimestamp is the MLS entry time and a listing can reach our
+ * index a day or two later. That catch-up is real — but a bubble created this morning has
+ * nothing to catch up ON.
+ *
+ * A missing or unparseable `created_at` applies no floor, which is exactly the behaviour
+ * before this existed: an area whose age we cannot establish is treated as established.
+ */
+export function bubbleSearchSinceMs(i: {
+  /** notify_since, as epoch ms. */
+  watermarkMs: number;
+  /** market_bubbles.created_at — when the reader saved this area. */
+  createdAt?: string | null;
+  /** False on a pre-083 deploy, where there is no dedup set and so no lookback. */
+  hasNotifiedKeys: boolean;
+}): number {
+  const base = i.hasNotifiedKeys ? i.watermarkMs - BUBBLE_LOOKBACK_MS : i.watermarkMs;
+  const createdMs = i.createdAt ? Date.parse(i.createdAt) : NaN;
+  return Number.isFinite(createdMs) ? Math.max(base, createdMs) : base;
+}
+
 export interface NotifiedKey {
   /** Listing key. */
   k: string;
