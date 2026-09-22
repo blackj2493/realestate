@@ -8,6 +8,8 @@ import {
   BUBBLE_EMAIL_ROW_CAP,
   BUBBLE_COLLAPSE_THRESHOLD,
   NOTIFIED_KEY_RETENTION_MS,
+  BUBBLE_LOOKBACK_MS,
+  bubbleSearchSinceMs,
   type BubbleAreaOrder,
   type BubbleMatches,
   type NewListingAlert,
@@ -200,5 +202,77 @@ describe("compareBubbleSpecificity — narrowest area claims a listing first", (
     expect(
       order([area("named-city", "city", null), { id: "x", name: "Toronto", area_type: "city" }])
     ).toEqual(["named-city", "x"]);
+  });
+});
+
+/**
+ * The 2026-09-21 incident: a brand-new area's FIRST digest quoted a three-day backlog
+ * ("6 picks from 358 new listings"), because the silent baseline leaves notified_keys empty
+ * and the 72h lookback then has nothing to dedupe against.
+ */
+describe("bubbleSearchSinceMs", () => {
+  const HOUR = 3_600_000;
+  const DAY = 24 * HOUR;
+  const now = Date.parse("2026-09-21T13:22:00Z");
+  const iso = (ms: number) => new Date(ms).toISOString();
+
+  it("never reaches back past the moment the reader saved the area", () => {
+    // Baselined silently 9h ago; the area itself was created 13h ago at signup.
+    const watermarkMs = now - 9 * HOUR;
+    const createdAt = iso(now - 13 * HOUR);
+    const since = bubbleSearchSinceMs({ watermarkMs, createdAt, hasNotifiedKeys: true });
+    expect(since).toBe(Date.parse(createdAt));
+    // Without the floor this reached three days back — the whole bug.
+    expect(since).toBeGreaterThan(watermarkMs - BUBBLE_LOOKBACK_MS);
+  });
+
+  it("leaves an established area's 72h lookback exactly as it was", () => {
+    const watermarkMs = now - DAY;
+    const since = bubbleSearchSinceMs({
+      watermarkMs,
+      createdAt: iso(now - 200 * DAY),
+      hasNotifiedKeys: true,
+    });
+    expect(since).toBe(watermarkMs - BUBBLE_LOOKBACK_MS);
+  });
+
+  it("applies no lookback at all before migration 083, floor included", () => {
+    const watermarkMs = now - DAY;
+    expect(
+      bubbleSearchSinceMs({ watermarkMs, createdAt: iso(now - 200 * DAY), hasNotifiedKeys: false })
+    ).toBe(watermarkMs);
+    // A pre-083 area younger than its watermark still cannot be dragged backwards.
+    expect(
+      bubbleSearchSinceMs({ watermarkMs, createdAt: iso(now - HOUR), hasNotifiedKeys: false })
+    ).toBe(now - HOUR);
+  });
+
+  describe("an age we cannot establish is treated as established", () => {
+    it("for a missing created_at", () => {
+      const watermarkMs = now - DAY;
+      for (const createdAt of [undefined, null, ""]) {
+        expect(
+          bubbleSearchSinceMs({ watermarkMs, createdAt, hasNotifiedKeys: true }),
+          JSON.stringify(createdAt)
+        ).toBe(watermarkMs - BUBBLE_LOOKBACK_MS);
+      }
+    });
+
+    it("for an unparseable one", () => {
+      const watermarkMs = now - DAY;
+      expect(
+        bubbleSearchSinceMs({ watermarkMs, createdAt: "not a date", hasNotifiedKeys: true })
+      ).toBe(watermarkMs - BUBBLE_LOOKBACK_MS);
+    });
+  });
+
+  it("collapses the window to nothing when the area was saved after the watermark", () => {
+    // Shouldn't arise — the baseline runs after creation — but the floor must not invent a
+    // window that runs backwards if it ever does.
+    const watermarkMs = now - DAY;
+    const createdAt = iso(now - HOUR);
+    expect(bubbleSearchSinceMs({ watermarkMs, createdAt, hasNotifiedKeys: true })).toBe(
+      Date.parse(createdAt)
+    );
   });
 });

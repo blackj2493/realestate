@@ -54,7 +54,7 @@ import {
 import {
   advanceNotifiedKeys,
   buildBubbleSections,
-  BUBBLE_LOOKBACK_MS,
+  bubbleSearchSinceMs,
   compareBubbleSpecificity,
   filterFreshMatches,
   parseNotifiedKeys,
@@ -1278,9 +1278,17 @@ async function main() {
         // 72h lookback past the watermark: EntryTimestamp is the MLS entry time, and a
         // listing can reach OUR index a day or two later (late publication, sync backlog).
         // The strict watermark silently dropped those; notified_keys dedupes the overlap.
+        // …but never past `created_at`. The first run after a silent baseline finds an EMPTY
+        // notified_keys, so without that floor the first digest a new area ever sends quotes
+        // a three-day backlog — 358 listings in Toronto on 2026-09-21, and both readers who
+        // received it unsubscribed inside the hour. See bubbleSearchSinceMs.
         const notified: NotifiedKey[] = hasNotifiedKeys ? parseNotifiedKeys(b.notified_keys) : [];
         const watermarkMs = new Date(b.notify_since).getTime();
-        const sinceMs = hasNotifiedKeys ? watermarkMs - BUBBLE_LOOKBACK_MS : watermarkMs;
+        const sinceMs = bubbleSearchSinceMs({
+          watermarkMs,
+          createdAt: b.created_at,
+          hasNotifiedKeys,
+        });
 
         // The pool has to cover whatever window the watermark actually spans. It is one
         // night for a daily reader and up to a week for a weekly one (migration 144 holds
