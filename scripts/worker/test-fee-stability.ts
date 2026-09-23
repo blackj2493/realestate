@@ -189,6 +189,7 @@ const area: AreaStats = {
   p75Psf: 1.0,
   sampleCount: 20,
   inclusionsMixed: false,
+  subType: 'Condo Apartment',
 };
 const corp: CorpStats = {
   buckets: [

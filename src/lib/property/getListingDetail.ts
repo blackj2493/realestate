@@ -637,7 +637,7 @@ export const getListingDetail = cache(
           cityRegion && subType
             ? supabase
                 .from("condo_fee_stats")
-                .select("median_fee_psf, p25_fee_psf, p75_fee_psf, sample_count, inclusions_mixed")
+                .select("median_fee_psf, p25_fee_psf, p75_fee_psf, sample_count, inclusions_mixed, property_sub_type")
                 .eq("cohort_type", "area")
                 .eq("cohort_key", cityRegion)
                 .eq("property_sub_type", subType)
@@ -662,6 +662,9 @@ export const getListingDetail = cache(
               p75Psf: Number(areaRow.p75_fee_psf),
               sampleCount: Number(areaRow.sample_count),
               inclusionsMixed: areaRow.inclusions_mixed === true,
+              // Read off the ROW rather than reusing the local `subType`, so the label
+              // can only ever name the cohort that was actually matched.
+              subType: typeof areaRow.property_sub_type === "string" ? areaRow.property_sub_type : null,
             }
           : null;
 
