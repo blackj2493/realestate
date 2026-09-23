@@ -278,8 +278,15 @@ async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null
  * belongs to an opted-out sibling, so an affected key resolves to "delisted" where it
  * previously resolved to "sold" — and a stale entry would keep publishing the SOLD label
  * the bump exists to remove.
+ *
+ * v12 is a SHAPE bump, and the textbook case for one. #565 added `area.subType` so the
+ * fee card could say "53 sold condo townhouses" instead of "53 sold condos". The code
+ * shipped and the label did not change: unstable_cache entries survive a deploy, so
+ * every warm key kept serving the old field-less object, `subType` arrived undefined,
+ * and the card fell back to the generic wording on exactly the listings with traffic.
+ * A new field on a cached shape is invisible until the key changes with it.
  */
-export const DETAIL_SHAPE_VERSION = "v11-optout-relist-promotion";
+export const DETAIL_SHAPE_VERSION = "v12-fee-cohort-subtype";
 
 /**
  * Has this listing key's seller switched "Distribute to Internet" off? One indexed PK
