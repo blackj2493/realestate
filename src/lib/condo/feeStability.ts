@@ -133,6 +133,15 @@ export interface AreaStats {
   p75Psf: number;
   sampleCount: number;
   inclusionsMixed: boolean;
+  /**
+   * The property sub-type the cohort was built from. The area query matches the
+   * subject's OWN sub-type, so a Condo Townhouse is benchmarked against sold Condo
+   * Townhouses, not against every condo in the neighbourhood. Carried through only
+   * so the UI can say which — "52 sold condos" both understates the rigour and
+   * misdescribes the set when the real cohort is 52 sold condo townhouses out of
+   * 228 sold condos in that area.
+   */
+  subType: string | null;
 }
 
 export interface CorpStats {
@@ -162,6 +171,8 @@ export interface FeeStabilityResult {
     pctVsMedian: number; // signed % vs area median, 2-decimal (−19.25 = 19.25% below)
     sampleCount: number;
     inclusionsMixed: boolean;
+    /** Sub-type the cohort was matched on, so the sample label can name it. */
+    subType: string | null;
   };
   trend:
     | null
@@ -538,6 +549,7 @@ export function buildFeeStabilityResult(args: {
       position,
       pctVsMedian,
       sampleCount: area.sampleCount,
+      subType: area.subType ?? null,
       // Caveat fires if either the area cohort or the building cohort mixes inclusions.
       inclusionsMixed: area.inclusionsMixed || corp?.inclusionsMixed === true,
     },

@@ -23,6 +23,20 @@ interface CondoFeeStabilityCardProps {
 
 const psf = (n: number) => `$${n.toFixed(2)}/sqft`;
 
+/**
+ * "sold condo townhouses" / "sold condos" — what the benchmark cohort actually is.
+ *
+ * The area cohort is matched on the subject's own PropertySubType, so saying "sold
+ * condos" describes a set several times larger than the one behind the number. Falls
+ * back to the generic wording only when the cohort's sub-type is missing.
+ */
+function cohortLabel(subType: string | null | undefined, n: number): string {
+  const t = (subType ?? "").trim();
+  if (!t || /^all$/i.test(t)) return `sold ${n === 1 ? "condo" : "condos"}`;
+  const lower = t.toLowerCase();
+  return n === 1 ? `sold ${lower}` : `sold ${lower}s`;
+}
+
 const CONFIDENCE_STYLES: Record<Confidence, string> = {
   HIGH: "bg-green-100 text-green-800 border-green-300",
   MEDIUM: "bg-yellow-100 text-yellow-800 border-yellow-300",
@@ -73,7 +87,14 @@ export default function CondoFeeStabilityCard({
 
           <p className="text-xs text-muted-foreground">
             Area median {psf(area.medianPsf)}
-            {area.cityRegion ? ` in ${area.cityRegion}` : ""} · {area.sampleCount} sold condos
+            {area.cityRegion ? ` in ${area.cityRegion}` : ""} · {area.sampleCount}{" "}
+            {/*
+              Name the cohort. The area query matches this unit's OWN sub-type, so the
+              sample is sold condo townhouses, not all condos — and in Don Valley Village
+              that is 52 of the 228 sold condos on file. "Sold condos" made the rigorous
+              choice look like a thin one.
+            */}
+            {cohortLabel(area.subType, area.sampleCount)}
           </p>
 
           {/* ── Trend: same-building fee trajectory (only when dense enough) ── */}
@@ -136,7 +157,15 @@ function AreaPosition({
   const below = position === "below";
   return (
     <p className={`text-sm font-medium mt-1 ${below ? "text-green-600" : "text-red-600"}`}>
-      {below ? "↓" : "↑"} {Math.abs(pctVsMedian).toFixed(2)}% {below ? "below" : "above"} area median
+      {/*
+        Whole percent, not two decimals. The underlying median is a ~50-sale figure over
+        band-midpoint square footage and it moves on every nightly recompute — one area
+        went 28.73% → 29.89% in a day on the same unit. Two decimals claim a precision
+        the metric does not have, and they invite the arithmetic objection: a reader sees
+        $0.65 against a displayed $0.50 and gets 30%, because the displayed median is
+        itself rounded. A whole number is honest and reconciles on sight.
+      */}
+      {below ? "↓" : "↑"} {Math.round(Math.abs(pctVsMedian))}% {below ? "below" : "above"} area median
     </p>
   );
 }
@@ -161,6 +190,8 @@ function PercentileBar({
   const domainHi = hi + pad;
   const domain = domainHi - domainLo || 1;
   const pct = (x: number) => Math.max(0, Math.min(100, ((x - domainLo) / domain) * 100));
+  /** Unit sits outside the interquartile band — the case the old labels hid. */
+  const outside = unit > p75 || unit < p25;
 
   return (
     <div className="pt-1">
@@ -181,10 +212,23 @@ function PercentileBar({
           style={{ left: `${pct(unit)}%` }}
         />
       </div>
-      <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
-        <span>{psf(p25)}</span>
-        <span>median</span>
-        <span>{psf(p75)}</span>
+      {/*
+        These labels used to sit at the two ENDS of the rail reading "$0.43" and "$0.58"
+        — the IQR bounds — while the axis itself runs wider, because the domain above
+        stretches to include the unit. A unit above p75 then rendered as a dot at the
+        right-hand end directly above a label saying $0.58, so the card read as "this
+        unit is $0.58" when it was $0.65. It understated the very thing the card exists
+        to show. Nothing at an axis end may name a value that is not at that end, so the
+        range is now stated as a range and the unit states itself.
+      */}
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+        <span>
+          Typical range {psf(p25)}–{psf(p75)}
+        </span>
+        <span className={outside ? "font-medium text-foreground" : undefined}>
+          This unit {psf(unit)}
+          {outside ? (unit > p75 ? " — above the typical range" : " — below the typical range") : ""}
+        </span>
       </div>
     </div>
   );
