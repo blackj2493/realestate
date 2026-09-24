@@ -570,16 +570,40 @@ export function checkEmailFailures(failures: { kind: string; reason: string }[])
  * failure on a night when many did. So neither number decides alone — the rule joins them,
  * using the counters the senders now record in metric_snapshots under the `_ops` region:
  *
- *   no counter within staleDays        → warn: the run itself may have stopped
- *   due > 0, sent = 0, suppressed = 0  → error: every send threw, or the loop never ran
- *   due > 0, sent + suppressed < due   → warn: sends lost between the gate and Resend
+ *   no counter within staleDays            → warn: the run itself may have stopped
+ *   due > 0, nothing sent/suppressed/deferred → error: every send threw, or the loop never ran
+ *   failed > 0                              → warn: the provider REJECTED that many
+ *   accounted < due                         → warn: genuinely unaccounted for
  *
  * `due > 0, sent = 0, suppressed = due` is explicitly HEALTHY — everyone with news had
  * asked not to hear it. That is the consent gate working, not an outage.
+ *
+ * ALL FIVE COUNTERS, OR THE ARITHMETIC LIES. alerts.ts has always recorded five outcomes;
+ * this check accepted three and treated `due − sent − suppressed` as loss. When weekly
+ * cadence shipped (migration 144) `deferred` went from 0 to ~89 a night, and the canary
+ * reported 89 users "fell through (no profile email on file, or Resend threw)" three
+ * nights running while the true gap was zero — those readers were holding tonight's news
+ * for their weekly send, exactly as designed. A canary that cries wolf nightly is one
+ * nobody reads, which is how the real failure gets missed.
+ *
+ * `failed` is the counter that actually matters, and it now gets its own line rather than
+ * being buried in a residual: Resend returns API errors in the response instead of
+ * throwing, so a rejected send looks like a delivered one unless something counts it.
  */
 export function checkEmailSendVolume(input: {
-  /** `_ops` counters for the most recent day that has any, or null when none exist yet. */
-  latest: { day: string; due: number; sent: number; suppressed: number } | null;
+  /**
+   * `_ops` counters for the most recent day that has any, or null when none exist yet.
+   * `deferred` and `failed` are optional so a snapshot row written before those metrics
+   * existed still reads as zero rather than as a gap.
+   */
+  latest: {
+    day: string;
+    due: number;
+    sent: number;
+    suppressed: number;
+    deferred?: number;
+    failed?: number;
+  } | null;
   /** Days without a counter before the run is presumed stalled. */
   staleDays: number;
   now?: number;
@@ -599,6 +623,8 @@ export function checkEmailSendVolume(input: {
   }
 
   const { day, due, sent, suppressed } = input.latest;
+  const deferred = input.latest.deferred ?? 0;
+  const failed = input.latest.failed ?? 0;
   const ageDays = Math.floor((now - Date.parse(`${day}T00:00:00Z`)) / 86_400_000);
   if (Number.isFinite(ageDays) && ageDays > input.staleDays) {
     // A stalled run makes the counts below meaningless, so report only this.
@@ -613,31 +639,47 @@ export function checkEmailSendVolume(input: {
     ];
   }
 
-  if (due > 0 && sent === 0 && suppressed === 0) {
+  if (due > 0 && sent === 0 && suppressed === 0 && deferred === 0) {
     return [
       {
         severity: "error",
         check: "email-volume",
         detail:
-          `${day}: ${due} user(s) had digest-worthy changes and NONE were emailed or suppressed — ` +
+          `${day}: ${due} user(s) had digest-worthy changes and NONE were emailed, suppressed or deferred — ` +
           "every send failed, or the send loop never reached them",
       },
     ];
   }
 
-  if (due > 0 && sent + suppressed < due) {
-    return [
-      {
-        severity: "warn",
-        check: "email-volume",
-        detail:
-          `${day}: ${due} user(s) had changes but ${sent} were emailed and ${suppressed} suppressed — ` +
-          `${due - sent - suppressed} fell through (no profile email on file, or Resend threw)`,
-      },
-    ];
+  const out: Problem[] = [];
+
+  // A provider rejection is its own signal and never a residual. Resend answers with an
+  // API error rather than throwing, so without this counter a rejected send is
+  // indistinguishable from a delivered one.
+  if (failed > 0) {
+    out.push({
+      severity: "warn",
+      check: "email-volume",
+      detail:
+        `${day}: the provider REJECTED ${failed} of ${sent + failed} attempted send(s) — ` +
+        "rate limit, quota or a validation error; those users got nothing",
+    });
   }
 
-  return [];
+  // Everyone with news must land in exactly one bucket. Only what lands in none is loss.
+  const accounted = sent + suppressed + deferred + failed;
+  if (due > 0 && accounted < due) {
+    out.push({
+      severity: "warn",
+      check: "email-volume",
+      detail:
+        `${day}: ${due} user(s) had changes — ${sent} emailed, ${suppressed} suppressed, ` +
+        `${deferred} deferred to a weekly send, ${failed} rejected — ` +
+        `${due - accounted} unaccounted for (no profile email on file, or the loop never reached them)`,
+    });
+  }
+
+  return out;
 }
 
 /** Repo migration files not recorded as applied — the migration-082 failure mode. */
