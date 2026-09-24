@@ -18,6 +18,7 @@ import 'dotenv/config';
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { processBatch, SyncResult } from './sync';
+import { primeCatchmentIndex } from '@/lib/schools/catchmentIndex';
 import {
   getSoldAdminClient,
   toSoldDocument,
@@ -1866,6 +1867,22 @@ async function main() {
   const args = process.argv.slice(2);
   
   if (args[0] === 'sync') {
+    // Load school attendance boundaries BEFORE anything transforms. The transformer writes
+    // SchoolCatchments only once this has succeeded, because `[]` is a VALID answer meaning
+    // "in no catchment" — an un-primed run would publish that onto every document it touched
+    // and the school filter would answer no for every school, everywhere, with nothing in
+    // the log to read.
+    //
+    // primeCatchmentIndex throws on a failed or suspiciously short read, and that is
+    // deliberately fatal here rather than a warning: the delta sync re-upserts documents, so
+    // continuing would strip the field off every listing in the batch.
+    const primed = await primeCatchmentIndex(getServiceRoleClient());
+    console.log(
+      `   🏫 Catchments primed: ${primed.zones} zones in ${primed.cells} cells ` +
+        `(${primed.rowsRead} rows, ${primed.withoutSchoolId} without a school id, ` +
+        `${primed.unreadableGeometry} unreadable) in ${(primed.ms / 1000).toFixed(1)}s`
+    );
+
     const result = await runDeltaSync();
     // Exit non-zero when the sync did not fully succeed, so CI marks the run failed and
     // the failure notifier in daily-sync.yml fires. runDeltaSync catches its OWN errors

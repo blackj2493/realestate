@@ -174,6 +174,13 @@ export const indexedFields: IndexedField[] = [
   { name: 'BestSchoolScoreNearby', type: 'float', facet: false, sort: true, optional: true },
   // Target-school filter: ids of nearby schools, filterable via NearbySchools:=<id>.
   { name: 'NearbySchools', type: 'string[]', facet: false, optional: true },
+  // Catchment membership: `<school_id>|<program>` for every attendance boundary that
+  // CONTAINS this listing, filterable via SchoolCatchments:=<id>|<program>. NearbySchools
+  // above answers a proximity question — every school within 2.5 km — which is a different
+  // question and visibly disagrees with the boundary the map draws: a home 2.75 km from St
+  // Cyril sits inside its 57.6 km² French Immersion zone and was excluded from a search for
+  // it. Distance stays the fallback where a board publishes no boundary.
+  { name: 'SchoolCatchments', type: 'string[]', facet: false, optional: true },
 
   // ─── Amenity proximity (nearest grocery + recreation centre) — walkability ──
   // Straight-line km, sortable + filterable (NearestGroceryKm:<=X). NO_AMENITY_KM (99)
@@ -356,6 +363,10 @@ export const typesenseSchema = {
     { name: 'BestSecondaryScore', type: 'float' as const, facet: false, sort: true, optional: true },
     { name: 'BestSchoolScoreNearby', type: 'float' as const, facet: false, sort: true, optional: true },
     { name: 'NearbySchools', type: 'string[]' as const, facet: false, optional: true },
+    // Catchment membership: <school_id>|<program> for every boundary CONTAINING this
+    // listing. NearbySchools above is a 2.5 km radius and answers a different question —
+    // see the indexedFields note. optional: backfilled in place on existing documents.
+    { name: 'SchoolCatchments', type: 'string[]' as const, facet: false, optional: true },
 
     // ─── Amenity proximity — walkability distance sliders (NO_AMENITY_KM sentinel) ──
     { name: 'NearestGroceryKm', type: 'float' as const, facet: false, sort: true, optional: true },
@@ -586,6 +597,10 @@ export interface TypesensePropertyDocument {
   BestSchoolScoreNearby?: number;
   /** Ids of schools within ~2.5 km, filterable via NearbySchools:=<id>. */
   NearbySchools?: string[];
+  /** `<school_id>|<program>` for every catchment CONTAINING this listing.
+   *  Filterable via SchoolCatchments:=<id>|<program>. Distinct from NearbySchools, which
+   *  is a 2.5 km radius — see the schema comment. */
+  SchoolCatchments?: string[];
   /** Per-panel nearest-school name + distance (km) — display cargo. */
   ElemPublicSchool?: string;
   ElemPublicDistanceKm?: number;

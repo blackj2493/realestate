@@ -301,6 +301,10 @@ export interface ListingDocument {
   BestSecondaryScore?: number;
   BestSchoolScoreNearby?: number;
   NearbySchools?: string[];
+  /** `<school_id>|<program>` for every catchment CONTAINING this listing.
+   *  Filterable via SchoolCatchments:=<id>|<program>. Distinct from NearbySchools, which
+   *  is a 2.5 km radius — see the schema comment. */
+  SchoolCatchments?: string[];
   ElemPublicSchool?: string;
   ElemPublicDistanceKm?: number;
   ElemCatholicSchool?: string;

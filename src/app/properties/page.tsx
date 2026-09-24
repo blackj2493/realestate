@@ -40,6 +40,7 @@ import { FACET_FIELDS, readStepper } from "@/lib/filters/filterRegistry";
 import { isInvestorLayerActive, priceConfig } from "@/lib/filters/fundamentals";
 import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
+import { buildSchoolFilterClause } from "@/lib/schools/schoolFilterClause";
 import { useCommuteIsochrone } from "@/hooks/useCommuteIsochrone";
 import { useBubbleHydration } from "@/hooks/useBubbleHydration";
 import { boundsAroundPoint, fetchSoldComps } from "@/lib/sold/fetchSoldComps";
@@ -391,7 +392,11 @@ function CommandCenterContent() {
     const schoolField = school.enabled ? schoolScoreField(school.level, school.system) : null;
     const schoolParts: string[] = [];
     if (schoolField && school.minScore > 0) schoolParts.push(`${schoolField}:>=${school.minScore}`);
-    if (school.enabled && school.targetSchool) schoolParts.push(`NearbySchools:=\`${school.targetSchool.id}\``);
+    // Boundary when the board publishes one for this school AND this program; 2.5 km radius
+    // when it does not. The two answer different questions, and the chip says which — see
+    // buildSchoolFilterClause for the report that forced them apart.
+    if (school.enabled && school.targetSchool)
+      schoolParts.push(buildSchoolFilterClause(school.targetSchool, school.program).clause);
     // Walkability: nearest grocery / recreation within maxKm. "either" = OR across both.
     const amenityParts: string[] = [];
     if (amenity.enabled) {
@@ -428,7 +433,7 @@ function CommandCenterContent() {
       sortBy: schoolField ?? (investorLayer ? lensSort : BASIC_SORT),
       sortOrder: "desc",
     });
-  }, [activePersona, transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
+  }, [activePersona, transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, school.program, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
 
   const performSearch = useCallback(async () => {
     // First-load viewport hold (fix #4): on a bare cold start with no explicit
