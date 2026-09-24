@@ -12,7 +12,19 @@
 export const LISTING_SHARD_URLS = 20_000;
 
 /**
- * Fixed shard count → 60,000 URLs of capacity against 18,773 live listings (2026-09-15).
+ * Fixed shard count → 160,000 URLs of capacity against 104,889 eligible listings
+ * (measured 2026-09-24: standard_status IN LISTING_ACTIVE_STATUSES AND is_orphaned=false).
+ *
+ * THE 18,773 THIS WAS SIZED FOR WAS WRONG. That figure came from counting `/properties`
+ * URLs in the old root sitemap, which was itself capped at MAX_URLS = 45,000 and, after
+ * #491, emitted listings under their DESCRIPTIVE canonical (/property/on/{city}/…-{KEY}) —
+ * so the count that looked like "listings" was a prefix match that had already been
+ * truncated. The real on-market population is 5.6x that. At 3 shards, 44,889 listings had
+ * no file to live in even once the query was fixed — silently, because a shard past the
+ * end of the data is indistinguishable from a shard the query failed on.
+ *
+ * Sized with headroom on purpose: active inventory swings seasonally, and running out is
+ * invisible. Re-measure before trimming it.
  *
  * WHY THESE MOVED OUT OF /sitemap.xml. That file had reached 47,646 of the protocol's
  * 50,000-URL cap. At the cap Google rejects the ENTIRE file — not the overflow — so every
@@ -25,7 +37,7 @@ export const LISTING_SHARD_URLS = 20_000;
  * shard or an unannounced one. A shard past the end of the data renders as a valid empty
  * sitemap, which costs nothing.
  */
-export const LISTING_SITEMAP_SHARDS = 3;
+export const LISTING_SITEMAP_SHARDS = 8;
 
 /** Total listing URLs the sitemap can declare. Raising it means raising the shard count. */
 export const LISTING_SITEMAP_CAPACITY = LISTING_SHARD_URLS * LISTING_SITEMAP_SHARDS;
