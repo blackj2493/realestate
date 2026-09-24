@@ -234,6 +234,17 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       needs_geocoding: p.needs_geocoding,
       city: p.city,
       city_region: p.city_region,
+      // Descriptive canonical path (migration 138). The transformer computes it, but this
+      // hand-maintained list is what actually reaches the table — and it was omitted when
+      // the column shipped (#491), so every upsert since has written NULL over it. The
+      // backfill filled all 308,951 rows on 2026-09-04; by 2026-09-24, 36,797 carried
+      // NULL again, the newest written that morning. A NULL is not fatal — the sitemap
+      // falls back to /properties/{KEY} — but that is the non-canonical form #473 set out
+      // to stop declaring, so a quarter of the listing sitemap had quietly regressed.
+      //
+      // This is the SECOND time this list has done exactly this: see the ingester's own
+      // header on transaction_type going missing for 12 days after migration 104.
+      sitemap_path: p.sitemap_path,
       property_sub_type: p.property_sub_type,
       list_price: p.list_price,
       extrapolated_cap_rate: p.extrapolated_cap_rate,

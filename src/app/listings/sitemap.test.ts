@@ -26,12 +26,22 @@ interface Row {
  * shard 1 reading rows it should not see shows up as wrong data, not as a passing test.
  */
 function supabaseStub(dataset: Row[], opts: { pageError?: number } = {}) {
-  const calls = { selects: [] as string[], ranges: [] as [number, number][] };
+  const calls = {
+    selects: [] as string[],
+    /** the SEEK only — `.range(base, base)` to find a shard's first key */
+    ranges: [] as [number, number][],
+    /** every keyset page: the cursor and whether the boundary key is included */
+    cursors: [] as { key: string; inclusive: boolean }[],
+    limits: [] as number[],
+  };
   let pages = 0;
 
   const make = () => {
     let from = 0;
     let to = 0;
+    let cursor: string | null = null;
+    let inclusive = false;
+    let lim = dataset.length;
     const q: Record<string, unknown> = {};
     q.select = vi.fn((s: string) => {
       calls.selects.push(s);
@@ -46,6 +56,25 @@ function supabaseStub(dataset: Row[], opts: { pageError?: number } = {}) {
       calls.ranges.push([f, t]);
       return q;
     });
+    // Keyset. `.gte` is the first page of a shard (it must INCLUDE the key the seek
+    // returned); `.gt` is every page after it.
+    q.gte = vi.fn((_c: string, v: string) => {
+      cursor = v;
+      inclusive = true;
+      calls.cursors.push({ key: v, inclusive: true });
+      return q;
+    });
+    q.gt = vi.fn((_c: string, v: string) => {
+      cursor = v;
+      inclusive = false;
+      calls.cursors.push({ key: v, inclusive: false });
+      return q;
+    });
+    q.limit = vi.fn((n: number) => {
+      lim = n;
+      calls.limits.push(n);
+      return q;
+    });
     q.then = (resolve: (v: unknown) => unknown) => {
       pages++;
       if (opts.pageError && pages === opts.pageError) {
@@ -53,7 +82,13 @@ function supabaseStub(dataset: Row[], opts: { pageError?: number } = {}) {
           resolve({ data: null, error: new Error('canceling statement due to statement timeout') })
         );
       }
-      return Promise.resolve(resolve({ data: dataset.slice(from, to + 1), error: null }));
+      // A seek asks for a single absolute offset; everything else walks by key.
+      if (cursor === null && calls.cursors.length === 0 && to >= from && calls.limits.length === 0) {
+        return Promise.resolve(resolve({ data: dataset.slice(from, to + 1), error: null }));
+      }
+      const c = cursor;
+      const eligible = c === null ? dataset : dataset.filter((r) => (inclusive ? r.listing_key >= c : r.listing_key > c));
+      return Promise.resolve(resolve({ data: eligible.slice(0, lim), error: null }));
     };
     return q;
   };
@@ -81,7 +116,7 @@ describe('listing sitemap — shard addressing', () => {
     );
   });
 
-  it('reads from the shardOFFSET, not always from zero', async () => {
+  it('SEEKS to its own shard boundary, not always to zero', async () => {
     const { client, calls } = supabaseStub([]);
     vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
@@ -119,7 +154,7 @@ describe('listing sitemap — shard addressing', () => {
 });
 
 describe('listing sitemap — pagination and canonical URLs', () => {
-  it('emits ALL rows in a shard when there are more than 1000 (pages with .range)', async () => {
+  it('emits ALL rows in a shard when there are more than 1000 (keyset pages)', async () => {
     const dataset = Array.from({ length: 2500 }, (_, i) => row(i));
     const { client, calls } = supabaseStub(dataset);
     vi.mocked(getServiceRoleClient).mockReturnValue(client);
@@ -128,18 +163,34 @@ describe('listing sitemap — pagination and canonical URLs', () => {
     expect(entries.length).toBe(2500);
     // PAGE must stay <= 1000 — PostgREST hard-caps one response there and silently
     // truncates anything larger.
-    const [f0, t0] = calls.ranges[0];
-    expect(t0 - f0 + 1).toBeLessThanOrEqual(1000);
+    for (const n of calls.limits) expect(n).toBeLessThanOrEqual(1000);
   });
 
-  it('never reads past its own shard', async () => {
-    // 2,500 rows exist; shard 0 owns [0, 20000). The guard that matters is the upper
-    // bound — a shard that runs off its end duplicates the next shard's URLs.
+  it('walks by KEYSET, never by a deepening OFFSET', async () => {
+    // THE regression this replaces. With the partial index (migration 148) in place and
+    // being USED, offset paging still read and heap-visited every discarded row:
+    //     OFFSET 40000 → rows=41000, 4,568 ms   vs   KEYSET → rows=1000, 1.8 ms
+    // Past ~20,000 that crossed the 8s statement timeout, so shard 0 died mid-slice and
+    // shards 1-2 died on their first page: 12,000 of 104,889 URLs, two files empty.
     const { client, calls } = supabaseStub(Array.from({ length: 2500 }, (_, i) => row(i)));
     vi.mocked(getServiceRoleClient).mockReturnValue(client);
 
     await sitemap({ id: 0 });
-    for (const [, to] of calls.ranges) expect(to).toBeLessThan(LISTING_SHARD_URLS);
+    // Shard 0 starts at the beginning, so it needs no seek at all.
+    expect(calls.ranges).toEqual([]);
+    expect(calls.cursors.length).toBeGreaterThan(0);
+    // The first page of a shard must INCLUDE its boundary key; later pages must not, or
+    // the row on the boundary is emitted twice.
+    expect(calls.cursors.filter((c) => c.inclusive).length).toBeLessThanOrEqual(1);
+  });
+
+  it('never emits more than its own shard holds', async () => {
+    // A shard that runs off its end duplicates the next shard's URLs.
+    const { client } = supabaseStub(Array.from({ length: 2500 }, (_, i) => row(i)));
+    vi.mocked(getServiceRoleClient).mockReturnValue(client);
+
+    const entries = await sitemap({ id: 0 });
+    expect(entries.length).toBeLessThanOrEqual(LISTING_SHARD_URLS);
   });
 
   it('emits the precomputed canonical, not the legacy /properties/{KEY}', async () => {
@@ -252,6 +303,8 @@ describe('listing sitemap — pagination and canonical URLs', () => {
     const entries = await sitemap({ id: 0 });
     expect(entries.length).toBe(1000); // short, as it must be
     // ...but never silently. Silence is what let a 69% shortfall sit live for two days.
-    expect(err).toHaveBeenCalledWith(expect.stringContaining('failed at offset'));
+    // The message must say HOW FAR it got — a bare "failed" gives no way to tell a
+    // timeout apart from a shard that legitimately ran out of rows.
+    expect(err).toHaveBeenCalledWith(expect.stringContaining('failed after 1000 rows'));
   });
 });

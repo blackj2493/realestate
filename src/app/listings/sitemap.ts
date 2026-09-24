@@ -92,36 +92,81 @@ async function shardIndex(id: unknown): Promise<number | null> {
   return shard;
 }
 
-/** One shard's worth of rows, read in PostgREST-sized pages from the shard's offset. */
+/**
+ * One shard's worth of rows: SEEK to the shard's first key, then walk forward by KEYSET.
+ *
+ * WHY NOT OFFSET. This paged with `.range(base + taken, …)` until 2026-09-24 and the
+ * shards served 12,000 of 104,889 URLs, two of them empty. Migration 148's partial index
+ * was necessary but NOT sufficient — measured on production, with the index in place and
+ * being used:
+ *
+ *     OFFSET 40000 : Index Scan, rows=41000, buffers hit=27909 read=12222 → 4,568 ms
+ *     KEYSET       : Index Scan, rows=1000,  buffers hit=988             →     1.8 ms
+ *
+ * OFFSET has to walk AND HEAP-VISIT every row it discards, because synced_at and
+ * sitemap_path are not in the index. At offsets of 20,000+ that crossed the 8s statement
+ * timeout, so shard 0 died mid-slice and shards 1 and 2 died on their first page.
+ *
+ * The seek is the one exception, and it is cheap precisely because it asks for NOTHING
+ * but listing_key — the index column — so it runs as an Index Only Scan: 30-41 ms at
+ * offset 20,000 through 140,000. One of those per shard, then every page after it reads
+ * only the rows it returns.
+ *
+ * An error is never treated as exhaustion. Both look like an empty <urlset> to a crawler
+ * and leave the build green, which is how this shipped silently twice.
+ */
 async function shardRows(
   supabase: ReturnType<typeof getServiceRoleClient>,
   shard: number
 ): Promise<ListingSitemapRow[]> {
   const base = shard * LISTING_SHARD_URLS;
   const rows: ListingSitemapRow[] = [];
-  for (let taken = 0; taken < LISTING_SHARD_URLS; taken += PAGE) {
-    const from = base + taken;
-    const to = Math.min(from + PAGE, base + LISTING_SHARD_URLS) - 1;
-    const { data, error } = await supabase
-      .from("listings")
-      .select(LISTING_SELECT)
-      // On-market rows only. See LISTING_ACTIVE_STATUSES: 130,917 of 327,723 rows are
-      // sold or leased, the listing page noindexes every one of them, and declaring them
-      // spends crawl budget fetching pages Google is then told to discard.
+
+  /** The shard's population, filtered identically at every step — see migration 148:
+   *  widen these and the index predicate stops matching, silently. */
+  const scoped = <T>(q: T): T =>
+    (q as unknown as { in: (c: string, v: string[]) => { eq: (c: string, v: boolean) => T } })
       .in("standard_status", LISTING_ACTIVE_STATUSES as unknown as string[])
-      // Orphans are rows the feed stopped sending. They resolve to nothing worth indexing.
-      .eq("is_orphaned", false)
+      .eq("is_orphaned", false);
+
+  // 1. Where does this shard start? Shard 0 starts at the beginning and needs no seek.
+  let cursor: string | null = null;
+  if (base > 0) {
+    const { data, error } = await scoped(supabase.from("listings").select("listing_key"))
       .order("listing_key")
-      .range(from, to);
+      .range(base, base);
     if (error) {
-      // Loudly, and stop — but never silently, and never as if the table simply ended.
-      // Conflating those is what hid a 69% shortfall in the root sitemap for two days.
-      console.error(`[sitemap] listing shard ${shard} failed at offset ${from}: ${error.message}`);
+      console.error(`[sitemap] listing shard ${shard} seek to ${base} failed: ${error.message}`);
+      return [];
+    }
+    // No row at that offset = this shard is past the end of the data. A valid empty
+    // sitemap, and NOT the same thing as a failure — which is why the error above
+    // returns separately rather than falling through to here.
+    if (!data || data.length === 0) return [];
+    cursor = (data[0] as unknown as { listing_key: string }).listing_key;
+  }
+
+  // 2. Walk forward. The first page must INCLUDE the boundary key the seek returned.
+  let inclusive = true;
+  while (rows.length < LISTING_SHARD_URLS) {
+    const want = Math.min(PAGE, LISTING_SHARD_URLS - rows.length);
+    let q = scoped(supabase.from("listings").select(LISTING_SELECT)).order("listing_key").limit(want);
+    if (cursor !== null) {
+      q = inclusive
+        ? (q as unknown as { gte: (c: string, v: string) => typeof q }).gte("listing_key", cursor)
+        : (q as unknown as { gt: (c: string, v: string) => typeof q }).gt("listing_key", cursor);
+    }
+    const { data, error } = await q;
+    if (error) {
+      console.error(`[sitemap] listing shard ${shard} failed after ${rows.length} rows: ${error.message}`);
       break;
     }
     if (!data || data.length === 0) break;
-    rows.push(...(data as unknown as ListingSitemapRow[]));
-    if (data.length < to - from + 1) break;
+    const page = data as unknown as ListingSitemapRow[];
+    rows.push(...page);
+    cursor = page[page.length - 1].listing_key;
+    inclusive = false;
+    if (page.length < want) break; // exhausted
   }
   return rows;
 }
