@@ -44,6 +44,7 @@ import { getServiceRoleClient } from '@/lib/supabase/client';
 import { buildAreaClause } from '@/lib/bubbles/stats';
 import { buildTransactionClause, SALE_PRICE_FLOOR } from '@/lib/filters/fundamentals';
 import { bubbleAlertFilter } from '@/lib/alerts/bubbleFilterClause';
+import { aboveGradeBedsRangeClause } from '@/lib/filters/filterRegistry';
 import { pickScore, sanePriceCut, type PickEstimate } from '@/lib/alerts/pickRank';
 import {
   classifyStatusChange,
@@ -227,7 +228,8 @@ interface ListingAlertRow {
   last_notified_at: string | null;
 }
 
-/** Anchor facts a `similar` subscription matches against (active index, else vault). */
+/** Anchor facts a `similar` subscription matches against (active index, else vault).
+ *  `beds` is ABOVE-GRADE (total only as a fallback) — see fetchSimilarAnchor. */
 interface SimilarAnchor {
   city: string;
   subtype: string;
@@ -240,15 +242,23 @@ async function fetchSimilarAnchor(
   supabase: ReturnType<typeof getServiceRoleClient>,
   key: string
 ): Promise<SimilarAnchor | null> {
-  const shape = (city: unknown, subtype: unknown, price: unknown, beds: unknown): SimilarAnchor | null => {
+  // ABOVE-GRADE, falling back to the total when it is missing or 0 — the same rule
+  // bedsLabel uses to RENDER beds and aboveGradeBedsClause uses to FILTER them. This read
+  // BedroomsTotal until 2026-09-24, so a 3+1 anchor counted as a "4 bed" and its ±1 band
+  // reached down to true 3-beds.
+  const shape = (
+    city: unknown, subtype: unknown, price: unknown, above: unknown, total: unknown
+  ): SimilarAnchor | null => {
     const p = Number(price);
     if (!city || !subtype || !Number.isFinite(p) || p <= 0) return null;
-    const b = Number(beds);
-    return { city: String(city), subtype: String(subtype), price: p, beds: Number.isFinite(b) && b > 0 ? b : null };
+    const a = Number(above);
+    const t = Number(total);
+    const b = Number.isFinite(a) && a > 0 ? a : Number.isFinite(t) && t > 0 ? t : null;
+    return { city: String(city), subtype: String(subtype), price: p, beds: b };
   };
   try {
     const doc = (await ts.collections('properties').documents(key).retrieve()) as Record<string, unknown>;
-    const a = shape(doc.City, doc.PropertySubType, doc.ListPrice, doc.BedroomsTotal);
+    const a = shape(doc.City, doc.PropertySubType, doc.ListPrice, doc.BedroomsAboveGrade, doc.BedroomsTotal);
     if (a) return a;
   } catch {
     /* fall through to the vault — a similar sub should keep matching after the anchor sells */
@@ -257,12 +267,13 @@ async function fetchSimilarAnchor(
     const { data } = await supabase
       .from('listings')
       .select(
-        'city:full_payload->>City, subtype:full_payload->>PropertySubType, price:full_payload->>ListPrice, beds:full_payload->>BedroomsTotal'
+        'city:full_payload->>City, subtype:full_payload->>PropertySubType, price:full_payload->>ListPrice, ' +
+          'above:full_payload->>BedroomsAboveGrade, beds:full_payload->>BedroomsTotal'
       )
       .eq('listing_key', key)
       .maybeSingle();
-    const r = data as { city?: string; subtype?: string; price?: string; beds?: string } | null;
-    return r ? shape(r.city, r.subtype, r.price, r.beds) : null;
+    const r = data as { city?: string; subtype?: string; price?: string; above?: string; beds?: string } | null;
+    return r ? shape(r.city, r.subtype, r.price, r.above, r.beds) : null;
   } catch {
     return null;
   }
@@ -431,9 +442,14 @@ export async function runListingAlertsPhase(
     const sinceMs = new Date(r.last_notified_at).getTime();
     const lo = Math.round(anchor.price * 0.8);
     const hi = Math.round(anchor.price * 1.2);
+    // ±1 on ABOVE-GRADE beds. The band stays symmetric on purpose — a `similar`
+    // subscription is a lead who clicked "homes like this" on ONE listing and never
+    // stated a minimum, so 3 and 5 are both legitimate neighbours of a 4. What was wrong
+    // was the FIELD: both sides read BedroomsTotal while every card renders above-grade,
+    // so a 3+1 read as a 4 and the window reached true 3-beds.
     const bedsClause =
       anchor.beds != null
-        ? ` && BedroomsTotal:>=${Math.max(0, anchor.beds - 1)} && BedroomsTotal:<=${anchor.beds + 1}`
+        ? ` && ${aboveGradeBedsRangeClause(Math.max(0, anchor.beds - 1), anchor.beds + 1)}`
         : '';
     try {
       const res = await ts.collections('properties').documents().search({
@@ -445,7 +461,7 @@ export async function runListingAlertsPhase(
         sort_by: 'EntryTimestamp:desc',
         per_page: 7, // 6 shown + headroom for the anchor itself sneaking in
         include_fields:
-          'id,UnparsedAddress,City,ListPrice,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp',
+          'id,UnparsedAddress,City,ListPrice,BedroomsAboveGrade,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp',
       });
       const num = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
       const matches: SimilarMatch[] = (res.hits ?? [])
@@ -457,7 +473,8 @@ export async function runListingAlertsPhase(
           address: (d.UnparsedAddress as string) || 'New listing',
           city: (d.City as string) || null,
           price: num(d.ListPrice),
-          beds: num(d.BedroomsTotal),
+          // Render what the cards render: above-grade, total only as a fallback.
+          beds: num(d.BedroomsAboveGrade) ?? num(d.BedroomsTotal),
           baths: num(d.BathroomsTotalInteger),
           brokerage: (d.ListOfficeName as string) || null,
         }));
@@ -1318,7 +1335,7 @@ async function main() {
             per_page: BUBBLE_PAGE_SIZE,
             page,
             include_fields:
-              'id,UnparsedAddress,City,ListPrice,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp,primaryImageUrl,TotalPriceDrop',
+              'id,UnparsedAddress,City,ListPrice,BedroomsAboveGrade,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp,primaryImageUrl,TotalPriceDrop',
           });
           const hits = res.hits ?? [];
           for (const h of hits) docs.push(h.document as Record<string, unknown>);
@@ -1332,7 +1349,9 @@ async function main() {
             address: (d.UnparsedAddress as string) || 'New listing',
             city: (d.City as string) || null,
             price: num(d.ListPrice),
-            beds: num(d.BedroomsTotal),
+            // The area query filters on ABOVE-grade beds (aboveGradeBedsClause), so a
+            // row rendering the total contradicted the filter it was selected by.
+            beds: num(d.BedroomsAboveGrade) ?? num(d.BedroomsTotal),
             baths: num(d.BathroomsTotalInteger),
             brokerage: (d.ListOfficeName as string) || null,
             // Same precedence the app cards use (thumbnailUrl || primaryImageUrl); only

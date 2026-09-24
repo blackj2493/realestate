@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  aboveGradeBedsClause,
+  exactAboveGradeBedsClause,
+  aboveGradeBedsRangeClause,
   FILTERS_BY_KEY,
   buildUniversalFilterString,
   makeDefaultUniversalFilters,
@@ -160,5 +163,34 @@ describe("filterRegistry — class-scoped filter sets (commercial)", () => {
     expect(excluded).not.toContain("homeType");
     expect(excluded).not.toContain("occupancy");
     expect(excluded).not.toContain("lotSize");
+  });
+});
+
+describe("aboveGradeBedsRangeClause — the similar-alerts ±1 band", () => {
+  it("bands ABOVE-grade beds, with the same total fallback as its siblings", () => {
+    const c = aboveGradeBedsRangeClause(3, 5);
+    expect(c).toBe(
+      "((BedroomsAboveGrade:>=3 && BedroomsAboveGrade:<=5)" +
+        " || (BedroomsAboveGrade:=0 && BedroomsTotal:>=3 && BedroomsTotal:<=5))"
+    );
+  });
+
+  it("never bands on BedroomsTotal alone — that is the bug it replaces", () => {
+    // Both sides of the band read BedroomsTotal until 2026-09-24, so a 3+1 anchor
+    // counted as a "4 bed" and its window reached true 3-beds, which read to the user
+    // as the bed filter leaking. The total may only appear inside the above-grade=0
+    // rescue branch.
+    const c = aboveGradeBedsRangeClause(3, 5);
+    const outsideFallback = c.replace(/\(BedroomsAboveGrade:=0[^)]*\)/, "");
+    expect(outsideFallback).not.toContain("BedroomsTotal");
+  });
+
+  it("agrees with aboveGradeBedsClause about what a bedroom is", () => {
+    // One definition of "a bedroom" across min, exact and range — if these three ever
+    // disagree, the filter, the email and the card start contradicting each other.
+    for (const clause of [aboveGradeBedsClause(4), exactAboveGradeBedsClause(4), aboveGradeBedsRangeClause(3, 5)]) {
+      expect(clause).toContain("BedroomsAboveGrade");
+      expect(clause).toContain("BedroomsAboveGrade:=0 && BedroomsTotal");
+    }
   });
 });
