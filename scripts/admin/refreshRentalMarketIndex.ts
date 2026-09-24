@@ -222,8 +222,11 @@ function report(label: string, read: number, rows: RentalIndexRow[]): void {
     a[r.match_tier] = (a[r.match_tier] ?? 0) + 1;
     return a;
   }, {});
-  for (const t of ['nbhd', 'city_bath', 'city', 'city_family', 'county', 'suite_nbhd', 'suite_city'] as const) {
-    console.log(`  ${t.padEnd(12)} ${(byTier[t] ?? 0).toLocaleString().padStart(7)} cohorts`);
+  // Derived from the rows, NOT a hardcoded list: the 148 size rungs were built and
+  // written correctly while this summary silently omitted them, which reads to an
+  // operator as "the new rungs didn't build".
+  for (const t of Object.keys(byTier).sort()) {
+    console.log(`  ${t.padEnd(16)} ${(byTier[t] ?? 0).toLocaleString().padStart(7)} cohorts`);
   }
 }
 
@@ -292,21 +295,21 @@ async function main() {
   await client.query('TRUNCATE rental_market_index');
   for (let i = 0; i < indexRows.length; i += WRITE_CHUNK) {
     const batch = indexRows.slice(i, i + WRITE_CHUNK);
-    const COLS = 14; // keep in lockstep with the INSERT column list + params.push below
+    const COLS = 15; // keep in lockstep with the INSERT column list + params.push below
     const params: (string | number | null)[] = [];
     const tuples = batch.map((row, j) => {
       const b = j * COLS;
       params.push(row.match_tier, row.basis, row.city_region, row.city, row.property_sub_type,
         row.bedrooms_total, row.bedrooms_above, row.den, row.bathrooms,
         row.avg_rent, row.p10_rent, row.sample_count,
-        row.county, row.sub_type_family);
+        row.county, row.sub_type_family, row.living_area_range);
       return `(${Array.from({ length: COLS }, (_, k) => `$${b + k + 1}`).join(', ')})`;
     });
     await client.query(
       `INSERT INTO rental_market_index
          (match_tier, basis, city_region, city, property_sub_type, bedrooms_total,
           bedrooms_above, den, bathrooms, avg_rent, p10_rent, sample_count,
-          county, sub_type_family)
+          county, sub_type_family, living_area_range)
        VALUES ${tuples.join(',')}`,
       params,
     );
