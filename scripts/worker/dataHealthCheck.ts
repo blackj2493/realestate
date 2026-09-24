@@ -394,6 +394,10 @@ async function checkEmailVolume(sb: ReturnType<typeof getServiceRoleClient>): Pr
             due: valueOn(EMAIL_METRICS.digestDue),
             sent: valueOn(EMAIL_METRICS.digestSent),
             suppressed: valueOn(EMAIL_METRICS.digestSuppressed),
+            // alerts.ts records five outcomes; reading three made every weekly reader
+            // look like a lost send once migration 144 shipped. Pass them all.
+            deferred: valueOn(EMAIL_METRICS.digestDeferred),
+            failed: valueOn(EMAIL_METRICS.digestFailed),
           }
         : null,
       staleDays: EMAIL_VOLUME_STALE_DAYS,

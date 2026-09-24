@@ -414,14 +414,75 @@ describe("the nightly email run going quiet (the never-attempted send)", () => {
     expect(p[0].detail).toContain("12");
   });
 
-  it("warns when some sends fall through between the gate and Resend", () => {
+  it("warns when some sends are genuinely unaccounted for", () => {
     const p = checkEmailSendVolume({
       latest: { day: day(0), due: 10, sent: 6, suppressed: 1 },
       staleDays: 2,
       now: NOW,
     });
     expect(p[0].severity).toBe("warn");
-    expect(p[0].detail).toContain("3 fell through");
+    expect(p[0].detail).toContain("3 unaccounted for");
+  });
+
+  it("stays silent when the remainder is weekly readers holding their news", () => {
+    // The live false alarm this check was rewritten for: on 2026-09-22/23/24 it reported
+    // ~89 users "fell through (no profile email on file, or Resend threw)" three nights
+    // running. They were weekly-cadence readers deferring tonight's news (migration 144),
+    // and the check simply had not been given that counter. 108 + 52 + 89 + 0 = 249.
+    expect(
+      checkEmailSendVolume({
+        latest: { day: day(0), due: 249, sent: 108, suppressed: 52, deferred: 89, failed: 0 },
+        staleDays: 2,
+        now: NOW,
+      })
+    ).toEqual([]);
+  });
+
+  it("reports a provider rejection on its own line, not as a residual", () => {
+    // Resend answers with an API error rather than throwing, so a rejected send is
+    // indistinguishable from a delivered one unless this counter is read.
+    const p = checkEmailSendVolume({
+      latest: { day: day(0), due: 20, sent: 15, suppressed: 2, deferred: 0, failed: 3 },
+      staleDays: 2,
+      now: NOW,
+    });
+    expect(p.length).toBe(1);
+    expect(p[0].severity).toBe("warn");
+    expect(p[0].detail).toContain("REJECTED 3");
+    // Rejections are accounted for, so they must not ALSO read as unexplained.
+    expect(p[0].detail).not.toContain("unaccounted");
+  });
+
+  it("separates a rejection from a real shortfall when both happen", () => {
+    const p = checkEmailSendVolume({
+      latest: { day: day(0), due: 20, sent: 10, suppressed: 2, deferred: 3, failed: 1 },
+      staleDays: 2,
+      now: NOW,
+    });
+    expect(p.length).toBe(2);
+    expect(p[0].detail).toContain("REJECTED 1");
+    expect(p[1].detail).toContain("4 unaccounted for");
+  });
+
+  it("treats a night that only deferred as healthy, not as a dead send loop", () => {
+    // Everyone with news is on weekly. Nothing went out tonight and nothing is wrong.
+    expect(
+      checkEmailSendVolume({
+        latest: { day: day(0), due: 5, sent: 0, suppressed: 0, deferred: 5, failed: 0 },
+        staleDays: 2,
+        now: NOW,
+      })
+    ).toEqual([]);
+  });
+
+  it("reads a pre-migration-144 row, which carries neither counter, as zero not as a gap", () => {
+    expect(
+      checkEmailSendVolume({
+        latest: { day: day(0), due: 7, sent: 5, suppressed: 2 },
+        staleDays: 2,
+        now: NOW,
+      })
+    ).toEqual([]);
   });
 
   it("tolerates one deferred night, warns once the run has really stopped", () => {
