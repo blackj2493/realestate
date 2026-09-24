@@ -182,6 +182,7 @@ async function recompute(raw: any) {
     bedroomsBelowGrade: raw.BedroomsBelowGrade,
     bathroomsTotal: raw.BathroomsTotalInteger || 0,
     county: raw.CountyOrParish,
+    livingAreaRange: raw.LivingAreaRange,
   }));
 
   // Suite rent (125), only where the feed OBSERVES a suite — never from a score. Same

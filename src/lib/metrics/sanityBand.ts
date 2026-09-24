@@ -67,3 +67,89 @@ export function hasRentEstimate(doc: {
     (typeof doc.gross_yield_est === "number" && doc.gross_yield_est > 0)
   );
 }
+
+/**
+ * Plausible monthly rent CEILING by TRREB living-area band, from 261,896 signed leases
+ * that carry a size band. Each `max` is the band's own 99.5th percentile.
+ *
+ * WHY PER BAND, NOT A FLAT $/SQFT RULE. A flat rent-per-square-foot ceiling was the
+ * obvious guard and the data killed it: 8.3% of real leases clear $5/sqft, and a 250 sqft
+ * studio at $2,100/mo — $8.40/sqft — is simply a normal downtown studio. Rent per square
+ * foot falls steeply with size, so one threshold either passes everything or rejects every
+ * small unit. The rent a given SIZE actually commands is the stable thing, so that is what
+ * is bounded.
+ *
+ * WHAT IT CATCHES. The rent ladder keys on region/city x type x beds x baths and has no
+ * size dimension at all, so bathroom count silently acts as a size proxy. On 130 River St
+ * #1508 — 650 sqft, listed with 3 bathrooms — that proxy inverted: the cohort it matched
+ * (Toronto C08, 2 bed, 3 bath, n=31) is made of 1,900 sqft Merchants' Wharf and Queens Quay
+ * penthouses, and it published $5,200/mo. Two units in that same building, same size, leased
+ * that month for $2,900 and $3,000. $5,200 sits above 99.99% of the 41,269 real 650 sqft
+ * leases in the feed.
+ *
+ * Applied in fetchRentAVM to SKIP a rung rather than to blank the answer: a cohort that
+ * fails here is a wrong cohort, and the next rung down is usually right (on that listing the
+ * bath-matched rung failed and the size-agnostic city rung returned $2,600).
+ *
+ * Calibrated on individual leases but applied to cohort MEDIANS, which are far less
+ * dispersed — so the real false-positive rate is well under the 0.5% the percentile implies.
+ * Regenerate from raw_vow_sold lease rows grouped by living_area_range if the market moves.
+ */
+export const RENT_CEILING_BY_SIZE: ReadonlyArray<{ sqft: number; max: number }> = [
+  { sqft: 250, max: 3_100 },
+  { sqft: 550, max: 3_000 },
+  { sqft: 650, max: 3_400 },
+  { sqft: 700, max: 4_750 },
+  { sqft: 750, max: 3_975 },
+  { sqft: 850, max: 4_575 },
+  { sqft: 900, max: 4_750 },
+  { sqft: 950, max: 5_000 },
+  { sqft: 1_100, max: 6_500 },
+  { sqft: 1_300, max: 6_980 },
+  { sqft: 1_500, max: 12_000 },
+  { sqft: 1_700, max: 16_000 },
+  { sqft: 1_750, max: 6_900 },
+  { sqft: 1_900, max: 17_500 },
+  { sqft: 2_125, max: 20_500 },
+  { sqft: 2_250, max: 9_990 },
+  { sqft: 2_375, max: 18_000 },
+  { sqft: 2_750, max: 14_000 },
+  { sqft: 3_250, max: 15_000 },
+  { sqft: 4_250, max: 26_000 },
+  { sqft: 5_000, max: 30_000 },
+];
+
+/** Midpoint of a TRREB living-area band ("600-699" -> 650), or null. Accepts a bare
+ *  number too, since raw_vow_sold already stores the midpoint. */
+export function livingAreaMidpoint(v: string | number | null | undefined): number | null {
+  if (typeof v === "number") return Number.isFinite(v) && v > 0 ? v : null;
+  if (typeof v !== "string") return null;
+  const range = v.match(/(\d+)\s*[-–]\s*(\d+)/);
+  if (range) return (Number(range[1]) + Number(range[2])) / 2;
+  const n = Number(v.trim());
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * Highest plausible monthly rent for a dwelling of this size, or null when the size is
+ * unknown or larger than the table covers — in which case the caller must NOT gate, because
+ * "no ceiling" is not the same as "zero".
+ */
+export function rentCeilingForSize(v: string | number | null | undefined): number | null {
+  const sqft = livingAreaMidpoint(v);
+  if (sqft === null) return null;
+  // Nearest band at or above the size; the top row also covers anything larger.
+  for (const b of RENT_CEILING_BY_SIZE) if (sqft <= b.sqft) return b.max;
+  return null;
+}
+
+/** True when this cohort rent is impossible for a dwelling of this size. Unknown size or
+ *  unknown rent is never "implausible" — absence of evidence is not evidence. */
+export function rentImplausibleForSize(
+  monthlyRent: number | null | undefined,
+  livingArea: string | number | null | undefined,
+): boolean {
+  const ceiling = rentCeilingForSize(livingArea);
+  if (ceiling === null) return false;
+  return typeof monthlyRent === "number" && Number.isFinite(monthlyRent) && monthlyRent > ceiling;
+}
