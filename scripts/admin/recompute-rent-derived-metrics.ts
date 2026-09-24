@@ -43,6 +43,12 @@
  *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts                # dry-run
  *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --apply
  *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --limit=2000   # bound the scan
+ *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --after=X12345 --limit=20000 --apply
+ *        # RESUMABLE WINDOW. The full --all scan is ~150k listings and writes only at the
+ *        # END, so a run killed at 12k/150k wrote nothing at all. Chain windows instead:
+ *        # each one scans, writes, and prints the --after for the next. A kill then costs
+ *        # one window, not two hours. --limit ALONE cannot do this: without a cursor the
+ *        # second run rescans the same head of the set and never moves forward.
  *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --all          # rescan positives too
  *   npx tsx scripts/admin/recompute-rent-derived-metrics.ts --all --resync-index
  *        # also repatch rows the Postgres-drift test skips. Use when the index has
@@ -433,6 +439,10 @@ async function main() {
   const all = process.argv.includes('--all');
   const resyncIndex = process.argv.includes('--resync-index');
   const force = process.argv.includes('--force');
+  const afterArg = process.argv.find((a) => a.startsWith('--after='));
+  /** Resume cursor: scan only keys AFTER this one. Empty string scans from the start,
+   *  because every listing_key is non-empty so `> ''` matches everything. */
+  const after = afterArg ? afterArg.split('=').slice(1).join('=') : '';
   const limitArg = process.argv.find((a) => a.startsWith('--limit='));
   const sampleArg = process.argv.find((a) => a.startsWith('--samples='));
   const limit = limitArg ? Number(limitArg.split('=')[1]) : null;
@@ -477,9 +487,9 @@ async function main() {
   // 15% band and 1,550 carrying a fabricated negative.
   const scopeSql =
     `FROM listings WHERE (list_price >= 100000 OR (cap_rate_est IS NOT NULL AND cap_rate_est <> 0)) ` +
-    `AND coalesce(standard_status,'') <> ALL($1::text[]) ${candidateFilter}`;
+    `AND coalesce(standard_status,'') <> ALL($1::text[]) AND listing_key > $2 ${candidateFilter}`;
 
-  const { rows: countRows } = await client.query(`SELECT count(*)::int AS n ${scopeSql}`, [CLOSED_STATUSES]);
+  const { rows: countRows } = await client.query(`SELECT count(*)::int AS n ${scopeSql}`, [CLOSED_STATUSES, after]);
   const total = limit ? Math.min(limit, countRows[0].n) : countRows[0].n;
   console.log(`📋 ${total.toLocaleString()} listing(s) in scope\n`);
 
@@ -488,13 +498,20 @@ async function main() {
   let clearedNegative = 0;
   const drifted: Drift[] = [];
 
-  for (let offset = 0; offset < total; offset += READ_PAGE) {
+  // KEYSET, not OFFSET. A resumable scan needs a stable cursor, and OFFSET re-reads and
+  // discards everything before it — on the 150k full scan the last page costs the whole
+  // table. `cursor` is also what gets printed on exit so a killed run can resume.
+  let cursor = after;
+  let lastKey = after;
+  for (let done = 0; done < total; done += READ_PAGE) {
     const { rows } = await client.query<Row>(
       `SELECT listing_key, cap_rate_est, rent_match_tier, suite_rent_est, full_payload ${scopeSql}
-        ORDER BY listing_key LIMIT $2 OFFSET $3`,
-      [CLOSED_STATUSES, Math.min(READ_PAGE, total - offset), offset]
+        ORDER BY listing_key LIMIT $3`,
+      [CLOSED_STATUSES, cursor, Math.min(READ_PAGE, total - done)]
     );
     if (rows.length === 0) break;
+    cursor = rows[rows.length - 1].listing_key;
+    lastKey = cursor;
 
     const results = await mapPool(rows, CONCURRENCY, async (r) => {
       try {
@@ -564,7 +581,7 @@ async function main() {
       });
     }
     console.log(
-      `   … scanned ${scanned.toLocaleString()}/${total.toLocaleString()}  (drift ${drifted.length.toLocaleString()})`
+      `   … scanned ${scanned.toLocaleString()}/${total.toLocaleString()}  (drift ${drifted.length.toLocaleString()})  --after=${lastKey}`
     );
   }
 
@@ -593,6 +610,15 @@ async function main() {
         `${from.padStart(8)}% → ${d.to.toFixed(2).padStart(6)}%   ${d.hadComp ? 'comp' : 'no comp'}`
       );
     }
+  }
+
+  // The full --all scan is ~150k listings and writes only at the END, so a run killed at
+  // 12k/150k wrote nothing at all. Chain bounded windows instead — each scans, writes, and
+  // prints the cursor for the next, so a kill costs one window rather than two hours.
+  // --limit ALONE cannot do this: with no cursor the next run rescans the same head.
+  if (lastKey) {
+    console.log(`
+↻ next window: --after=${lastKey}   (done when a window reports 0 listing(s) in scope)`);
   }
 
   if (!apply) {
