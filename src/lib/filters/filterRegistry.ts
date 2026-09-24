@@ -68,6 +68,20 @@ export const exactAboveGradeBedsClause = (n: number): string =>
   `(BedroomsAboveGrade:=${n} || (BedroomsAboveGrade:=0 && BedroomsTotal:=${n}))`;
 
 /**
+ * Inclusive RANGE variant of {@link aboveGradeBedsClause}, for the similar-listings
+ * alert's "beds within ±1 of the anchor" band.
+ *
+ * That band matched on BedroomsTotal on BOTH sides until 2026-09-24 — anchor and
+ * candidates alike — while every card renders above-grade. So a 3+1 anchor counted as a
+ * "4 bed" and its ±1 window pulled in true 3-beds, which read as the bed filter leaking.
+ * Same above-grade/total fallback as its two siblings, so all three agree about what a
+ * bedroom is.
+ */
+export const aboveGradeBedsRangeClause = (lo: number, hi: number): string =>
+  `((BedroomsAboveGrade:>=${lo} && BedroomsAboveGrade:<=${hi})` +
+  ` || (BedroomsAboveGrade:=0 && BedroomsTotal:>=${lo} && BedroomsTotal:<=${hi}))`;
+
+/**
  * Normalises a stepper value. A bare number means "minimum" (the default/legacy
  * shape), so existing state and the `0` defaults keep working; the object form
  * `{ n, exact }` carries the Min/Exact mode the popover now offers.
