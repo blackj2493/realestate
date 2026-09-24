@@ -65,3 +65,24 @@ describe('refreshRentalMarketIndex writer', () => {
     expect(SRC).toMatch(/Object\.keys\(byTier\)/);
   });
 });
+
+describe('operator summaries must not hardcode the tier list', () => {
+  // The same mistake was made twice: refreshRentalMarketIndex and
+  // recompute-rent-derived-metrics each printed a fixed array of rung names, so both
+  // omitted the 148 size rungs. On a recompute where 266 of 288 rewrites came from a size
+  // cohort, the summary showed 22 — which reads as "the new rungs aren't being used" on a
+  // run that was working perfectly. A wrong summary gets a correct change reverted.
+  const SCRIPTS = [
+    ['refreshRentalMarketIndex.ts', 'byTier'],
+    ['recompute-rent-derived-metrics.ts', 'tierMix'],
+  ] as const;
+
+  for (const [file, tally] of SCRIPTS) {
+    it(`${file} derives its rung list from ${tally}`, () => {
+      const src = fs.readFileSync(path.join(__dirname, '../admin/', file), 'utf8');
+      expect(src).toContain(`Object.keys(${tally})`);
+      // And no literal rung array left behind to drift out of date.
+      expect(src).not.toMatch(/\[\s*'nbhd'\s*,\s*'city_bath'/);
+    });
+  }
+});

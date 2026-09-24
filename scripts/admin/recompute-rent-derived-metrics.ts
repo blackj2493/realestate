@@ -580,8 +580,11 @@ async function main() {
   }, {});
   console.log('');
   console.log('   rung mix of the rewritten values:');
-  for (const t of ['nbhd', 'city_bath', 'city', 'city_family', 'county', '(no comp)']) {
-    if (tierMix[t]) console.log(`      ${t.padEnd(12)} ${tierMix[t].toLocaleString().padStart(7)}`);
+  // Derived from the data, NOT a hardcoded list. The hardcoded version omitted the 148
+  // size rungs, so a run where 266 of 288 rewrites came from a size cohort displayed 22
+  // — which reads as "the new rungs aren't being used" on a run that was working.
+  for (const t of Object.keys(tierMix).sort()) {
+    console.log(`      ${t.padEnd(16)} ${tierMix[t].toLocaleString().padStart(7)}`);
   }
 
   if (drifted.length) {
