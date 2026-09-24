@@ -923,6 +923,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
       bedroomsBelowGrade: raw.BedroomsBelowGrade,
       // Real bath count drives the tiered rent lookup (replaces WashroomsType1Pcs).
       bathroomsTotal: raw.BathroomsTotalInteger || 0,
+      // Size. The ladder has no size dimension, so bath count acts as a size proxy —
+      // this lets a rung whose rent is impossible for the dwelling be skipped.
+      livingAreaRange: raw.LivingAreaRange,
       // Parent geography for the county rung (124). Omit it and the ladder just stops
       // one rung earlier, so this is additive, never a regression.
       county: raw.CountyOrParish,
@@ -958,6 +961,7 @@ export async function transformListing(raw: any): Promise<TransformResult> {
           bedroomsBelowGrade: raw.BedroomsBelowGrade,
           bathroomsTotal: raw.BathroomsTotalInteger || 0,
           county: raw.CountyOrParish,
+          livingAreaRange: raw.LivingAreaRange,
           wholeHome: rentAVM,
         }),
       ]);

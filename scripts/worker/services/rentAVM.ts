@@ -6,6 +6,7 @@
  * Falls back gracefully when no data is available.
  */
 
+import { rentImplausibleForSize } from '@/lib/metrics/sanityBand';
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { bedSplit } from '@/lib/listings/bedSplit';
@@ -57,6 +58,11 @@ export async function fetchRentAVM(params: {
   bathroomsTotal?: number;
   /** CountyOrParish. Without it the ladder simply stops one rung earlier (124). */
   county?: string | null;
+  /** LivingAreaRange ("600-699") or a midpoint. The ladder has NO size dimension, so
+   *  bathroom count silently acts as a size proxy; pass this and a rung whose rent is
+   *  impossible for the dwelling's size is skipped instead of published. Omit it and the
+   *  behaviour is exactly as before. */
+  livingAreaRange?: string | number | null;
 }): Promise<RentAVMResult> {
   const { bedroomsTotal, bathroomsTotal = 0 } = params;
 
@@ -141,27 +147,34 @@ export async function fetchRentAVM(params: {
     return pickPreferredBasis((data ?? []) as CohortRow[]);
   };
 
+  // A cohort rent that is impossible for this dwelling's SIZE is a wrong cohort, not a
+  // high one — see RENT_CEILING_BY_SIZE. Skipping the rung lets the ladder fall through to
+  // one that fits; on 130 River St #1508 the bath-matched rung published $5,200 for a
+  // 650 sqft unit and the next rung down returned $2,600, against $2,900-3,000 actual.
+  const acceptable = (data: CohortRow | null): data is CohortRow =>
+    !!data && !rentImplausibleForSize(data.avg_rent, params.livingAreaRange);
+
   for (const d of dims) {
     // Tier 1 — neighbourhood + baths (most precise)
     if (!row && cityRegion) {
       const data = await probe((q) => q
         .eq('match_tier', 'nbhd').eq('city_region', cityRegion)
         .eq('property_sub_type', propertySubType).eq('bathrooms', bathroomsTotal), d);
-      if (data) { row = data; tier = 'nbhd'; plusRoomAware = d.aware; }
+      if (acceptable(data)) { row = data; tier = 'nbhd'; plusRoomAware = d.aware; }
     }
     // Tier 2 — city + baths
     if (!row && city) {
       const data = await probe((q) => q
         .eq('match_tier', 'city_bath').eq('city', city)
         .eq('property_sub_type', propertySubType).eq('bathrooms', bathroomsTotal), d);
-      if (data) { row = data; tier = 'city_bath'; plusRoomAware = d.aware; }
+      if (acceptable(data)) { row = data; tier = 'city_bath'; plusRoomAware = d.aware; }
     }
     // Tier 3 — city, baths relaxed
     if (!row && city) {
       const data = await probe((q) => q
         .eq('match_tier', 'city').eq('city', city)
         .eq('property_sub_type', propertySubType), d);
-      if (data) { row = data; tier = 'city'; plusRoomAware = d.aware; }
+      if (acceptable(data)) { row = data; tier = 'city'; plusRoomAware = d.aware; }
     }
     // Tier 4 (124) — city held, sub-type relaxed to its family. Above `county`
     // because location dominates rent: the right city with a pooled type beats the
@@ -170,7 +183,7 @@ export async function fetchRentAVM(params: {
       const data = await probe((q) => q
         .eq('match_tier', 'city_family').eq('city', city)
         .eq('sub_type_family', family), d);
-      if (data) { row = data; tier = 'city_family'; plusRoomAware = d.aware; }
+      if (acceptable(data)) { row = data; tier = 'city_family'; plusRoomAware = d.aware; }
     }
     // Tier 5 (124) — exact sub-type held, geography widened to the county. Last rung:
     // below this the answer is no estimate, which is the correct answer for a
@@ -179,7 +192,7 @@ export async function fetchRentAVM(params: {
       const data = await probe((q) => q
         .eq('match_tier', 'county').eq('county', county)
         .eq('property_sub_type', propertySubType), d);
-      if (data) { row = data; tier = 'county'; plusRoomAware = d.aware; }
+      if (acceptable(data)) { row = data; tier = 'county'; plusRoomAware = d.aware; }
     }
     if (row) break;
   }
@@ -239,6 +252,7 @@ export async function fetchMainUnitRent(params: {
   bedroomsBelowGrade?: number | null;
   bathroomsTotal?: number;
   county?: string | null;
+  livingAreaRange?: string | number | null;
   /** The whole-home result already fetched for this listing. Returned unchanged when
    *  there is no plus-room to strip — see below. */
   wholeHome: RentAVMResult;
