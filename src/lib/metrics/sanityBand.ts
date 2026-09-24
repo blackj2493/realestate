@@ -153,3 +153,17 @@ export function rentImplausibleForSize(
   if (ceiling === null) return false;
   return typeof monthlyRent === "number" && Number.isFinite(monthlyRent) && monthlyRent > ceiling;
 }
+
+/**
+ * Canonical cohort key for a living-area band.
+ *
+ * raw_vow_sold stores the ROUNDED midpoint (650); the listing payload ships the range
+ * string ("600-699", midpoint 649.5). Rounding reconciles them exactly across every TRREB
+ * band — 249.5->250, 1099.5->1100, 2124.5->2125 — so both sides of the rent index key the
+ * same cohort. Keep the model and the lookup on THIS function; two near-identical
+ * midpoints would silently build cohorts nothing can ever find.
+ */
+export function livingAreaBandKey(v: string | number | null | undefined): number | null {
+  const mid = livingAreaMidpoint(v);
+  return mid === null ? null : Math.round(mid);
+}

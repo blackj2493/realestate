@@ -72,6 +72,7 @@ interface LeaseRow {
   bedrooms_above: string | number | null;
   bedrooms_below: string | number | null;
   bathrooms_total: string | number | null;
+  living_area_range: string | number | null;
   county: string | null;
   unparsed_address: string | null;
   dedupe_key: string | null;
@@ -101,6 +102,9 @@ function accumulate(rows: LeaseRow[], basis: RentBasis): RentalIndexRow[] {
       bedroomsBelowGrade: int(r.bedrooms_below),
       // Real bath count — replaces the bogus WashroomsType1Pcs piece-count key.
       bathroomsTotal: int(r.bathrooms_total),
+      // Size band for the 148 rungs. Both sources canonicalise through livingAreaBandKey,
+      // so the midpoint raw_vow_sold stores and the band string listings ships agree.
+      livingAreaRange: r.living_area_range,
       // Parent geography for the `county` rung (124). 100% populated in the feed.
       county: r.county,
       // In-home unit tell (125). 12.0% of this inventory is a basement / upper /
@@ -150,6 +154,7 @@ async function loadClosed(client: Client, months: number): Promise<LeaseRow[]> {
             bedrooms_above_grade              AS bedrooms_above,
             bedrooms_below_grade              AS bedrooms_below,
             bathrooms_total_integer           AS bathrooms_total,
+            living_area_range                 AS living_area_range,
             raw_payload->>'CountyOrParish'    AS county,
             unparsed_address,
             coalesce(nullif(property_hash,''), listing_key) AS dedupe_key
@@ -193,6 +198,7 @@ async function loadAsking(client: Client): Promise<LeaseRow[]> {
             full_payload->>'BedroomsAboveGrade'     AS bedrooms_above,
             full_payload->>'BedroomsBelowGrade'     AS bedrooms_below,
             full_payload->>'BathroomsTotalInteger'  AS bathrooms_total,
+            full_payload->>'LivingAreaRange'        AS living_area_range,
             full_payload->>'CountyOrParish'         AS county,
             full_payload->>'UnparsedAddress'        AS unparsed_address,
             coalesce(nullif(property_hash,''), nullif(norm_address,''), listing_key) AS dedupe_key

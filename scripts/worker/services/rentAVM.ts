@@ -6,7 +6,7 @@
  * Falls back gracefully when no data is available.
  */
 
-import { rentImplausibleForSize } from '@/lib/metrics/sanityBand';
+import { rentImplausibleForSize, livingAreaBandKey } from '@/lib/metrics/sanityBand';
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { bedSplit } from '@/lib/listings/bedSplit';
@@ -154,7 +154,34 @@ export async function fetchRentAVM(params: {
   const acceptable = (data: CohortRow | null): data is CohortRow =>
     !!data && !rentImplausibleForSize(data.avg_rent, params.livingAreaRange);
 
+  // The size band this listing keys on, canonical on both sides (148).
+  const sizeBand = livingAreaBandKey(params.livingAreaRange);
+
   for (const d of dims) {
+    // Rungs 0a-0c (148) — SIZE-KEYED, above everything. Measured 5.4% vs 6.2% median
+    // error at IDENTICAL coverage: when a size cohort is thin the walk simply continues
+    // into the rungs below, which is why these cost nothing to put first.
+    if (!row && sizeBand != null && cityRegion) {
+      const data = await probe((q) => q
+        .eq('match_tier', 'nbhd_size').eq('city_region', cityRegion)
+        .eq('property_sub_type', propertySubType).eq('bathrooms', bathroomsTotal)
+        .eq('living_area_range', sizeBand), d);
+      if (acceptable(data)) { row = data; tier = 'nbhd_size'; plusRoomAware = d.aware; }
+    }
+    if (!row && sizeBand != null && city) {
+      const data = await probe((q) => q
+        .eq('match_tier', 'city_bath_size').eq('city', city)
+        .eq('property_sub_type', propertySubType).eq('bathrooms', bathroomsTotal)
+        .eq('living_area_range', sizeBand), d);
+      if (acceptable(data)) { row = data; tier = 'city_bath_size'; plusRoomAware = d.aware; }
+    }
+    if (!row && sizeBand != null && city) {
+      const data = await probe((q) => q
+        .eq('match_tier', 'city_size').eq('city', city)
+        .eq('property_sub_type', propertySubType)
+        .eq('living_area_range', sizeBand), d);
+      if (acceptable(data)) { row = data; tier = 'city_size'; plusRoomAware = d.aware; }
+    }
     // Tier 1 — neighbourhood + baths (most precise)
     if (!row && cityRegion) {
       const data = await probe((q) => q
