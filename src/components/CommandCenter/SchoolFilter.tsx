@@ -20,7 +20,9 @@ import { Slider } from "@/components/ui/slider";
 import {
   useCommandCenterStore,
   type SchoolLevel,
+  type SchoolProgram,
   type SchoolSystem,
+  type SchoolZoneLevel,
 } from "@/lib/stores/commandCenterStore";
 
 interface SchoolSearchResult {
@@ -40,6 +42,15 @@ const SYSTEMS: { id: SchoolSystem; label: string }[] = [
   { id: "public", label: "Public" },
   { id: "catholic", label: "Catholic" },
   { id: "either", label: "Either" },
+];
+const ZONE_LEVELS: { id: SchoolZoneLevel; label: string; hint: string }[] = [
+  { id: "junior", label: "JK entry", hint: "The school a child starts at. Most boards publish only this." },
+  { id: "intermediate", label: "Grades 6-8", hint: "Toronto public runs a separate middle school whose zone covers several JK-entry zones." },
+];
+const PROGRAMS: { id: SchoolProgram; label: string; hint: string }[] = [
+  { id: "regular", label: "Regular", hint: "The home catchment — the school an address is assigned to by default." },
+  { id: "french_immersion", label: "French Immersion", hint: "One immersion school serves several regular catchments, so this zone is much larger." },
+  { id: "extended_french", label: "Extended French", hint: "A part-day French stream. Published by a few boards only." },
 ];
 
 const segBtn = (selected: boolean) =>
@@ -127,6 +138,66 @@ export default function SchoolFilter() {
         {school.system === "either" ? "public + catholic" : school.system}). Boundaries
         change yearly — verify with the board.
       </p>
+
+      {/* Grade band. Toronto public assigns an address a JK-entry school AND a 6-8
+          middle school covering the same ground, so drawing both stacked two boundaries
+          on 38% of Toronto addresses. Elementary only — secondary has no such split. */}
+      {school.showZones && school.level === "elementary" && (
+        <div className="mb-4">
+          <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Grade band
+          </label>
+          <div className="flex gap-1.5">
+            {ZONE_LEVELS.map((z) => (
+              <button
+                key={z.id}
+                type="button"
+                title={z.hint}
+                onClick={() => setSchool({ zoneLevel: z.id, enabled: true })}
+                className={segBtn(school.zoneLevel === z.id)}
+              >
+                {z.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[9px] leading-tight text-muted-foreground">
+            {ZONE_LEVELS.find((z) => z.id === school.zoneLevel)?.hint}
+          </p>
+        </div>
+      )}
+
+      {/* Program — the second axis. Drawn one at a time: a French Immersion zone covers
+          several regular zones, so showing both stacks unrelated boundaries. */}
+      {school.showZones && (
+        <div className="mb-4">
+          <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Program
+          </label>
+          <div className="flex gap-1.5">
+            {PROGRAMS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                title={p.hint}
+                onClick={() => setSchool({ program: p.id, enabled: true })}
+                className={segBtn(school.program === p.id)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[9px] leading-tight text-muted-foreground">
+            {PROGRAMS.find((p) => p.id === school.program)?.hint}
+            {school.program !== "regular" && (
+              <>
+                {" "}
+                Not every board publishes this zone. Where a board does not, the map says
+                so rather than draw one.
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Level */}
       <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">

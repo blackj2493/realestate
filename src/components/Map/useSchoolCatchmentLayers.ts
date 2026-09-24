@@ -10,13 +10,24 @@
  *      selected target school — a proximity radius, NOT a catchment. Renders the
  *      circle that today is invisible (serialize.ts only used it server-side).
  *
+ * PROGRAM is the second axis beside panel. One French Immersion school serves several
+ * regular catchments, so its zone runs several times larger than that school's regular
+ * zone — St Cyril's is 57.6 km2 against a 3.2 km2 median TCDSB zone. Program zones
+ * therefore draw with a thicker, fainter-filled outline so they never read as a home
+ * catchment at a glance.
+ *
+ * The circle is a REGULAR-program fallback ONLY. A program zone is not centred on its
+ * school and is nothing like a disc, so a circle there would be worse than silence:
+ * it would understate the zone while looking authoritative. For a program a board does
+ * not publish, the hook draws nothing and reports the gap through `onProgramGap`.
+ *
  * Returned layers are prepended to AlphaMap's layer array so they sit UNDER the
  * listing pins (pins stay clickable; catchment fills are translucent).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GeoJsonLayer, PolygonLayer } from "@deck.gl/layers";
 import type { Layer, PickingInfo } from "@deck.gl/core";
-import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
+import { useCommandCenterStore, type SchoolProgram } from "@/lib/stores/commandCenterStore";
 import { synthesizeCirclePolygon, latLngPolygonToLngLat } from "@/lib/bubbles/serialize";
 
 export interface CatchmentHover {
@@ -27,9 +38,25 @@ export interface CatchmentHover {
   approximate: boolean;
 }
 
+/** Reported when the selected school has no zone for the selected program. The map
+ *  states the gap instead of substituting a circle that would misrepresent it. */
+export interface CatchmentProgramGap {
+  schoolName: string;
+  program: SchoolProgram;
+}
+
+const PROGRAM_LABEL: Record<SchoolProgram, string> = {
+  regular: "Home catchment",
+  french_immersion: "French Immersion zone",
+  extended_french: "Extended French zone",
+};
+
 interface CatchmentProps {
   school_name?: string | null;
   panel?: string | null;
+  program?: string | null;
+  grades?: string | null;
+  level?: string | null;
   system?: string | null;
   board?: string | null;
   year?: string | null;
@@ -51,6 +78,15 @@ const SYSTEM_COLOR: Record<string, [number, number, number]> = {
 };
 const colorFor = (system?: string | null) => SYSTEM_COLOR[system ?? "public"] ?? SYSTEM_COLOR.public;
 
+const isProgramZone = (p: CatchmentProps) => (p.program ?? "regular") !== "regular";
+/** "French Immersion zone · grades 1-4" — the grade band matters where a board splits
+ *  immersion across two schools, so one address sits in two zones at different ages. */
+function zoneLabel(p: CatchmentProps): string {
+  const base = PROGRAM_LABEL[(p.program ?? "regular") as SchoolProgram] ?? PROGRAM_LABEL.regular;
+  const band = p.grades ? `grades ${p.grades}` : p.level === "intermediate" ? "grades 6-8" : null;
+  return band ? `${base} · ${band}` : base;
+}
+
 export interface OverlayBounds {
   west: number;
   south: number;
@@ -62,12 +98,22 @@ export function useSchoolCatchmentLayers(opts: {
   zoom: number;
   bounds: OverlayBounds | null;
   onHover: (h: CatchmentHover | null) => void;
+  onProgramGap?: (g: CatchmentProgramGap | null) => void;
 }): Layer[] {
-  const { zoom, bounds, onHover } = opts;
+  const { zoom, bounds, onHover, onProgramGap } = opts;
   const showZones = useCommandCenterStore((s) => s.school.showZones);
   const level = useCommandCenterStore((s) => s.school.level);
   const system = useCommandCenterStore((s) => s.school.system);
+  const program = useCommandCenterStore((s) => s.school.program);
+  const zoneLevel = useCommandCenterStore((s) => s.school.zoneLevel);
   const targetSchool = useCommandCenterStore((s) => s.school.targetSchool);
+  // Keep the gap callback out of the fetch effect's deps: a parent that passes an inline
+  // arrow would otherwise re-run the request on every render. Synced in an effect (not
+  // during render) and declared first, so it is current before the fetch effect reads it.
+  const gapRef = useRef(onProgramGap);
+  useEffect(() => {
+    gapRef.current = onProgramGap;
+  }, [onProgramGap]);
 
   const [fc, setFc] = useState<CatchmentFC | null>(null);
   const [targetFc, setTargetFc] = useState<CatchmentFC | null>(null);
@@ -83,6 +129,10 @@ export function useSchoolCatchmentLayers(opts: {
     const params = new URLSearchParams({
       bbox: `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
       panel: level,
+      program,
+      // Elementary only: secondary has no grade-band split, and sending one there would
+      // filter nothing while implying it had.
+      ...(level === "elementary" ? { level: zoneLevel } : {}),
       zoom: String(Math.round(zoom)),
     });
     if (system !== "either") params.set("system", system);
@@ -98,7 +148,7 @@ export function useSchoolCatchmentLayers(opts: {
         });
     }, 250);
     return () => clearTimeout(t);
-  }, [showZones, level, system, bounds, zoom]);
+  }, [showZones, level, system, program, zoneLevel, bounds, zoom]);
 
   // Selected target school: show its REAL catchment if we have it (by school_id),
   // otherwise fall back to an approximate 2.5 km proximity circle around its point.
@@ -106,17 +156,31 @@ export function useSchoolCatchmentLayers(opts: {
     if (!targetSchool) {
       setTargetFc(null);
       setCircle(null);
+      gapRef.current?.(null);
       return;
     }
     let alive = true;
     setTargetFc(null);
     setCircle(null);
-    fetch(`/api/schools/catchments?schoolId=${encodeURIComponent(targetSchool.id)}`)
+    gapRef.current?.(null);
+    // program=any: a school that runs French Immersion holds a regular zone AND a far
+    // larger FI zone under one school_id. We fetch both and keep the selected one, so
+    // the label can never call an FI zone the home catchment.
+    fetch(`/api/schools/catchments?schoolId=${encodeURIComponent(targetSchool.id)}&program=any`)
       .then((r) => r.json())
       .then((d: CatchmentFC) => {
         if (!alive) return;
-        if (d?.features?.length) {
-          setTargetFc(d); // real boundary — no circle
+        const wanted = (d?.features ?? []).filter(
+          (f) => (f.properties.program ?? "regular") === program
+        );
+        if (wanted.length) {
+          setTargetFc({ type: "FeatureCollection", features: wanted }); // real boundary — no circle
+          return;
+        }
+        if (program !== "regular") {
+          // No honest stand-in exists: a program zone is neither centred on its school
+          // nor disc-shaped, so a circle would understate it while looking official.
+          gapRef.current?.({ schoolName: targetSchool.name, program });
           return;
         }
         // Fallback: proximity circle around the school point.
@@ -134,7 +198,7 @@ export function useSchoolCatchmentLayers(opts: {
     return () => {
       alive = false;
     };
-  }, [targetSchool]);
+  }, [targetSchool, program]);
 
   return useMemo(() => {
     const out: Layer[] = [];
@@ -146,15 +210,18 @@ export function useSchoolCatchmentLayers(opts: {
           data: fc as unknown as GeoJSON.FeatureCollection,
           stroked: true,
           filled: true,
+          // A program zone covers several regular zones, so it gets a fainter fill and a
+          // heavier outline — legible when it sits over the regular zones it draws from.
           getFillColor: (f: unknown) => {
-            const c = colorFor((f as CatchmentFeature).properties.system);
-            return [c[0], c[1], c[2], 26];
+            const p = (f as CatchmentFeature).properties;
+            const c = colorFor(p.system);
+            return [c[0], c[1], c[2], isProgramZone(p) ? 14 : 26];
           },
           getLineColor: (f: unknown) => {
             const c = colorFor((f as CatchmentFeature).properties.system);
             return [c[0], c[1], c[2], 220];
           },
-          getLineWidth: 1.5,
+          getLineWidth: (f: unknown) => (isProgramZone((f as CatchmentFeature).properties) ? 3 : 1.5),
           lineWidthUnits: "pixels",
           pickable: true,
           autoHighlight: true,
@@ -166,7 +233,7 @@ export function useSchoolCatchmentLayers(opts: {
               return;
             }
             const score = typeof p.score === "number" ? ` · ${p.score.toFixed(1)}/10` : "";
-            const bits = ["Official", p.board, p.year].filter(Boolean).join(" · ");
+            const bits = [zoneLabel(p), "official", p.board, p.year].filter(Boolean).join(" · ");
             onHover({
               x: info.x,
               y: info.y,
@@ -188,9 +255,9 @@ export function useSchoolCatchmentLayers(opts: {
           data: targetFc as unknown as GeoJSON.FeatureCollection,
           stroked: true,
           filled: true,
-          getFillColor: [34, 211, 238, 45],
+          getFillColor: (f: unknown) => [34, 211, 238, isProgramZone((f as CatchmentFeature).properties) ? 28 : 45],
           getLineColor: [34, 211, 238, 255],
-          getLineWidth: 2.5,
+          getLineWidth: (f: unknown) => (isProgramZone((f as CatchmentFeature).properties) ? 3.5 : 2.5),
           lineWidthUnits: "pixels",
           pickable: true,
           onHover: (info: PickingInfo) => {
@@ -200,7 +267,9 @@ export function useSchoolCatchmentLayers(opts: {
               return;
             }
             const score = typeof p.score === "number" ? ` · ${p.score.toFixed(1)}/10` : "";
-            const bits = ["Home catchment", p.board, p.year].filter(Boolean).join(" · ");
+            // zoneLabel, not a hardcoded "Home catchment" — that caption on a French
+            // Immersion zone is the misread this whole change exists to stop.
+            const bits = [zoneLabel(p), p.board, p.year].filter(Boolean).join(" · ");
             onHover({ x: info.x, y: info.y, name: p.school_name ?? "School zone", detail: `${bits}${score}`, approximate: false });
           },
         })

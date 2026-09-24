@@ -30,7 +30,11 @@ import {
   toDeckPosition,
 } from "./mapLogic";
 import ListingMapPopup from "./ListingMapPopup";
-import { useSchoolCatchmentLayers, type CatchmentHover } from "./useSchoolCatchmentLayers";
+import {
+  useSchoolCatchmentLayers,
+  type CatchmentHover,
+  type CatchmentProgramGap,
+} from "./useSchoolCatchmentLayers";
 import { useZoningLayers, type ZoningHover } from "./useZoningLayers";
 import { ZONING_SOURCES } from "@/lib/zoning/attribution";
 
@@ -122,6 +126,7 @@ export default function AlphaMap({
   const [popup, setPopup] = useState<{ x: number; y: number; listings: ListingDocument[] } | null>(null);
   // Floating label for a hovered school catchment / proximity circle.
   const [catchmentHover, setCatchmentHover] = useState<CatchmentHover | null>(null);
+  const [catchmentGap, setCatchmentGap] = useState<CatchmentProgramGap | null>(null);
   // Floating tooltip for a hovered heatmap hex (listing count + aggregate metric).
   const [hexHover, setHexHover] = useState<{ x: number; y: number; count: number; metric?: string } | null>(null);
   // Floating tooltip for a hovered zoning-overlay polygon (municipal open data).
@@ -935,6 +940,7 @@ export default function AlphaMap({
     zoom: viewState.zoom,
     bounds: overlayBounds,
     onHover: setCatchmentHover,
+    onProgramGap: setCatchmentGap,
   });
 
   // Zoning overlay (municipal open data; viewport-scoped). Prepended below the pins.
@@ -1145,6 +1151,23 @@ export default function AlphaMap({
           <div className="text-xs font-medium text-foreground">{catchmentHover.name}</div>
           <div className={`text-[10px] leading-tight ${catchmentHover.approximate ? "text-amber-700 dark:text-amber-300/90" : "text-emerald-700 dark:text-emerald-300/90"}`}>
             {catchmentHover.detail}
+          </div>
+        </div>
+      )}
+
+      {/* The selected school has no zone for the selected program. We state the gap
+          rather than fall back to the 2.5 km circle: a French Immersion zone is neither
+          centred on its school nor disc-shaped, so a circle there would understate a
+          zone that is typically several times larger, while looking official. */}
+      {catchmentGap && (
+        <div className="pointer-events-none absolute bottom-24 left-1/2 z-20 max-w-[320px] -translate-x-1/2 border border-amber-500/50 bg-card/95 px-3 py-2 backdrop-blur-md">
+          <div className="text-xs font-medium text-foreground">
+            No {catchmentGap.program === "extended_french" ? "Extended French" : "French Immersion"} zone
+            published for {catchmentGap.schoolName}
+          </div>
+          <div className="mt-0.5 text-[10px] leading-tight text-amber-700 dark:text-amber-300/90">
+            This board does not publish that boundary. Ask the board directly — we do not
+            draw an estimate, because these zones are far larger than a home catchment.
           </div>
         </div>
       )}

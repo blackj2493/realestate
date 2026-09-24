@@ -67,6 +67,13 @@ const defaultCommute: CommuteState = {
 
 export type SchoolLevel = "elementary" | "secondary";
 export type SchoolSystem = "public" | "catholic" | "either";
+/** Which stream a catchment belongs to. Independent of level: a French Immersion zone
+ *  is drawn from several regular zones, so it overlaps them and runs much larger. */
+export type SchoolProgram = "regular" | "french_immersion" | "extended_french";
+/** Grade band inside the elementary panel. Only TDSB splits it — an address there has a
+ *  JK-entry school and a separate 6-8 middle/senior school covering the same ground.
+ *  Boards without the split show under either value. */
+export type SchoolZoneLevel = "junior" | "intermediate";
 
 /**
  * School-quality lens (global, applies across personas). The Level×System pair
@@ -83,6 +90,12 @@ export interface SchoolState {
   /** Draw real attendance-boundary polygons on the map (overlay; independent of the
    *  score filter). Drives useSchoolCatchmentLayers for the current level/system. */
   showZones: boolean;
+  /** Which stream the zone overlay draws. Only one at a time: program zones overlap the
+   *  regular zones they draw from, so showing both stacks unrelated boundaries. */
+  program: SchoolProgram;
+  /** Which elementary grade band the zone overlay draws, for the one board that splits
+   *  it. Defaults to the JK-entry zone — the school an address is assigned by default. */
+  zoneLevel: SchoolZoneLevel;
 }
 
 const defaultSchool: SchoolState = {
@@ -92,6 +105,8 @@ const defaultSchool: SchoolState = {
   minScore: 0,
   targetSchool: null,
   showZones: false,
+  program: "regular",
+  zoneLevel: "junior",
 };
 
 export type AmenityKind = "grocery" | "recreation" | "either";
