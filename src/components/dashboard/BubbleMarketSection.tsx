@@ -42,7 +42,8 @@ import { buildFiltersSnapshot, type Bubble } from "@/lib/bubbles/serialize";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { bubbleToArea } from "@/lib/dashboard/area";
-import type { MarketActivityLens } from "@/lib/dashboard/config";
+import { hasActiveLensFilters, type MarketActivityLens } from "@/lib/dashboard/config";
+import { hasActiveAlertFilters } from "@/lib/bubbles/hasActiveAlertFilters";
 import type { BoardDef } from "@/lib/dashboard/boards";
 import MarketActivityPanel from "./MarketActivityPanel";
 import RegionStatTiles from "./RegionStatTiles";
@@ -77,11 +78,37 @@ function tagline(b: Bubble): string {
   return "Custom pocket sketched on the map";
 }
 
+/** "Detached · 4+ bd · finished bsmt" — what the dashboard bar is currently narrowing to,
+ *  so the menu item names the rule it would apply instead of promising "my filters". */
+function lensSummary(lens: MarketActivityLens): string {
+  const parts: string[] = [];
+  if (lens.propertyTypes.length) parts.push(lens.propertyTypes.join("/"));
+  if (lens.minBeds > 0) parts.push(`${lens.minBeds}${lens.bedsExact ? "" : "+"} bd`);
+  if (lens.minBaths > 0) parts.push(`${lens.minBaths}${lens.bathsExact ? "" : "+"} ba`);
+  if (lens.minGarage > 0) parts.push(`${lens.minGarage}${lens.garageExact ? "" : "+"} garage`);
+  if (lens.basement !== "any") parts.push(`${lens.basement} bsmt`);
+  if (lens.minFrontage > 0) parts.push(`≥${lens.minFrontage}′ frontage`);
+  if (lens.transactionType === "lease") parts.push("For Rent");
+  return parts.join(" · ");
+}
+
+/** True when the saved snapshot is a TERMINAL one — it can carry filters the dashboard
+ *  bar has no control for (size, lot, persona, commute), so replacing it loses them and
+ *  the menu item has to say so rather than quietly dropping them. */
+function richerThanLens(snapshot: unknown): boolean {
+  return Boolean(
+    snapshot &&
+      typeof snapshot === "object" &&
+      "universalFilters" in (snapshot as object) &&
+      hasActiveAlertFilters(snapshot)
+  );
+}
+
 /**
  * Kebab menu lifted from the deprecated BubbleCard. Local state lives here
  * so the parent section stays declarative.
  */
-function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
+function BubbleSectionMenu({ bubble, lens }: { bubble: Bubble; lens: MarketActivityLens }) {
   const router = useRouter();
   const rename = useBubblesStore((s) => s.rename);
   const remove = useBubblesStore((s) => s.remove);
@@ -218,9 +245,38 @@ function BubbleSectionMenu({ bubble }: { bubble: Bubble }) {
               }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted"
             >
-              <SlidersHorizontal className="h-3 w-3" /> Capture current filters
+              <SlidersHorizontal className="h-3 w-3" /> Capture Map filters
             </button>
           )}
+          {/* The DASHBOARD source. The Map item above copies the Terminal's filters, which
+              is no help to someone who set "Detached · 4+ bd" on the bar at the top of THIS
+              page — the state they can see. Writes the `{ lens }` snapshot shape the city
+              bells already use, so the nightly worker needs no change: bubbleAlertFilter
+              routes a `lens` snapshot through buildLensClauses either way.
+
+              Disabled when the bar narrows nothing, because applying it would change
+              nothing while appearing to — the same trap as a "filtered" bubble whose saved
+              filters are all defaults. */}
+          <button
+            type="button"
+            disabled={!hasActiveLensFilters(lens)}
+            title={
+              hasActiveLensFilters(lens)
+                ? `Send this area's nightly email only for listings matching the filters set at the top of this page (${lensSummary(lens)}).${
+                    richerThanLens(bubble.filters)
+                      ? " This REPLACES the Map filters saved with this area, including ones the dashboard bar cannot express (size, lot, persona)."
+                      : ""
+                  }`
+                : "Set a property type, beds or baths at the top of this page first — there is nothing to apply."
+            }
+            onClick={() => {
+              void updateAlertFilters(bubble.id, { lens });
+              setMenuOpen(false);
+            }}
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:bg-transparent"
+          >
+            <SlidersHorizontal className="h-3 w-3" /> Use my dashboard filters
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -261,9 +317,12 @@ function BubbleAlertToggle({
   // The 'filtered' scope needs a 095-era snapshot (universal basics captured at
   // save time). Older bubbles must be re-saved in the terminal to enable it —
   // we never guess filters the user didn't choose as alert rules.
-  const hasSnapshot = Boolean(
-    bubble.filters && "universalFilters" in bubble.filters && bubble.filters.universalFilters
-  );
+  // ACTIVE filters, not merely a captured snapshot. A bubble saved from the Terminal
+  // before anything was narrowed stores a complete universalFilters object of defaults,
+  // so the old `"universalFilters" in filters` test let "My filters only" be selected on
+  // a rule that excludes nothing — a school bubble in that state delivered townhouses to
+  // a user whose dashboard read "Detached · 4+ bd" (2026-09-23).
+  const hasSnapshot = hasActiveAlertFilters(bubble.filters);
   const scope: "all" | "filtered" = bubble.alert_scope === "filtered" ? "filtered" : "all";
   const detail = variant === "detail";
   return (
@@ -305,7 +364,7 @@ function BubbleAlertToggle({
                 aria-disabled={locked}
                 title={
                   locked
-                    ? "This area was saved before filters were captured. Open it in the Terminal, set your filters, and Save it again to enable filtered alerts."
+                    ? "No filters are saved with this area, so there is nothing to filter by. Use “Use my dashboard filters” in the ⋯ menu, or set filters in the Map and use “Capture Map filters”."
                     : undefined
                 }
                 onClick={() => {
@@ -402,7 +461,7 @@ export default function BubbleMarketSection({
             <ExternalLink className="h-3 w-3" /> Open in Terminal
           </button>
           <BubbleAlertToggle bubble={bubble} />
-          <BubbleSectionMenu bubble={bubble} />
+          <BubbleSectionMenu bubble={bubble} lens={lens} />
         </>
       }
     >

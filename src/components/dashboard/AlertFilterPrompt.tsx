@@ -31,6 +31,7 @@ import React, { useEffect, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
 import { hasActiveLensFilters, type MarketActivityLens } from "@/lib/dashboard/config";
+import { hasActiveAlertFilters } from "@/lib/bubbles/hasActiveAlertFilters";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 
 export default function AlertFilterPrompt({
@@ -39,8 +40,10 @@ export default function AlertFilterPrompt({
   dismissed,
   onDismiss,
 }: {
-  /** The dashboard's areas. Only these are offered — a drawn or school bubble has its
-   *  own lifecycle and its own bell, and is not what "your areas" means here. */
+  /** The dashboard's city areas. Bubbles whose source is one of these are offered by
+   *  name; drawn / commute / school bubbles are offered too (see `unfiltered`), because
+   *  they email on the same nightly run and land in the same inbox. Keeping them out was
+   *  why a school bubble sat unfiltered while the dashboard read "4+ beds". */
   regions: string[];
   /** The filters as they are NOW. Captured on click, then kept in step by the
    *  server-side reconcile on every later config save. */
@@ -66,13 +69,22 @@ export default function AlertFilterPrompt({
   const wanted = new Set(regions);
   // A MUTED row sends nothing, so it is not "emailing every new listing" and must not be
   // counted — the sentence would be false and the fix pointless.
+  //
+  // TWO WIDENINGS, both from one observed case (2026-09-23): a school bubble reading
+  // "My filters only" delivered townhouses while the dashboard read "Detached · 4+ bd".
+  //
+  //  • ANY area kind, not just city. A school/commute/drawn bubble emails on the same
+  //    nightly run into the same inbox; excluding it meant the only offer to fix it was
+  //    a menu item that copies from the MAP, which is not where the user set the filters.
+  //  • `alert_scope !== 'filtered'` was the wrong test. A bubble saved before any filter
+  //    was set stores a full universalFilters object of DEFAULTS, so it is nominally
+  //    'filtered' and narrows nothing — the state that most needs this offer was the one
+  //    state the test excluded. hasActiveAlertFilters asks whether anything is narrowed.
   const unfiltered = Object.values(items).filter(
     (b) =>
-      b.area_type === "city" &&
-      b.source.kind === "city" &&
-      wanted.has(b.source.city) &&
+      (b.source.kind !== "city" || wanted.has(b.source.city)) &&
       b.alerts_enabled !== false &&
-      b.alert_scope !== "filtered"
+      !hasActiveAlertFilters(b.filters)
   );
   if (unfiltered.length === 0) return null;
 

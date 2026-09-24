@@ -200,11 +200,14 @@ function dropRowsHtml(drops: DropAlert[]): string {
 }
 
 function bubbleSectionHtml(b: BubbleSection): string {
-  // alert_scope 'filtered': always show WHAT the alert matched, so a quiet or
-  // short digest is legible ("why didn't I see X?" → it didn't fit the filters).
+  // ALWAYS state the scope, both ways. Showing the line only when a label exists made a
+  // filtered digest and an unfiltered one look identical — so a bubble whose saved
+  // filters were all defaults delivered townhouses under a UI reading "My filters only",
+  // and nothing in the email contradicted it (2026-09-23). The absent case is the one
+  // worth naming: it is the only one the reader can act on.
   const filterLine = b.filterLabel
     ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">filtered to: ${b.filterLabel}</div>`
-    : "";
+    : `<div style="font-size:11px;color:#64748b;margin-top:2px;">showing every new listing — no filters saved for this area</div>`;
   const title = `<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:14px;">${b.bubbleName}</div>${filterLine}`;
   const rows = b.listings
     .map(

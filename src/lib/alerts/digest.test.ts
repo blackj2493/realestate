@@ -346,6 +346,16 @@ describe("renderAlertsDigest — the filter nudge", () => {
     expect(text).not.toContain("You get every new home");
   });
 
+  it("STATES the unfiltered case rather than rendering no scope line at all", () => {
+    // Showing the line only when a label existed made a filtered digest and an
+    // unfiltered one look identical in the section body. A school bubble whose saved
+    // filters were all defaults delivered townhouses under a UI reading "My filters
+    // only", and nothing in the email contradicted it (2026-09-23).
+    const { html } = renderAlertsDigest(payload({ bubbles: [baseSection] }));
+    expect(html).toContain("no filters saved for this area");
+    expect(html).not.toContain("filtered to:");
+  });
+
   it("names only the unfiltered areas, and says it once", () => {
     const open2 = { ...baseSection, bubbleId: "b3", bubbleName: "Pocket B" };
     const { html } = renderAlertsDigest(payload({ bubbles: [baseSection, filtered, open2] }));
