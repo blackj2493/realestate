@@ -462,3 +462,69 @@ describe('pickPreferredBasis (131)', () => {
     expect(pickPreferredBasis([row('closed_36', 4000), row('asking', 7000)])?.avg_rent).toBe(7000);
   });
 });
+
+describe('size-keyed rungs (148)', () => {
+  /** A lease that will clear MIN_COHORT_SAMPLES on its own. */
+  const lease = (over: Partial<RawLeaseInput> = {}): RawLeaseInput => ({
+    transactionType: 'For Lease',
+    closePrice: 2_400,
+    city: 'Toronto C08',
+    cityRegion: 'Regent Park',
+    propertySubType: 'Condo Apartment',
+    bedroomsTotal: 2,
+    bathroomsTotal: 2,
+    livingAreaRange: '600-699',
+    ...over,
+  });
+  const rowsFor = (rs: RawLeaseInput[]) => buildRentalIndexRows(rs);
+
+  it('emits the three size rungs, keyed on the ROUNDED band midpoint', () => {
+    const rows = rowsFor(Array.from({ length: 5 }, () => lease()));
+    const sized = rows.filter((r) => r.match_tier.endsWith('_size'));
+    expect(new Set(sized.map((r) => r.match_tier))).toEqual(
+      new Set(['nbhd_size', 'city_bath_size', 'city_size']),
+    );
+    // "600-699" has midpoint 649.5; raw_vow_sold stores 650. Both must key the same row.
+    for (const r of sized) expect(r.living_area_range).toBe(650);
+  });
+
+  it('keys a band string and a bare midpoint into the SAME cohort', () => {
+    // Half the leases arrive as "600-699" (listings payload), half as 650 (raw_vow_sold).
+    const rows = rowsFor([
+      ...Array.from({ length: 3 }, () => lease({ livingAreaRange: '600-699' })),
+      ...Array.from({ length: 3 }, () => lease({ livingAreaRange: 650 })),
+    ]);
+    const cs = rows.filter((r) => r.match_tier === 'city_size');
+    // One cohort of 6, not two of 3 — a split here would strand both below the floor.
+    expect(cs.length).toBeGreaterThan(0);
+    expect(Math.max(...cs.map((r) => r.sample_count))).toBe(6);
+  });
+
+  it('leaves living_area_range NULL on every rung that does not key on size', () => {
+    const rows = rowsFor(Array.from({ length: 5 }, () => lease()));
+    for (const r of rows.filter((x) => !x.match_tier.endsWith('_size'))) {
+      expect(r.living_area_range).toBeNull();
+    }
+  });
+
+  it('a lease with no size band still feeds the size-less rungs', () => {
+    const rows = rowsFor(Array.from({ length: 5 }, () => lease({ livingAreaRange: null })));
+    expect(rows.filter((r) => r.match_tier.endsWith('_size'))).toHaveLength(0);
+    expect(rows.some((r) => r.match_tier === 'city_bath')).toBe(true);
+  });
+
+  it('separates two sizes that the size-less ladder would have merged', () => {
+    // The actual bug: a 650 sqft unit and 1,900 sqft penthouses share city/type/beds/baths.
+    const rows = rowsFor([
+      ...Array.from({ length: 4 }, () => lease({ livingAreaRange: '600-699', closePrice: 2_400 })),
+      ...Array.from({ length: 4 }, () => lease({ livingAreaRange: '1800-1999', closePrice: 9_000 })),
+    ]);
+    const sized = rows.filter((r) => r.match_tier === 'city_size');
+    const byBand = new Map(sized.map((r) => [r.living_area_range, r.avg_rent]));
+    expect(byBand.get(650)).toBe(2_400);
+    expect(byBand.get(1900)).toBe(9_000);
+    // …while the size-less rung still pools them, which is exactly what published $5,200.
+    const pooled = rows.find((r) => r.match_tier === 'city_bath');
+    expect(pooled!.sample_count).toBe(8);
+  });
+});

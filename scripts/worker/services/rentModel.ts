@@ -11,7 +11,7 @@
 import { bedSplit } from '@/lib/listings/bedSplit';
 import { subTypeFamily } from '@/lib/listings/subTypeFamily';
 import { isPartialUnitRental } from '@/lib/listings/inHomeUnit';
-import { MONTHLY_RENT_BAND } from '@/lib/metrics/sanityBand';
+import { MONTHLY_RENT_BAND, livingAreaBandKey } from '@/lib/metrics/sanityBand';
 
 // One definition, shared with the web side. It used to live only here, which is why
 // the address page's "Median rent" tile had no ceiling and published $120,300/mo.
@@ -50,7 +50,11 @@ export const MIN_COHORT_SAMPLES = 3;
  * `city_family` sits above `county` because location dominates rent: relaxing the
  * sub-type inside the right city beats keeping the sub-type two counties away.
  */
-export type MatchTier = 'nbhd' | 'city_bath' | 'city' | 'city_family' | 'county';
+export type MatchTier =
+  // Size-keyed rungs (148). Above everything else: measured 5.4% vs 6.2% median error at
+  // IDENTICAL coverage, because they fall back to the rungs below when a cohort is thin.
+  | 'nbhd_size' | 'city_bath_size' | 'city_size'
+  | 'nbhd' | 'city_bath' | 'city' | 'city_family' | 'county';
 
 /**
  * Suite rungs (125). Kept OUT of MatchTier deliberately: MatchTier is walked in order
@@ -82,6 +86,9 @@ export interface RawLeaseInput {
    *  value means "no plus-room", not "unknown". */
   bedroomsBelowGrade?: number | null;
   bathroomsTotal?: number | null; // real bath count (BathroomsTotalInteger)
+  /** LivingAreaRange — a band string ("600-699") or the rounded midpoint raw_vow_sold
+   *  already stores. Absent, the lease simply skips the size rungs. */
+  livingAreaRange?: string | number | null;
   /** CountyOrParish — the parent geography for the `county` rung (migration 124). */
   county?: string | null;
   /**
@@ -198,6 +205,9 @@ export interface RentalIndexRow {
   bedrooms_above: number | null;
   /** Capped plus-room flag. NULL marks a merged cohort. */
   den: 0 | 1 | null;
+  /** Rounded living-area band midpoint (148). Set only on the three size rungs; NULL on
+   *  every other, exactly as county is NULL off the county rung. */
+  living_area_range: number | null;
   bathrooms: number | null;
   avg_rent: number;   // median monthly rent
   p10_rent: number;   // 10th-percentile monthly rent
@@ -263,10 +273,12 @@ export function createRentAccumulator(basis: RentBasis = 'asking') {
           sub_type_family: IN_HOME_UNIT_FAMILY,
           county: null,
           bedrooms_total: suiteBeds,
-          // A suite has no plus-room split and no reliable bath count of its own.
+          // A suite has no plus-room split, no reliable bath count, and no size of its
+          // own — the band on the record describes the WHOLE dwelling, not the unit.
           bedrooms_above: null,
           den: null,
           bathrooms: null,
+          living_area_range: null,
         };
         if (cr) {
           bump(`sn|${cr.toLowerCase()}|${suiteBeds}`,
@@ -289,6 +301,9 @@ export function createRentAccumulator(basis: RentBasis = 'asking') {
       // merged cohort it has always fed. The lookup prefers the split row; the merged
       // row is what keeps a listing from going null when its split cohort is too thin
       // (measured: split-only costs 1,830 of 76,869 covered listings).
+      // One canonical key for both sides of the index — see livingAreaBandKey.
+      const sizeBand = livingAreaBandKey(r.livingAreaRange);
+
       const dims: Array<{ above: number | null; den: 0 | 1 | null; tag: string }> = [
         { above: null, den: null, tag: `t${beds}` },
       ];
@@ -298,7 +313,30 @@ export function createRentAccumulator(basis: RentBasis = 'asking') {
         const meta = {
           property_sub_type: st, sub_type_family: null, county: null,
           bedrooms_total: beds, bedrooms_above: d.above, den: d.den,
+          // NULL on every rung that does not key on size — the 122/124 idiom.
+          living_area_range: null as number | null,
         };
+        // Rungs 0a-0c (148) — SIZE-KEYED. The ladder below has no size dimension, so
+        // bathroom count acts as a size proxy; on a 650 sqft unit listed with 3 baths that
+        // proxy matched 1,900 sqft penthouses and published $5,200/mo. A lease with no
+        // size band simply skips these and feeds the rungs it always did.
+        if (sizeBand != null) {
+          if (cr && bath != null) {
+            bump(`nsz|${cr.toLowerCase()}|${st.toLowerCase()}|${d.tag}|${bath}|${sizeBand}`,
+              { match_tier: 'nbhd_size', city_region: cr, city: city || null, ...meta,
+                bathrooms: bath, living_area_range: sizeBand }, rent);
+          }
+          if (city && bath != null) {
+            bump(`cbsz|${city.toLowerCase()}|${st.toLowerCase()}|${d.tag}|${bath}|${sizeBand}`,
+              { match_tier: 'city_bath_size', city_region: null, city, ...meta,
+                bathrooms: bath, living_area_range: sizeBand }, rent);
+          }
+          if (city) {
+            bump(`csz|${city.toLowerCase()}|${st.toLowerCase()}|${d.tag}|${sizeBand}`,
+              { match_tier: 'city_size', city_region: null, city, ...meta,
+                bathrooms: null, living_area_range: sizeBand }, rent);
+          }
+        }
         // Tier 1 — neighbourhood + baths (most precise)
         if (cr && bath != null) {
           bump(`nbhd|${cr.toLowerCase()}|${st.toLowerCase()}|${d.tag}|${bath}`,
