@@ -19,6 +19,7 @@ import {
   type RentBasis,
   type SuiteMatchTier,
 } from './rentModel';
+import { rentDispersion } from '@/lib/metrics/rentTier';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,6 +45,11 @@ export interface RentAVMResult {
   /** How many comps stand behind the median. A cohort of 4 and a cohort of 40 print
    *  the same number today, and only this tells them apart. */
   sample_count?: number | null;
+  /** (p75-p25)/median for the cohort that answered (150). The RELIABILITY signal:
+   *  above RENT_DISPERSION_CEILING the median stops describing any one property and
+   *  18% of the answers land >50% off. null where the cohort carries no quartiles.
+   *  Written to the document as `rent_dispersion`; read by rentTierConfidence(). */
+  dispersion?: number | null;
 }
 
 export async function fetchRentAVM(params: {
@@ -99,7 +105,11 @@ export async function fetchRentAVM(params: {
   // null for land / commercial — those skip the pooled rung entirely (124).
   const family = subTypeFamily(propertySubType);
 
-  const sel = () => supabase.from('rental_market_index').select('avg_rent, p10_rent, basis, sample_count');
+  const sel = () => supabase.from('rental_market_index')
+    // p25/p75 (150) are the SPREAD behind avg_rent, not extra precision on it. They
+    // are NULL on every row written before 150, which rentDispersion() reads as
+    // "unknown" so the gate stays off until the index is rebuilt.
+    .select('avg_rent, p10_rent, p25_rent, p75_rent, basis, sample_count');
 
   const split = bedSplit({
     BedroomsAboveGrade: params.bedroomsAboveGrade,
@@ -107,7 +117,11 @@ export async function fetchRentAVM(params: {
     BedroomsTotal: bedroomsTotal,
   });
 
-  type CohortRow = { avg_rent: number; p10_rent: number; basis: RentBasis; sample_count: number | null };
+  type CohortRow = {
+    avg_rent: number; p10_rent: number;
+    p25_rent: number | null; p75_rent: number | null;
+    basis: RentBasis; sample_count: number | null;
+  };
   let row: CohortRow | null = null;
   let tier: RentAVMResult['match_tier'] = null;
   let plusRoomAware = false;
@@ -253,6 +267,10 @@ export async function fetchRentAVM(params: {
     plus_room_aware: plusRoomAware,
     basis: row.basis ?? null,
     sample_count: row.sample_count ?? null,
+    // How much the comps behind that median disagree (150). Carried out beside the rung
+    // and the count so a consumer cannot read the rent without being able to see how
+    // trustworthy it is. null where the cohort predates the quartile columns.
+    dispersion: rentDispersion(row.avg_rent, row.p25_rent, row.p75_rent),
   };
 }
 

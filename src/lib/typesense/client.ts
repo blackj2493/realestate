@@ -245,6 +245,12 @@ export interface ListingDocument {
    *  they are and stops there. '' / 0 are the no-data sentinels, same as the rung. */
   rent_basis?: string;
   rent_sample_count?: number;
+  /** HOW MUCH those comps disagree: (p75-p25)/median of the cohort (150). Above
+   *  RENT_DISPERSION_CEILING the median stops describing this one property — 18% of
+   *  those answers land >50% off — and the surfaces withhold the cap rate.
+   *  -1/absent = unknown, NOT 0: a cohort whose quartiles coincide is the tightest
+   *  there is, so 0 cannot double as the no-data sentinel. Use readRentDispersion(). */
+  rent_dispersion?: number;
   /** One tenant, the entire house — a different cohort from the rent above wherever a
    *  suite is observed, and usually a thinner one. */
   whole_home_monthly_rent?: number;
