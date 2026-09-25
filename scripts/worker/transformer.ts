@@ -26,6 +26,7 @@ import { processBuilderMetrics } from '@/services/BuilderAnalyticsEngine';
 import { resolveLocation } from './resolveLocation';
 import { buildListingPath } from '@/lib/listings/listingPath';
 import { assignSchools } from '@/lib/schools/nearestSchools';
+import { catchmentsForPoint, isCatchmentIndexPrimed } from '@/lib/schools/catchmentIndex';
 import { assignAmenities } from '@/lib/amenities/nearestAmenities';
 import { selectPrimaryImage, collectMediaUrls } from '@/lib/etl/selectPrimaryImage';
 import { deriveBasementTier } from '@/lib/avm/conditionScoring';
@@ -834,6 +835,9 @@ export interface TransformResult {
     BestSecondaryScore?: number;
     BestSchoolScoreNearby?: number;
     NearbySchools?: string[];
+    /** `<school_id>|<program>` per containing catchment. Written only when the ETL primed
+     *  the boundary index — see the block that sets it. */
+    SchoolCatchments?: string[];
     // Amenity proximity (nearest grocery + recreation centre); NO_AMENITY_KM sentinel.
     NearestGroceryKm?: number;
     NearestGroceryName?: string;
@@ -1304,6 +1308,25 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   typesensePayload.BestSecondaryScore = schools.BestSecondaryScore;
   typesensePayload.BestSchoolScoreNearby = schools.BestSchoolScoreNearby;
   typesensePayload.NearbySchools = schools.NearbySchools;
+
+  // Catchment membership — the attendance boundaries this listing sits INSIDE, as
+  // `<school_id>|<program>`. NearbySchools above is a 2.5 km radius answering a different
+  // question: a home 2.75 km from St Cyril is inside its 57.6 km² French Immersion zone and
+  // was excluded from a search for that school until this field existed.
+  //
+  // ONLY WHEN THE INDEX IS PRIMED. These boundaries live in `geo_features`, so unlike
+  // assignSchools this cannot be a bare synchronous call over committed JSON — a caller has
+  // to load them first. Writing `[]` on an un-primed run would be worse than writing
+  // nothing: `[]` is a VALID answer meaning "in no catchment", so it would publish a
+  // collection that silently answers no to every school search, everywhere. Omitting the key
+  // leaves the field to the backfill. The daily sync primes, and primeCatchmentIndex throws
+  // on a short read rather than returning one, so a sync that cannot load boundaries stops.
+  if (isCatchmentIndexPrimed()) {
+    typesensePayload.SchoolCatchments = catchmentsForPoint(
+      geo.location?.[0] ?? null,
+      geo.location?.[1] ?? null
+    );
+  }
 
   // Amenity proximity: nearest grocery + recreation centre (deterministic, §4/§6).
   // Distances use the NO_AMENITY_KM sentinel (not 0) so the walkability filter

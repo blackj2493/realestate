@@ -19,6 +19,7 @@ import { buildFilterTokens } from "./filterTokens";
 import { formatResultNudge } from "./filterNudge";
 import { anyControlActive, isControlActive, controlId } from "./investorControls";
 import { SCHOOL_LEVEL_LABEL } from "@/lib/schools/schoolLens";
+import { buildSchoolFilterClause } from "@/lib/schools/schoolFilterClause";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -65,8 +66,11 @@ export default function FilterBar() {
     {
       id: "school",
       active: school.enabled && (school.minScore > 0 || !!school.targetSchool),
+      // "Near X" was the label for both answers while the filter ran a 2.5 km radius, and it
+      // reads as an attendance claim. Say which one is actually applied: "In X's French
+      // Immersion catchment" or "Within 2.5 km of X".
       label: school.targetSchool
-        ? `Near ${school.targetSchool.name}`
+        ? buildSchoolFilterClause(school.targetSchool, school.program).label
         : `${SCHOOL_LEVEL_LABEL[school.level]} school ≥ ${school.minScore.toFixed(1)}`,
       onRemove: resetSchool,
     },

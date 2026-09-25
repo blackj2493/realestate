@@ -86,7 +86,9 @@ export interface SchoolState {
   level: SchoolLevel;
   system: SchoolSystem;
   minScore: number; // 0–10; 0 = no score filter (sort/shade only)
-  targetSchool: { id: string; name: string } | null;
+  /** The chosen school, plus which programs it publishes a catchment for — that decides
+   *  whether the filter uses the boundary or falls back to a 2.5 km radius. */
+  targetSchool: { id: string; name: string; programs?: SchoolProgram[] } | null;
   /** Draw real attendance-boundary polygons on the map (overlay; independent of the
    *  score filter). Drives useSchoolCatchmentLayers for the current level/system. */
   showZones: boolean;

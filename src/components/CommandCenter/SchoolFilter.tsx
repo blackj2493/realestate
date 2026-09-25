@@ -32,6 +32,8 @@ interface SchoolSearchResult {
   system: "public" | "catholic";
   city: string;
   score: number | null;
+  /** Programs this school publishes a catchment for; decides boundary vs 2.5 km radius. */
+  programs?: SchoolProgram[];
 }
 
 const LEVELS: { id: SchoolLevel; label: string }[] = [
@@ -98,7 +100,9 @@ export default function SchoolFilter() {
   }, [query]);
 
   const selectTarget = (r: SchoolSearchResult) => {
-    setSchool({ targetSchool: { id: r.id, name: r.name }, enabled: true });
+    // programs decides boundary-vs-radius downstream; an older API that omits it
+    // reads as "no catchment" and keeps the 2.5 km behaviour.
+    setSchool({ targetSchool: { id: r.id, name: r.name, programs: r.programs ?? [] }, enabled: true });
     setQuery(r.name);
     setResults([]);
   };
