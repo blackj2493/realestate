@@ -177,6 +177,7 @@ export const COMPARE_METRICS: CompareMetric[] = [
       const conf = rentTierConfidence(
         c.listing.rent_match_tier,
         readRentDispersion(c.listing.rent_dispersion),
+        readRentDispersion(c.listing.rent_disagreement),
       );
       return conf === "area" || rentSpreadTooWide(conf)
         ? null

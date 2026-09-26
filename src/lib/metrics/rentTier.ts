@@ -147,6 +147,55 @@ const COMP_TIERS: ReadonlySet<string> = new Set([
 export const RENT_DISPERSION_CEILING = 0.5;
 
 /**
+ * How far the winning rung may sit from its postal-area cohort before we stop publishing.
+ *
+ * Expressed as |ln(ladder / fsa)|, so it is symmetric — 2x too high and 2x too low are the
+ * same distance. 0.5 is a factor of about 1.65.
+ *
+ * WHY A SECOND SIGNAL AT ALL. Dispersion (above) asks whether a cohort agrees with ITSELF.
+ * It cannot see a cohort that is tight around the wrong value, and that is the failure that
+ * prompted this work: 473 Dupont reads $7,000 from six large Annex condos that agree closely
+ * with each other (spread 0.104) while every M6G lease says ~$2,500. A neighbourhood label
+ * pools M5R (median $2,900) with M6G ($2,175); the postal FSA does not.
+ *
+ * MEASURED on the same 38,301 held-out closed leases as RENT_DISPERSION_CEILING:
+ *
+ *   flag                          flagged   blow-in   blow-out   recall    lift
+ *   spread > 0.5 alone              1.46%    18.13%      0.87%    23.5%   16.1x
+ *   this alone, at 0.5              0.51%    21.51%      1.02%     9.7%   19.1x
+ *   either                          1.78%    16.74%      0.84%    26.5%   14.9x
+ *
+ * The two catch different listings, which is the whole reason to carry both: recall rises
+ * 23.5% -> 26.5% for 0.32pp more of the book withheld.
+ *
+ * A DEPTH REQUIREMENT ON THE FSA COHORT WAS MEASURED AND IS NOT WORTH IT. Demanding n>=5,
+ * 10 or 20 before letting it contradict the ladder moves recall 26.5% -> 26.5% -> 26.2% ->
+ * 26.0%. MIN_COHORT_SAMPLES already applies; a further floor only removes signal.
+ *
+ * THIS WITHHOLDS, IT NEVER SUBSTITUTES. The FSA median is a poor estimator — on 473 Dupont
+ * it says $2,500 against a reality near $3,100. Substituting it was measured directly and
+ * made the tail WORSE, 1.13% -> 1.28% blow-ups. Disagreement tells us the ladder cannot be
+ * trusted here; it does not tell us the right answer.
+ */
+export const RENT_DISAGREEMENT_CEILING = 0.5;
+
+/**
+ * |ln(ladder / secondOpinion)| — how far apart two independent cohorts put this property.
+ *
+ * Null whenever there is no second opinion to compare against, which must read as "do not
+ * flag" for the same reason null quartiles do: every row predates 151 until the index is
+ * rebuilt, and a signal that failed closed would blank the site.
+ */
+export function rentDisagreement(
+  ladderRent: number | null | undefined,
+  secondOpinionRent: number | null | undefined,
+): number | null {
+  if (!ladderRent || ladderRent <= 0) return null;
+  if (!secondOpinionRent || secondOpinionRent <= 0) return null;
+  return Math.abs(Math.log(ladderRent / secondOpinionRent));
+}
+
+/**
  * (p75 - p25) / median for a cohort, or null when the quartiles are unknown.
  *
  * NULL IS THE IMPORTANT CASE. Every `rental_market_index` row written before 150 carries
@@ -198,12 +247,20 @@ export function readRentDispersion(raw: number | null | undefined): number | nul
 export function rentTierConfidence(
   tier: string | null | undefined,
   dispersion?: number | null,
+  disagreement?: number | null,
 ): RentConfidence {
   if (!tier) return 'none';
   const known = COMP_TIERS.has(tier) || AREA_TIERS.has(tier);
-  // Spread is only meaningful once we trust the rung. An unknown rung is already
+  // Both signals are only meaningful once we trust the rung. An unknown rung is already
   // unusable, and reporting it as 'wide' would claim we measured something we did not.
-  if (known && dispersion != null && dispersion > RENT_DISPERSION_CEILING) return 'wide';
+  //
+  // EITHER fires, because they catch different listings: dispersion sees a cohort that
+  // disagrees with itself, disagreement sees a cohort that agrees tightly around the
+  // wrong number. Requiring both would collapse recall to the intersection.
+  if (known) {
+    if (dispersion != null && dispersion > RENT_DISPERSION_CEILING) return 'wide';
+    if (disagreement != null && disagreement > RENT_DISAGREEMENT_CEILING) return 'wide';
+  }
   if (COMP_TIERS.has(tier)) return 'comp';
   if (AREA_TIERS.has(tier)) return 'area';
   return 'none'; // unknown rung: treat as unusable rather than guess at its accuracy

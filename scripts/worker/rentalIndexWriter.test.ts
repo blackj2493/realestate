@@ -58,6 +58,10 @@ describe('refreshRentalMarketIndex writer', () => {
       // index the way 148 did — it would quietly leave every cohort's spread NULL, which
       // reads as "unknown, do not flag" and so turns the gate off site-wide, silently.
       'p25_rent', 'p75_rent',
+      // 151: the FSA second opinion. Omitting it would write every `fsa` row with a NULL
+      // FSA, and since that rung keys on NOTHING else they would all collide on
+      // uniq_rmi_tier — the 148 failure exactly, TRUNCATE included.
+      'fsa',
     ]) {
       expect(cols).toContain(field);
     }

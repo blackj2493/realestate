@@ -230,6 +230,8 @@ export const unindexedFields: UnindexedField[] = [
   // confidence decision happens where the number renders, not in a query. -1 = unknown,
   // because 0 is a real reading (a cohort whose quartiles coincide is the tightest one).
   { name: 'rent_dispersion', type: 'float', index: false, facet: false, optional: true },
+  // Distance from the FSA second opinion (151). Same -1 convention, same reason.
+  { name: 'rent_disagreement', type: 'float', index: false, facet: false, optional: true },
   { name: 'suite_rent_basis', type: 'string', index: false, facet: false, optional: true },
   { name: 'suite_rent_sample_count', type: 'int32', index: false, facet: false, optional: true },
   // What ONE tenant pays for the ENTIRE house, with its own rung and depth. Wherever a
@@ -513,6 +515,10 @@ export interface TypesensePropertyDocument {
    *  RENT_DISPERSION_CEILING the cap rate is withheld. -1/absent = unknown, NOT 0:
    *  0 means a perfectly tight cohort, so it cannot double as the no-data sentinel. */
   rent_dispersion?: number;
+  /** |ln(ladder / FSA cohort)| (151) — the second reliability signal, which catches a
+   *  cohort tight around the wrong value. -1/absent = unknown, NOT 0 (0 = perfect
+   *  agreement, the most reassuring reading). */
+  rent_disagreement?: number;
   /** One tenant, the entire house. Differs from the rent above wherever a suite is
    *  observed, because that one is the main unit alone. */
   whole_home_monthly_rent?: number;

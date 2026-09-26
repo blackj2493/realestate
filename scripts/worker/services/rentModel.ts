@@ -12,6 +12,9 @@ import { bedSplit } from '@/lib/listings/bedSplit';
 import { subTypeFamily } from '@/lib/listings/subTypeFamily';
 import { isPartialUnitRental } from '@/lib/listings/inHomeUnit';
 import { MONTHLY_RENT_BAND, livingAreaBandKey } from '@/lib/metrics/sanityBand';
+// ONE definition of "first three characters of a postal code", shared with the address
+// side. Re-deriving it here is how the grid and the ladder drifted apart before.
+import { fsaOf } from '@/lib/address/streetLedger';
 
 // One definition, shared with the web side. It used to live only here, which is why
 // the address page's "Median rent" tile had no ceiling and published $120,300/mo.
@@ -54,7 +57,12 @@ export type MatchTier =
   // Size-keyed rungs (148). Above everything else: measured 5.4% vs 6.2% median error at
   // IDENTICAL coverage, because they fall back to the rungs below when a cohort is thin.
   | 'nbhd_size' | 'city_bath_size' | 'city_size'
-  | 'nbhd' | 'city_bath' | 'city' | 'city_family' | 'county';
+  | 'nbhd' | 'city_bath' | 'city' | 'city_family' | 'county'
+  // SECOND OPINION ONLY (151). Present in the type so the row can be built and written,
+  // but fetchRentAVM never WALKS to it for an estimate: measured as a rung it is worse
+  // than the ladder above it (5.53% vs 5.45% median). It exists to CONTRADICT the rung
+  // that answered — see RENT_DISAGREEMENT_CEILING in src/lib/metrics/rentTier.ts.
+  | 'fsa';
 
 /**
  * Suite rungs (125). Kept OUT of MatchTier deliberately: MatchTier is walked in order
@@ -91,6 +99,11 @@ export interface RawLeaseInput {
   livingAreaRange?: string | number | null;
   /** CountyOrParish — the parent geography for the `county` rung (migration 124). */
   county?: string | null;
+  /** PostalCode. Keys the `fsa` second-opinion rung (151) off its first three
+   *  characters. Absent, the lease simply skips that rung — the board's own
+   *  neighbourhood label is what this exists to cross-check, so a lease with no postal
+   *  code still feeds every rung it always did. 100% populated in raw_vow_sold. */
+  postalCode?: string | null;
   /**
    * Stable identity for the PROPERTY, not the record —
    * coalesce(property_hash, norm_address, listing_key), the same key
@@ -208,6 +221,10 @@ export interface RentalIndexRow {
   /** Rounded living-area band midpoint (148). Set only on the three size rungs; NULL on
    *  every other, exactly as county is NULL off the county rung. */
   living_area_range: number | null;
+  /** Forward sortation area (151). Set only on `fsa` rows; NULL on every other rung.
+   *  MUST be part of uniq_rmi_tier — every `fsa` row keys on nothing else, so without it
+   *  M6G and M5R are the same row and the rebuild collides mid-TRUNCATE. */
+  fsa: string | null;
   bathrooms: number | null;
   avg_rent: number;   // median monthly rent
   p10_rent: number;   // 10th-percentile monthly rent
@@ -262,6 +279,9 @@ export function createRentAccumulator(basis: RentBasis = 'asking') {
       // otherwise fragment every cohort for that sub-type into two.
       const st = (r.propertySubType ?? '').trim();
       const cty = (r.county ?? '').trim();
+      // null when the postal code is missing or malformed — that lease just skips the
+      // second-opinion rung (151) and feeds every other one unchanged.
+      const fsa = fsaOf(r.postalCode);
       // null for land / commercial: those must never receive a pooled rent.
       const fam = subTypeFamily(st);
       const beds = r.bedroomsTotal;
@@ -289,6 +309,10 @@ export function createRentAccumulator(basis: RentBasis = 'asking') {
           den: null,
           bathrooms: null,
           living_area_range: null,
+          // Suites get no FSA rung either. The second opinion (151) cross-checks a
+          // WHOLE-HOME cohort against its postal area; a suite cohort is already a
+          // different kind of dwelling and pooling it by FSA would not test anything.
+          fsa: null,
         };
         if (cr) {
           bump(`sn|${cr.toLowerCase()}|${suiteBeds}`,
@@ -325,6 +349,8 @@ export function createRentAccumulator(basis: RentBasis = 'asking') {
           bedrooms_total: beds, bedrooms_above: d.above, den: d.den,
           // NULL on every rung that does not key on size — the 122/124 idiom.
           living_area_range: null as number | null,
+          // Same idiom for the FSA second opinion (151).
+          fsa: null as string | null,
         };
         // Rungs 0a-0c (148) — SIZE-KEYED. The ladder below has no size dimension, so
         // bathroom count acts as a size proxy; on a 650 sqft unit listed with 3 baths that
@@ -368,6 +394,18 @@ export function createRentAccumulator(basis: RentBasis = 'asking') {
           bump(`cf|${city.toLowerCase()}|${fam}|${d.tag}`,
             { match_tier: 'city_family', city_region: null, city, ...meta,
               property_sub_type: null, sub_type_family: fam, bathrooms: null }, rent);
+        }
+        // SECOND OPINION (151) — postal FSA, sub-type and bedrooms. NOT part of the walk:
+        // fetchRentAVM probes this separately and uses it only to contradict whichever rung
+        // answered. Measured as a rung it LOSES to the ladder (5.53% vs 5.45%); measured as
+        // a disagreement flag it catches what dispersion cannot — a tight cohort of six
+        // expensive Annex condos publishing $7,000 where every M6G lease says ~$2,500.
+        // No bath and no size axis on purpose: this is a geography cross-check, and adding
+        // dimensions would thin it back toward the cohort it exists to question.
+        if (fsa) {
+          bump(`fsa|${fsa.toLowerCase()}|${st.toLowerCase()}|${d.tag}`,
+            { match_tier: 'fsa', city_region: null, city: null, ...meta,
+              fsa, bathrooms: null }, rent);
         }
         // Tier 5 (124) — exact sub-type held, geography widened to the county.
         if (cty) {

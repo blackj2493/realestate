@@ -802,6 +802,12 @@ export interface TransformResult {
      *  rent_basis reuses '' would publish every pre-150 cohort as maximally reliable —
      *  a no-data sentinel that fails OPEN on the exact metric meant to close a gap. */
     rent_dispersion?: number;
+    /** |ln(ladder / FSA cohort)| (151) — how far a second, independent geography puts this
+     *  property from the rung that answered. Catches what rent_dispersion cannot: a cohort
+     *  tight around the wrong value. -1 IS THE UNKNOWN SENTINEL for the same reason as
+     *  above — 0 means the two agree perfectly, which is the most reassuring reading there
+     *  is, so it cannot double as "we never checked". */
+    rent_disagreement?: number;
     /** What ONE tenant pays for the ENTIRE house. Distinct from `monthlyRent`'s comp
      *  wherever a suite is observed, because that one is the main unit alone. */
     whole_home_monthly_rent?: number;
@@ -942,6 +948,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
       // Parent geography for the county rung (124). Omit it and the ladder just stops
       // one rung earlier, so this is additive, never a regression.
       county: raw.CountyOrParish,
+      // Buys the FSA second opinion (151) — one probe whose only job is to contradict the
+      // rung that won. The neighbourhood label pools M5R with M6G; the postal area does not.
+      postalCode: raw.PostalCode,
     });
     wholeHomeRent = rentAVM;
   } catch (err) {
@@ -1267,6 +1276,8 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     // See the -1 note on the declaration: absent quartiles must not read as a tight cohort.
     typesensePayload.rent_dispersion =
       rentAVM.has_data && rentAVM.dispersion != null ? rentAVM.dispersion : -1;
+    typesensePayload.rent_disagreement =
+      rentAVM.has_data && rentAVM.disagreement != null ? rentAVM.disagreement : -1;
     typesensePayload.suite_rent_est = suiteRent.has_data ? suiteRent.monthly_rent : 0;
     typesensePayload.suite_rent_tier = suiteRent.has_data ? (suiteRent.match_tier ?? '') : '';
     typesensePayload.suite_rent_basis = suiteRent.has_data ? (suiteRent.basis ?? '') : '';

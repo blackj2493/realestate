@@ -19,7 +19,8 @@ import {
   type RentBasis,
   type SuiteMatchTier,
 } from './rentModel';
-import { rentDispersion } from '@/lib/metrics/rentTier';
+import { rentDispersion, rentDisagreement } from '@/lib/metrics/rentTier';
+import { fsaOf } from '@/lib/address/streetLedger';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,6 +46,14 @@ export interface RentAVMResult {
   /** How many comps stand behind the median. A cohort of 4 and a cohort of 40 print
    *  the same number today, and only this tells them apart. */
   sample_count?: number | null;
+  /** |ln(ladder / FSA cohort)| (151). The OTHER reliability signal, and it catches what
+   *  `dispersion` structurally cannot: a cohort that is tight around the WRONG value.
+   *  Above RENT_DISAGREEMENT_CEILING the two geographies contradict each other and the
+   *  rent is withheld. null where no postal code was passed or no FSA cohort exists. */
+  disagreement?: number | null;
+  /** The FSA cohort's own median, carried for debugging and operator probes. NEVER
+   *  published as the estimate: substituting it was measured and made the tail worse. */
+  fsa_rent?: number | null;
   /** (p75-p25)/median for the cohort that answered (150). The RELIABILITY signal:
    *  above RENT_DISPERSION_CEILING the median stops describing any one property and
    *  18% of the answers land >50% off. null where the cohort carries no quartiles.
@@ -69,6 +78,11 @@ export async function fetchRentAVM(params: {
    *  impossible for the dwelling's size is skipped instead of published. Omit it and the
    *  behaviour is exactly as before. */
   livingAreaRange?: string | number | null;
+  /** PostalCode. Buys ONE extra probe for the FSA second opinion (151), whose only job is
+   *  to contradict the rung that answered. Omit it and `disagreement` comes back null,
+   *  which rentTierConfidence() reads as "do not flag" — i.e. exactly the pre-151
+   *  behaviour, so this is additive. */
+  postalCode?: string | null;
 }): Promise<RentAVMResult> {
   const { bedroomsTotal, bathroomsTotal = 0 } = params;
 
@@ -259,6 +273,29 @@ export async function fetchRentAVM(params: {
   const annualRent = (row.avg_rent || 0) * 12;
   const annualRentP10 = (row.p10_rent || 0) * 12;
 
+  // THE SECOND OPINION (151). ONE probe, after the walk has already settled, and it never
+  // changes which rung won — it only reports how far the postal area disagrees.
+  //
+  // Placed here rather than inside the walk deliberately. The FSA cohort measured WORSE
+  // than the ladder as an estimator (5.53% vs 5.45% median error), so letting it win a
+  // rung would degrade the number; its value is entirely in contradicting one.
+  //
+  // Uses the SPLIT/MERGED bed dimension the same way every other probe does, preferring
+  // the split cohort, so it is comparable to the rung it is questioning.
+  const fsa = fsaOf(params.postalCode);
+  let fsaRow: CohortRow | null = null;
+  if (fsa) {
+    for (const d of dims) {
+      const data = await probe((q) => q
+        .eq('match_tier', 'fsa').eq('fsa', fsa)
+        .eq('property_sub_type', propertySubType), d);
+      // No `acceptable()` here: the size ceiling exists to stop a bad rung being
+      // PUBLISHED, and this one never is. Screening it would also hide exactly the
+      // implausible-looking cohorts that make the disagreement worth reporting.
+      if (data && data.avg_rent > 0) { fsaRow = data; break; }
+    }
+  }
+
   return {
     annual_rent: annualRent,
     annual_rent_p10: annualRentP10,
@@ -271,6 +308,10 @@ export async function fetchRentAVM(params: {
     // and the count so a consumer cannot read the rent without being able to see how
     // trustworthy it is. null where the cohort predates the quartile columns.
     dispersion: rentDispersion(row.avg_rent, row.p25_rent, row.p75_rent),
+    // How far a second, independent geography puts this property from the rung that won
+    // (151). null when there is no postal code or no FSA cohort — read as "do not flag".
+    disagreement: rentDisagreement(row.avg_rent, fsaRow?.avg_rent),
+    fsa_rent: fsaRow?.avg_rent ?? null,
   };
 }
 
