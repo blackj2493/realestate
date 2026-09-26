@@ -61,6 +61,47 @@ export interface RentAVMResult {
   dispersion?: number | null;
 }
 
+/**
+ * THE ONE MAPPING from a raw feed record to the rent lookup's inputs.
+ *
+ * Four call sites build this object — fetchRentAVM and fetchMainUnitRent, each from both
+ * the transformer and the recompute job — and they have now drifted twice:
+ *
+ *   - the recompute's fetchMainUnitRent omitted `livingAreaRange`, so a recomputed
+ *     listing skipped the per-size rent ceiling that a freshly-synced one applied;
+ *   - `postalCode` reached fetchRentAVM but not fetchMainUnitRent, which silently
+ *     disabled the 151 cross-check on every home with an observed suite.
+ *
+ * Both are the same failure: a rule written out longhand in four places. A field added to
+ * this function now reaches every caller at once, which is the property the repo keeps
+ * discovering it needs (see MONTHLY_RENT_BAND's move into src/lib, and fsaOf).
+ */
+export function rentLookupParamsFromFeed(raw: {
+  City?: string | null;
+  CityRegion?: string | null;
+  PropertySubType?: string | null;
+  BedroomsTotal?: number | null;
+  BedroomsAboveGrade?: number | null;
+  BedroomsBelowGrade?: number | null;
+  BathroomsTotalInteger?: number | null;
+  CountyOrParish?: string | null;
+  LivingAreaRange?: string | number | null;
+  PostalCode?: string | null;
+}) {
+  return {
+    city: raw.City || '',
+    cityRegion: raw.CityRegion || raw.City || '',
+    propertySubType: raw.PropertySubType || '',
+    bedroomsTotal: raw.BedroomsTotal || 0,
+    bedroomsAboveGrade: raw.BedroomsAboveGrade,
+    bedroomsBelowGrade: raw.BedroomsBelowGrade,
+    bathroomsTotal: raw.BathroomsTotalInteger || 0,
+    county: raw.CountyOrParish,
+    livingAreaRange: raw.LivingAreaRange,
+    postalCode: raw.PostalCode,
+  };
+}
+
 export async function fetchRentAVM(params: {
   city: string;
   cityRegion: string;
@@ -339,6 +380,11 @@ export async function fetchMainUnitRent(params: {
   bathroomsTotal?: number;
   county?: string | null;
   livingAreaRange?: string | number | null;
+  /** PostalCode. MUST be forwarded: wherever a suite is observed THIS function's result
+   *  is the one that gets published, so omitting it here silently drops the 151 FSA
+   *  cross-check for every plus-room home — about 20% of the book — while the whole-home
+   *  path kept it. The `...params` spread below carries it through. */
+  postalCode?: string | null;
   /** The whole-home result already fetched for this listing. Returned unchanged when
    *  there is no plus-room to strip — see below. */
   wholeHome: RentAVMResult;
