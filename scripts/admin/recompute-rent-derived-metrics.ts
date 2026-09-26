@@ -63,7 +63,7 @@
 
 import 'dotenv/config';
 import { Client } from 'pg';
-import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent, type SuiteRentResult } from '../worker/services/rentAVM';
+import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent, rentLookupParamsFromFeed, type SuiteRentResult } from '../worker/services/rentAVM';
 import { resolveRatioPrice, fetchMillRate } from '../worker/services/ratioPriceCalculator';
 import { calculateFinancialMetrics } from '../worker/services/financialMetrics';
 import { hasObservedSuite } from '@/lib/listings/observedSuite';
@@ -181,20 +181,8 @@ async function millRateFor(cityRegion: string) {
 /** Rebuilds the exact input the transformer hands calculateFinancialMetrics. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function recompute(raw: any) {
-  const rentAVM = await withRetry(() => fetchRentAVM({
-    city: raw.City || '',
-    cityRegion: raw.CityRegion || raw.City || '',
-    propertySubType: raw.PropertySubType || '',
-    bedroomsTotal: raw.BedroomsTotal || 0,
-    bedroomsAboveGrade: raw.BedroomsAboveGrade,
-    bedroomsBelowGrade: raw.BedroomsBelowGrade,
-    bathroomsTotal: raw.BathroomsTotalInteger || 0,
-    county: raw.CountyOrParish,
-    livingAreaRange: raw.LivingAreaRange,
-    // FSA second opinion (151) — must match the transformer exactly, or a recomputed
-    // listing and a freshly-synced one disagree about whether to publish a cap rate.
-    postalCode: raw.PostalCode,
-  }));
+  // Shared mapper, so "what the transformer saw" is a fact rather than a promise.
+  const rentAVM = await withRetry(() => fetchRentAVM(rentLookupParamsFromFeed(raw)));
 
   // Suite rent (125), only where the feed OBSERVES a suite — never from a score. Same
   // gate the transformer applies, so a recomputed listing and a freshly-synced one
@@ -214,17 +202,10 @@ async function recompute(raw: any) {
         cityRegion: raw.CityRegion || raw.City || '',
         bedroomsBelowGrade: raw.BedroomsBelowGrade,
       })),
-      withRetry(() => fetchMainUnitRent({
-        city: raw.City || '',
-        cityRegion: raw.CityRegion || raw.City || '',
-        propertySubType: raw.PropertySubType || '',
-        bedroomsTotal: raw.BedroomsTotal || 0,
-        bedroomsAboveGrade: raw.BedroomsAboveGrade,
-        bedroomsBelowGrade: raw.BedroomsBelowGrade,
-        bathroomsTotal: raw.BathroomsTotalInteger || 0,
-        county: raw.CountyOrParish,
-        wholeHome: rentAVM,
-      })),
+      // Shared mapper — this call had drifted TWICE from the transformer's: it was
+      // missing livingAreaRange (so a recomputed listing skipped the size ceiling) and
+      // then postalCode (so it skipped the 151 cross-check).
+      withRetry(() => fetchMainUnitRent({ ...rentLookupParamsFromFeed(raw), wholeHome: rentAVM })),
     ]);
     // Same all-or-nothing rule as the transformer: suite income only on the main-unit
     // basis, never added to a whole-home comp that already contains the basement.
