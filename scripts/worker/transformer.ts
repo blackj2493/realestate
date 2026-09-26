@@ -18,7 +18,7 @@ import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage
 import { detectDistress } from '@/lib/listings/distressSignals';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
-import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent, type RentAVMResult, type SuiteRentResult } from './services/rentAVM';
+import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent, rentLookupParamsFromFeed, type RentAVMResult, type SuiteRentResult } from './services/rentAVM';
 import { hasObservedSuite } from '@/lib/listings/observedSuite';
 import { resolveRatioPrice, fetchMillRate } from './services/ratioPriceCalculator';
 import { calculateFinancialMetrics } from './services/financialMetrics';
@@ -930,28 +930,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     basis: null, sample_count: null,
   };
   try {
-    rentAVM = await fetchRentAVM({
-      city: raw.City || '',
-      cityRegion: raw.CityRegion || raw.City || '',
-      propertySubType: raw.PropertySubType || '',
-      bedroomsTotal: raw.BedroomsTotal || 0,
-      // The plus-room split (migration 122): a 1+den is not a 2 bedroom and leases
-      // ~$500/mo below one. Passing these picks the split cohort; omitting them
-      // silently degrades to the merged one.
-      bedroomsAboveGrade: raw.BedroomsAboveGrade,
-      bedroomsBelowGrade: raw.BedroomsBelowGrade,
-      // Real bath count drives the tiered rent lookup (replaces WashroomsType1Pcs).
-      bathroomsTotal: raw.BathroomsTotalInteger || 0,
-      // Size. The ladder has no size dimension, so bath count acts as a size proxy —
-      // this lets a rung whose rent is impossible for the dwelling be skipped.
-      livingAreaRange: raw.LivingAreaRange,
-      // Parent geography for the county rung (124). Omit it and the ladder just stops
-      // one rung earlier, so this is additive, never a regression.
-      county: raw.CountyOrParish,
-      // Buys the FSA second opinion (151) — one probe whose only job is to contradict the
-      // rung that won. The neighbourhood label pools M5R with M6G; the postal area does not.
-      postalCode: raw.PostalCode,
-    });
+    // Shared mapper (see rentLookupParamsFromFeed) — the plus-room split, the real bath
+    // count, the size band and the postal FSA all reach the lookup from ONE place, so the
+    // recompute job cannot fall out of step with this call again.
+    rentAVM = await fetchRentAVM(rentLookupParamsFromFeed(raw));
     wholeHomeRent = rentAVM;
   } catch (err) {
     console.warn('[Transformer] Rent AVM lookup failed:', err);
@@ -974,18 +956,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
           // an absent value as a 1-bed rather than as no suite.
           bedroomsBelowGrade: raw.BedroomsBelowGrade,
         }),
-        fetchMainUnitRent({
-          city: raw.City || '',
-          cityRegion: raw.CityRegion || raw.City || '',
-          propertySubType: raw.PropertySubType || '',
-          bedroomsTotal: raw.BedroomsTotal || 0,
-          bedroomsAboveGrade: raw.BedroomsAboveGrade,
-          bedroomsBelowGrade: raw.BedroomsBelowGrade,
-          bathroomsTotal: raw.BathroomsTotalInteger || 0,
-          county: raw.CountyOrParish,
-          livingAreaRange: raw.LivingAreaRange,
-          wholeHome: rentAVM,
-        }),
+        // Built by the SHARED mapper, not by hand: this is the result that gets published
+        // wherever a suite is observed, and it previously lost the 151 postal cross-check
+        // because the two call sites were written out separately.
+        fetchMainUnitRent({ ...rentLookupParamsFromFeed(raw), wholeHome: rentAVM }),
       ]);
       // ALL OR NOTHING. Suite income is only legitimate on the main-unit basis. With
       // no main-unit cohort we keep the whole-home comp and publish no suite line,
