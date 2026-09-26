@@ -74,6 +74,7 @@ interface LeaseRow {
   bathrooms_total: string | number | null;
   living_area_range: string | number | null;
   county: string | null;
+  postal_code: string | null;
   unparsed_address: string | null;
   dedupe_key: string | null;
 }
@@ -107,6 +108,10 @@ function accumulate(rows: LeaseRow[], basis: RentBasis): RentalIndexRow[] {
       livingAreaRange: r.living_area_range,
       // Parent geography for the `county` rung (124). 100% populated in the feed.
       county: r.county,
+      // Keys the FSA second opinion (151). raw_vow_sold has a real column; listings
+      // keeps it in full_payload. Both arrive here as the same raw string and are
+      // canonicalised by the ONE fsaOf() the address side already uses.
+      postalCode: r.postal_code,
       // In-home unit tell (125). 12.0% of this inventory is a basement / upper /
       // main-floor unit wearing the whole house's sub-type. Without this column they
       // land in the whole-home cohorts and drag the medians that become cap_rate_est.
@@ -156,6 +161,7 @@ async function loadClosed(client: Client, months: number): Promise<LeaseRow[]> {
             bathrooms_total_integer           AS bathrooms_total,
             living_area_range                 AS living_area_range,
             raw_payload->>'CountyOrParish'    AS county,
+            postal_code,
             unparsed_address,
             coalesce(nullif(property_hash,''), listing_key) AS dedupe_key
        FROM raw_vow_sold
@@ -200,6 +206,7 @@ async function loadAsking(client: Client): Promise<LeaseRow[]> {
             full_payload->>'BathroomsTotalInteger'  AS bathrooms_total,
             full_payload->>'LivingAreaRange'        AS living_area_range,
             full_payload->>'CountyOrParish'         AS county,
+            full_payload->>'PostalCode'             AS postal_code,
             full_payload->>'UnparsedAddress'        AS unparsed_address,
             coalesce(nullif(property_hash,''), nullif(norm_address,''), listing_key) AS dedupe_key
        FROM listings
@@ -298,7 +305,7 @@ async function main() {
     // COLS, the column list and params.push must agree. That lockstep broke once and
     // emptied the table (see 148); scripts/worker/rentalIndexWriter.test.ts now asserts
     // all three against each other, so a mismatch fails CI instead of production.
-    const COLS = 17;
+    const COLS = 18;
     const params: (string | number | null)[] = [];
     const tuples = batch.map((row, j) => {
       const b = j * COLS;
@@ -306,14 +313,14 @@ async function main() {
         row.bedrooms_total, row.bedrooms_above, row.den, row.bathrooms,
         row.avg_rent, row.p10_rent, row.sample_count,
         row.county, row.sub_type_family, row.living_area_range,
-        row.p25_rent, row.p75_rent);
+        row.p25_rent, row.p75_rent, row.fsa);
       return `(${Array.from({ length: COLS }, (_, k) => `$${b + k + 1}`).join(', ')})`;
     });
     await client.query(
       `INSERT INTO rental_market_index
          (match_tier, basis, city_region, city, property_sub_type, bedrooms_total,
           bedrooms_above, den, bathrooms, avg_rent, p10_rent, sample_count,
-          county, sub_type_family, living_area_range, p25_rent, p75_rent)
+          county, sub_type_family, living_area_range, p25_rent, p75_rent, fsa)
        VALUES ${tuples.join(',')}`,
       params,
     );

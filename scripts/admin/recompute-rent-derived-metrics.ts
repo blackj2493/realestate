@@ -124,6 +124,7 @@ interface Drift {
   basisTo: string;
   sampleTo: number;
   dispersionTo: number;
+  disagreementTo: number;
   /** Measured suite rent (125), monthly. 0 = no observed suite, or no cohort. */
   suiteTo: number;
   suiteTierTo: string;
@@ -190,6 +191,9 @@ async function recompute(raw: any) {
     bathroomsTotal: raw.BathroomsTotalInteger || 0,
     county: raw.CountyOrParish,
     livingAreaRange: raw.LivingAreaRange,
+    // FSA second opinion (151) — must match the transformer exactly, or a recomputed
+    // listing and a freshly-synced one disagree about whether to publish a cap rate.
+    postalCode: raw.PostalCode,
   }));
 
   // Suite rent (125), only where the feed OBSERVES a suite — never from a score. Same
@@ -281,6 +285,7 @@ async function recompute(raw: any) {
     // match the transformer exactly or a recomputed listing and a freshly-synced one
     // disagree about whether their cap rate may be shown.
     dispersion: rent.has_data && rent.dispersion != null ? rent.dispersion : -1,
+    disagreement: rent.has_data && rent.disagreement != null ? rent.disagreement : -1,
     suiteRent: suiteRent.has_data ? suiteRent.monthly_rent : 0,
     suiteTier: suiteRent.has_data ? (suiteRent.match_tier ?? '') : '',
     suiteBasis: suiteRent.has_data ? (suiteRent.basis ?? '') : '',
@@ -331,6 +336,7 @@ async function pushTypesense(
       rent_basis: r.basisTo,
       rent_sample_count: r.sampleTo,
       rent_dispersion: r.dispersionTo,
+      rent_disagreement: r.disagreementTo,
       suite_rent_est: r.suiteTo,
       suite_rent_tier: r.suiteTierTo,
       suite_rent_basis: r.suiteBasisTo,
@@ -532,7 +538,7 @@ async function main() {
       if (!res) continue;
       scanned++;
       const {
-        r, metrics, hadComp, tier, basis, sample, dispersion, suiteRent, suiteTier, suiteBasis, suiteSample,
+        r, metrics, hadComp, tier, basis, sample, dispersion, disagreement, suiteRent, suiteTier, suiteBasis, suiteSample,
         wholeHomeRent, wholeHomeTier, wholeHomeBasis, wholeHomeSample,
       } = res;
       const stored = r.cap_rate_est == null ? null : Number(r.cap_rate_est);
@@ -559,8 +565,8 @@ async function main() {
       // and not the default: without it a converged re-run writes nothing.
       //
       // THE PROVENANCE FIELDS CANNOT DRIFT-DETECT. `rent_basis`, `rent_sample_count` and
-      // `rent_dispersion` (150) are index-only and Postgres stores none of them, so there
-      // is nothing on `r` to compare them against — a converged row skips here and keeps an empty provenance line forever.
+      // `rent_dispersion` (150) and `rent_disagreement` (151) are index-only and Postgres
+      // stores none of them, so there is nothing on `r` to compare them against — a converged row skips here and keeps an empty provenance line forever.
       // Backfilling them is a ONE-TIME `--resync-index` pass, which is exactly the case
       // that flag was added for. After that pass they ride along with any real drift.
       // The same is true of the four `whole_home_*` fields.
@@ -576,6 +582,7 @@ async function main() {
         basisTo: basis,
         sampleTo: sample,
         dispersionTo: dispersion,
+        disagreementTo: disagreement,
         suiteTo: suiteRent,
         suiteTierTo: suiteTier,
         suiteBasisTo: suiteBasis,

@@ -251,6 +251,11 @@ export interface ListingDocument {
    *  -1/absent = unknown, NOT 0: a cohort whose quartiles coincide is the tightest
    *  there is, so 0 cannot double as the no-data sentinel. Use readRentDispersion(). */
   rent_dispersion?: number;
+  /** |ln(ladder / FSA cohort)| (151) — how far the postal area puts this property from the
+   *  rung that answered. The signal rent_dispersion structurally cannot see: six expensive
+   *  Annex condos agreeing closely with each other is a TIGHT cohort, and still wrong.
+   *  -1/absent = unknown, NOT 0. Use readRentDispersion() to decode (same convention). */
+  rent_disagreement?: number;
   /** One tenant, the entire house — a different cohort from the rent above wherever a
    *  suite is observed, and usually a thinner one. */
   whole_home_monthly_rent?: number;

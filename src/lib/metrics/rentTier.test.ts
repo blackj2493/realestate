@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   rentTierConfidence, rentTierLabel, rentTierExplainer, rentProvenanceNote,
   rentDispersion, readRentDispersion, rentSpreadTooWide, rentWithheldExplainer,
-  RENT_DISPERSION_CEILING,
+  RENT_DISPERSION_CEILING, RENT_DISAGREEMENT_CEILING, rentDisagreement,
 } from './rentTier';
 
 describe('rentTierConfidence', () => {
@@ -253,5 +253,71 @@ describe('rentWithheldExplainer', () => {
       expect(note).not.toMatch(/cohort|rung|tier|percentile|p25|p75|0\.\d/i);
       expect(note).not.toMatch(/\$/);
     }
+  });
+});
+
+
+describe('rentDisagreement', () => {
+  it('is symmetric in the ratio, so 2x high and 2x low read the same', () => {
+    const high = rentDisagreement(6000, 3000)!;
+    const low = rentDisagreement(3000, 6000)!;
+    expect(high).toBeCloseTo(low, 10);
+    expect(high).toBeCloseTo(Math.log(2), 10);
+  });
+
+  it('is zero when the two cohorts agree', () => {
+    expect(rentDisagreement(3000, 3000)).toBe(0);
+  });
+
+  it('returns null when either side is missing, so the gate stays OFF', () => {
+    // No postal code, or no FSA cohort yet because the index predates 151.
+    expect(rentDisagreement(3000, null)).toBeNull();
+    expect(rentDisagreement(3000, undefined)).toBeNull();
+    expect(rentDisagreement(null, 3000)).toBeNull();
+    expect(rentDisagreement(3000, 0)).toBeNull();
+  });
+});
+
+describe('rentTierConfidence with the FSA second opinion (151)', () => {
+  const wideDis = RENT_DISAGREEMENT_CEILING + 0.01;
+  const okDis = RENT_DISAGREEMENT_CEILING - 0.01;
+
+  it('withholds a TIGHT cohort that a second geography contradicts', () => {
+    // This is the case dispersion structurally cannot see, and the one that prompted the
+    // work: 473 Dupont, spread 0.104 (tight) but 2.88x above every M6G lease.
+    expect(rentTierConfidence('nbhd_size', 0.104, 1.058)).toBe('wide');
+  });
+
+  it('either signal alone is enough — they catch different listings', () => {
+    expect(rentTierConfidence('nbhd', 0.9, null)).toBe('wide');       // spread only
+    expect(rentTierConfidence('nbhd', 0.1, wideDis)).toBe('wide');    // disagreement only
+  });
+
+  it('publishes when both signals are within their ceilings', () => {
+    expect(rentTierConfidence('nbhd_size', 0.1, okDis)).toBe('comp');
+    expect(rentTierConfidence('county', 0.1, okDis)).toBe('area');
+  });
+
+  it('is exclusive at the ceiling, matching the measured population', () => {
+    expect(rentTierConfidence('nbhd', 0.1, RENT_DISAGREEMENT_CEILING)).toBe('comp');
+  });
+
+  it('behaves exactly as pre-151 when the disagreement is unknown', () => {
+    // What makes this safe to deploy before the index carries any `fsa` rows.
+    for (const tier of ['nbhd_size', 'nbhd', 'city_bath', 'city', 'city_family', 'county']) {
+      expect(rentTierConfidence(tier, 0.1, null)).toBe(rentTierConfidence(tier, 0.1));
+      expect(rentTierConfidence(tier, null, null)).toBe(rentTierConfidence(tier));
+    }
+  });
+
+  it('does not let a second opinion promote an unknown rung', () => {
+    expect(rentTierConfidence('some_future_rung', 0.1, wideDis)).toBe('none');
+    expect(rentTierConfidence(null, 0.1, wideDis)).toBe('none');
+  });
+
+  it('never grades the fsa rung itself as publishable', () => {
+    // It is a second opinion, never an estimate. If it ever reaches rent_match_tier that
+    // is a bug, and it must not render as a property-level figure.
+    expect(rentTierConfidence('fsa')).toBe('none');
   });
 });

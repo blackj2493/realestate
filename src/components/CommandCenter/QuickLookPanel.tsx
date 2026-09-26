@@ -162,6 +162,7 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   const rentConf = rentTierConfidence(
     property.rent_match_tier,
     readRentDispersion(property.rent_dispersion),
+    readRentDispersion(property.rent_disagreement),
   );
   const capRateArea = rentConf === "area";
   // 'wide' (150): the cohort answered from close by but its own rents disagree past

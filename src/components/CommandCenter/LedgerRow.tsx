@@ -136,6 +136,7 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
       const conf = rentTierConfidence(
         doc.rent_match_tier,
         readRentDispersion(doc.rent_dispersion),
+        readRentDispersion(doc.rent_disagreement),
       );
       // 'wide' (150): a close cohort answered, but its own rents disagree past
       // RENT_DISPERSION_CEILING — 18% of those are more than 50% wrong. Withhold rather
@@ -178,6 +179,7 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
       const cfConf = rentTierConfidence(
         doc.rent_match_tier,
         readRentDispersion(doc.rent_dispersion),
+        readRentDispersion(doc.rent_disagreement),
       );
       // Cashflow is the cap rate with leverage on top, so an unreliable rent reaches it
       // amplified. Withheld on the same test, for the same reason.
