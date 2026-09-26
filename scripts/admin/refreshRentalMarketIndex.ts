@@ -295,21 +295,25 @@ async function main() {
   await client.query('TRUNCATE rental_market_index');
   for (let i = 0; i < indexRows.length; i += WRITE_CHUNK) {
     const batch = indexRows.slice(i, i + WRITE_CHUNK);
-    const COLS = 15; // keep in lockstep with the INSERT column list + params.push below
+    // COLS, the column list and params.push must agree. That lockstep broke once and
+    // emptied the table (see 148); scripts/worker/rentalIndexWriter.test.ts now asserts
+    // all three against each other, so a mismatch fails CI instead of production.
+    const COLS = 17;
     const params: (string | number | null)[] = [];
     const tuples = batch.map((row, j) => {
       const b = j * COLS;
       params.push(row.match_tier, row.basis, row.city_region, row.city, row.property_sub_type,
         row.bedrooms_total, row.bedrooms_above, row.den, row.bathrooms,
         row.avg_rent, row.p10_rent, row.sample_count,
-        row.county, row.sub_type_family, row.living_area_range);
+        row.county, row.sub_type_family, row.living_area_range,
+        row.p25_rent, row.p75_rent);
       return `(${Array.from({ length: COLS }, (_, k) => `$${b + k + 1}`).join(', ')})`;
     });
     await client.query(
       `INSERT INTO rental_market_index
          (match_tier, basis, city_region, city, property_sub_type, bedrooms_total,
           bedrooms_above, den, bathrooms, avg_rent, p10_rent, sample_count,
-          county, sub_type_family, living_area_range)
+          county, sub_type_family, living_area_range, p25_rent, p75_rent)
        VALUES ${tuples.join(',')}`,
       params,
     );

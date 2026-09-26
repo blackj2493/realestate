@@ -43,7 +43,10 @@ import InfoDot from "@/components/ui/InfoDot";
 import type { GlossaryKey } from "@/lib/glossary";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
-import { rentTierConfidence, rentTierExplainer } from "@/lib/metrics/rentTier";
+import {
+  rentTierConfidence, rentTierExplainer, rentWithheldExplainer,
+  rentSpreadTooWide, readRentDispersion,
+} from "@/lib/metrics/rentTier";
 import { isCommercialProperty } from "@/lib/filters/fundamentals";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { basementLabel } from "@/lib/listings/basementLabel";
@@ -156,7 +159,16 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
   const capRate = capRateOrNull(property.cap_rate_est);
   // Area-grade rungs carry 13-15% median rent error vs 5.6% for a neighbourhood comp,
   // and that amplifies through NOI. Mark it rather than show both the same way.
-  const capRateArea = rentTierConfidence(property.rent_match_tier) === "area";
+  const rentConf = rentTierConfidence(
+    property.rent_match_tier,
+    readRentDispersion(property.rent_dispersion),
+  );
+  const capRateArea = rentConf === "area";
+  // 'wide' (150): the cohort answered from close by but its own rents disagree past
+  // RENT_DISPERSION_CEILING, where 18% of answers land >50% off. Both tiles below are
+  // the rent divided by the price, so neither survives an unusable rent.
+  const rentUsable = !rentSpreadTooWide(rentConf);
+  const rentWithheldHint = rentWithheldExplainer(rentConf);
   const hero = property.primaryImageUrl || property.thumbnailUrl;
   const sqft = property.BuildingAreaTotal && property.BuildingAreaTotal > 0
     ? property.BuildingAreaTotal.toLocaleString()
@@ -322,13 +334,27 @@ export default function QuickLookPanel({ property, onClose }: QuickLookPanelProp
           {showBuyerAnalytics ? (
             <div className="mb-4 grid grid-cols-3 gap-2">
               <Tile label="True DOM" value={`${dom}d`} valueClass={domColor} term="dom" />
-              <Tile label="Gross Yield" value={pct(yieldEst)} valueClass="text-emerald-700 dark:text-emerald-400" term="grossYield" />
+              <Tile
+                label="Gross Yield"
+                value={rentUsable ? pct(yieldEst) : "—"}
+                valueClass="text-emerald-700 dark:text-emerald-400"
+                term="grossYield"
+                approxHint={rentUsable ? null : rentWithheldHint}
+              />
               <Tile
                 label="Cap Rate"
-                value={capRate != null && capRateArea ? `≈${pct(capRate)}` : pct(capRate)}
+                value={
+                  !rentUsable ? "—"
+                    : capRate != null && capRateArea ? `≈${pct(capRate)}`
+                      : pct(capRate)
+                }
                 valueClass="text-foreground"
                 term="capRate"
-                approxHint={capRateArea ? rentTierExplainer(property.rent_match_tier) : null}
+                approxHint={
+                  !rentUsable ? rentWithheldHint
+                    : capRateArea ? rentTierExplainer(property.rent_match_tier)
+                      : null
+                }
               />
             </div>
           ) : (

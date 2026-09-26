@@ -211,12 +211,22 @@ export interface RentalIndexRow {
   bathrooms: number | null;
   avg_rent: number;   // median monthly rent
   p10_rent: number;   // 10th-percentile monthly rent
+  /** Quartiles (150). Their spread relative to avg_rent is the RELIABILITY signal:
+   *  (p75-p25)/avg_rent > 0.5 marks a cohort whose median is not a trustworthy point
+   *  estimate for any single member of it — 18.1% of those answers land more than 50%
+   *  off, against 0.87% everywhere else, a 16x lift. Deliberately NOT sample_count,
+   *  which separates barely at all (1.65x) and is why gating on cohort depth failed. */
+  p25_rent: number;
+  p75_rent: number;
   sample_count: number;
 }
 
 /** `basis` is a property of the whole PASS, not of an individual cohort, so it is
  *  stamped once in finalize() rather than carried on every group. */
-type RowMeta = Omit<RentalIndexRow, 'avg_rent' | 'p10_rent' | 'sample_count' | 'basis'>;
+type RowMeta = Omit<
+  RentalIndexRow,
+  'avg_rent' | 'p10_rent' | 'p25_rent' | 'p75_rent' | 'sample_count' | 'basis'
+>;
 
 /**
  * @param basis which population this accumulator is being fed. One accumulator per
@@ -372,7 +382,16 @@ export function createRentAccumulator(basis: RentBasis = 'asking') {
       for (const g of groups.values()) {
         if (g.rents.length < MIN_COHORT_SAMPLES) continue;
         const sorted = [...g.rents].sort((a, b) => a - b);
-        rows.push({ ...g.meta, basis, avg_rent: Math.round(percentile(sorted, 0.5)), p10_rent: Math.round(percentile(sorted, 0.10)), sample_count: sorted.length });
+        rows.push({
+          ...g.meta, basis,
+          avg_rent: Math.round(percentile(sorted, 0.5)),
+          p10_rent: Math.round(percentile(sorted, 0.10)),
+          // The spread that becomes the confidence gate (150). Computed here, beside the
+          // median it qualifies, so a cohort can never ship one without the other.
+          p25_rent: Math.round(percentile(sorted, 0.25)),
+          p75_rent: Math.round(percentile(sorted, 0.75)),
+          sample_count: sorted.length,
+        });
       }
       return rows;
     },

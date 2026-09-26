@@ -22,7 +22,10 @@ import { ListingThumbnail } from "@/components/listing/ListingThumbnail";
 import ListingCardBody from "./ListingCardBody";
 import { carryFor } from "./columnSort";
 import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
-import { rentTierConfidence, rentTierExplainer } from "@/lib/metrics/rentTier";
+import {
+  rentTierConfidence, rentTierExplainer, rentWithheldExplainer,
+  rentSpreadTooWide, readRentDispersion,
+} from "@/lib/metrics/rentTier";
 import type { CohortRanker } from "./cohortPercentiles";
 
 interface LedgerRowProps {
@@ -130,7 +133,22 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
       // error against 5.6% for a neighbourhood comp, and that amplifies through NOI.
       // Show it as approximate and drop the percentile rank — ranking a cohort on a
       // number that loose reads as precision the figure does not have.
-      const area = rentTierConfidence(doc.rent_match_tier) === "area";
+      const conf = rentTierConfidence(
+        doc.rent_match_tier,
+        readRentDispersion(doc.rent_dispersion),
+      );
+      // 'wide' (150): a close cohort answered, but its own rents disagree past
+      // RENT_DISPERSION_CEILING — 18% of those are more than 50% wrong. Withhold rather
+      // than dim. A dimmed number still sorts and still anchors; an em dash does not.
+      // Only 'wide'. A missing rung keeps its existing treatment — see rentSpreadTooWide.
+      if (rentSpreadTooWide(conf)) {
+        return (
+          <span className="text-muted-foreground" title={rentWithheldExplainer(conf) ?? undefined}>
+            —
+          </span>
+        );
+      }
+      const area = conf === "area";
       return (
         <span
           className={area ? "text-cyan-700/70 dark:text-cyan-400/70" : "text-cyan-700 dark:text-cyan-400"}
@@ -157,7 +175,20 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
       // between the ones that lose money and the ones that make it.
       const v = monthlyCashflow({ listPrice: doc.ListPrice, capRatePct: doc.cap_rate_est }, financing);
       if (v == null) return <span className="text-muted-foreground">—</span>;
-      const area = rentTierConfidence(doc.rent_match_tier) === "area";
+      const cfConf = rentTierConfidence(
+        doc.rent_match_tier,
+        readRentDispersion(doc.rent_dispersion),
+      );
+      // Cashflow is the cap rate with leverage on top, so an unreliable rent reaches it
+      // amplified. Withheld on the same test, for the same reason.
+      if (rentSpreadTooWide(cfConf)) {
+        return (
+          <span className="text-muted-foreground" title={rentWithheldExplainer(cfConf) ?? undefined}>
+            —
+          </span>
+        );
+      }
+      const area = cfConf === "area";
       return (
         <span
           className={cn(

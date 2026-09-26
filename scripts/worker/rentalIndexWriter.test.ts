@@ -54,6 +54,10 @@ describe('refreshRentalMarketIndex writer', () => {
       'match_tier', 'basis', 'city_region', 'city', 'county', 'property_sub_type',
       'sub_type_family', 'bedrooms_total', 'bedrooms_above', 'den', 'bathrooms',
       'avg_rent', 'p10_rent', 'sample_count', 'living_area_range',
+      // 150: the quartiles behind the confidence gate. Dropping these would not empty the
+      // index the way 148 did — it would quietly leave every cohort's spread NULL, which
+      // reads as "unknown, do not flag" and so turns the gate off site-wide, silently.
+      'p25_rent', 'p75_rent',
     ]) {
       expect(cols).toContain(field);
     }

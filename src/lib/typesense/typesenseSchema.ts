@@ -226,6 +226,10 @@ export const unindexedFields: UnindexedField[] = [
   // stored JSON and no index at all.
   { name: 'rent_basis', type: 'string', index: false, facet: false, optional: true },
   { name: 'rent_sample_count', type: 'int32', index: false, facet: false, optional: true },
+  // Spread of the cohort behind the rent (150). Unindexed like its neighbours: the
+  // confidence decision happens where the number renders, not in a query. -1 = unknown,
+  // because 0 is a real reading (a cohort whose quartiles coincide is the tightest one).
+  { name: 'rent_dispersion', type: 'float', index: false, facet: false, optional: true },
   { name: 'suite_rent_basis', type: 'string', index: false, facet: false, optional: true },
   { name: 'suite_rent_sample_count', type: 'int32', index: false, facet: false, optional: true },
   // What ONE tenant pays for the ENTIRE house, with its own rung and depth. Wherever a
@@ -505,6 +509,10 @@ export interface TypesensePropertyDocument {
   rent_basis?: string;
   /** How many comps the cohort median was taken over. 0/absent = unknown, never "few". */
   rent_sample_count?: number;
+  /** (p75-p25)/median of that cohort (150) — how much the comps disagree. Above
+   *  RENT_DISPERSION_CEILING the cap rate is withheld. -1/absent = unknown, NOT 0:
+   *  0 means a perfectly tight cohort, so it cannot double as the no-data sentinel. */
+  rent_dispersion?: number;
   /** One tenant, the entire house. Differs from the rent above wherever a suite is
    *  observed, because that one is the main unit alone. */
   whole_home_monthly_rent?: number;

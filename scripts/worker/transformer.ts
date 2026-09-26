@@ -793,6 +793,15 @@ export interface TransformResult {
      *  document dropped them, so the sandbox could not tell 40 leases from 3 asks. */
     rent_basis?: string;
     rent_sample_count?: number;
+    /** (p75-p25)/median for the cohort behind the rent (150) — how much the comps
+     *  DISAGREE, which is a different question from how many there are. Above
+     *  RENT_DISPERSION_CEILING the surfaces withhold the cap rate.
+     *
+     *  -1 IS THE UNKNOWN SENTINEL, NOT 0. Zero is a real and excellent reading: a
+     *  cohort whose quartiles coincide is the tightest one there is. Reusing 0 the way
+     *  rent_basis reuses '' would publish every pre-150 cohort as maximally reliable —
+     *  a no-data sentinel that fails OPEN on the exact metric meant to close a gap. */
+    rent_dispersion?: number;
     /** What ONE tenant pays for the ENTIRE house. Distinct from `monthlyRent`'s comp
      *  wherever a suite is observed, because that one is the main unit alone. */
     whole_home_monthly_rent?: number;
@@ -1255,6 +1264,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
     // rent_match_tier: absent must be indistinguishable from absent, never from "few".
     typesensePayload.rent_basis = rentAVM.has_data ? (rentAVM.basis ?? '') : '';
     typesensePayload.rent_sample_count = rentAVM.has_data ? (rentAVM.sample_count ?? 0) : 0;
+    // See the -1 note on the declaration: absent quartiles must not read as a tight cohort.
+    typesensePayload.rent_dispersion =
+      rentAVM.has_data && rentAVM.dispersion != null ? rentAVM.dispersion : -1;
     typesensePayload.suite_rent_est = suiteRent.has_data ? suiteRent.monthly_rent : 0;
     typesensePayload.suite_rent_tier = suiteRent.has_data ? (suiteRent.match_tier ?? '') : '';
     typesensePayload.suite_rent_basis = suiteRent.has_data ? (suiteRent.basis ?? '') : '';

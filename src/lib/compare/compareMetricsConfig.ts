@@ -16,7 +16,7 @@ import { dealScoreFromDocument } from "@/lib/dealScore/fromListingDocument";
 import { winnerIndices, bestValue, type WinnerDirection } from "./winner";
 import { rowIsIdentical } from "./diff";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
-import { rentTierConfidence } from "@/lib/metrics/rentTier";
+import { rentTierConfidence, rentSpreadTooWide, readRentDispersion } from "@/lib/metrics/rentTier";
 
 export type CompareGroupId =
   | "valuationDeal"
@@ -170,9 +170,18 @@ export const COMPARE_METRICS: CompareMetric[] = [
   // false precision the "est" tag does not communicate. The live-underwritten cap rate
   // above it still shows for every row.
   { key: "capRateVA", label: "Est. Cap Rate", group: "cashflowCarry", cellKind: "numeric",
-    get: (c) => (rentTierConfidence(c.listing.rent_match_tier) === "area"
-      ? null
-      : capRateOrNull(c.listing.cap_rate_est)),
+    get: (c) => {
+      // Also suppressed when the cohort's own rents disagree past
+      // RENT_DISPERSION_CEILING (150) — 18% of those answers are more than 50% wrong,
+      // which is worse than the area rungs this column already declines to rank.
+      const conf = rentTierConfidence(
+        c.listing.rent_match_tier,
+        readRentDispersion(c.listing.rent_dispersion),
+      );
+      return conf === "area" || rentSpreadTooWide(conf)
+        ? null
+        : capRateOrNull(c.listing.cap_rate_est);
+    },
     format: fmtPct1, winner: "high",
     tag: () => "est", glossaryKey: "capRate" },
   { key: "cashflow", label: "Monthly Cashflow", group: "cashflowCarry", cellKind: "numeric",
