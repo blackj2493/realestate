@@ -42,6 +42,7 @@ import { createSendPacer, type SendPacer } from '@/lib/alerts/sendPacer';
 import Typesense, { Client } from 'typesense';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { buildAreaClause } from '@/lib/bubbles/stats';
+import { fetchCatchmentPrograms } from '@/lib/schools/catchmentPrograms';
 import { buildTransactionClause, SALE_PRICE_FLOOR } from '@/lib/filters/fundamentals';
 import { bubbleAlertFilter } from '@/lib/alerts/bubbleFilterClause';
 import { aboveGradeBedsRangeClause } from '@/lib/filters/filterRegistry';
@@ -1273,6 +1274,21 @@ async function main() {
     if (bubbleData) bubbleData = [...bubbleData].sort(compareBubbleSpecificity);
   }
 
+  /** The school id a bubble scopes to, or '' for every other area type. */
+  const schoolKeyOf = (source: unknown): string => {
+    const s = source as { kind?: string; schoolKey?: string } | null;
+    return s?.kind === 'school' && typeof s.schoolKey === 'string' ? s.schoolKey : '';
+  };
+
+  // Which of tonight's school bubbles have a published attendance boundary — ONE lookup for
+  // the whole run rather than one per bubble. School bubbles are 6 of 427 rows in
+  // production, so this is usually a no-op; a failed lookup returns an empty map and every
+  // school bubble keeps the 2.5 km radius it has always used.
+  const schoolCatchmentPrograms = await fetchCatchmentPrograms(
+    supabase,
+    (bubbleData ?? []).map((b) => schoolKeyOf(b.source)).filter(Boolean)
+  );
+
   if (bubbleErrMsg !== null) {
     // Pre-migration-034 deploys land here (unknown column) — skip the phase, never the run.
     console.warn(`[alerts] bubbles phase skipped: ${bubbleErrMsg}`);
@@ -1285,11 +1301,17 @@ async function main() {
           await supabase.from('market_bubbles').update({ notify_since: runStartIso }).eq('id', b.id);
           continue;
         }
-        const areaClause = buildAreaClause({
-          area_type: b.area_type,
-          polygon: b.polygon,
-          source: b.source as Parameters<typeof buildAreaClause>[0]['source'],
-        });
+        const areaClause = buildAreaClause(
+          {
+            area_type: b.area_type,
+            polygon: b.polygon,
+            source: b.source as Parameters<typeof buildAreaClause>[0]['source'],
+          },
+          // A school bubble scopes to the ATTENDANCE BOUNDARY where the board publishes one,
+          // and to the old 2.5 km radius where it does not. Resolved once for the whole run
+          // (below the bubble load); an absent entry keeps the radius.
+          { catchmentPrograms: schoolCatchmentPrograms.get(schoolKeyOf(b.source)) }
+        );
         if (!areaClause) continue;
 
         // 72h lookback past the watermark: EntryTimestamp is the MLS entry time, and a
