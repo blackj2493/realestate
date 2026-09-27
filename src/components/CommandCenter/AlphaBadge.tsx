@@ -4,6 +4,7 @@
  */
 
 import { cn } from '@/lib/utils';
+import { sanitizeOriginalListPrice } from '@/lib/listing/originalListPrice';
 import { detectDistress } from '@/lib/listings/distressSignals';
 
 // Badge variants based on the design spec
@@ -163,8 +164,10 @@ export function detectPropertyBadges(property: {
   }
 
   // Price Drop badge
-  if (property.OriginalListPrice && property.ListPrice && property.OriginalListPrice > property.ListPrice) {
-    const dropPercent = Math.round(((property.OriginalListPrice - property.ListPrice) / property.OriginalListPrice) * 100);
+  // Guarded: an unsanitised 1000x-scaled original renders as "-99% PRICE DROP".
+  const originalAsk = sanitizeOriginalListPrice(property.OriginalListPrice, property.ListPrice);
+  if (originalAsk && property.ListPrice && originalAsk > property.ListPrice) {
+    const dropPercent = Math.round(((originalAsk - property.ListPrice) / originalAsk) * 100);
     badges.push({ variant: 'price-drop', label: `-${dropPercent}% PRICE DROP` });
   }
 

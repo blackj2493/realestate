@@ -46,6 +46,7 @@ import { getConsumer } from "@/lib/auth/requireConsumer";
 import { assignSchools } from "@/lib/schools/nearestSchools";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import { sanitizeOriginalListPrice } from "@/lib/listing/originalListPrice";
 
 export const dynamic = "force-dynamic"; // render depends on auth (anon vs consumer)
 
@@ -137,7 +138,7 @@ async function GatedSectionAsync({ soldKey }: { soldKey: string }) {
     ...(hasHero
       ? []
       : ([
-          [d.DealType === "leased" ? "Leased price" : isSold ? "Sold price" : "Last list price", fmt(isSold ? d.ClosePrice : d.OriginalListPrice ?? d.ListPrice)],
+          [d.DealType === "leased" ? "Leased price" : isSold ? "Sold price" : "Last list price", fmt(isSold ? d.ClosePrice : (sanitizeOriginalListPrice(d.OriginalListPrice, d.ListPrice) ?? d.ListPrice))],
           [d.DealType === "leased" ? "Leased on" : isSold ? "Sold on" : "Removed on", soldDate ?? "—"],
         ] as [string, string][])),
     ["Beds", d.BedroomsTotal ? String(d.BedroomsTotal) : "—"],

@@ -1,4 +1,5 @@
 /** Pure shape + mapper for sold rows — kept out of route.ts so node-env tests don't load next/server. */
+import { sanitizeOriginalListPrice } from "@/lib/listing/originalListPrice";
 
 export interface SoldListing {
   id: string;
@@ -57,6 +58,6 @@ export function mapSoldDoc(d: Record<string, unknown>): SoldListing {
       (v) => d.DealType === v
     ) ?? "sold",
     daysOnMarket: posOrNull(d.DaysOnMarket),
-    originalListPrice: posOrNull(d.OriginalListPrice),
+    originalListPrice: sanitizeOriginalListPrice(posOrNull(d.OriginalListPrice), posOrNull(d.ListPrice)),
   };
 }
