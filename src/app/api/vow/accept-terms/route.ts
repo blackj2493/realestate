@@ -32,6 +32,8 @@ import { recordTermsAcceptance } from "@/lib/auth/terms";
 import { sendWelcomeEmail } from "@/lib/alerts/welcomeEmail";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cleanSignupRegion, seedSignupRegion } from "@/lib/dashboard/seedSignupRegion";
+import { getServiceRoleClient } from "@/lib/supabase/client";
+import { saveSignupAttribution } from "@/lib/analytics/signupAttribution";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
     agree?: unknown;
     region?: unknown;
     filter?: unknown;
+    touches?: unknown;
   } = {};
   try {
     body = await request.json();
@@ -83,6 +86,17 @@ export async function POST(request: Request) {
     }
   } else if (!sentRegion) {
     console.warn("[accept-terms] no region in body — pre-deploy client bundle?");
+  }
+
+  // Where this account came from (migration 152). First acceptance only — a re-accept
+  // after a Terms bump is not a signup. Never fails the response, like the seed above.
+  if (result.firstAcceptance && result.userId) {
+    try {
+      const saved = await saveSignupAttribution(getServiceRoleClient(), result.userId, body.touches);
+      if (saved.error) console.error("[accept-terms] attribution save failed:", saved.error);
+    } catch (e) {
+      console.error("[accept-terms] attribution save threw (acceptance recorded):", e);
+    }
   }
 
   // First-ever acceptance = a newly activated consumer → welcome email. Best-effort:

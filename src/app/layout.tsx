@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import PostHogProvider from "@/components/analytics/PostHogProvider";
+import TouchRecorder from "@/components/analytics/TouchRecorder";
 import WatchlistInit from "@/components/watchlist/WatchlistInit";
 import DiscoveryRoot from "@/components/discovery/DiscoveryRoot";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
@@ -141,6 +142,7 @@ export default function RootLayout({
         />
         <ThemeProvider>
           <PostHogProvider>
+            <TouchRecorder />
             <WatchlistInit />
             {children}
             <DiscoveryRoot />
