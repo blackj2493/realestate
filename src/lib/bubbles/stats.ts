@@ -28,6 +28,10 @@ import Typesense, { Client } from "typesense";
 import type { Bubble } from "./serialize";
 import { CAP_RATE_BAND } from "@/lib/metrics/sanityBand";
 import { areaFilter } from "@/lib/dashboard/area";
+import { catchmentToken } from "@/lib/schools/catchmentMembership";
+import { fetchCatchmentPrograms } from "@/lib/schools/catchmentPrograms";
+import { getServiceRoleClient } from "@/lib/supabase/client";
+import type { SchoolProgram } from "@/lib/stores/commandCenterStore";
 import { buildTransactionClause, SALE_PRICE_FLOOR } from "@/lib/filters/fundamentals";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
@@ -98,10 +102,33 @@ const EMPTY: BubbleStats = {
  * Exported for the nightly alerts worker (scripts/worker/alerts.ts), which
  * scopes its new-listing search with the exact same clause.
  */
+export interface BuildAreaClauseOptions {
+  /**
+   * Programs this bubble's school publishes a boundary for (fetchCatchmentPrograms).
+   *
+   * ABSENT MEANS "not looked up", not "none", and keeps the 2.5 km radius — exactly the
+   * behaviour before catchments existed. So a caller that has not been updated, or a lookup
+   * that failed, degrades instead of filtering on a token that may match nothing.
+   */
+  catchmentPrograms?: readonly SchoolProgram[];
+}
+
 export function buildAreaClause(
-  bubble: Pick<Bubble, "area_type" | "polygon" | "source">
+  bubble: Pick<Bubble, "area_type" | "polygon" | "source">,
+  opts: BuildAreaClauseOptions = {}
 ): string | null {
   if (bubble.area_type === "school" && bubble.source.kind === "school") {
+    // The ATTENDANCE BOUNDARY where the board publishes one, the 2.5 km radius where it
+    // does not. A school bubble means "the homes that feed this school", and a circle is not
+    // that — a home 2.75 km from St Cyril sits inside its catchment and outside the circle.
+    //
+    // `regular` because a school bubble names a school, not a program: the home catchment is
+    // what "Near <school>" has always meant. A reader who wants the immersion zone picks the
+    // program in the filter panel, which is a different surface.
+    if (opts.catchmentPrograms?.includes("regular")) {
+      const token = catchmentToken(bubble.source.schoolKey, "regular").replace(/`/g, "");
+      return `SchoolCatchments:=\`${token}\``;
+    }
     // Backticks because school ids contain hyphens/colons.
     return `NearbySchools:=\`${bubble.source.schoolKey}\``;
   }
@@ -171,7 +198,16 @@ async function computeMedianListPrice(
  * "view filtered stats" toggle on the card.
  */
 export async function computeBubbleStats(bubble: Bubble): Promise<BubbleStats> {
-  const areaClause = buildAreaClause(bubble);
+  // One tiny lookup, and only for a school bubble — 6 of 427 rows in production. It decides
+  // boundary vs radius; a failure returns an empty map and keeps the radius.
+  const catchmentPrograms =
+    bubble.area_type === "school" && bubble.source.kind === "school"
+      ? (await fetchCatchmentPrograms(getServiceRoleClient(), [bubble.source.schoolKey])).get(
+          bubble.source.schoolKey
+        )
+      : undefined;
+
+  const areaClause = buildAreaClause(bubble, { catchmentPrograms });
   if (!areaClause) return EMPTY;
 
   const baseFilter = `${SALES_FLOOR} && ${areaClause}`;

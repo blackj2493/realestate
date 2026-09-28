@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as fs from "fs";
 import * as path from "path";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import { fetchCatchmentPrograms } from "@/lib/schools/catchmentPrograms";
 import type { SchoolProgram } from "@/lib/stores/commandCenterStore";
 
 interface RawSchool {
@@ -38,46 +39,6 @@ export interface SchoolSearchResult {
    * buildSchoolFilterClause. Empty is a normal answer; plenty of boards publish nothing.
    */
   programs: SchoolProgram[];
-}
-
-/**
- * Which programs each of these schools publishes a catchment for.
- *
- * Attributes only — never `geom`. This runs on every keystroke of the autocomplete, and the
- * polygons are full-resolution: a dissolved immersion zone is the union of a dozen
- * catchments, so selecting geometry here would move megabytes to answer a yes/no question.
- *
- * Best-effort by design. A failed read returns an empty map, every school then reads as
- * "no catchment", and the filter falls back to the radius it has always used. Degrading to
- * the old behaviour is the right failure for a database hiccup on a typeahead.
- */
-async function catchmentProgramsFor(ids: string[]): Promise<Map<string, SchoolProgram[]>> {
-  const out = new Map<string, SchoolProgram[]>();
-  if (!ids.length) return out;
-  try {
-    const { data, error } = await getServiceRoleClient()
-      .from("geo_features")
-      .select("attrs")
-      .eq("kind", "school_catchment")
-      .in("attrs->>school_id", ids);
-    if (error) {
-      console.warn("[Schools search API] catchment lookup failed:", error.message);
-      return out;
-    }
-    for (const row of (data ?? []) as Array<{ attrs: Record<string, unknown> | null }>) {
-      const id = row.attrs?.school_id;
-      if (typeof id !== "string") continue;
-      const raw = row.attrs?.program;
-      const program: SchoolProgram =
-        raw === "french_immersion" || raw === "extended_french" ? raw : "regular";
-      const list = out.get(id);
-      if (!list) out.set(id, [program]);
-      else if (!list.includes(program)) list.push(program);
-    }
-  } catch (e) {
-    console.warn("[Schools search API] catchment lookup threw:", e instanceof Error ? e.message : e);
-  }
-  return out;
 }
 
 let CACHE: RawSchool[] | null = null;
@@ -114,7 +75,7 @@ export async function GET(req: NextRequest) {
     });
 
     const top = matches.slice(0, 12);
-    const programs = await catchmentProgramsFor(top.map((s) => s.id));
+    const programs = await fetchCatchmentPrograms(getServiceRoleClient(), top.map((s) => s.id));
 
     const results: SchoolSearchResult[] = top.map((s) => ({
       id: s.id,
