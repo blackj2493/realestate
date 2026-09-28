@@ -24,6 +24,44 @@ export const POSTHOG_HOST = (process.env.NEXT_PUBLIC_POSTHOG_HOST || '/ingest').
 export const analyticsEnabled = POSTHOG_KEY.length > 0;
 
 /**
+ * Initialise posthog-js once. Idempotent; browser-only. Returns whether it is ready.
+ *
+ * WHY EVERY HELPER CALLS THIS. posthog-js silently IGNORES a capture made before init
+ * (it logs `uninitializedWarning` and returns). Init used to live only in
+ * PostHogProvider's useEffect — and React runs a child's effects BEFORE its parent's, so
+ * on a fresh document every event fired from a mount effect lost the race and vanished.
+ * auth_terms_viewed fires on mount of /welcome, which is always a fresh document (both
+ * sign-in paths do a full navigation there). A signup funnel over 2026-09-16..28 had 2
+ * people reach it, while auth_signup_completed — a click, long after init — counted 55,
+ * matching the database. Initialising on first use makes the order irrelevant.
+ */
+export function initPostHog(): boolean {
+  if (!analyticsEnabled || typeof window === 'undefined') return false;
+  if (posthog.__loaded) return true;
+  try {
+    posthog.init(POSTHOG_KEY, {
+      api_host: POSTHOG_HOST,
+      ui_host: 'https://us.posthog.com',
+      // Only create person profiles for identified users — keeps anonymous-first
+      // traffic cheap and privacy-friendly (CLAUDE.md §3A onboarding is optional).
+      person_profiles: 'identified_only',
+      // We fire pageviews manually for App Router (see PostHogPageView).
+      capture_pageview: false,
+      capture_pageleave: true,
+      // Replay defaults stay conservative; actual recording is toggled in the
+      // PostHog project. Mask all inputs + anything tagged [data-ph-mask].
+      session_recording: {
+        maskAllInputs: true,
+        maskTextSelector: '[data-ph-mask]',
+      },
+    });
+  } catch {
+    return false;
+  }
+  return !!posthog.__loaded;
+}
+
+/**
  * Typed event catalogue. Keep this the single source of truth for event names and
  * their property shapes so funnels/dashboards stay stable. Add new events here rather
  * than calling `posthog.capture` with ad-hoc strings.
@@ -114,7 +152,7 @@ export function track<E extends keyof AnalyticsEvents>(
   event: E,
   properties?: AnalyticsEvents[E],
 ): void {
-  if (!analyticsEnabled) return;
+  if (!initPostHog()) return;
   try {
     posthog.capture(event, properties);
   } catch {
@@ -124,7 +162,7 @@ export function track<E extends keyof AnalyticsEvents>(
 
 /** Attach properties to every later event from this browser (PostHog "super properties"). */
 export function registerProperties(properties: Record<string, string | number | boolean>): void {
-  if (!analyticsEnabled) return;
+  if (!initPostHog()) return;
   try {
     posthog.register(properties);
   } catch {
@@ -134,7 +172,7 @@ export function registerProperties(properties: Record<string, string | number | 
 
 /** Associate the current anonymous session with a known user (call on sign-in). */
 export function identifyUser(userId: string, properties?: Record<string, unknown>): void {
-  if (!analyticsEnabled || !userId) return;
+  if (!userId || !initPostHog()) return;
   try {
     posthog.identify(userId, properties);
   } catch {
@@ -144,7 +182,7 @@ export function identifyUser(userId: string, properties?: Record<string, unknown
 
 /** Detach the user on sign-out so the next session starts anonymous. */
 export function resetUser(): void {
-  if (!analyticsEnabled) return;
+  if (!initPostHog()) return;
   try {
     posthog.reset();
   } catch {

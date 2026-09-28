@@ -24,9 +24,8 @@ import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider } from 'posthog-js/react';
 import { createClient } from '@/lib/supabase/browser';
 import {
-  POSTHOG_KEY,
-  POSTHOG_HOST,
   analyticsEnabled,
+  initPostHog,
   identifyUser,
   resetUser,
   track,
@@ -38,7 +37,9 @@ function PostHogPageView() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (!analyticsEnabled || !pathname) return;
+    // This effect runs before the provider's own (child effects first), so it cannot
+    // assume init has happened — see initPostHog.
+    if (!pathname || !initPostHog()) return;
     let url = window.origin + pathname;
     const qs = searchParams?.toString();
     if (qs) url += `?${qs}`;
@@ -96,23 +97,9 @@ function PostHogAuthBridge() {
 
 export default function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    if (!analyticsEnabled || posthog.__loaded) return;
-    posthog.init(POSTHOG_KEY, {
-      api_host: POSTHOG_HOST,
-      ui_host: 'https://us.posthog.com',
-      // Only create person profiles for identified users — keeps anonymous-first
-      // traffic cheap and privacy-friendly (CLAUDE.md §3A onboarding is optional).
-      person_profiles: 'identified_only',
-      // We fire pageviews manually for App Router (see PostHogPageView).
-      capture_pageview: false,
-      capture_pageleave: true,
-      // Replay defaults stay conservative; actual recording is toggled in the
-      // PostHog project. Mask all inputs + anything tagged [data-ph-mask].
-      session_recording: {
-        maskAllInputs: true,
-        maskTextSelector: '[data-ph-mask]',
-      },
-    });
+    // Usually a no-op by now: the first track/pageview from a child effect already
+    // initialised it. Kept so a page with no events still starts PostHog.
+    initPostHog();
   }, []);
 
   // When unconfigured (no key), render children without the provider — zero overhead.
