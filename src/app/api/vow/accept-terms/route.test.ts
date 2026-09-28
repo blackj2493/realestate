@@ -23,12 +23,19 @@ vi.mock("@/lib/dashboard/seedSignupRegion", async () => {
   };
 });
 
+vi.mock("@/lib/supabase/client", () => ({ getServiceRoleClient: vi.fn().mockReturnValue({}) }));
+vi.mock("@/lib/analytics/signupAttribution", () => ({
+  saveSignupAttribution: vi.fn().mockResolvedValue({ saved: true, error: null }),
+}));
+
 import { recordTermsAcceptance } from "@/lib/auth/terms";
 import { seedSignupRegion } from "@/lib/dashboard/seedSignupRegion";
+import { saveSignupAttribution } from "@/lib/analytics/signupAttribution";
 import { POST } from "./route";
 
 const mockRecord = vi.mocked(recordTermsAcceptance);
 const mockSeed = vi.mocked(seedSignupRegion);
+const mockSaveAttribution = vi.mocked(saveSignupAttribution);
 
 const ATTESTED = { notAgent: true, bonaFide: true, agree: true };
 
@@ -157,5 +164,34 @@ describe("POST /api/vow/accept-terms — the narrowing filter", () => {
     // filter", which is exactly how signup behaved before the question existed.
     const res = await POST(post({ ...ATTESTED, region: "Toronto", filter: "detached" }));
     expect(res.status).toBe(200);
+  });
+});
+
+/** Where the account came from (migration 152). Saved once, never at the cost of the signup. */
+describe("POST /api/vow/accept-terms — signup attribution", () => {
+  const touches = { first: null, last: { utm_source: "reddit", at: "2026-09-28T12:00:00.000Z" } };
+
+  beforeEach(() => {
+    mockSaveAttribution.mockReset();
+    mockSaveAttribution.mockResolvedValue({ saved: true, error: null });
+  });
+
+  it("saves the touches on a first acceptance", async () => {
+    mockRecord.mockResolvedValueOnce({ ok: true, firstAcceptance: true, userId: "u1" });
+    await POST(post({ ...ATTESTED, region: "Ottawa", touches }));
+    expect(mockSaveAttribution).toHaveBeenCalledWith(expect.anything(), "u1", touches);
+  });
+
+  it("does not save on a re-acceptance after a Terms bump", async () => {
+    await POST(post({ ...ATTESTED, region: "Ottawa", touches }));
+    expect(mockSaveAttribution).not.toHaveBeenCalled();
+  });
+
+  it("still returns ok when the save fails or throws", async () => {
+    mockRecord.mockResolvedValue({ ok: true, firstAcceptance: true, userId: "u1" });
+    mockSaveAttribution.mockResolvedValueOnce({ saved: false, error: "relation does not exist" });
+    expect((await POST(post({ ...ATTESTED, region: "Ottawa", touches }))).status).toBe(200);
+    mockSaveAttribution.mockRejectedValueOnce(new Error("network"));
+    expect((await POST(post({ ...ATTESTED, region: "Ottawa", touches }))).status).toBe(200);
   });
 });

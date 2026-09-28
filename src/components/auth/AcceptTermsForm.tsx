@@ -49,6 +49,7 @@ import { QUICK_PICK_MARKETS, marketCamera } from "@/lib/dashboard/area";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 import { SIGNUP_BED_CHOICES } from "@/lib/dashboard/signupFilter";
 import { track } from "@/lib/analytics/posthog";
+import { readTouches } from "@/lib/analytics/touch";
 import {
   getConfig,
   saveConfig,
@@ -162,6 +163,9 @@ export default function AcceptTermsForm({
           // Sent even when empty. The server reads "no constraint" and "skipped" the same
           // way, so there is nothing to branch on here.
           filter: { propertyTypes: homeTypes, minBeds },
+          // Where this visitor came from (lib/analytics/touch). Saved once, on the first
+          // acceptance only; the server re-validates it and never fails a signup over it.
+          touches: readTouches(),
         }),
       });
       if (!res.ok) {
