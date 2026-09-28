@@ -70,6 +70,12 @@ export type AnalyticsEvents = {
   // Google skips auth_otp_sent by design — comparing the two paths is half the point.
   /** Someone hit a locked VOW surface. Top of the funnel: every signup starts here. */
   'auth_gate_viewed': { surface: string; state: 'anonymous' | 'terms_pending' };
+  /**
+   * /login rendered. `gate` is the locked surface named by `next` (see loginGate.ts) —
+   * `none` for a bare /login. Most /login visitors never fire auth_gate_viewed (that
+   * event lives only on the overlay), so THIS is the step to start a login funnel on.
+   */
+  'auth_login_viewed': { gate: string };
   'auth_signin_started': { method?: string };
   /** A one-time code was emailed. Never fires for OAuth. */
   'auth_otp_sent': { resend: boolean };
