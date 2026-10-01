@@ -6,9 +6,18 @@
  * required). The single XLSX already contains Latitude/Longitude AND EQAO results, so
  * NO geocoding is needed.
  *
- * NOTE: the latest *finalized* SIF release suppresses most EQAO results; the latest
- * *preliminary* release carries full EQAO coverage (~4.3k rated schools). We use the
- * preliminary file deliberately for that reason.
+ * SOURCE DISCOVERY: the file is found through the data.ontario.ca CKAN API — the newest
+ * ENGLISH resource on the dataset — never a fixed URL. Ontario REPLACES files in place
+ * (2026-09-29: the April 2024-25 preliminary file was deleted for the August 2024-25 final
+ * one), so a pinned URL 404s the next quarterly run. That file mixes the two cell formats:
+ * 361 rated schools as numbers, the other 3,983 as "71%" text.
+ *
+ * COVERAGE GUARD: a new release can suppress EQAO results (an older final release hid
+ * most of them) or change the cell format (the 2024-25 final writes "71%", the preliminary
+ * wrote 0.71). Either one turns every score null WITHOUT an error, and the workflow's next
+ * step would then copy those nulls onto every listing. So the build REFUSES to write when
+ * the rated count falls below RATED_FLOOR of the dataset it replaces. Re-run with
+ * --allow-drop after checking the drop is real.
  *
  * Output: data/ontario-schools.json — [{ id, name, level, system, language, lat, lng,
  *   score, address }]. `score` is a deterministic 0–10 "PureProperty School Score"
@@ -24,16 +33,21 @@ import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// "Preliminary 2025-2026" resource (latest; full EQAO coverage). OGL-Ontario.
-const SOURCE_URL =
-  'https://data.ontario.ca/dataset/d85f68c5-fcb0-4b4d-aec5-3047db47dcd5/resource/1e604bf9-49c5-49a1-a8b7-297147c771d0/download/new_sif_data_table_2024_25prelim_en_april2026.xlsx';
+// SIF dataset id on data.ontario.ca (OGL-Ontario). The file itself is discovered per run.
+const DATASET_ID = 'd85f68c5-fcb0-4b4d-aec5-3047db47dcd5';
+const CKAN_PACKAGE_URL = `https://data.ontario.ca/api/3/action/package_show?id=${DATASET_ID}`;
+// A real release moves the rated count by a few percent (the 2024-25 final rated the same
+// 4,344 schools as the preliminary it replaced). Losing a seventh of them is not a release
+// difference, it is a parse or suppression failure.
+const RATED_FLOOR = 0.85;
 const CACHE_DIR = path.join(process.cwd(), '.cache', 'schools');
 const CACHE_FILE = path.join(CACHE_DIR, 'sif_latest.xlsx');
 const OUT_FILE = path.join(process.cwd(), 'data', 'ontario-schools.json');
 const REFRESH = process.argv.includes('--refresh');
+const ALLOW_DROP = process.argv.includes('--allow-drop');
 
-// EQAO achievement columns (exact SIF header names; values are fractions 0–1 = % at
-// the provincial standard). The "Change ... Over Three Years" delta columns are ignored.
+// EQAO achievement columns (exact SIF header names; values are % at the provincial
+// standard, as a 0–1 fraction or a "71%" string depending on the release). The "Change ... Over Three Years" delta columns are ignored.
 const ELEM_COLS = [
   'Percentage of Grade 3 Students Achieving the Provincial Standard in Reading',
   'Percentage of Grade 3 Students Achieving the Provincial Standard in Writing',
@@ -56,12 +70,48 @@ const numOrNull = (v: any): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+// An EQAO cell as a 0–1 fraction: 0.71 stays 0.71, "71%" becomes 0.71, "NA" / "N/R" -> null.
+const fractionOrNull = (v: unknown): number | null => {
+  const s = String(v ?? '').trim();
+  const pct = /^(\d+(?:\.\d+)?)\s*%$/.exec(s);
+  if (pct) return Number(pct[1]) / 100;
+  const n = numOrNull(s);
+  return n !== null && n >= 0 && n <= 1 ? n : null;
+};
+
 // Deterministic 0–10 score = mean of available EQAO % at standard, ×10. null if none.
 function computeScore(row: Record<string, any>, cols: string[]): number | null {
-  const vals = cols.map((c) => numOrNull(row[c])).filter((v): v is number => v !== null);
+  const vals = cols.map((c) => fractionOrNull(row[c])).filter((v): v is number => v !== null);
   if (vals.length === 0) return null;
   const mean = vals.reduce((a, b) => a + b, 0) / vals.length; // 0–1
   return Math.round(mean * 10 * 100) / 100; // 0–10, 2 decimals
+}
+
+type CkanResource = { url: string; name?: string; format?: string; created?: string };
+
+// The newest English XLSX on the dataset. French twins share each release, so filter on
+// the "_en" file-name token rather than trusting order.
+async function discoverSourceUrl(): Promise<string> {
+  const res = await fetch(CKAN_PACKAGE_URL);
+  if (!res.ok) throw new Error(`CKAN package_show failed: HTTP ${res.status}`);
+  const body = (await res.json()) as { success?: boolean; result?: { resources?: CkanResource[] } };
+  const english = (body.result?.resources ?? [])
+    .filter((r) => /xlsx/i.test(r.format ?? '') && /_en[_.]/i.test(r.url.split('/').pop() ?? ''))
+    .sort((a, b) => String(b.created ?? '').localeCompare(String(a.created ?? '')));
+  if (!english.length) throw new Error('CKAN listed no English XLSX resource on the SIF dataset');
+  console.log(`Newest English SIF resource: "${english[0].name ?? ''}" (created ${english[0].created ?? '?'})`);
+  return english[0].url;
+}
+
+// Rated count of the dataset about to be replaced, or null when there is none to compare.
+function previousRatedCount(): number | null {
+  if (!fs.existsSync(OUT_FILE)) return null;
+  try {
+    const prev = JSON.parse(fs.readFileSync(OUT_FILE, 'utf8')) as { score: number | null }[];
+    return prev.filter((s) => s.score !== null).length;
+  } catch {
+    return null;
+  }
 }
 
 async function ensureSource() {
@@ -70,8 +120,9 @@ async function ensureSource() {
     console.log(`Using cached source: ${path.relative(process.cwd(), CACHE_FILE)}`);
     return;
   }
-  console.log('Downloading Ontario SIF source (OGL-Ontario)...');
-  const res = await fetch(SOURCE_URL);
+  const url = await discoverSourceUrl();
+  console.log(`Downloading Ontario SIF source (OGL-Ontario): ${url}`);
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Download failed: HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
   fs.writeFileSync(CACHE_FILE, buf);
@@ -136,6 +187,17 @@ async function main() {
       score,
       address: [street, city, postal].filter(Boolean).join(', '),
     });
+  }
+
+  // Checked BEFORE the write: a throw here leaves the committed dataset in place and fails
+  // the workflow before the Typesense backfill step can propagate the loss.
+  const prevRated = previousRatedCount();
+  if (prevRated && rated < prevRated * RATED_FLOOR && !ALLOW_DROP) {
+    throw new Error(
+      `Rated schools fell from ${prevRated} to ${rated} (floor ${Math.round(RATED_FLOOR * 100)}%). ` +
+        'The source may suppress EQAO or use a new cell format. Nothing was written. ' +
+        'Check the file, then re-run with --allow-drop if the drop is real.'
+    );
   }
 
   out.sort((a, b) => a.name.localeCompare(b.name));
