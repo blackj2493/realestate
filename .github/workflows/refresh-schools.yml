@@ -12,10 +12,11 @@ name: Refresh School Scores
 # EQAO releases at most ~1×/year, so quarterly is ample; the value is completeness of
 # propagation, not sub-quarter freshness. Trigger manually anytime via the Actions tab.
 #
-# SOURCE-VINTAGE CAVEAT: build-schools-dataset.ts currently points at a FIXED SIF file URL, so
-# a rebuild re-pulls that same vintage. When Ontario publishes a newer preliminary release,
-# bump SOURCE_URL in that script (and commit the regenerated data/ontario-schools.json) — the
-# next run then propagates the newer scores automatically. (Follow-up: CKAN auto-discovery.)
+# SOURCE DISCOVERY: build-schools-dataset.ts finds the newest English SIF file through the
+# data.ontario.ca CKAN API on every run, so a new Ontario release is picked up automatically
+# and a replaced file no longer 404s the job (it did on 2026-10-01). The build REFUSES to
+# write when the rated-school count drops below 85% of the committed dataset, which fails
+# this job BEFORE the Typesense backfill can copy null scores onto every listing.
 on:
   # NOT scheduled by GitHub. GitHub runs `schedule` at lowest priority and drops it
   # under load, hardest at minute :00 — which is where this job used to sit. Supabase
