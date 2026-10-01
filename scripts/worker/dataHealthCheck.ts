@@ -367,13 +367,24 @@ async function checkEmailHealth(): Promise<void> {
  * EMAIL_VOLUME_STALE_DAYS decides when silence stops being tolerable.
  */
 async function checkEmailVolume(sb: ReturnType<typeof getServiceRoleClient>): Promise<void> {
+  // FETCH every counter valueOn() reads below. A metric missing from this list reads as 0,
+  // not as an error: on 2026-10-01 the 117 weekly readers alerts.ts deferred were reported
+  // "unaccounted for" because digest_deferred was passed through but never selected.
+  const metrics = [
+    EMAIL_METRICS.digestDue,
+    EMAIL_METRICS.digestSent,
+    EMAIL_METRICS.digestSuppressed,
+    EMAIL_METRICS.digestDeferred,
+    EMAIL_METRICS.digestFailed,
+  ];
   const { data, error } = await sb
     .from('metric_snapshots')
     .select('captured_on, metric, value')
     .eq('region', OPS_REGION)
-    .in('metric', [EMAIL_METRICS.digestDue, EMAIL_METRICS.digestSent, EMAIL_METRICS.digestSuppressed])
+    .in('metric', metrics)
     .order('captured_on', { ascending: false })
-    .limit(30);
+    // Six nights of all five counters: enough that the newest day is always complete.
+    .limit(metrics.length * 6);
   if (error) {
     problems.push({ severity: 'warn', check: 'email-volume', detail: `send counters unavailable (${error.message}) — is migration 090 applied?` });
     return;
