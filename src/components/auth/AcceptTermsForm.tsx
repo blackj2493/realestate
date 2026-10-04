@@ -45,7 +45,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { QUICK_PICK_MARKETS, marketCamera } from "@/lib/dashboard/area";
+import { QUICK_PICK_MARKETS, regionCamera } from "@/lib/dashboard/area";
+import { partsOf } from "@/lib/dashboard/cityParts";
+import CityPartChips from "@/components/areas/CityPartChips";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 import { SIGNUP_BED_CHOICES } from "@/lib/dashboard/signupFilter";
 import { track } from "@/lib/analytics/posthog";
@@ -104,6 +106,8 @@ export default function AcceptTermsForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [market, setMarket] = useState<string | null>(null);
+  // A city too big to follow whole (Toronto) opens its parts instead of being picked.
+  const [openCity, setOpenCity] = useState<string | null>(null);
   // The optional narrowing answer. Empty means "everything", which is what every account
   // gets today — see signupFilter.ts for why 82.4% of saved areas send the whole city.
   const [homeTypes, setHomeTypes] = useState<string[]>([]);
@@ -217,9 +221,10 @@ export default function AcceptTermsForm({
         // bounds scope it and results follow the drag. That is the same reasoning the
         // ?lat/?lng seed already documents for address entry — reuse it rather than
         // inventing a second camera param.
-        // A market off the quick-pick list (the inferred chip) has no stored camera; the
-        // terminal's own INITIAL_VIEW_STATE is the right fallback, not another city's.
-        const cam = marketCamera(market);
+        // regionCamera covers the quick picks AND the parts of a city ("Scarborough"). A
+        // market in neither (the inferred chip) has no stored camera; the terminal's own
+        // INITIAL_VIEW_STATE is the right fallback, not another city's.
+        const cam = regionCamera(market);
         router.replace(
           cam ? `/properties?lat=${cam.lat}&lng=${cam.lng}&z=${cam.zoom}` : "/properties"
         );
@@ -260,13 +265,44 @@ export default function AcceptTermsForm({
         </p>
         <div role="group" aria-label="Starting market" className="mt-3 flex flex-wrap gap-2">
           {choices.map((city) => {
+            const parts = partsOf(city);
+            if (parts) {
+              // Too big to follow whole: the chip opens its parts and shows the one chosen.
+              const chosen = parts.find((p) => p.name === market) ?? null;
+              const open = openCity === city;
+              return (
+                <button
+                  key={city}
+                  type="button"
+                  aria-expanded={open}
+                  aria-pressed={!!chosen}
+                  onClick={() => setOpenCity(open ? null : city)}
+                  className={cn(
+                    "min-h-[36px] border px-3 py-1.5 text-xs transition-colors",
+                    open
+                      ? "border-cyan-600 bg-cyan-500/15 text-cyan-700 dark:text-cyan-300"
+                      : chosen
+                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                        : "border-border bg-card text-muted-foreground hover:border-cyan-600/60 hover:text-foreground"
+                  )}
+                >
+                  {chosen ? `${city} · ${chosen.name}` : city}
+                  <span aria-hidden="true" className="ml-1 text-[10px]">
+                    {open ? "▴" : "▾"}
+                  </span>
+                </button>
+              );
+            }
             const active = market === city;
             return (
               <button
                 key={city}
                 type="button"
                 aria-pressed={active}
-                onClick={() => setMarket(active ? null : city)}
+                onClick={() => {
+                  setMarket(active ? null : city);
+                  setOpenCity(null);
+                }}
                 className={cn(
                   "min-h-[36px] border px-3 py-1.5 text-xs transition-colors",
                   active
@@ -284,6 +320,17 @@ export default function AcceptTermsForm({
             );
           })}
         </div>
+        {openCity && partsOf(openCity) && (
+          <CityPartChips
+            parent={openCity}
+            parts={partsOf(openCity)!}
+            selected={market}
+            onPick={(name) => {
+              setMarket(name);
+              setOpenCity(null);
+            }}
+          />
+        )}
         {/* Say what the choice buys them. "Pick one" with no reason reads as a form field;
             the reason is the whole point, and it is also the consent we rely on. */}
         <p className="mt-2 text-[11px] text-muted-foreground">

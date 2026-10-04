@@ -49,9 +49,15 @@ describe("marketSourceFromNext", () => {
 });
 
 describe("regionForCity", () => {
-  it("rolls a Toronto district up to the city", () => {
-    // Saving "Toronto C12" verbatim would scope the whole dashboard to one district.
-    expect(regionForCity("Toronto C12")).toBe("Toronto");
+  it("rolls a Toronto district up to its part, not the whole city", () => {
+    // Saving "Toronto C12" verbatim would scope the whole dashboard to one district, and
+    // the whole of Toronto is too big to follow (cityParts.ts).
+    expect(regionForCity("Toronto C12")).toBe("North York");
+    expect(regionForCity("Toronto C11")).toBe("East End and East York");
+  });
+
+  it("keeps the bare Toronto value as the city", () => {
+    expect(regionForCity("Toronto")).toBe("Toronto");
   });
 
   it("rolls an Ottawa OREB area up to the city", () => {
@@ -70,7 +76,8 @@ describe("regionForCity", () => {
   });
 
   it("is case-insensitive and trims", () => {
-    expect(regionForCity("  toronto c12 ")).toBe("Toronto");
+    expect(regionForCity("  toronto c12 ")).toBe("North York");
+    expect(regionForCity("  BARRHAVEN ")).toBe("Ottawa");
   });
 
   it("returns null for nothing usable", () => {

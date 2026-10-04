@@ -19,6 +19,7 @@
 import type { Bubble } from "@/lib/bubbles/serialize";
 import { hasActiveLensFilters, type MarketActivityLens } from "./config";
 import { OTTAWA_AREAS } from "./ottawaAreas";
+import { CITY_PARTS, partForCity, partNamed } from "./cityParts";
 // 34 rows keyed by raw feed City strings (~2KB). Imported directly rather than through
 // lib/postalCodes, which pulls in `fs` and so can't be reached from a client component.
 import cityCentroidsData from "@/data/city-centroids.json";
@@ -67,6 +68,13 @@ export const CITY_GROUPS: Record<string, string[]> = {
   Toronto: torontoDistricts(),
   London: ["London", "London North", "London South", "London East", "London West"],
   Ottawa: OTTAWA_AREAS,
+  // The parts a too-big city is offered as ("Scarborough", "Midtown Toronto", …) — see
+  // cityParts.ts. Keys here so every surface that expands a group expands a part too.
+  ...Object.fromEntries(
+    Object.values(CITY_PARTS)
+      .flat()
+      .map((p) => [p.name, [...p.members]])
+  ),
 };
 
 /**
@@ -104,10 +112,15 @@ export const COMMUNITY_ALIASES: Record<string, string[]> = {
  * names ("Kanata" → "Ottawa" is a membership fact, not a suffix rule; see ottawaAreas).
  *
  * A city in no group (Mississauga, Burlington, …) passes through unchanged.
+ *
+ * A city offered in PARTS (Toronto) rolls up to the part, not the whole city: a listing in
+ * "Toronto C12" seeds "North York". The whole of Toronto is too big to follow (cityParts.ts).
  */
 export function regionForCity(city: string | null | undefined): string | null {
   const raw = (city ?? "").trim();
   if (!raw) return null;
+  const part = partForCity(raw);
+  if (part) return part.name;
   const lower = raw.toLowerCase();
   for (const [parent, members] of Object.entries(CITY_GROUPS)) {
     if (parent.toLowerCase() === lower) return parent;
@@ -224,6 +237,9 @@ export function regionCamera(name: string): RegionCamera | null {
 
   const pick = QUICK_PICK_MARKETS.find((m) => m.name.toLowerCase() === key);
   if (pick) return { lat: pick.lat, lng: pick.lng, zoom: pick.zoom };
+
+  const part = partNamed(key);
+  if (part) return { lat: part.lat, lng: part.lng, zoom: part.zoom };
 
   const centroid = CITY_CENTROIDS.find((c) => c.city.trim().toLowerCase() === key);
   if (!centroid) return null;

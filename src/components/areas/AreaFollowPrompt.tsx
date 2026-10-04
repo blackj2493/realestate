@@ -35,6 +35,8 @@ import { MapPin, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QUICK_PICK_MARKETS } from "@/lib/dashboard/area";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
+import { partsOf } from "@/lib/dashboard/cityParts";
+import CityPartChips from "@/components/areas/CityPartChips";
 
 const DISMISS_KEY = "pp_area_prompt_snoozed_at";
 const REASK_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
@@ -103,6 +105,7 @@ export default function AreaFollowPrompt({
   const [snoozed, setSnoozed] = useState(true);
   const [busy, setBusy] = useState(false);
   const [followed, setFollowed] = useState<string | null>(null);
+  const [openCity, setOpenCity] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -205,21 +208,40 @@ export default function AreaFollowPrompt({
         </p>
 
         <div role="group" aria-label="Areas" className="mt-2.5 flex flex-wrap gap-2">
-          {QUICK_PICK_MARKETS.map(({ name }) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => follow(name)}
-              disabled={busy}
-              className={cn(
-                "terminal-font inline-flex min-h-[44px] items-center border border-border bg-background px-3 text-[11px] uppercase tracking-wider text-muted-foreground transition-colors sm:min-h-[32px]",
-                "hover:border-cyan-600/60 hover:text-foreground disabled:opacity-60"
-              )}
-            >
-              {name}
-            </button>
-          ))}
+          {QUICK_PICK_MARKETS.map(({ name }) => {
+            // Too big to follow whole (Toronto): the chip opens its parts instead.
+            const opens = !!partsOf(name);
+            return (
+              <button
+                key={name}
+                type="button"
+                aria-expanded={opens ? openCity === name : undefined}
+                onClick={() => (opens ? setOpenCity(openCity === name ? null : name) : follow(name))}
+                disabled={busy}
+                className={cn(
+                  "terminal-font inline-flex min-h-[44px] items-center border border-border bg-background px-3 text-[11px] uppercase tracking-wider text-muted-foreground transition-colors sm:min-h-[32px]",
+                  "hover:border-cyan-600/60 hover:text-foreground disabled:opacity-60",
+                  opens && openCity === name && "border-cyan-600 text-cyan-700 dark:text-cyan-300"
+                )}
+              >
+                {name}
+                {opens && (
+                  <span aria-hidden="true" className="ml-1">
+                    {openCity === name ? "▴" : "▾"}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+        {openCity && partsOf(openCity) && (
+          <CityPartChips
+            parent={openCity}
+            parts={partsOf(openCity)!}
+            onPick={(part) => follow(part)}
+            disabled={busy}
+          />
+        )}
 
         {error && <p className="mt-2 text-[11px] text-rose-700 dark:text-rose-400">{error}</p>}
 
