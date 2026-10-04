@@ -1,4 +1,5 @@
 import AreaFollowPrompt from "@/components/areas/AreaFollowPrompt";
+import SaveHomeHint from "@/components/watchlist/SaveHomeHint";
 
 /**
  * Terminal (/properties) layout.
@@ -14,12 +15,16 @@ import AreaFollowPrompt from "@/components/areas/AreaFollowPrompt";
  * is signed in and follows no area. The terminal sits outside the (app) route group, so it
  * needs its own mount; without this the map-first users, who are most of the population it
  * targets, would never see it.
+ *
+ * SaveHomeHint shares that corner but only for a reader who DOES follow an area and has no
+ * saved home, so at most one of the two ever renders.
  */
 export default function TerminalLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
       <AreaFollowPrompt variant="floating" />
+      <SaveHomeHint />
     </>
   );
 }

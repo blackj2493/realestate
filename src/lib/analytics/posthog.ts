@@ -134,6 +134,17 @@ export type AnalyticsEvents = {
    */
   'auth_signup_completed': { market: string; narrowed: boolean; homeTypes: number; minBeds: number };
 
+  // First saved home (src/components/watchlist). A reader who saved a home on signup day
+  // came back on a later day at 81% vs 33-34% without one (2026-10-04, 422 signups).
+  // signup_save_offer_* = the one-tap offer on the listing a reader signed up from;
+  // save_hint_* = the one-time terminal card pointing at the heart.
+  'signup_save_offer_shown': { listingKey: string };
+  'signup_save_offer_accepted': { listingKey: string };
+  'signup_save_offer_dismissed': { listingKey: string };
+  'save_hint_shown': Record<string, never>;
+  'save_hint_converted': Record<string, never>;
+  'save_hint_dismissed': Record<string, never>;
+
   // Installable app (src/lib/pwa). `platform` is where the install would land;
   // `source` is which surface asked. Every event also carries the `pp_display_mode`
   // super property (standalone vs browser) set by ServiceWorkerRegister.

@@ -79,6 +79,7 @@ import { buildTheRead } from "@/lib/property/theRead";
 import { resolvePersona } from "@/lib/personas/resolvePersona";
 import { LENS_COOKIE } from "@/lib/personas/lensPersistence";
 import WatchButton from "@/components/watchlist/WatchButton";
+import SaveAfterSignupPrompt from "@/components/watchlist/SaveAfterSignupPrompt";
 import ShareListingButton from "@/components/Property/ShareListingButton";
 import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
@@ -1069,6 +1070,18 @@ export default async function PropertyPage({
                   <LiveDealScoreBadge dealScore={view.dealScore} initialLens={lens} />
                 )}
               </div>
+
+              {/* One-tap save for a reader who signed up from this listing. Renders
+                  nothing for anyone else; the mark is consumed once (saveOffer.ts). */}
+              <SaveAfterSignupPrompt
+                item={{
+                  listing_key: id,
+                  address,
+                  city: detail.city ?? undefined,
+                  list_price: price,
+                  thumb: view.media_urls[0],
+                }}
+              />
 
               {/* PROTOTYPE (Proposal B): hero scent — the moat one tap from the price.
                   Mobile-only (on desktop the Intelligence panel is already beside the
