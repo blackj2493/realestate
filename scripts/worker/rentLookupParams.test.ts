@@ -1,7 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { rentLookupParamsFromFeed } from './services/rentAVM';
+
+// rentAVM builds its Supabase client at import time, and CI has no SUPABASE_URL, so the
+// import threw "supabaseUrl is required" before a single assertion ran. Nothing here
+// queries: the mapper is pure and the call-site checks read source text.
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: () => ({
+    from: () => {
+      throw new Error('rentLookupParams tests must not query');
+    },
+  }),
+}));
 
 /**
  * Guards the rent lookup's inputs against call-site drift.
