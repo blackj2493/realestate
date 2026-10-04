@@ -50,6 +50,8 @@ import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
 import { SIGNUP_BED_CHOICES } from "@/lib/dashboard/signupFilter";
 import { track } from "@/lib/analytics/posthog";
 import { readTouches } from "@/lib/analytics/touch";
+import { marketSourceFromNext } from "@/lib/auth/seedMarket";
+import { markSaveOffer } from "@/lib/watchlist/saveOffer";
 import {
   getConfig,
   saveConfig,
@@ -224,6 +226,11 @@ export default function AcceptTermsForm({
         router.refresh();
         return;
       }
+
+      // Signed up from a listing: the listing page offers a one-tap save of that home once
+      // they land. A saved home, not a saved area, is what predicts a reader coming back.
+      const source = marketSourceFromNext(next);
+      if (source?.kind === "listing") markSaveOffer(source.listingKey);
 
       router.replace(next);
       router.refresh();
