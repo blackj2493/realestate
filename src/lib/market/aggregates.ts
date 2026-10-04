@@ -208,7 +208,7 @@ export function getTrendCached(region: string, typeKeys: string[], scope: Scope)
     // v11 = basement filter (043); v10 = Toronto district roll-up (042); v9 = RPC (040).
     // Bumped so stale empty Ottawa entries (and any v11 entry) are not served post-migration.
     // v14 = migration 109 (complete months only — no partial-month bucket — + banded-sqft $/psf).
-    ["market-price-trend", "v14", region.toLowerCase(), k], // v13 = migration 082 (avgPrice)
+    ["market-price-trend", "v15", region.toLowerCase(), k], // v15 = migration 153 (grouped regions: the parts of Toronto); v13 = migration 082 (avgPrice)
     { revalidate: 86400 }
   )();
 }
@@ -221,7 +221,7 @@ export function getStatsCached(region: string, typeKeys: string[], scope: Scope)
     // v7 = CountyOrParish roll-up (migration 047 — fixes Ottawa, which cached empty under v6);
     // v6 = basement filter (043); v5 = Toronto district roll-up (042); v4 = parking (027).
     // Bumped so stale empty Ottawa entries (and any v6 entry) are not served post-migration.
-    ["market-region-stats", "v10", region.toLowerCase(), k], // v10 = migration 082 (last_seen freshness gate)
+    ["market-region-stats", "v11", region.toLowerCase(), k], // v11 = migration 153 (region_aliases); v10 = migration 082 (last_seen freshness gate)
     { revalidate: 86400 }
   )();
 }
@@ -292,7 +292,7 @@ export function getDomDistCached(region: string, typeKeys: string[], scope: Scop
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeDomDist(region, typeKeys, scope),
-    ["market-dom-dist", "v5", region.toLowerCase(), k], // v5 = migration 082 (last_seen freshness gate)
+    ["market-dom-dist", "v6", region.toLowerCase(), k], // v6 = migration 153 (region_aliases); v5 = migration 082 (last_seen freshness gate)
     { revalidate: 86400 }
   )();
 }
@@ -351,7 +351,7 @@ export function getPriceCutsCached(region: string, typeKeys: string[], scope: Sc
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computePriceCuts(region, typeKeys, scope),
-    ["market-price-cuts", "v3", region.toLowerCase(), k], // v3 = migration 082 (last_seen freshness gate)
+    ["market-price-cuts", "v4", region.toLowerCase(), k], // v4 = migration 153 (region_aliases); v3 = migration 082 (last_seen freshness gate)
     { revalidate: 86400 }
   )();
 }
@@ -425,7 +425,7 @@ export function getSoldDynamicsCached(region: string, typeKeys: string[], scope:
   const k = `${typeKey(typeKeys)}|${scopeKey(scope)}`;
   return unstable_cache(
     () => computeSoldDynamics(region, typeKeys, scope),
-    ["market-sold-dynamics", "v2", region.toLowerCase(), k], // v2 = 109 (banded-sqft $/psf); v1 = 061
+    ["market-sold-dynamics", "v3", region.toLowerCase(), k], // v3 = migration 153 (region_aliases); v2 = 109 (banded-sqft $/psf); v1 = 061
     { revalidate: 86400 }
   )();
 }
@@ -508,7 +508,7 @@ async function computeAvmReliability(region: string, typeKeys: string[]): Promis
 export function getAvmReliabilityCached(region: string, typeKeys: string[]): Promise<AvmReliability> {
   return unstable_cache(
     () => computeAvmReliability(region, typeKeys),
-    ["market-avm-reliability", "v1", region.toLowerCase(), typeKey(typeKeys)], // v1 = migration 062
+    ["market-avm-reliability", "v2", region.toLowerCase(), typeKey(typeKeys)], // v2 = migration 153 (region_aliases); v1 = migration 062
     { revalidate: 86400 }
   )();
 }
@@ -642,7 +642,7 @@ async function computeListingOutcomes(region: string, typeKeys: string[]): Promi
 export function getListingOutcomesCached(region: string, typeKeys: string[]): Promise<ListingOutcomes> {
   return unstable_cache(
     () => computeListingOutcomes(region, typeKeys),
-    ["market-listing-outcomes", "v3", region.toLowerCase(), typeKey(typeKeys)], // v3 = null failureRate when delisted feed can't match region (Ottawa)
+    ["market-listing-outcomes", "v4", region.toLowerCase(), typeKey(typeKeys)], // v4 = parts of Toronto (153 seed); v3 = null failureRate when delisted feed can't match region (Ottawa)
     { revalidate: 86400 }
   )();
 }
@@ -680,7 +680,7 @@ async function computePriceLedger(region: string): Promise<PriceLedger> {
 export function getPriceLedgerCached(region: string): Promise<PriceLedger> {
   return unstable_cache(
     () => computePriceLedger(region),
-    ["market-price-ledger", "v1", region.toLowerCase()], // v1 = migrations 069/070
+    ["market-price-ledger", "v2", region.toLowerCase()], // v2 = migration 153 (region_aliases); v1 = migrations 069/070
     { revalidate: 86400 }
   )();
 }
