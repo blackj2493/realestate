@@ -23,6 +23,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: ['.env.local', '.env'] });
 
 import { OTTAWA_AREAS } from '@/lib/dashboard/ottawaAreas';
+import { CITY_PARTS } from '@/lib/dashboard/cityParts';
 
 const APPLY = process.argv.includes('--apply');
 const DATABASE_URL = process.env.DATABASE_URL || process.env.DIRECT_DB_URL;
@@ -34,6 +35,14 @@ if (!DATABASE_URL) {
 /** region (lowercase) → member city/area values as stored in the feed. */
 const GROUPS: Record<string, string[]> = {
   ottawa: OTTAWA_AREAS,
+  // The parts a too-big city is offered as ("scarborough" → its districts). Same source the
+  // map and the nightly email expand (cityParts.ts → CITY_GROUPS), so the SQL market stats
+  // for a saved part can never cover different streets than its email does.
+  ...Object.fromEntries(
+    Object.values(CITY_PARTS)
+      .flat()
+      .map((p) => [p.name.toLowerCase(), [...p.members]])
+  ),
 };
 
 async function main() {
