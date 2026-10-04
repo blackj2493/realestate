@@ -60,10 +60,14 @@ describe("regionForCity", () => {
     expect(regionForCity("Toronto")).toBe("Toronto");
   });
 
-  it("rolls an Ottawa OREB area up to the city", () => {
-    // The reason this is a membership lookup and not a suffix strip: no string rule turns
-    // "Barrhaven" into "Ottawa".
-    expect(regionForCity("Barrhaven")).toBe("Ottawa");
+  it("rolls an Ottawa OREB area up to its part, not the whole city", () => {
+    // A membership lookup, not a suffix strip: no string rule turns "Barrhaven" into
+    // anything. The whole of Ottawa is too big to follow (cityParts.ts).
+    expect(regionForCity("Barrhaven")).toBe("Barrhaven and Manotick");
+  });
+
+  it("keeps the bare Ottawa value as the city", () => {
+    expect(regionForCity("Ottawa")).toBe("Ottawa");
   });
 
   it("rolls a London directional up to the city", () => {
@@ -77,7 +81,7 @@ describe("regionForCity", () => {
 
   it("is case-insensitive and trims", () => {
     expect(regionForCity("  toronto c12 ")).toBe("North York");
-    expect(regionForCity("  BARRHAVEN ")).toBe("Ottawa");
+    expect(regionForCity("  BARRHAVEN ")).toBe("Barrhaven and Manotick");
   });
 
   it("returns null for nothing usable", () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { TORONTO_PARTS, partsOf, partForCity, partNamed } from "./cityParts";
+import { TORONTO_PARTS, OTTAWA_PARTS, CITY_PARTS, partsOf, partForCity, partNamed } from "./cityParts";
 import { CITY_GROUPS, areaFilter, regionCamera, isWholeCityRegion } from "./area";
+import { OTTAWA_AREAS } from "./ottawaAreas";
 
 // The grammar the market APIs accept for a region (api/market/*/route.ts). A part name
 // that fails it would save fine and then show an empty scorecard.
@@ -43,8 +44,48 @@ describe("Toronto parts", () => {
     expect(partNamed("scarborough")?.name).toBe("Scarborough");
   });
 
-  it("are offered for Toronto only", () => {
+  it("are offered for Toronto and Ottawa only", () => {
     expect(partsOf("Toronto")).toBe(TORONTO_PARTS);
+    expect(partsOf("Ottawa")).toBe(OTTAWA_PARTS);
     expect(partsOf("Richmond Hill")).toBeNull();
+  });
+});
+
+describe("Ottawa parts", () => {
+  it("cover every Ottawa OREB area exactly once", () => {
+    const members = OTTAWA_PARTS.flatMap((p) => p.members);
+    expect([...members].sort()).toEqual([...OTTAWA_AREAS].sort());
+    expect(new Set(members).size).toBe(members.length);
+  });
+
+  it("follow the approved grouping", () => {
+    expect(partForCity("Barrhaven")?.name).toBe("Barrhaven and Manotick");
+    expect(partForCity("Kanata")?.name).toBe("Kanata and Stittsville");
+    expect(partForCity("Overbrook - Castleheights and Area")?.name).toBe("Central Ottawa");
+    // Riverside South lives inside this area, which the feed cannot split.
+    expect(partForCity("Blossom Park - Airport and Area")?.name).toBe("South Ottawa");
+    expect(partForCity("Stittsville - Munster - Richmond")?.name).toBe("Kanata and Stittsville");
+  });
+});
+
+describe("every city's parts", () => {
+  const all = Object.values(CITY_PARTS).flat();
+
+  it("have unique names the market APIs accept", () => {
+    for (const p of all) expect(p.name).toMatch(REGION_RE);
+    expect(new Set(all.map((p) => p.name.toLowerCase())).size).toBe(all.length);
+  });
+
+  it("expand, open the map, and count as a whole-city area", () => {
+    for (const p of all) {
+      expect(CITY_GROUPS[p.name]).toEqual([...p.members]);
+      expect(regionCamera(p.name)).toEqual({ lat: p.lat, lng: p.lng, zoom: p.zoom });
+      expect(isWholeCityRegion(p.name)).toBe(true);
+    }
+  });
+
+  it("leave each parent city followable whole for existing readers", () => {
+    expect(CITY_GROUPS.Toronto.length).toBeGreaterThan(30);
+    expect(CITY_GROUPS.Ottawa).toEqual(OTTAWA_AREAS);
   });
 });
