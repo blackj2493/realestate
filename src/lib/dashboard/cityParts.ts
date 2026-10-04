@@ -16,6 +16,17 @@
  *   - C03/C04 mix York and North York streets but read as Midtown to buyers.
  * TREB has no C05.
  *
+ * Ottawa (~4,400 for sale) is offered as six parts of 500-1,000 homes, built from its 51 OREB
+ * areas (the feed's City values, see ottawaAreas.ts). The grouping follows OREB's own
+ * district number, the first two digits of each CityRegion ("7711 - Barrhaven" → 77), and
+ * each area's live median location. Owner-approved 2026-10-04, including:
+ *   - Overbrook and Manor Park (35, 31) sit in Central Ottawa, beside Vanier and Rockcliffe.
+ *   - Riverside South is inside the area "Blossom Park - Airport and Area" (26, Gloucester),
+ *     which the feed cannot split, so it is South Ottawa, not Barrhaven.
+ *   - Richmond shares one area with Stittsville, so it is Kanata and Stittsville.
+ *   - Rural areas join the nearest suburb (Carp/Constance Bay → Kanata, Greely → South,
+ *     Manotick → Barrhaven).
+ *
  * A part name is a region like any other: it is a CITY_GROUPS key (area.ts) so the map,
  * dashboard and nightly email expand it, and a region_aliases row set (seed-region-aliases)
  * so the SQL market stats do. This file is the one source for both.
@@ -84,9 +95,102 @@ export const TORONTO_PARTS: readonly CityPart[] = [
   },
 ];
 
-/** Parent city → its parts. Ottawa joins here once its grouping is approved. */
+export const OTTAWA_PARTS: readonly CityPart[] = [
+  {
+    name: "Central Ottawa",
+    members: [
+      "Ottawa Centre",
+      "Lower Town - Sandy Hill",
+      "Glebe - Ottawa East and Area",
+      "West Centre Town",
+      "Dows Lake - Civic Hospital and Area",
+      "Tunneys Pasture and Ottawa West",
+      "New Edinburgh - Lindenlea",
+      "Rockcliffe Park",
+      "Vanier and Kingsview Park",
+      "Overbrook - Castleheights and Area",
+      "Manor Park - Cardinal Glen and Area",
+    ],
+    hint: "Centretown · ByWard Market · Glebe · Vanier",
+    lat: 45.4205, lng: -75.6901, zoom: 13,
+  },
+  {
+    name: "Kanata and Stittsville",
+    members: [
+      "Kanata",
+      "Stittsville - Munster - Richmond",
+      "Carp - Huntley Ward",
+      "Constance Bay - Dunrobin - Kilmaurs - Woodlawn",
+      "Carp - Dunrobin - Huntley - Fitzroy and Area",
+    ],
+    hint: "Kanata · Stittsville · Carp",
+    lat: 45.3069, lng: -75.9088, zoom: 12,
+  },
+  {
+    name: "South Ottawa",
+    members: [
+      "Alta Vista and Area",
+      "Hunt Club - South Keys and Area",
+      "Hunt Club - Windsor Park Village and Area",
+      "Billings Bridge - Riverside Park and Area",
+      "Mooneys Bay - Carleton Heights and Area",
+      "Elmvale Acres and Area",
+      "Blossom Park - Airport and Area",
+      "Leitrim",
+      "Greely - Metcalfe - Osgoode - Vernon and Area",
+    ],
+    hint: "Alta Vista · Hunt Club · Riverside South",
+    lat: 45.3562, lng: -75.6433, zoom: 12,
+  },
+  {
+    name: "Orleans and East Ottawa",
+    members: [
+      "Orleans - Cumberland and Area",
+      "Orleans - Convent Glen and Area",
+      "Blackburn Hamlet",
+      "Beacon Hill North - South and Area",
+      "Cyrville - Carson Grove - Pineview",
+      "Carlsbad Springs",
+    ],
+    hint: "Orléans · Beacon Hill · Blackburn Hamlet",
+    lat: 45.457, lng: -75.5308, zoom: 12,
+  },
+  {
+    name: "Ottawa West and Nepean",
+    members: [
+      "Westboro - Hampton Park",
+      "Carlingwood - Westboro and Area",
+      "McKellar Heights - Glabar Park and Area",
+      "Carlington - Central Park",
+      "Belair Park - Copeland Park and Area",
+      "Woodroffe",
+      "Britannia - Lincoln Heights and Area",
+      "Britannia Heights - Queensway Terrace N and Area",
+      "Parkway Park - Queensway Terrace S and Area",
+      "Crystal Bay - Rocky Point - Bayshore",
+      "Qualicum - Bruce Farm - Greenbelt and Area",
+      "Cityview - Parkwoods Hills - Rideau Shore",
+      "Meadowlands - Crestview and Area",
+      "Country Place - Pineglen - Crestview and Area",
+      "Tanglewood - Grenfell Glen - Pineglen",
+      "South of Baseline to Knoxdale",
+      "Bells Corners and South to Fallowfield",
+    ],
+    hint: "Westboro · Britannia · Centrepointe · Bells Corners",
+    lat: 45.3531, lng: -75.7716, zoom: 12.5,
+  },
+  {
+    name: "Barrhaven and Manotick",
+    members: ["Barrhaven", "Fallowfield Rd South of Ottawa", "Manotick - Kars - Rideau Twp and Area"],
+    hint: "Barrhaven · Half Moon Bay · Manotick",
+    lat: 45.2741, lng: -75.7503, zoom: 12,
+  },
+];
+
+/** Parent city → its parts. */
 export const CITY_PARTS: Readonly<Record<string, readonly CityPart[]>> = {
   Toronto: TORONTO_PARTS,
+  Ottawa: OTTAWA_PARTS,
 };
 
 /** The parts a chip should open instead of saving, or null for a city followed whole. */
