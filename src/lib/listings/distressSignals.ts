@@ -45,13 +45,13 @@
  */
 
 /** A named pattern, so a match can explain itself rather than just flipping a boolean. */
-interface Signal {
+export interface Signal {
   label: string;
   pattern: RegExp;
 }
 
 /** Seller is under legal or financial pressure — the genuinely rare, genuinely valuable case. */
-const FORCED_SALE: Signal[] = [
+export const FORCED_SALE: Signal[] = [
   { label: "Power of Sale", pattern: /\bpower\s+of\s+sale\b/ },
   { label: "Foreclosure", pattern: /\bforeclos(ure|ed|ing)\b/ },
   { label: "Bank Owned", pattern: /\bbank[\s-]?owned\b/ },
@@ -67,7 +67,7 @@ const FORCED_SALE: Signal[] = [
 ];
 
 /** The property itself needs substantial work — a different claim, and a different buyer. */
-const NEEDS_WORK: Signal[] = [
+export const NEEDS_WORK: Signal[] = [
   { label: "Handyman Special", pattern: /\bhandy\s?m(a|e)n('?s)?\b/ },
   { label: "Fixer-Upper", pattern: /\bfixer[\s-]?upper\b/ },
   { label: "Contractor Special", pattern: /\bcontractor('?s)?\s+(special|dream|delight)\b/ },

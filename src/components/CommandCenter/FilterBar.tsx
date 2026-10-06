@@ -1,5 +1,15 @@
 "use client";
 
+import { DESCRIPTION_SEARCH_ENABLED } from "@/lib/search/searchConfig";
+import {
+  DESC_SIGNALS_KEY,
+  DESC_WORDS_KEY,
+  descTerms,
+  removeTerm,
+  signalIds,
+  termLabel,
+} from "@/lib/filters/descriptionFilters";
+import { SIGNAL_BY_ID } from "@/lib/listings/descriptionSignals";
 import React from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -87,6 +97,34 @@ export default function FilterBar() {
       onRemove: resetAmenity,
     },
   ];
+
+  // Description search: one strip token per signal and per word, each removable on its own.
+  // Behind the flag, and only where it can apply (residential, an active layer lit).
+  const showDescription =
+    DESCRIPTION_SEARCH_ENABLED &&
+    propertyClass !== "commercial" &&
+    (activeLayers.has("forSale") || activeLayers.has("forRent"));
+  const descWords = universalFilters[DESC_WORDS_KEY];
+  const descSignals = signalIds(universalFilters[DESC_SIGNALS_KEY]);
+  if (showDescription) {
+    for (const id of descSignals) {
+      lenses.push({
+        id: `desc-signal-${id}`,
+        active: true,
+        label: SIGNAL_BY_ID[id as keyof typeof SIGNAL_BY_ID].label,
+        onRemove: () => setUniversalFilter(DESC_SIGNALS_KEY, descSignals.filter((s) => s !== id)),
+      });
+    }
+    for (const t of descTerms(descWords)) {
+      lenses.push({
+        id: `desc-word-${t.text}`,
+        active: true,
+        label: termLabel(t),
+        onRemove: () => setUniversalFilter(DESC_WORDS_KEY, removeTerm(descWords, t.text)),
+      });
+    }
+  }
+  const descActiveCount = showDescription ? descSignals.length + descTerms(descWords).length : 0;
 
   const nudge = formatResultNudge(searchResult?.listings.length ?? 0, totalCount);
   // The active persona PINS this subset; every other investor signal stays reachable
@@ -178,7 +216,7 @@ export default function FilterBar() {
   const activeFilterCount =
     [...coreFilters, ...addedDefs].filter((d) =>
       d.isActive(universalFilters[d.key] ?? d.defaultValue)
-    ).length + (investorActive ? 1 : 0);
+    ).length + (investorActive ? 1 : 0) + descActiveCount;
   const soldWindowVisible =
     activeLayers.has("sold") || activeLayers.has("leased") || activeLayers.has("delisted");
 
@@ -187,7 +225,8 @@ export default function FilterBar() {
   // the basics that stay inline on the bar.
   const drawerActiveCount =
     moreFilters.filter((d) => d.isActive(universalFilters[d.key] ?? d.defaultValue)).length +
-    (investorLayer ? INVESTOR_CONTROLS.filter((c) => isControlActive(c, filters)).length : 0);
+    (investorLayer ? INVESTOR_CONTROLS.filter((c) => isControlActive(c, filters)).length : 0) +
+    descActiveCount;
 
   // Flatten the active filters (core + added + investor) into one removable token
   // list for the summary strip. Gates mirror the chip rows: added + investor are
@@ -313,6 +352,7 @@ export default function FilterBar() {
           clearAll={clearAll}
           anyActive={anyActive}
           resultCount={totalCount}
+          showDescription={showDescription}
         />
       )}
 
@@ -325,6 +365,7 @@ export default function FilterBar() {
           clearAll={clearAll}
           anyActive={anyActive}
           resultCount={totalCount}
+          showDescription={showDescription}
         />
       )}
     </>

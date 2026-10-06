@@ -16,6 +16,7 @@ import { loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
 import { calculateProForma, ProFormaMetrics } from '@/lib/typesense/ExtrapolatedCapRateEngine';
 import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage';
 import { detectDistress } from '@/lib/listings/distressSignals';
+import { descriptionSearchFields } from '@/lib/listings/descriptionSignals';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
 import { fetchRentAVM, fetchSuiteRent, fetchMainUnitRent, rentLookupParamsFromFeed, type RentAVMResult, type SuiteRentResult } from './services/rentAVM';
@@ -743,6 +744,10 @@ export interface TransformResult {
     ListOfficeName?: string;
     EntryTimestamp?: number;
     PublicRemarks?: string;
+    /** Full-text copy of PublicRemarks on for-sale docs ('' otherwise). */
+    SearchRemarks?: string;
+    /** descriptionSignals ids matched in PublicRemarks. */
+    description_signals?: string[];
     RawImages?: string[];
     RawRooms?: any;
     TotalCapitalBasis?: number;
@@ -1204,6 +1209,11 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   if (coverThumb) typesensePayload.thumbnailUrl = coverThumb;
   typesensePayload.ListOfficeName = raw.ListOfficeName || '';
   typesensePayload.PublicRemarks = raw.PublicRemarks || '';
+  // Description search: full text on for-sale docs, signal ids on all (descriptionSignals.ts).
+  // Both always set — the schema declares them and Typesense rejects a batch missing one.
+  const descSearch = descriptionSearchFields(raw.PublicRemarks, raw.TransactionType);
+  typesensePayload.SearchRemarks = descSearch.SearchRemarks;
+  typesensePayload.description_signals = descSearch.description_signals;
   if (mediaUrls.length > 0) typesensePayload.RawImages = mediaUrls;
   else typesensePayload.RawImages = [];
   if (raw.rooms) typesensePayload.RawRooms = raw.rooms;

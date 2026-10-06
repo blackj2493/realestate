@@ -12,6 +12,15 @@ export const SEARCH_V2_ENABLED =
   (process.env.NEXT_PUBLIC_SEARCH_V2 ?? "1") !== "0";
 
 /**
+ * Description search ("In the description": word search + ready-made signals). OFF until
+ * scripts/admin/backfillDescriptionSearch.ts --apply has declared SearchRemarks and
+ * description_signals on the live collection: a query or filter on an undeclared field is
+ * an HTTP 400 that takes the whole terminal search down. Turn on with
+ * NEXT_PUBLIC_DESCRIPTION_SEARCH=1 once the script's verify step passes.
+ */
+export const DESCRIPTION_SEARCH_ENABLED = process.env.NEXT_PUBLIC_DESCRIPTION_SEARCH === "1";
+
+/**
  * VOW / legal gate. Sold *prices* are never rendered to anonymous users in the
  * search surfaces (suggest rows, answer-card medians, comps). Existence + date may
  * show — the masked price is the sign-up hook, not a wall. Per the advisory verdict

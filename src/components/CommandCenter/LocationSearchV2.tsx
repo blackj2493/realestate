@@ -16,7 +16,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair, Layers } from "lucide-react";
+import { Search, X, Home, Hash, MapPin, GraduationCap, Navigation, Sparkles, Crosshair, Layers, TextSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
@@ -36,7 +36,9 @@ import { addressProfileHref } from "@/lib/search/searchTarget";
 import { ROW_STATUS_CHIP, ROW_STATUS_LABEL, ROW_STATUS_TONE, backOnMarketLabel } from "@/lib/search/searchRows";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { expandableCityGroupFor } from "@/lib/regions/cityGroups";
-import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS, SEARCH_DEBUG } from "@/lib/search/searchConfig";
+import { SUGGEST_MIN_CHARS, SUGGEST_DEBOUNCE_MS, SEARCH_DEBUG, DESCRIPTION_SEARCH_ENABLED } from "@/lib/search/searchConfig";
+import { DESC_SIGNALS_KEY, DESC_WORDS_KEY, addTerm, descriptionRowFor, signalIds } from "@/lib/filters/descriptionFilters";
+import { signalForQuery } from "@/lib/listings/descriptionSignals";
 import { recordParse, parseMissRate } from "@/lib/search/parseMetrics";
 import type { SuggestGroup, SuggestItem, ParsedQuery } from "@/lib/search/types";
 import type { ListingDocument } from "@/lib/typesense/client";
@@ -99,6 +101,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   // Apply filters on (otherwise the preview count diverges from the applied result).
   const schoolField = schoolScoreField(school.level, school.system);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
+  const universalFilters = useCommandCenterStore((s) => s.universalFilters);
   const openListing = useOpenListing();
   const authed = useIsAuthed();
 
@@ -312,6 +315,10 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
       selectItem(flatItems[highlight]);
     } else if (parsed?.isStructured) {
       applyNl();
+    } else if (descRow && groups.length === 0) {
+      // Nothing to place the map on, but the words describe homes: Enter means the one
+      // row on screen, not a text query over City names that can only come back empty.
+      applyDescRow();
     } else if (value.trim()) {
       const q = value.trim();
       setLocation(q);
@@ -368,6 +375,25 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
   const flat = (item: SuggestItem) => flatItems.indexOf(item);
   // Address intent = a number that isn't part of a structured NL query ("3 bed…").
   const addrIntent = /\d/.test(value) && !parsed?.isStructured;
+  // At most ONE description row, last in the list, never for addresses — see descriptionRowFor.
+  const descRow = DESCRIPTION_SEARCH_ENABLED
+    ? descriptionRowFor(value, { structured: !!parsed?.isStructured, transactionMode }, signalForQuery)
+    : null;
+  const applyDescRow = () => {
+    if (!descRow) return;
+    if (descRow.kind === "signal") {
+      const current = signalIds(universalFilters[DESC_SIGNALS_KEY]);
+      if (!current.includes(descRow.id)) setUniversalFilter(DESC_SIGNALS_KEY, [...current, descRow.id]);
+    } else {
+      setUniversalFilter(
+        DESC_WORDS_KEY,
+        addTerm(universalFilters[DESC_WORDS_KEY], `${descRow.exclude ? "-" : ""}${descRow.text}`)
+      );
+    }
+    setValue("");
+    close();
+    onSelect?.();
+  };
   const topCommunity = groups.flatMap((g) => g.items).find((i) => i.category === "community");
   // A parent city the query is reaching for (Toronto/London) whose whole-city scope
   // is reachable via the terminal's existing full-text location path — offers a
@@ -539,7 +565,7 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
               {searching && groups.length === 0 && !(parsed?.isStructured && preview) && (
                 <div className="px-3 py-3 font-mono text-xs text-muted-foreground">Searching…</div>
               )}
-              {!searching && groups.length === 0 && !(parsed?.isStructured && preview) && (
+              {!searching && groups.length === 0 && !(parsed?.isStructured && preview) && !descRow && (
                 <div className="px-3 py-3 font-mono text-xs text-muted-foreground">
                   No matches for “{value.trim()}”. Try an address, community, school, or MLS#.
                 </div>
@@ -844,6 +870,35 @@ export default function LocationSearchV2({ className, placeholder: placeholderPr
                   })}
                 </div>
               ))}
+
+              {/* Description search — one row, after places and listings, so it never pushes
+                  the map exit or a listing down. A typed signal alias offers the signal. */}
+              {descRow && (
+                <div>
+                  <div className="px-3 pb-1 pt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    In listing descriptions
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applyDescRow}
+                    className="flex w-full items-center gap-2.5 border-l-2 border-cyan-500 bg-cyan-500/5 px-3 py-2.5 text-left transition-colors hover:bg-cyan-500/10"
+                  >
+                    <TextSearch className="h-3.5 w-3.5 shrink-0 text-cyan-700 dark:text-cyan-400" />
+                    <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                      {descRow.kind === "signal" ? (
+                        <>
+                          Homes with <span className="font-semibold text-cyan-700 dark:text-cyan-300">{descRow.label}</span>
+                        </>
+                      ) : (
+                        <>
+                          Homes that {descRow.exclude ? "don't mention" : "mention"}{" "}
+                          <span className="font-semibold text-cyan-700 dark:text-cyan-300">“{descRow.text}”</span>
+                        </>
+                      )}
+                    </span>
+                  </button>
+                </div>
+              )}
 
               {/* Persistent map exit. This footer used to render ONLY for a structured
                   (natural-language) query, so an address or street search had no way back

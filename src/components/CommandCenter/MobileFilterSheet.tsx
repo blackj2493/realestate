@@ -22,6 +22,7 @@ import { isFinancingControl } from "@/lib/personas/personaConfig";
 import FilterChip, { FilterControl } from "./FilterChip";
 import InvestorChip from "./InvestorChip";
 import FinancingGroup from "./FinancingGroup";
+import DescriptionFilterSection from "./DescriptionFilterSection";
 import FundamentalToggle from "./FundamentalToggle";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
@@ -50,6 +51,8 @@ interface MobileFilterSheetProps {
   anyActive: boolean;
   /** Total matching listings — surfaced on the apply button. */
   resultCount: number;
+  /** Show "In the description" (flag on, residential, an active layer lit). */
+  showDescription?: boolean;
 }
 
 export default function MobileFilterSheet({
@@ -62,6 +65,7 @@ export default function MobileFilterSheet({
   clearAll,
   anyActive,
   resultCount,
+  showDescription = false,
 }: MobileFilterSheetProps) {
   const propertyClass = useCommandCenterStore((s) => s.propertyClass);
   const setPropertyClass = useCommandCenterStore((s) => s.setPropertyClass);
@@ -177,6 +181,8 @@ export default function MobileFilterSheet({
               </div>
             </section>
           )}
+
+          {showDescription && <DescriptionFilterSection />}
 
           {showAdvanced && showInvestor && <FinancingGroup controls={financingControls} />}
 

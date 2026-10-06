@@ -62,6 +62,13 @@ export const indexedFields: IndexedField[] = [
 
   // Basement (multi-select) — real facet. KitchensTotal is a range, not a facet
   { name: 'BasementType', type: 'string[]', facet: true },
+
+  // Description search (src/lib/listings/descriptionSignals.ts). SearchRemarks is the
+  // full-text copy of PublicRemarks — FOR-SALE docs only, '' on leases, to keep the
+  // inverted index (RAM) to the listings the terminal actually searches.
+  // description_signals: ready-made signal ids, a facet for the Filters panel counts.
+  { name: 'SearchRemarks', type: 'string', facet: false, optional: true },
+  { name: 'description_signals', type: 'string[]', facet: true, optional: true },
   { name: 'KitchensTotal', type: 'int32', facet: false },
 
   // Lot Dimensions — range sliders, not facets
@@ -283,6 +290,9 @@ export const typesenseSchema = {
     { name: 'UnparsedAddress', type: 'string' as const, facet: false, optional: true },
     { name: 'PostalCode', type: 'string' as const, facet: false },
     { name: 'BasementType', type: 'string[]' as const, facet: true },
+    // Description search — see the note in `indexedFields` above.
+    { name: 'SearchRemarks', type: 'string' as const, facet: false, optional: true },
+    { name: 'description_signals', type: 'string[]' as const, facet: true, optional: true },
     { name: 'KitchensTotal', type: 'int32' as const, facet: false },
     { name: 'LotWidth', type: 'float' as const, facet: false, sort: true },
     { name: 'LotDepth', type: 'float' as const, facet: false, sort: true },
@@ -592,6 +602,11 @@ export interface TypesensePropertyDocument {
   IsDetachedEligible: boolean;
   DetachedRejectionReason: string | null;
   
+  /** Full-text copy of PublicRemarks on for-sale docs; '' otherwise. */
+  SearchRemarks: string;
+  /** descriptionSignals ids matched in PublicRemarks. */
+  description_signals: string[];
+
   // Unindexed Cargo
   PublicRemarks: string | null;
   TaxAnnualAmount: number;

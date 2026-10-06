@@ -18,6 +18,7 @@ import { statusBadge, type BadgeTone } from "@/lib/listings/statusBadge";
 import { layerStatus, LAYER_TONE_CLASS } from "@/lib/listings/layerStatus";
 import { bedsLabel } from "@/lib/listings/bedsLabel";
 import { basementLabel } from "@/lib/listings/basementLabel";
+import { snippetParts } from "@/lib/filters/descriptionFilters";
 import { soldVsAsk } from "@/lib/sold/delta";
 import { isDelistedDealType } from "@/lib/sold/dealType";
 import type { ListingDocument } from "@/lib/typesense/client";
@@ -194,6 +195,31 @@ export default function ListingCardBody({ doc }: { doc: ListingDocument }) {
         <span className="text-muted-foreground">·</span>
         <span className="truncate normal-case tracking-normal">{doc.ListOfficeName || "Brokerage unavailable"}</span>
       </div>
+
+      {/* Description search: the lines that matched, quoted word for word from the listing
+          remarks (IDX, never rewritten). Present only while words are being searched. */}
+      {doc._snippet && <DescriptionSnippet snippet={doc._snippet} />}
     </>
+  );
+}
+
+/** A matched excerpt with the searched words marked — text nodes only, never HTML. */
+function DescriptionSnippet({ snippet }: { snippet: string }) {
+  const parts = snippetParts(snippet);
+  if (!parts.some((p) => p.hit)) return null;
+  return (
+    <p className="mt-1.5 line-clamp-3 border-l-2 border-border pl-2 font-sans text-xs leading-snug text-muted-foreground">
+      …
+      {parts.map((p, i) =>
+        p.hit ? (
+          <mark key={i} className="bg-cyan-500/20 px-0.5 text-cyan-800 dark:text-cyan-200">
+            {p.text}
+          </mark>
+        ) : (
+          <React.Fragment key={i}>{p.text}</React.Fragment>
+        )
+      )}
+      …
+    </p>
   );
 }

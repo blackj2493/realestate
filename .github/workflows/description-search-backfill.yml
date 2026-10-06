@@ -1,0 +1,52 @@
+name: Description Search Backfill
+
+# One-off (and re-run whenever a description signal's patterns change): declares
+# SearchRemarks + description_signals on the live `properties` collection and fills them
+# for every existing document. See scripts/admin/backfillDescriptionSearch.ts.
+#
+# Manual only, and safe by default: without the `apply` box ticked it is a DRY RUN that
+# reads the index and prints the text volume (the RAM driver) and per-signal counts,
+# writing nothing. Runnable from the GitHub mobile app: Actions → this workflow →
+# Run workflow.
+#
+# RAM: run --apply in the daytime and watch Memory Usage on the Typesense Cloud
+# dashboard. Typesense refuses writes once RAM + swap reach the cluster total, so the
+# nightly sync is what would fail first.
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Write to the live index (unticked = dry run, read-only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Shares the nightly sync's group: the backfill and the sync both write `properties`,
+# so one waits for the other instead of interleaving updates.
+concurrency:
+  group: daily-sync
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run backfill (${{ inputs.apply && 'APPLY' || 'dry run' }})
+        env:
+          TYPESENSE_ADMIN_API_KEY: ${{ secrets.TYPESENSE_ADMIN_API_KEY }}
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npx tsx scripts/admin/backfillDescriptionSearch.ts ${{ inputs.apply && '--apply' || '' }}

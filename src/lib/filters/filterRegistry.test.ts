@@ -90,7 +90,7 @@ describe("buildUniversalFilterString", () => {
 
 describe("MORE_FILTERS (Phase 2)", () => {
   it("registers 17 filters total (4 pinned + 13 added)", () => {
-    expect(ALL_FILTERS.length).toBe(17);
+    expect(ALL_FILTERS.length).toBe(19);
     expect(ALL_FILTERS.filter((f) => f.defaultPinned).length).toBe(4);
   });
   it("basement backtick-quotes BasementType values in an OR group", () => {

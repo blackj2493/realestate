@@ -23,6 +23,7 @@ import type { FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
 import InvestorChip from "./InvestorChip";
 import FinancingGroup from "./FinancingGroup";
+import DescriptionFilterSection from "./DescriptionFilterSection";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
 
@@ -44,6 +45,8 @@ interface FilterDrawerProps {
   anyActive: boolean;
   /** Total matching listings — surfaced on the apply button. */
   resultCount: number;
+  /** Show "In the description" (flag on, residential, an active layer lit). */
+  showDescription?: boolean;
 }
 
 export default function FilterDrawer({
@@ -54,6 +57,7 @@ export default function FilterDrawer({
   clearAll,
   anyActive,
   resultCount,
+  showDescription = false,
 }: FilterDrawerProps) {
   const universalFilters = useCommandCenterStore((s) => s.universalFilters);
   const setUniversalFilter = useCommandCenterStore((s) => s.setUniversalFilter);
@@ -166,6 +170,12 @@ export default function FilterDrawer({
                 ))}
               </div>
             </section>
+          )}
+
+          {/* Description search sits with the property fields it extends, ahead of the
+              investor-only groups, and follows the drawer's "find a filter" box. */}
+          {showDescription && (!q.trim() || "in the description words mentions signals".includes(q.trim().toLowerCase())) && (
+            <DescriptionFilterSection />
           )}
 
           <FinancingGroup controls={financingMatches} />
