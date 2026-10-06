@@ -11,7 +11,9 @@
  */
 
 import type { StatusAlertKind } from "./transitions";
-import type { BubbleSection } from "./bubbleDigest";
+import type { BubbleSection, NewListingAlert } from "./bubbleDigest";
+import { ANGLE_COPY, angleReason, angleSubjectPhrase, type AnglePick, type ReasonTone } from "./pickAngles";
+import type { PersonaType } from "@/lib/personas/personaConfig";
 import { shell, footer, button, MONO } from "./emailShell";
 
 export interface DropAlert {
@@ -131,13 +133,34 @@ function subjectFor(p: DigestPayload): string {
   // Lead with the choosing, not the volume. "268 new listings" is a chore in a subject
   // line; "6 picks from 268 new listings" is the same number doing the opposite job. Only
   // claim it where we actually chose — an area that fit entirely into the email did not.
-  if (newCount)
+  // An angle section has something better than a count to say: what it found. "Vaughan
+  // tonight: an $80K price cut, a suite-ready home and 2 more" is a reason to open; a
+  // number of listings is a reason to file it.
+  const angled = angleHeadline(p.bubbles, pickCount);
+  if (angled) parts.push(angled);
+  else if (newCount)
     parts.push(
       newCount > pickCount
         ? `${pickWord(pickCount)} from ${newCount}${newCapped ? "+" : ""} new listings`
         : `${newCount}${newCapped ? "+" : ""} new listing${newPlural}`
     );
   return parts.join(" · ") || "Your PureProperty alerts";
+}
+
+/** "Vaughan tonight: an $80K price cut, a suite-ready home and 2 more", or null. */
+function angleHeadline(bubbles: BubbleSection[], pickCount: number): string | null {
+  const lead = bubbles.find((b) => b.angles?.length);
+  if (!lead?.angles) return null;
+  const phrases = lead.angles.slice(0, 2).map(angleSubjectPhrase);
+  const rest = pickCount - phrases.length;
+  const where = bubbles.length === 1 ? `${lead.bubbleName} tonight` : "New tonight";
+  const list =
+    rest > 0
+      ? `${phrases.join(", ")} and ${rest} more`
+      : phrases.length === 2
+        ? `${phrases[0]} and ${phrases[1]}`
+        : phrases[0];
+  return `${where}: ${list}`;
 }
 
 /** "1 pick" / "6 picks" — the chosen rows, said in words. */
@@ -199,19 +222,24 @@ function dropRowsHtml(drops: DropAlert[]): string {
     .join("");
 }
 
-function bubbleSectionHtml(b: BubbleSection): string {
-  // ALWAYS state the scope, both ways. Showing the line only when a label exists made a
-  // filtered digest and an unfiltered one look identical — so a bubble whose saved
-  // filters were all defaults delivered townhouses under a UI reading "My filters only",
-  // and nothing in the email contradicted it (2026-09-23). The absent case is the one
-  // worth naming: it is the only one the reader can act on.
-  const filterLine = b.filterLabel
-    ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">filtered to: ${b.filterLabel}</div>`
-    : `<div style="font-size:11px;color:#64748b;margin-top:2px;">showing every new listing — no filters saved for this area</div>`;
-  const title = `<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:14px;">${b.bubbleName}</div>${filterLine}`;
-  const rows = b.listings
-    .map(
-      (l) => `
+const REASON_STYLE: Record<ReasonTone, string> = {
+  good: "color:#0f766e;background:#f0fdfa;",
+  cut: "color:#b91c1c;background:#fef2f2;",
+  lock: "color:#0e7490;background:#ecfeff;",
+};
+
+/** The one line under an angle row. A sign-in tease links to the listing page. */
+function reasonHtml(pick: AnglePick<NewListingAlert>): string {
+  const r = angleReason(pick);
+  const style = `display:inline-block;margin-top:6px;font-size:12px;font-weight:600;border-radius:4px;padding:3px 6px;${REASON_STYLE[r.tone]}`;
+  return r.tone === "lock"
+    ? `<a href="${listingUrl(pick.listing.listing_key)}" style="${style}text-decoration:none;">${r.text} &rarr;</a>`
+    : `<div style="${style}">${r.text}</div>`;
+}
+
+/** One listing row: thumb, address, city, brokerage (§4), price line, then `extra`. */
+function listingRowHtml(l: NewListingAlert, extra: string): string {
+  return `
       <tr>
         ${thumbCell(l.listing_key, l.thumb)}
         <td valign="top" style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
@@ -224,12 +252,65 @@ function bubbleSectionHtml(b: BubbleSection): string {
           ${l.price != null ? `<strong>${money(l.price)}</strong>` : ""}
           ${l.beds != null ? ` · ${l.beds} bd` : ""}${l.baths != null ? ` · ${l.baths} ba` : ""}
         </div>
-        ${
-          l.priceCut
-            ? `<div style="margin-top:4px;font-size:12px;color:#0f766e;font-weight:600;">Cut ${money(l.priceCut)} since it listed</div>`
-            : ""
-        }
-      </td></tr>`
+        ${extra}
+      </td></tr>`;
+}
+
+/** Angle sections: a small heading and blurb per angle, then its one home. */
+function angleRowsHtml(angles: AnglePick<NewListingAlert>[]): string {
+  return angles
+    .map((a) => {
+      const copy = ANGLE_COPY[a.angle];
+      return `<div style="font-size:11px;color:#334155;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-top:16px;">${copy.title}</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px;">${copy.blurb}</div>
+      <table style="width:100%;border-collapse:collapse;">${listingRowHtml(a.listing, reasonHtml(a))}</table>`;
+    })
+    .join("");
+}
+
+/**
+ * The scope line for an area with no filter, upgraded to the fix itself: a few signed
+ * links that each set ONE filter. They replace "showing every new listing — no filters
+ * saved", which named the problem and left the reader to go solve it on the dashboard —
+ * a longer trip than the Unsubscribe link sitting below it.
+ */
+function filterChipsHtml(b: BubbleSection, chips: FilterChipLink[]): string {
+  const links = chips
+    .map(
+      (c) =>
+        `<a href="${c.url}" style="display:inline-block;border:1px solid #0891b2;color:#0e7490;font-size:12px;font-weight:600;text-decoration:none;padding:5px 10px;border-radius:999px;margin:0 6px 6px 0;background:#ffffff;">${c.label}</a>`
+    )
+    .join("");
+  return `<div style="margin-top:8px;border-left:3px solid #0891b2;background:#f8fafc;padding:10px 12px;">
+      <div style="font-size:12px;color:#334155;line-height:1.5;margin-bottom:8px;">
+        You get every new home in ${b.bubbleName}. Tap one to get only those from tomorrow:
+      </div>
+      ${links}
+      <div style="font-size:12px;"><a href="${SITE}/dashboard" style="color:#0891b2;text-decoration:none;font-weight:600;">Set my own filters &rarr;</a></div>
+    </div>`;
+}
+
+function bubbleSectionHtml(b: BubbleSection, chips?: FilterChipLink[]): string {
+  // ALWAYS state the scope, both ways. Showing the line only when a label exists made a
+  // filtered digest and an unfiltered one look identical — so a bubble whose saved
+  // filters were all defaults delivered townhouses under a UI reading "My filters only",
+  // and nothing in the email contradicted it (2026-09-23). The absent case is the one
+  // worth naming: it is the only one the reader can act on.
+  const filterLine = b.filterLabel
+    ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">filtered to: ${b.filterLabel}</div>`
+    : `<div style="font-size:11px;color:#64748b;margin-top:2px;">showing every new listing — no filters saved for this area</div>`;
+  // An unfiltered area that has filter links shows them in place of the scope line: the
+  // links ARE the statement of scope, and they come with the way out of it.
+  const scope = !b.filterLabel && chips?.length ? filterChipsHtml(b, chips) : filterLine;
+  const title = `<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:14px;">${b.bubbleName}</div>${scope}`;
+  const rows = b.listings
+    .map((l) =>
+      listingRowHtml(
+        l,
+        l.priceCut
+          ? `<div style="margin-top:4px;font-size:12px;color:#0f766e;font-weight:600;">Cut ${money(l.priceCut)} since it listed</div>`
+          : ""
+      )
     )
     .join("");
   // A busy area names its full count in words rather than as a bare "+N more", because
@@ -249,7 +330,10 @@ function bubbleSectionHtml(b: BubbleSection): string {
         : `<div style="font-size:12px;margin-top:6px;">
              <a href="${areaUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">+${more} more in ${b.bubbleName} →</a>
            </div>`;
-  return `${title}<table style="width:100%;border-collapse:collapse;">${rows}</table>${overflow}`;
+  const body = b.angles?.length
+    ? angleRowsHtml(b.angles)
+    : `<table style="width:100%;border-collapse:collapse;">${rows}</table>`;
+  return `${title}${body}${overflow}`;
 }
 
 /**
@@ -320,6 +404,57 @@ export interface DigestActions {
    * to make.
    */
   cadenceIsDerived?: boolean;
+  /**
+   * Per-area one-filter links, keyed by bubbleId. Only unfiltered areas get them; an area
+   * with links shows them instead of the "no filters saved" line, and drops out of the
+   * once-per-email nudge (it has already been nudged, with the fix attached).
+   */
+  filterChips?: Record<string, FilterChipLink[]>;
+  /** The persona the angle picks were ordered for. Drives the switch line's wording. */
+  persona?: PersonaType;
+  /** Signed links that reorder the picks for another persona. Shown only beside angles. */
+  personaSwitch?: PersonaSwitchLink[];
+}
+
+export interface FilterChipLink {
+  label: string;
+  url: string;
+}
+
+export interface PersonaSwitchLink {
+  persona: PersonaType;
+  url: string;
+}
+
+/** How the switch line names each persona — plain words, not the terminal's lens names. */
+export const PERSONA_PICK_LABEL: Record<PersonaType, string> = {
+  smart: "Buying a home",
+  cashflow: "Rental income",
+  flippers: "Flips",
+  builders: "Land & building",
+};
+
+/**
+ * One line that lets an investor or builder reorder their picks. Homebuyers are most of
+ * the list and get the default order, so the line has to cost them nothing: one quiet
+ * sentence under the picks. Investors are the minority and can self-select from here.
+ */
+function personaSwitchHtml(a: DigestActions): string {
+  const links = (a.personaSwitch ?? []).filter((l) => l.persona !== a.persona);
+  if (!links.length) return "";
+  const lead =
+    !a.persona || a.persona === "smart"
+      ? "Buying to invest? Order my picks for:"
+      : `Your picks are ordered for ${PERSONA_PICK_LABEL[a.persona].toLowerCase()}. Switch to:`;
+  const anchors = links
+    .map(
+      (l) =>
+        `<a href="${l.url}" style="color:#0891b2;text-decoration:none;font-weight:600;">${PERSONA_PICK_LABEL[l.persona]}</a>`
+    )
+    .join(` <span style="color:#cbd5e1;">&middot;</span> `);
+  return `<div style="margin-top:16px;font-size:12px;color:#475569;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:6px;padding:10px 12px;line-height:1.7;">
+      ${lead} ${anchors}
+    </div>`;
 }
 
 /**
@@ -387,11 +522,15 @@ export function renderAlertsDigest(
       `<table style="width:100%;border-collapse:collapse;">${dropRowsHtml(dropsShown)}</table>` +
       (p.drops.length > dropsShown.length ? overflowLine(p.drops.length - dropsShown.length) : "")
     : "";
-  // Areas that carried no filter tonight — they are the ones the nudge is for.
-  const unfilteredAreas = p.bubbles.filter((b) => !b.filterLabel).map((b) => b.bubbleName);
+  // Areas that carried no filter tonight — they are the ones the nudge is for. An area
+  // that already shows its own filter links has been nudged in place.
+  const chipsFor = (b: BubbleSection) => (!b.filterLabel ? actions.filterChips?.[b.bubbleId] : undefined);
+  const unfilteredAreas = p.bubbles.filter((b) => !b.filterLabel && !chipsFor(b)?.length).map((b) => b.bubbleName);
+  const anyAngles = p.bubbles.some((b) => b.angles?.length);
   const bubblesSection = p.bubbles.length
     ? sectionHeader("New in your areas") +
-      p.bubbles.map(bubbleSectionHtml).join("") +
+      p.bubbles.map((b) => bubbleSectionHtml(b, chipsFor(b))).join("") +
+      (anyAngles ? personaSwitchHtml(actions) : "") +
       filterNudgeHtml(unfilteredAreas)
     : "";
 
@@ -446,18 +585,38 @@ export function renderAlertsDigest(
           .map(
             (b) =>
               `• ${b.bubbleName}${b.filterLabel ? ` [${b.filterLabel}]` : ""} (${countLabel(b)} new):\n` +
-              b.listings
-                .map(
-                  (l) =>
-                    `   - ${l.address}${l.price != null ? ` — ${money(l.price)}` : ""}${l.brokerage ? ` — ${l.brokerage}` : ""}${l.priceCut ? `\n     Cut ${money(l.priceCut)} since it listed` : ""}\n     ${listingUrl(l.listing_key)}`
-                )
-                .join("\n") +
+              (b.angles?.length
+                ? b.angles
+                    .map(
+                      (a) =>
+                        `   ${ANGLE_COPY[a.angle].title.toUpperCase()}: ${a.listing.address}${a.listing.price != null ? ` — ${money(a.listing.price)}` : ""} — ${a.listing.brokerage || "Brokerage unavailable"}\n     ${angleReason(a).text}\n     ${listingUrl(a.listing.listing_key)}`
+                    )
+                    .join("\n")
+                : b.listings
+                    .map(
+                      (l) =>
+                        `   - ${l.address}${l.price != null ? ` — ${money(l.price)}` : ""}${l.brokerage ? ` — ${l.brokerage}` : ""}${l.priceCut ? `\n     Cut ${money(l.priceCut)} since it listed` : ""}\n     ${listingUrl(l.listing_key)}`
+                    )
+                    .join("\n")) +
+              (chipsFor(b)?.length
+                ? `\n   Get only some of these from tomorrow:\n` +
+                  chipsFor(b)!.map((c) => `     ${c.label}: ${c.url}`).join("\n")
+                : "") +
               (b.highVolume
                 ? `\n   ${pickWord(b.listings.length)} from ${countLabel(b)} new homes in ${b.bubbleName} today — see them all: ${SITE}/dashboard?bubble=${encodeURIComponent(b.bubbleId)}`
                 : "")
           )
           .join("\n")
     );
+    const switches = (actions.personaSwitch ?? []).filter((l) => l.persona !== actions.persona);
+    if (anyAngles && switches.length) {
+      textParts.push(
+        (!actions.persona || actions.persona === "smart"
+          ? "Buying to invest? Order my picks for:\n"
+          : `Your picks are ordered for ${PERSONA_PICK_LABEL[actions.persona].toLowerCase()}. Switch to:\n`) +
+          switches.map((l) => `${PERSONA_PICK_LABEL[l.persona]}: ${l.url}`).join("\n")
+      );
+    }
     if (unfilteredAreas.length) {
       textParts.push(
         `You get every new home in ${nameList(unfilteredAreas)}. Set your filters and we send only the homes that match — your price, your bedrooms, your kind of home.\nSet my filters: ${SITE}/dashboard`

@@ -441,3 +441,105 @@ describe("a derived weekly cadence explains itself", () => {
     expect(html).not.toContain("This is your weekly email.");
   });
 });
+
+describe("renderAlertsDigest — angle picks for an unfiltered area", () => {
+  const cutHome = {
+    ...baseSection.listings[0],
+    listing_key: "C1",
+    address: "9 Cut Crt",
+    priceCut: 80_000,
+    brokerage: "CUT REALTY",
+  };
+  const suiteHome = {
+    ...baseSection.listings[0],
+    listing_key: "S1",
+    address: "46 Suite Dr",
+    brokerage: "SUITE REALTY",
+    signals: { suiteStatus: "POTENTIAL_CANDIDATE", basement: ["Finished", "Separate Entrance"] },
+  };
+  const staleHome = {
+    ...baseSection.listings[0],
+    listing_key: "D1",
+    address: "31 Stale Rd",
+    brokerage: "STALE REALTY",
+    signals: { trueDom: 187 },
+  };
+  const angled = {
+    ...baseSection,
+    bubbleName: "Vaughan",
+    total: 164,
+    highVolume: true,
+    listings: [cutHome, suiteHome, staleHome],
+    angles: [
+      { angle: "price_cut" as const, listing: cutHome },
+      { angle: "suite" as const, listing: suiteHome },
+      { angle: "negotiate" as const, listing: staleHome },
+    ],
+  };
+
+  it("leads the subject with what it found", () => {
+    const { subject } = renderAlertsDigest(payload({ bubbles: [angled] }));
+    expect(subject).toBe("Vaughan tonight: an $80K price cut, a suite-ready home and 1 more");
+  });
+
+  it("draws one titled section per angle, each with its reason and brokerage", () => {
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [angled] }));
+    for (const t of ["Biggest price cut", "Suite potential", "Room to negotiate"]) expect(html).toContain(t);
+    expect(html).toContain("Cut $80,000 since it first listed");
+    expect(html).toContain("Separate entrance + finished basement");
+    for (const b of ["CUT REALTY", "SUITE REALTY", "STALE REALTY"]) {
+      expect(html).toContain(b);
+      expect(text).toContain(b);
+    }
+    expect(text).toContain("BIGGEST PRICE CUT: 9 Cut Crt");
+  });
+
+  it("never prints the True DOM that ordered the negotiate pick", () => {
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [angled] }));
+    expect(html).toContain("Sign in to see its true days on market");
+    expect(html).not.toContain("187");
+    expect(text).not.toContain("187");
+  });
+
+  it("swaps the no-filter line for the area's filter links, and skips the bottom nudge", () => {
+    const chips = [
+      { label: "Detached only", url: "https://x.test/d" },
+      { label: "3+ bedrooms", url: "https://x.test/b" },
+    ];
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [angled] }), undefined, {
+      filterChips: { [angled.bubbleId]: chips },
+    });
+    expect(html).toContain("Tap one to get only those from tomorrow");
+    expect(html).toContain('href="https://x.test/d"');
+    expect(html).not.toContain("no filters saved for this area");
+    expect(html).not.toContain("Set your filters and we send only");
+    expect(text).toContain("Detached only: https://x.test/d");
+  });
+
+  it("offers a persona switch beside angle picks only", () => {
+    const personaSwitch = [
+      { persona: "smart" as const, url: "https://x.test/p/smart" },
+      { persona: "cashflow" as const, url: "https://x.test/p/cash" },
+    ];
+    const withAngles = renderAlertsDigest(payload({ bubbles: [angled] }), undefined, {
+      persona: "smart",
+      personaSwitch,
+    });
+    expect(withAngles.html).toContain("Buying to invest? Order my picks for:");
+    expect(withAngles.html).toContain('href="https://x.test/p/cash"');
+    // The reader's own persona is not offered back to them.
+    expect(withAngles.html).not.toContain('href="https://x.test/p/smart"');
+
+    const plain = renderAlertsDigest(payload({ bubbles: [baseSection] }), undefined, { persona: "smart", personaSwitch });
+    expect(plain.html).not.toContain("Order my picks for");
+  });
+
+  it("names an investor's current order and offers the way back", () => {
+    const { html } = renderAlertsDigest(payload({ bubbles: [angled] }), undefined, {
+      persona: "cashflow",
+      personaSwitch: [{ persona: "smart", url: "https://x.test/p/smart" }],
+    });
+    expect(html).toContain("Your picks are ordered for rental income. Switch to:");
+    expect(html).toContain("Buying a home");
+  });
+});

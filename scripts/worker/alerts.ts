@@ -82,6 +82,10 @@ import { qualifiesAsDrop } from '@/lib/alerts/dropPolicy';
 import { findRelists, type RelistTargetFull } from '@/lib/watchlist/relistLookup';
 import { addressesMatch, parseAddress } from '@/lib/watchlist/disposition';
 import { unsubscribeUrl, marketingUnsubscribeUrl, emailActionUrl } from '@/lib/alerts/unsubscribe';
+import { FILTER_PRESETS, PERSONA_PRESETS, briefActionUrl } from '@/lib/alerts/briefAction';
+import { digestPersona } from '@/lib/alerts/digestPersona';
+import type { FilterChipLink, PersonaSwitchLink } from '@/lib/alerts/digest';
+import type { PersonaType } from '@/lib/personas/personaConfig';
 import { undeliverableReason } from '@/lib/email/deliverability';
 import { digestCadence } from '@/lib/email/digestCadence';
 import { SENDERS } from '@/lib/alerts/senders';
@@ -821,6 +825,100 @@ async function readLastDigestAt(
  * every signup since PR #511 writes one at terms acceptance, so no row means an account
  * that predates it and has not been back since.
  */
+/**
+ * Each reader's persona for the angle picks (digestPersona): the dashboard's saved persona,
+ * else their /apply objectives, else homebuyer. Two batched reads, never one per user.
+ *
+ * Also returns who HAS a dashboard row, because a persona link can only be honoured by
+ * writing one (the brief route never creates it — see src/app/api/email/brief/route.ts).
+ * Any read failure degrades to homebuyer, which is what the email showed before.
+ */
+async function readDigestPersonas(
+  supabase: ReturnType<typeof getServiceRoleClient>,
+  userIds: string[],
+  emails: Map<string, string | null>
+): Promise<{ byUser: Map<string, PersonaType>; hasDashboard: Set<string> }> {
+  const configs = new Map<string, unknown>();
+  const hasDashboard = new Set<string>();
+  const CHUNK = 400;
+  for (let i = 0; i < userIds.length; i += CHUNK) {
+    try {
+      const { data, error } = await supabase
+        .from('dashboard_prefs')
+        .select('user_id, config')
+        .in('user_id', userIds.slice(i, i + CHUNK));
+      if (error) {
+        console.warn(`[alerts] dashboard_prefs persona read failed (${error.message}) — homebuyer order tonight`);
+        break;
+      }
+      for (const row of (data ?? []) as Array<{ user_id: string; config: unknown }>) {
+        configs.set(row.user_id, row.config);
+        hasDashboard.add(row.user_id);
+      }
+    } catch (e) {
+      console.warn('[alerts] dashboard_prefs persona read threw — homebuyer order tonight:', e instanceof Error ? e.message : e);
+      break;
+    }
+  }
+
+  // /apply objectives, keyed by lower-cased email. The latest application wins.
+  const objectivesByEmail = new Map<string, string[]>();
+  const wanted = userIds
+    .map((u) => emails.get(u))
+    .filter((e): e is string => !!e)
+    .map((e) => e.toLowerCase());
+  for (let i = 0; i < wanted.length; i += CHUNK) {
+    try {
+      const { data, error } = await supabase
+        .from('terminal_applications')
+        .select('email, objectives, created_at')
+        .in('email', wanted.slice(i, i + CHUNK))
+        .order('created_at', { ascending: true });
+      if (error) break;
+      for (const row of (data ?? []) as Array<{ email: string | null; objectives: string[] | null }>) {
+        if (row.email && row.objectives?.length) objectivesByEmail.set(row.email.toLowerCase(), row.objectives);
+      }
+    } catch {
+      break;
+    }
+  }
+
+  const byUser = new Map<string, PersonaType>();
+  for (const u of userIds) {
+    const email = emails.get(u)?.toLowerCase();
+    byUser.set(u, digestPersona(configs.get(u), email ? objectivesByEmail.get(email) : null));
+  }
+  return { byUser, hasDashboard };
+}
+
+/**
+ * The signed brief links for one digest (briefAction.ts): filter chips for each unfiltered
+ * CITY area, and persona switches when the email carries angle picks. Drawn and commute
+ * areas get no chips — their filters are a terminal snapshot, not the dashboard lens the
+ * route writes — and keep the plain "set my filters" nudge.
+ */
+function briefLinks(
+  email: string,
+  payload: DigestPayload,
+  persona: PersonaType,
+  hasDashboard: boolean,
+  areaTypeById: Map<string, string>
+): { filterChips: Record<string, FilterChipLink[]>; persona: PersonaType; personaSwitch: PersonaSwitchLink[] } {
+  const filterChips: Record<string, FilterChipLink[]> = {};
+  for (const b of payload.bubbles) {
+    if (b.filterLabel || areaTypeById.get(b.bubbleId) !== 'city') continue;
+    filterChips[b.bubbleId] = PERSONA_PRESETS[persona].map((id) => ({
+      label: FILTER_PRESETS[id].label,
+      url: briefActionUrl(email, `filter:${id}`, SITE, b.bubbleId),
+    }));
+  }
+  const all: PersonaType[] = ['smart', 'cashflow', 'flippers', 'builders'];
+  const personaSwitch = hasDashboard
+    ? all.map((p) => ({ persona: p, url: briefActionUrl(email, `persona:${p}`, SITE) }))
+    : [];
+  return { filterChips, persona, personaSwitch };
+}
+
 async function readWorkspaceTouchedAt(
   supabase: ReturnType<typeof getServiceRoleClient>,
   userIds: string[]
@@ -1357,7 +1455,11 @@ async function main() {
             per_page: BUBBLE_PAGE_SIZE,
             page,
             include_fields:
-              'id,UnparsedAddress,City,ListPrice,BedroomsAboveGrade,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp,primaryImageUrl,TotalPriceDrop',
+              'id,UnparsedAddress,City,ListPrice,BedroomsAboveGrade,BedroomsTotal,BathroomsTotalInteger,ListOfficeName,EntryTimestamp,primaryImageUrl,TotalPriceDrop,' +
+              // Angle signals (pickAngles). Scalars plus one short string array — still no
+              // RawImages. lot_width_ft / lot_depth_ft / severance_candidate are stored on
+              // the document but not declared in the schema: returned, never filterable.
+              'SuiteStatus,SuiteScore,BasementType,CapitalBurnRateMonthly,TrueDom,cap_rate_est,LotWidth,LotDepth,lot_width_ft,lot_depth_ft,severance_candidate',
           });
           const hits = res.hits ?? [];
           for (const h of hits) docs.push(h.document as Record<string, unknown>);
@@ -1384,6 +1486,19 @@ async function main() {
             // are IDX, unlike the estimate that orders these rows. Bounded because
             // TotalPriceDrop carries relist artifacts — see sanePriceCut.
             priceCut: sanePriceCut(num(d.TotalPriceDrop), num(d.ListPrice)),
+            // Every signal falls back to null (CLAUDE.md §6): a missing field disqualifies
+            // the listing from that one angle and from nothing else.
+            signals: {
+              suiteStatus: typeof d.SuiteStatus === 'string' ? d.SuiteStatus : null,
+              suiteScore: num(d.SuiteScore),
+              basement: Array.isArray(d.BasementType) ? (d.BasementType as unknown[]).map(String) : null,
+              burnMonthly: num(d.CapitalBurnRateMonthly),
+              trueDom: num(d.TrueDom),
+              capRate: num(d.cap_rate_est),
+              lotWidthFt: num(d.LotWidth) ?? num(d.lot_width_ft),
+              lotDepthFt: num(d.LotDepth) ?? num(d.lot_depth_ft),
+              severance: d.severance_candidate === true,
+            },
           };
         });
         const matches = filterFreshMatches(fetched, notified);
@@ -1510,6 +1625,9 @@ async function main() {
     areaStats.set(b.user_id, s);
   }
   const workspaceTouchedAt = await readWorkspaceTouchedAt(supabase, [...userIds]);
+  // Only readers with an area section tonight need a persona — it orders angle picks.
+  const personas = await readDigestPersonas(supabase, [...bubbleMatchesByUser.keys()], emails);
+  const areaTypeById = new Map<string, string>((bubbleData ?? []).map((b) => [b.id, b.area_type]));
 
   const sentUsers = new Set<string>();
   let emailed = 0;
@@ -1536,7 +1654,10 @@ async function main() {
     const payload: DigestPayload = {
       drops: dropsByUser.get(userId) ?? [],
       statusChanges: statusByUser.get(userId) ?? [],
-      bubbles: buildBubbleSections(bubbleMatchesByUser.get(userId) ?? []),
+      bubbles: buildBubbleSections(bubbleMatchesByUser.get(userId) ?? [], {
+        persona: personas.byUser.get(userId) ?? 'smart',
+        nowMs: runStartMs,
+      }),
     };
     if (!payload.drops.length && !payload.statusChanges.length && !payload.bubbles.length) continue;
     due++;
@@ -1610,6 +1731,7 @@ async function main() {
       // that constraint is met: a derived weekly SAYS so, in the email, above the footer,
       // next to the one click that undoes it.
       cadenceIsDerived: cadence.derived,
+      ...briefLinks(email, payload, personas.byUser.get(userId) ?? 'smart', personas.hasDashboard.has(userId), areaTypeById),
     });
     const out = await pacer.send({
       kind: 'watchlist-digest',

@@ -19,6 +19,15 @@ function secret(): string {
 
 const normEmail = (email: string): string => (email || "").trim().toLowerCase();
 
+/**
+ * URL-safe HMAC-SHA256 of an arbitrary payload, under the same secret as every link in
+ * this file. For link families that sign more than the email (see briefAction.ts) — each
+ * caller is responsible for prefixing its payload so no two families can collide.
+ */
+export function signAlertsPayload(payload: string): string {
+  return createHmac("sha256", secret()).update(payload).digest("base64url");
+}
+
 /** URL-safe HMAC-SHA256 of the normalized email. */
 export function signUnsubscribe(email: string): string {
   return createHmac("sha256", secret()).update(normEmail(email)).digest("base64url");

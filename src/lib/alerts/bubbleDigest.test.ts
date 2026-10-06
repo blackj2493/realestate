@@ -276,3 +276,47 @@ describe("bubbleSearchSinceMs", () => {
     );
   });
 });
+
+describe("buildBubbleSections — angle picks for unfiltered areas", () => {
+  const NOW = Date.UTC(2026, 9, 6);
+  const withSignals = (key: string, over: Partial<NewListingAlert>): NewListingAlert => ({
+    ...listing(key, NOW - 86_400_000),
+    ...over,
+  });
+
+  it("replaces the plain rows with one home per angle when a persona is given", () => {
+    const matches = [
+      listing("plain1", NOW),
+      withSignals("cut", { priceCut: 60_000 }),
+      withSignals("suite", { signals: { suiteStatus: "EXISTING_SUITE" } }),
+    ];
+    const [s] = buildBubbleSections([bubble("b1", "Vaughan", matches)], { persona: "smart", nowMs: NOW });
+    expect(s.angles?.map((a) => a.angle)).toEqual(["price_cut", "suite"]);
+    expect(s.listings.map((l) => l.listing_key)).toEqual(["cut", "suite"]);
+    expect(s.total).toBe(3);
+  });
+
+  it("leaves a filtered area exactly as it was", () => {
+    const matches = [withSignals("cut", { priceCut: 60_000 }), listing("plain", NOW)];
+    const [s] = buildBubbleSections([{ ...bubble("b1", "Vaughan", matches), filterLabel: "Detached" }], {
+      persona: "smart",
+      nowMs: NOW,
+    });
+    expect(s.angles).toBeUndefined();
+    expect(s.listings).toHaveLength(2);
+  });
+
+  it("falls back to the plain rows when no angle qualifies", () => {
+    const [s] = buildBubbleSections([bubble("b1", "Pocket", [listing("a"), listing("b")])], {
+      persona: "smart",
+      nowMs: NOW,
+    });
+    expect(s.angles).toBeUndefined();
+    expect(s.listings).toHaveLength(2);
+  });
+
+  it("without a persona behaves as before", () => {
+    const [s] = buildBubbleSections([bubble("b1", "Vaughan", [withSignals("cut", { priceCut: 60_000 })])]);
+    expect(s.angles).toBeUndefined();
+  });
+});
