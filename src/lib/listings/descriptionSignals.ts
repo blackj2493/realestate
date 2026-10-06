@@ -199,3 +199,28 @@ export function signalForQuery(q: string): DescriptionSignal | null {
   if (n.length < 3) return null;
   return DESCRIPTION_SIGNALS.find((s) => s.aliases.some((a) => normQuery(a) === n)) ?? null;
 }
+
+/** The TransactionType value on a for-sale document (fundamentals.ts TRANSACTION_VALUE). */
+const FOR_SALE = "for sale";
+
+/**
+ * Both description-search fields for one search document, from its remarks and
+ * TransactionType. The ONE place they are derived: the ETL transformer and the backfill
+ * script both call this, so a listing indexed tonight and one backfilled today agree.
+ *
+ * SearchRemarks is filled only on for-sale documents. It is the field that costs RAM (an
+ * inverted index over ~1 KB of text per doc), and the terminal's description search runs
+ * on for-sale listings; leases get ''. Signals are cheap and written for every doc.
+ * Both are always present (§6): Typesense rejects a batch when a declared field is missing.
+ */
+export function descriptionSearchFields(
+  remarks: string | null | undefined,
+  transactionType: string | null | undefined
+): { SearchRemarks: string; description_signals: DescriptionSignalId[] } {
+  const text = typeof remarks === "string" ? remarks.trim() : "";
+  const isSale = (transactionType ?? "").trim().toLowerCase() === FOR_SALE;
+  return {
+    SearchRemarks: isSale ? text : "",
+    description_signals: detectDescriptionSignals(text),
+  };
+}

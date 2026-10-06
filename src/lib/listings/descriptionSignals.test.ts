@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DESCRIPTION_SIGNALS,
   SIGNAL_ORDER,
+  descriptionSearchFields,
   detectDescriptionSignals,
   signalForQuery,
 } from "./descriptionSignals";
@@ -83,5 +84,24 @@ describe("registry", () => {
 
   it("uses non-global patterns", () => {
     for (const s of DESCRIPTION_SIGNALS) for (const p of s.patterns) expect(p.global).toBe(false);
+  });
+});
+
+
+describe("descriptionSearchFields", () => {
+  it("indexes text for sale listings only, signals for all", () => {
+    const remarks = "  Separate entrance to basement.  ";
+    expect(descriptionSearchFields(remarks, "For Sale")).toEqual({
+      SearchRemarks: "Separate entrance to basement.",
+      description_signals: ["separate_entrance"],
+    });
+    expect(descriptionSearchFields(remarks, "For Lease")).toEqual({
+      SearchRemarks: "",
+      description_signals: ["separate_entrance"],
+    });
+  });
+
+  it("always returns both fields", () => {
+    expect(descriptionSearchFields(null, null)).toEqual({ SearchRemarks: "", description_signals: [] });
   });
 });
