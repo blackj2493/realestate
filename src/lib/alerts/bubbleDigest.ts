@@ -9,6 +9,8 @@
 
 import { isWholeCityRegion } from "@/lib/dashboard/area";
 import { comparePicks } from "./pickRank";
+import { pickAngles, type AnglePick, type ListingSignals } from "./pickAngles";
+import type { PersonaType } from "@/lib/personas/personaConfig";
 
 export interface NewListingAlert {
   listing_key: string;
@@ -29,6 +31,8 @@ export interface NewListingAlert {
   score?: number | null;
   /** IDX-safe price cut, already sanity-bounded, or null. The one per-row line we print. */
   priceCut?: number | null;
+  /** Signals the angle picks read (pickAngles). Two of them order picks and never print. */
+  signals?: ListingSignals | null;
 }
 
 export interface BubbleMatches {
@@ -62,6 +66,11 @@ export interface BubbleSection {
   highVolume: boolean;
   /** Present when the bubble alerts on its saved filters (alert_scope 'filtered'). */
   filterLabel?: string | null;
+  /**
+   * Unfiltered areas only: one pick per angle, in persona order. When present, `listings`
+   * holds exactly these homes in the same order and the renderer draws angle sections.
+   */
+  angles?: AnglePick<NewListingAlert>[];
 }
 
 export const BUBBLE_EMAIL_ROW_CAP = 6;
@@ -215,7 +224,21 @@ export function advanceNotifiedKeys(
   return kept;
 }
 
-export function buildBubbleSections(perBubble: BubbleMatches[]): BubbleSection[] {
+export interface BuildSectionOptions {
+  /**
+   * The reader's persona. When given, an area with no saved filter is shown as angle
+   * picks (pickAngles) instead of six rows off one ranking. Filtered areas never change:
+   * the reader already said what they want there.
+   */
+  persona?: PersonaType;
+  /** Run start, for the negotiate angle's listing-age arithmetic. */
+  nowMs?: number;
+}
+
+export function buildBubbleSections(
+  perBubble: BubbleMatches[],
+  opts: BuildSectionOptions = {}
+): BubbleSection[] {
   const seen = new Set<string>();
   const sections: BubbleSection[] = [];
 
@@ -232,7 +255,14 @@ export function buildBubbleSections(perBubble: BubbleMatches[]): BubbleSection[]
     // WHICH six, though, is the whole value of a section over a city: 268 homes came up in
     // Toronto last night and six of them fit. comparePicks puts the best-priced first and
     // falls back to newest, so an area with no estimates behind it is unchanged.
-    const rows = [...deduped].sort(comparePicks).slice(0, BUBBLE_EMAIL_ROW_CAP);
+    //
+    // An area with no saved filter goes further: one home per angle, each with a reason.
+    // An area where no angle qualifies (land, commercial, a thin night) keeps the rows.
+    const angles =
+      opts.persona && !b.filterLabel ? pickAngles(deduped, opts.persona, opts.nowMs ?? Date.now()) : [];
+    const rows = angles.length
+      ? angles.map((a) => a.listing)
+      : [...deduped].sort(comparePicks).slice(0, BUBBLE_EMAIL_ROW_CAP);
     if (rows.length === 0) continue;
     sections.push({
       bubbleId: b.bubbleId,
@@ -244,6 +274,7 @@ export function buildBubbleSections(perBubble: BubbleMatches[]): BubbleSection[]
       listings: rows,
       highVolume: total > BUBBLE_COLLAPSE_THRESHOLD,
       filterLabel: b.filterLabel ?? null,
+      ...(angles.length ? { angles } : {}),
     });
   }
 
