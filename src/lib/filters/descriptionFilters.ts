@@ -227,3 +227,41 @@ export const DESC_WORDS_FILTER: FilterDef = {
 };
 
 export const DESCRIPTION_FILTERS: FilterDef[] = [DESC_SIGNALS_FILTER, DESC_WORDS_FILTER];
+
+// ── Search-box row ─────────────────────────────────────────────────────────
+
+/** What the search box offers for a typed string — at most ONE row, never for addresses. */
+export type DescriptionRow =
+  | { kind: "signal"; id: string; label: string }
+  | { kind: "words"; text: string; exclude: boolean };
+
+const ADDRESS_LIKE = /\d+\s+[a-z]{3,}/i;
+const MLS_LIKE = /^[a-z]?\d{6,}$/i;
+
+/**
+ * The single "In listing descriptions" row for the search box, or null.
+ *
+ *  - Nothing under 3 characters, and nothing that looks like an address or an MLS number:
+ *    those searches already have a precise answer and must not grow a list.
+ *  - Nothing for a structured sentence ("3 bed under 800k"): the parser owns it.
+ *  - Nothing past 4 words: a sentence is not a description term.
+ *  - A string that IS a signal's alias ("sep entrance") offers the signal, which also finds
+ *    the other spellings. Signals work in sale and rent.
+ *  - Otherwise, on a for-sale search, the words themselves ("-word" offers the exclusion).
+ */
+export function descriptionRowFor(
+  raw: string,
+  opts: { structured: boolean; transactionMode: "sale" | "rent" },
+  signalFor: (q: string) => { id: string; label: string } | null
+): DescriptionRow | null {
+  const q = raw.trim();
+  if (q.replace(/^-/, "").length < 3) return null;
+  if (opts.structured || ADDRESS_LIKE.test(q) || MLS_LIKE.test(q)) return null;
+  if (q.split(/\s+/).length > 4) return null;
+  const signal = signalFor(q);
+  if (signal) return { kind: "signal", id: signal.id, label: signal.label };
+  if (opts.transactionMode !== "sale") return null;
+  const exclude = q.startsWith("-");
+  const text = normaliseTermText(exclude ? q.slice(1) : q);
+  return text.length >= 3 ? { kind: "words", text, exclude } : null;
+}

@@ -5,6 +5,7 @@ import {
   DESC_WORDS_FILTER,
   DESC_WORDS_KEY,
   addTerm,
+  descriptionRowFor,
   descTerms,
   descriptionTextQuery,
   hasOnlyExclusions,
@@ -97,5 +98,32 @@ describe("isDescriptionFilterActive", () => {
     expect(isDescriptionFilterActive({ ...base, [DESC_SIGNALS_KEY]: ["tenanted"] })).toBe(true);
     expect(isDescriptionFilterActive({ ...base, [DESC_WORDS_KEY]: ["walk-out"] })).toBe(true);
     expect(isDescriptionFilterActive({ ...base, [DESC_WORDS_KEY]: ["-tenanted"] })).toBe(false);
+  });
+});
+
+describe("descriptionRowFor", () => {
+  const sig = (q: string) => (q.toLowerCase() === "sep entrance" ? { id: "separate_entrance", label: "Separate entrance" } : null);
+  const sale = { structured: false, transactionMode: "sale" as const };
+
+  it("offers nothing for addresses, MLS numbers, sentences or short input", () => {
+    expect(descriptionRowFor("46 bosco", sale, sig)).toBeNull();
+    expect(descriptionRowFor("W1234567", sale, sig)).toBeNull();
+    expect(descriptionRowFor("3 bed under 800k in hamilton", { ...sale, structured: true }, sig)).toBeNull();
+    expect(descriptionRowFor("a home with a big yard and a pool", sale, sig)).toBeNull();
+    expect(descriptionRowFor("wa", sale, sig)).toBeNull();
+  });
+
+  it("prefers the signal, which carries every spelling", () => {
+    expect(descriptionRowFor("sep entrance", sale, sig)).toEqual({
+      kind: "signal",
+      id: "separate_entrance",
+      label: "Separate entrance",
+    });
+  });
+
+  it("offers the words on a sale search, and the exclusion for a leading minus", () => {
+    expect(descriptionRowFor("Walk-Out", sale, sig)).toEqual({ kind: "words", text: "walk-out", exclude: false });
+    expect(descriptionRowFor("-tenanted", sale, sig)).toEqual({ kind: "words", text: "tenanted", exclude: true });
+    expect(descriptionRowFor("walk-out", { ...sale, transactionMode: "rent" }, sig)).toBeNull();
   });
 });
