@@ -7,6 +7,7 @@
  * Uses SEARCH_ONLY_API_KEY - read-only operations only.
  */
 
+import { DESCRIPTION_SEARCH_PARAMS, DESCRIPTION_TEXT_FIELD } from "@/lib/filters/descriptionFilters";
 import Typesense, { Client } from 'typesense';
 import { searchCities } from '@/lib/cities';
 import { bandFilter, type HistogramBand } from '@/lib/filters/histogram';
@@ -205,6 +206,10 @@ export interface ListingDocument {
   KitchensBelowGrade?: number;
   SchoolZone?: boolean;
   PublicRemarks?: string;
+  /** Description-search snippet with ⟦matched⟧ runs (client-side only, from the search
+   *  hit's highlight — never stored). See src/lib/filters/descriptionFilters.ts. */
+  _snippet?: string;
+  description_signals?: string[];
   
   // Building Systems
   Heating?: string;
@@ -397,6 +402,12 @@ export interface SearchOptions {
   /** Typesense exclude_fields. Defaults to the heavy detail-only fields (RawImages /
    *  RawRooms) so bulk list/map fetches stay light; pass "" to fetch every field. */
   excludeFields?: string;
+  /**
+   * Description words (descriptionTextQuery). When set, `q` searches SearchRemarks with
+   * exact-word rules instead of the place fields, and each hit carries a `_snippet`.
+   * The caller moves any place string into `rawFilterBy` (locationFilterClause).
+   */
+  descriptionQuery?: string | null;
 }
 
 export interface SearchResult {
@@ -552,6 +563,10 @@ export async function searchListings(
     page,
     per_page: perPage,
   };
+  // Description words replace the place query outright (see SearchOptions.descriptionQuery).
+  if (options.descriptionQuery) {
+    Object.assign(searchParams, DESCRIPTION_SEARCH_PARAMS, { q: options.descriptionQuery });
+  }
 
   if (facetBy) {
     searchParams.facet_by = facetBy;
@@ -629,7 +644,7 @@ export async function searchListings(
     }
 
     return {
-      listings: (response.hits || []).map((hit: { document: ListingDocument }) => hit.document),
+      listings: (response.hits || []).map((hit: SearchHit) => withSnippet(hit)),
       totalFound: response.found || 0,
       page: response.page || page,
       perPage: perPage,
@@ -650,6 +665,20 @@ export async function searchListings(
     reportSearchFailure(error, Date.now() - startedAt, { fn: 'searchListings' });
     throw error;
   }
+}
+
+interface SearchHit {
+  document: ListingDocument;
+  highlight?: Record<string, { snippet?: string } | undefined>;
+  highlights?: Array<{ field?: string; snippet?: string }>;
+}
+
+/** The hit's document, plus its description snippet when the search matched the text. */
+function withSnippet(hit: SearchHit): ListingDocument {
+  const snippet =
+    hit.highlight?.[DESCRIPTION_TEXT_FIELD]?.snippet ??
+    hit.highlights?.find((h) => h.field === DESCRIPTION_TEXT_FIELD)?.snippet;
+  return snippet ? { ...hit.document, _snippet: snippet } : hit.document;
 }
 
 /**

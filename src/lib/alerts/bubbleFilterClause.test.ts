@@ -119,3 +119,29 @@ describe("bubbleAlertFilter", () => {
     expect(out.label).toContain("For Rent");
   });
 });
+
+describe("bubbleAlertFilter — description search", () => {
+  it("applies signals in the clause and words as a text query, and labels both", () => {
+    const out = bubbleAlertFilter({
+      ...BASE_SNAPSHOT,
+      transactionMode: "sale",
+      propertyClass: "residential",
+      universalFilters: { descSignals: ["separate_entrance"], descWords: ["walk-out", "-tenanted"] },
+    });
+    expect(out.clause).toContain("description_signals:=`separate_entrance`");
+    expect(out.textQuery).toBe("walk-out -tenanted");
+    expect(out.label).toContain("Separate entrance");
+    expect(out.label).toContain("Mentions “walk-out”");
+  });
+
+  it("never sends a word search on a rent alert, where descriptions are not indexed", () => {
+    const out = bubbleAlertFilter({
+      ...BASE_SNAPSHOT,
+      transactionMode: "rent",
+      propertyClass: "residential",
+      universalFilters: { descWords: ["walk-out"] },
+    });
+    expect(out.textQuery).toBeUndefined();
+    expect(out.label ?? "").not.toContain("walk-out");
+  });
+});

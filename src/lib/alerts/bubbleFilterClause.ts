@@ -12,6 +12,7 @@
  * worker treats the bubble as 'all' (the UI requires a re-save to enable
  * 'filtered' on those).
  */
+import { DESC_WORDS_KEY, descriptionTextQuery } from "@/lib/filters/descriptionFilters";
 import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { FILTERS_BY_KEY, makePriceDef } from "@/lib/filters/filterRegistry";
 import {
@@ -38,6 +39,12 @@ export interface BubbleAlertFilter {
    *  null when nothing beyond the defaults is active (clause may still be
    *  non-null — it then matches ~everything the 'all' scope would). */
   label: string | null;
+  /**
+   * Description words as a Typesense `q` over SearchRemarks (descriptionTextQuery), or
+   * absent. filter_by cannot express text search, so the worker runs this as the query
+   * itself. The label already names the words; this is what makes the label true.
+   */
+  textQuery?: string | null;
 }
 
 const NONE: BubbleAlertFilter = { clause: null, label: null };
@@ -135,6 +142,8 @@ export function bubbleAlertFilter(rawSnapshot: unknown): BubbleAlertFilter {
     }
     for (const [key, value] of Object.entries(universalFilters)) {
       if (key === "price") continue;
+      // Words are never searched on rent alerts (see textQuery below), so never named either.
+      if (key === DESC_WORDS_KEY && transactionMode !== "sale") continue;
       const def = FILTERS_BY_KEY[key];
       if (!def) continue; // renamed/removed filter — clause builder ignored it too
       try {
@@ -146,7 +155,13 @@ export function bubbleAlertFilter(rawSnapshot: unknown): BubbleAlertFilter {
     if (buildInvestorClause(filters)) parts.push("investor filters");
     if (transactionMode === "rent") parts.push("For Rent");
 
-    return { clause: clauses.join(" && "), label: parts.length ? parts.join(" · ") : null };
+    // Words search for-sale listings only (SearchRemarks is empty on leases).
+    const textQuery = transactionMode === "sale" ? descriptionTextQuery(universalFilters) : null;
+    return {
+      clause: clauses.join(" && "),
+      label: parts.length ? parts.join(" · ") : null,
+      ...(textQuery ? { textQuery } : {}),
+    };
   } catch (err) {
     // A translation bug must degrade to 'all' behaviour, never kill the bubble phase.
     console.error("[bubbleFilterClause] translation failed:", err);

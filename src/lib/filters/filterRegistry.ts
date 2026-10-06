@@ -1,4 +1,5 @@
 import type { BandRangeValue, FilterDef, FilterValue, StepperValue, UniversalFilterState } from "./types";
+import { DESCRIPTION_FILTERS } from "./descriptionFilters";
 import { RESIDENTIAL_TYPE_OPTIONS, priceConfig, type RangeConfig, type PropertyClass } from "./fundamentals";
 import { DIRECTION_OPTIONS } from "@/lib/listings/directionFaces";
 import { SQFT_OPEN_MAX, SQFT_UNKNOWN } from "@/lib/listings/livingAreaBands";
@@ -440,7 +441,12 @@ export const MORE_FILTERS: FilterDef[] = [
 ];
 
 /** Pinned-by-default core + the opt-in deeper library. */
-export const ALL_FILTERS: FilterDef[] = [...CORE_FILTERS, ...MORE_FILTERS];
+/**
+ * Every universal filter. DESCRIPTION_FILTERS ride along so they reset, snapshot into saved
+ * areas and reach every query builder, but stay out of CORE/MORE: the Filters panel draws
+ * them in their own "In the description" section, never as generic bar chips.
+ */
+export const ALL_FILTERS: FilterDef[] = [...CORE_FILTERS, ...MORE_FILTERS, ...DESCRIPTION_FILTERS];
 
 /**
  * Filter keys that apply to COMMERCIAL listings. A warehouse / office / retail unit has

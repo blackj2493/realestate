@@ -231,6 +231,14 @@ export interface CommandCenterState {
   location: string;
   setLocation: (location: string) => void;
 
+  // Description search (src/lib/filters/descriptionFilters.ts). The words and signals
+  // themselves are universal filters; these two only drive the signal COUNTS, which are
+  // requested from Typesense while the "In the description" section is on screen.
+  descriptionCountsWanted: boolean;
+  setDescriptionCountsWanted: (wanted: boolean) => void;
+  descriptionSignalCounts: Record<string, number> | null;
+  setDescriptionSignalCounts: (counts: Record<string, number> | null) => void;
+
   // Commute-time filter (global, applies across personas)
   commute: CommuteState;
   setCommute: (patch: Partial<CommuteState>) => void;
@@ -503,6 +511,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
 
   location: "",
   setLocation: (location) => set({ location }),
+
+  descriptionCountsWanted: false,
+  setDescriptionCountsWanted: (wanted) => set({ descriptionCountsWanted: wanted }),
+  descriptionSignalCounts: null,
+  setDescriptionSignalCounts: (counts) => set({ descriptionSignalCounts: counts }),
 
   commute: { ...defaultCommute },
   setCommute: (patch) =>

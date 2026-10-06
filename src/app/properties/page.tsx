@@ -37,6 +37,13 @@ import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
 import type { ListingDocument, SearchResult } from "@/lib/typesense/client";
 import { FACET_FIELDS, readStepper } from "@/lib/filters/filterRegistry";
+import {
+  DESCRIPTION_SIGNAL_FIELD,
+  descriptionTextQuery,
+  isDescriptionFilterActive,
+  locationFilterClause,
+} from "@/lib/filters/descriptionFilters";
+import { DESCRIPTION_SEARCH_ENABLED } from "@/lib/search/searchConfig";
 import { isInvestorLayerActive, priceConfig } from "@/lib/filters/fundamentals";
 import { buildTerminalCoreClauses } from "@/lib/filters/terminalQuery";
 import { schoolScoreField, schoolMapColor } from "@/lib/schools/schoolLens";
@@ -148,6 +155,8 @@ function CommandCenterContent() {
     setTotalCount,
     location,
     setLocation,
+    descriptionCountsWanted,
+    setDescriptionSignalCounts,
     selectedProperty,
     setIsTerminalOpen,
     commute,
@@ -412,7 +421,13 @@ function CommandCenterContent() {
       drawPolygon && drawPolygon.length >= 3
         ? `location:(${drawPolygon.map(([lng, lat]) => `${lat}, ${lng}`).join(", ")})`
         : null;
-    const rawFilterBy = [...coreClauses, ...schoolParts, ...amenityParts, bandClause, drawClause].filter(Boolean).join(" && ");
+    // Description words take over `q` (Typesense has one per search), so the place string
+    // moves into filter_by. Words search for-sale listings only — SearchRemarks is empty on
+    // leases — so they are not applied in rent mode, where they could only ever match nothing.
+    const descriptionQuery =
+      DESCRIPTION_SEARCH_ENABLED && transactionMode === "sale" ? descriptionTextQuery(universalFilters) : null;
+    const placeClause = descriptionQuery ? locationFilterClause(location) : null;
+    const rawFilterBy = [...coreClauses, ...schoolParts, ...amenityParts, bandClause, drawClause, placeClause].filter(Boolean).join(" && ");
     const geoPolygon =
       commute.enabled && commute.polygon && commute.polygon.length >= 3
         ? commute.polygon.map(([lng, lat]) => [lat, lng] as [number, number])
@@ -428,12 +443,15 @@ function CommandCenterContent() {
       geoPolygon,
       filters: mapBounds ? { boundingBox: mapBounds } : undefined,
       perPage: MAX_LISTINGS,
-      facetBy: FACET_FIELDS.join(","),
+      // Signal counts ride on the same query, and only while the "In the description"
+      // section is on screen — a map pan with the Filters panel closed pays nothing.
+      facetBy: [...FACET_FIELDS, ...(DESCRIPTION_SEARCH_ENABLED && descriptionCountsWanted ? [DESCRIPTION_SIGNAL_FIELD] : [])].join(","),
       excludeFields: TERMINAL_EXCLUDE_FIELDS,
       sortBy: schoolField ?? (investorLayer ? lensSort : BASIC_SORT),
       sortOrder: "desc",
+      descriptionQuery,
     });
-  }, [activePersona, transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, school.program, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds]);
+  }, [activePersona, transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, school.program, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds, descriptionCountsWanted]);
 
   const performSearch = useCallback(async () => {
     // First-load viewport hold (fix #4): on a bare cold start with no explicit
@@ -521,8 +539,12 @@ function CommandCenterContent() {
 
       // Fan out: comps (gated VOW route, sold and/or leased) + active (public Typesense),
       // whichever layers are lit, in parallel; then merge into one recency-sorted list.
+      // Sold / leased comps come from sold_listings, which carries no description fields, so
+      // they cannot honour a description filter. While one is active they are left out rather
+      // than mixed in unfiltered under a "38 matches" heading they do not match.
+      const describeOnly = DESCRIPTION_SEARCH_ENABLED && isDescriptionFilterActive(universalFilters);
       const [compRes, activeRes] = await Promise.all([
-        plan.comps.length
+        plan.comps.length && !describeOnly
           ? fetchSoldComps({ mapBounds: compBounds, location, windowDays: soldWindowDays, limit: MAX_LISTINGS, kinds: plan.comps, filters: compFilters })
           : Promise.resolve({ docs: [] as ListingDocument[], count: 0, locked: false }),
         plan.active ? runActiveSearch() : Promise.resolve(null),
@@ -536,6 +558,8 @@ function CommandCenterContent() {
       if (activeRes) sources.push(activeRes.listings);
       const merged = mergeLayers(sources).slice(0, MAX_LISTINGS);
 
+      setDescriptionSignalCounts(activeRes?.facetDistribution?.[DESCRIPTION_SIGNAL_FIELD] ?? null);
+
       const total = (activeRes?.totalFound ?? 0) + compRes.count;
       setSearchResult({ listings: merged, totalFound: total, page: 1, perPage: MAX_LISTINGS, processingTimeMs: activeRes?.processingTimeMs ?? 0 });
       setTotalCount(total);
@@ -546,7 +570,7 @@ function CommandCenterContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [wantViewportScope, activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, searchPin, setSoldLocked, setSoldCount, setSearchResult, setIsLoading, setError, setTotalCount]);
+  }, [wantViewportScope, activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, searchPin, setSoldLocked, setSoldCount, setSearchResult, setIsLoading, setError, setTotalCount, setDescriptionSignalCounts]);
 
   // Drop any stale comps/search pin when the user navigates to a NEW area (location
   // change only — NOT on layer toggles, so the pin set alongside the Sold toggle in

@@ -83,6 +83,7 @@ import { findRelists, type RelistTargetFull } from '@/lib/watchlist/relistLookup
 import { addressesMatch, parseAddress } from '@/lib/watchlist/disposition';
 import { unsubscribeUrl, marketingUnsubscribeUrl, emailActionUrl } from '@/lib/alerts/unsubscribe';
 import { FILTER_PRESETS, PERSONA_PRESETS, briefActionUrl } from '@/lib/alerts/briefAction';
+import { DESCRIPTION_SEARCH_PARAMS } from '@/lib/filters/descriptionFilters';
 import { digestPersona } from '@/lib/alerts/digestPersona';
 import type { FilterChipLink, PersonaSwitchLink } from '@/lib/alerts/digest';
 import type { PersonaType } from '@/lib/personas/personaConfig';
@@ -132,6 +133,16 @@ const BUBBLE_PAGE_SIZE = 250;
 const MAX_BUBBLE_FETCH = 500;
 /** Absolute ceiling on that scaling: eight pages, enough for a held week of Toronto. */
 const MAX_BUBBLE_POOL = 2000;
+/** The terminal's description-search rules without the highlight fields the email never renders. */
+const DESCRIPTION_ALERT_PARAMS = {
+  query_by: DESCRIPTION_SEARCH_PARAMS.query_by,
+  prefix: DESCRIPTION_SEARCH_PARAMS.prefix,
+  num_typos: DESCRIPTION_SEARCH_PARAMS.num_typos,
+  min_len_1typo: DESCRIPTION_SEARCH_PARAMS.min_len_1typo,
+  min_len_2typo: DESCRIPTION_SEARCH_PARAMS.min_len_2typo,
+  drop_tokens_threshold: DESCRIPTION_SEARCH_PARAMS.drop_tokens_threshold,
+  typo_tokens_threshold: DESCRIPTION_SEARCH_PARAMS.typo_tokens_threshold,
+};
 
 interface WatchRow {
   id: string;
@@ -1438,7 +1449,8 @@ async function main() {
         // alert_scope 'filtered': swap the bare price floor for the bubble's saved
         // filter snapshot, translated by the SAME builder the terminal search uses
         // (bubbleAlertFilter). Pre-095 snapshots translate to null → 'all' behaviour.
-        const scoped = b.alert_scope === 'filtered' ? bubbleAlertFilter(b.filters) : { clause: null, label: null };
+        const scoped: { clause: string | null; label: string | null; textQuery?: string | null } =
+          b.alert_scope === 'filtered' ? bubbleAlertFilter(b.filters) : { clause: null, label: null };
         const baseClauses = scoped.clause ?? SALES_FLOOR;
 
         // Paged because per_page tops out at BUBBLE_PAGE_SIZE and the pool has to hold a
@@ -1450,6 +1462,9 @@ async function main() {
           const res = await ts.collections('properties').documents().search({
             q: '*',
             query_by: 'City',
+            // Description words (bubbleAlertFilter.textQuery): the same exact-word rules
+            // the terminal uses, minus highlighting the email never shows.
+            ...(scoped.textQuery ? { ...DESCRIPTION_ALERT_PARAMS, q: scoped.textQuery } : {}),
             filter_by: filterBy,
             sort_by: 'EntryTimestamp:desc',
             per_page: BUBBLE_PAGE_SIZE,
