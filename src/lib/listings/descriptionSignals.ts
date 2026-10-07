@@ -178,7 +178,35 @@ function normaliseRemarks(remarks: string): string {
 export function detectDescriptionSignals(remarks: string | null | undefined): DescriptionSignalId[] {
   if (typeof remarks !== "string" || remarks.trim() === "") return [];
   const text = normaliseRemarks(remarks);
-  return DESCRIPTION_SIGNALS.filter((s) => s.patterns.some((p) => p.test(text))).map((s) => s.id);
+  return DESCRIPTION_SIGNALS.filter((s) => s.patterns.some((p) => hasAffirmedMatch(text, p))).map((s) => s.id);
+}
+
+/**
+ * A negator earlier in the SAME clause, at most a few words back: "no assignment sale",
+ * "not a power of sale", "never tenanted", "without a separate entrance". The window stops
+ * at clause punctuation, so "No carpet, separate entrance" still counts the entrance.
+ */
+const NEGATED_BEFORE = /\b(no|not|non|never|without|nor|isn't|is\s+not)\b[^.;,:!?()\n]{0,14}$/;
+/** A refusal right after the phrase, in the same clause: "assignment sale not permitted". */
+const NEGATED_AFTER = /^[^.;,:!?()\n]{0,16}\b(not\s+(permitted|allowed|available|accepted|considered)|prohibited|disallowed)\b/;
+
+/**
+ * True when the pattern matches somewhere in the text WITHOUT being negated. Every match is
+ * checked, so a description that says "no assignment sale" in the condo rules and
+ * "assignment sale" in the first line still counts.
+ *
+ * Reported 2026-10-07: E13658116 reads "no assignment sale" and was tagged Assignment sale.
+ * Agents write negatives into remarks all the time, so this guards every signal, not one.
+ */
+function hasAffirmedMatch(text: string, pattern: RegExp): boolean {
+  const re = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`);
+  for (const m of text.matchAll(re)) {
+    const start = m.index ?? 0;
+    const before = text.slice(Math.max(0, start - 40), start);
+    const after = text.slice(start + m[0].length, start + m[0].length + 40);
+    if (!NEGATED_BEFORE.test(before) && !NEGATED_AFTER.test(after)) return true;
+  }
+  return false;
 }
 
 const normQuery = (q: string) =>

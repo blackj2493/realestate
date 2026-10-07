@@ -54,6 +54,27 @@ describe("detectDescriptionSignals", () => {
     expect(has("Seller will consider a VTB")).toContain("vendor_take_back");
   });
 
+  it("ignores a negated mention (reported on E13658116)", () => {
+    expect(has("Condo rules: no assignment sale.")).not.toContain("assignment");
+    expect(has("This is not an assignment sale")).not.toContain("assignment");
+    expect(has("Assignment sale not permitted by builder")).not.toContain("assignment");
+    expect(has("Not a power of sale. Well kept home.")).not.toContain("power_of_sale");
+    expect(has("Unit is not tenanted, vacant on closing")).not.toContain("tenanted");
+    expect(has("Bungalow without a separate entrance")).not.toContain("separate_entrance");
+  });
+
+  it("keeps a real mention next to an unrelated negative", () => {
+    expect(has("No carpet, separate entrance to basement")).toContain("separate_entrance");
+    expect(has("Assignment sale. No assignment fee to buyer.")).toContain("assignment");
+    // One negated and one affirmed mention: the affirmed one wins.
+    expect(has("Builder says no assignment sale on phase 1. This unit is an assignment sale.")).toContain(
+      "assignment"
+    );
+    expect(has("Tenanted at $2,400; tenants pay utilities. No pets.")).toContain("tenanted");
+    // A negative about something else, a few words back, does not cancel the feature.
+    expect(has("No pets allowed and separate entrance to basement")).toContain("separate_entrance");
+  });
+
   it("returns [] for missing or blank descriptions", () => {
     expect(has("")).toEqual([]);
     expect(detectDescriptionSignals(null)).toEqual([]);
