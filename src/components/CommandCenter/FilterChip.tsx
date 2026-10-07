@@ -70,10 +70,13 @@ export function FilterControl({
   def,
   value,
   onChange,
+  enumLayout = "list",
 }: {
   def: FilterDef;
   value: FilterValue;
   onChange: (value: FilterValue) => void;
+  /** "chips": wrapped pill buttons (mobile Filters sheet); "list": the popover checklist. */
+  enumLayout?: "list" | "chips";
 }) {
   return (
     <>
@@ -83,9 +86,12 @@ export function FilterControl({
       {def.control === "stepper" && (
         <StepperControl def={def} value={value} onChange={onChange} />
       )}
-      {def.control === "enum" && (
-        <EnumControl def={def} value={value as string[]} onChange={onChange} />
-      )}
+      {def.control === "enum" &&
+        (enumLayout === "chips" ? (
+          <EnumChips def={def} value={value as string[]} onChange={onChange} />
+        ) : (
+          <EnumControl def={def} value={value as string[]} onChange={onChange} />
+        ))}
       {def.control === "bands" && (
         <SqftBandControl def={def} value={value} onChange={onChange} />
       )}
@@ -204,6 +210,48 @@ function StepperControl({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The same multi-select as EnumControl, drawn as wrapped pills — so on the phone sheet a
+ * nine-option type list takes two rows instead of a screen, and looks like every other
+ * multi-select there. No label: the sheet's section card already names it.
+ */
+function EnumChips({
+  def,
+  value,
+  onChange,
+}: {
+  def: FilterDef;
+  value: string[];
+  onChange: (v: FilterValue) => void;
+}) {
+  const toggle = (val: string) => {
+    onChange(value.includes(val) ? value.filter((x) => x !== val) : [...value, val]);
+  };
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label={def.label}>
+      {(def.options ?? []).map((opt) => {
+        const on = value.includes(opt.value);
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            aria-pressed={on}
+            onClick={() => toggle(opt.value)}
+            className={cn(
+              "min-h-[36px] rounded-full border px-3 text-sm transition-colors",
+              on
+                ? "border-cyan-700 bg-cyan-700 text-white dark:border-cyan-500 dark:bg-cyan-600"
+                : "border-border bg-card text-foreground hover:border-cyan-500/50"
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

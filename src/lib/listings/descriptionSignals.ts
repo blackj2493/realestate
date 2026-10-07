@@ -39,10 +39,16 @@ export type DescriptionSignalId =
   | "vendor_take_back"
   | "assignment";
 
+/** Where a signal sits in the Filters panel: a feature of the home, or a fact about the deal. */
+export type SignalGroup = "home" | "deal";
+
+export const SIGNAL_GROUP_LABEL: Record<SignalGroup, string> = { home: "The home", deal: "The deal" };
+
 export interface DescriptionSignal {
   id: DescriptionSignalId;
   /** Checklist and chip text. */
   label: string;
+  group: SignalGroup;
   patterns: RegExp[];
   /**
    * What a reader might TYPE in the search box to mean this signal. Matched against the
@@ -59,6 +65,7 @@ export const DESCRIPTION_SIGNALS: readonly DescriptionSignal[] = [
   {
     id: "separate_entrance",
     label: "Separate entrance",
+    group: "home",
     patterns: [
       /\bseparate\s+(side\s+|rear\s+|private\s+|basement\s+)?entrance\b/,
       /\bsep\.?\s+(side\s+|rear\s+)?entrance\b/,
@@ -69,6 +76,7 @@ export const DESCRIPTION_SIGNALS: readonly DescriptionSignal[] = [
   {
     id: "second_suite",
     label: "In-law / second suite",
+    group: "home",
     patterns: [
       /\bin[\s-]?law\s+(suite|apartment|apt|unit)\b/,
       /\b(basement|bsmt|lower[\s-]level)\s+(apartment|apt|suite|unit)\b/,
@@ -83,6 +91,7 @@ export const DESCRIPTION_SIGNALS: readonly DescriptionSignal[] = [
   {
     id: "legal_second_unit",
     label: "Legal duplex / second unit",
+    group: "home",
     patterns: [
       /\blegal\s+(duplex|triplex|fourplex|two[\s-]unit|2[\s-]unit|three[\s-]unit|3[\s-]unit)\b/,
       /\blegal\s+(basement\s+)?(apartment|apt|suite|unit)\b/,
@@ -94,6 +103,7 @@ export const DESCRIPTION_SIGNALS: readonly DescriptionSignal[] = [
   {
     id: "walkout_basement",
     label: "Walk-out basement",
+    group: "home",
     patterns: [
       // "walk-out to the deck" is a kitchen door, not a basement. Only the basement forms.
       /\bwalk[\s-]?out\s+(basement|bsmt|lower[\s-]level)\b/,
@@ -105,6 +115,7 @@ export const DESCRIPTION_SIGNALS: readonly DescriptionSignal[] = [
   {
     id: "tenanted",
     label: "Tenanted",
+    group: "deal",
     patterns: [
       /\btenanted\b/,
       /\b(currently|presently)\s+(rented|leased|tenanted)\b/,
@@ -117,30 +128,35 @@ export const DESCRIPTION_SIGNALS: readonly DescriptionSignal[] = [
   {
     id: "power_of_sale",
     label: "Power of sale",
+    group: "deal",
     patterns: pick(FORCED_SALE, ["Power of Sale", "Foreclosure", "Bank Owned", "Court-Ordered Sale", "Receivership"]),
     aliases: ["power of sale", "pos", "foreclosure", "bank owned", "court ordered", "receivership"],
   },
   {
     id: "estate_sale",
     label: "Estate sale",
+    group: "deal",
     patterns: pick(FORCED_SALE, ["Estate Sale", "Probate"]),
     aliases: ["estate sale", "estate", "probate", "executor"],
   },
   {
     id: "needs_work",
     label: "Needs work",
+    group: "deal",
     patterns: NEEDS_WORK.map((s) => s.pattern),
     aliases: ["handyman", "handyman special", "fixer upper", "needs work", "tlc", "contractor special", "renovator special", "teardown"],
   },
   {
     id: "vendor_take_back",
     label: "Vendor take-back",
+    group: "deal",
     patterns: [/\bvendor\s+take[\s-]?back\b/, /\bvtb\b/, /\bseller\s+financing\b/],
     aliases: ["vendor take back", "vtb", "seller financing"],
   },
   {
     id: "assignment",
     label: "Assignment sale",
+    group: "deal",
     patterns: [
       /\bassignment\s+sale\b/,
       /\bassignment\s+of\s+(the\s+)?(agreement|aps|purchase)\b/,
