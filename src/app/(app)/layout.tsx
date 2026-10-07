@@ -1,6 +1,7 @@
 import AppHeader from "@/components/layout/AppHeader";
 import SiteFooter from "@/components/layout/SiteFooter";
 import AreaFollowPrompt from "@/components/areas/AreaFollowPrompt";
+import NarrowCityCard from "@/components/areas/NarrowCityCard";
 
 /**
  * Layout for the (app) route group — renders the unified AppHeader above every
@@ -23,6 +24,7 @@ export default function AppGroupLayout({ children }: { children: React.ReactNode
     <>
       <AppHeader variant="app" />
       <AreaFollowPrompt />
+      <NarrowCityCard />
       {children}
       <SiteFooter />
     </>

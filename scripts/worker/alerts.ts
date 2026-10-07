@@ -89,6 +89,11 @@ import type { FilterChipLink, PersonaSwitchLink } from '@/lib/alerts/digest';
 import type { PersonaType } from '@/lib/personas/personaConfig';
 import { undeliverableReason } from '@/lib/email/deliverability';
 import { digestCadence } from '@/lib/email/digestCadence';
+import { shouldAsk, suggestPart, wholeCityToNarrow } from '@/lib/areas/narrowAsk';
+import { loadAsks, loadOpensByFeedCity, markShown } from '@/lib/areas/narrowAskStore';
+import { narrowPageUrl } from '@/lib/areas/narrowLink';
+import { partNamed } from '@/lib/dashboard/cityParts';
+import type { NarrowAreaAsk } from '@/lib/alerts/digest';
 import { SENDERS } from '@/lib/alerts/senders';
 import {
   alertsFrequency,
@@ -1644,6 +1649,48 @@ async function main() {
   const personas = await readDigestPersonas(supabase, [...bubbleMatchesByUser.keys()], emails);
   const areaTypeById = new Map<string, string>((bubbleData ?? []).map((b) => [b.id, b.area_type]));
 
+  // ── The narrow ask (src/lib/areas/narrowAsk.ts) ────────────────────────────
+  // Readers who follow ALL of Toronto or Ottawa are asked, at most three times, to pick a
+  // part. It rides on this digest (no extra send). `narrowAsks === null` means the table is
+  // not there yet (migration 154) — the feature is simply off and nothing else changes.
+  const wholeCityBubble = new Map<string, { id: string; city: string }>();
+  for (const b of bubbleData ?? []) {
+    if (b.area_type !== 'city') continue;
+    const city = wholeCityToNarrow(b.source?.city ?? b.name);
+    if (city && !wholeCityBubble.has(b.user_id)) wholeCityBubble.set(b.user_id, { id: b.id, city });
+  }
+  const narrowAsks = await loadAsks(supabase, [...wholeCityBubble.keys()]);
+  let narrowAsked = 0;
+  const narrowAskFor = async (
+    userId: string,
+    email: string,
+    frequency: string
+  ): Promise<{ ask: NarrowAreaAsk; previous: number; suggested: string | null } | null> => {
+    const wc = wholeCityBubble.get(userId);
+    if (!wc || !narrowAsks) return null;
+    const state = narrowAsks.get(userId)?.get(wc.city) ?? null;
+    if (!shouldAsk(state)) return null;
+    // Suggest once and keep it: the same part across the three asks reads as one question.
+    const part = state?.suggested_part
+      ? partNamed(state.suggested_part)
+      : suggestPart(wc.city, await loadOpensByFeedCity(supabase, userId));
+    const match = (bubbleMatchesByUser.get(userId) ?? []).find((m) => m.bubbleId === wc.id);
+    return {
+      ask: {
+        city: wc.city,
+        newCount: match?.total ?? 0,
+        period: frequency === 'weekly' ? 'week' : 'night',
+        suggested: part
+          ? { name: part.name, hint: part.hint, url: narrowPageUrl(email, wc.city, SITE, part.name) }
+          : null,
+        pickUrl: narrowPageUrl(email, wc.city, SITE),
+        firstAsk: (state?.shown_count ?? 0) === 0,
+      },
+      previous: state?.shown_count ?? 0,
+      suggested: part?.name ?? null,
+    };
+  };
+
   const sentUsers = new Set<string>();
   let emailed = 0;
   let failed = 0;
@@ -1735,7 +1782,9 @@ async function main() {
     }
 
     const uUrl = marketingUnsubscribeUrl(email, SITE);
+    const narrow = await narrowAskFor(userId, email, frequency);
     const { subject, html, text } = renderAlertsDigest(payload, uUrl, {
+      narrowArea: narrow?.ask,
       // Offer the switch they have NOT taken. A weekly reader gets the way back instead —
       // /account/emails has no control for this, so the email is the only place it exists.
       weeklyUrl: frequency === 'weekly' ? undefined : emailActionUrl(email, 'weekly', SITE),
@@ -1761,6 +1810,11 @@ async function main() {
       sentUsers.add(userId);
       digested.push(email);
       emailed++;
+      // Counted only once the provider accepted it: a rejected send did not ask anyone.
+      if (narrow) {
+        await markShown(supabase, userId, narrow.ask.city, narrow.previous, narrow.suggested);
+        narrowAsked++;
+      }
       continue;
     }
     // NOT sent. Deliberately do NOT add to sentUsers: shouldApply() reads that set, so
@@ -1824,6 +1878,7 @@ async function main() {
       `${emailed} emails sent, ${notSent} NOT SENT, ${suppressed} suppressed on consent, ` +
       `${undeliverableSkipped} undeliverable, ${deferred} held for a weekly send ` +
       `(${derivedWeekly} on a derived cadence). ` +
+      `Narrow ask: ${narrowAsks === null ? 'off (no table)' : `${narrowAsked} asked of ${wholeCityBubble.size} whole-city readers`}. ` +
       `Listing-alerts: ${la.emailed} emailed, ${la.failed} not sent, ${la.baselined} baselined, ${la.similarMatched} similar matches. ` +
       `Address-watches: ${aw.emailed} emailed, ${aw.failed} not sent, ${aw.baselined} baselined.`
   );

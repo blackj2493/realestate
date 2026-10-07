@@ -14,7 +14,8 @@ import type { StatusAlertKind } from "./transitions";
 import type { BubbleSection, NewListingAlert } from "./bubbleDigest";
 import { ANGLE_COPY, angleReason, angleSubjectPhrase, type AnglePick, type ReasonTone } from "./pickAngles";
 import type { PersonaType } from "@/lib/personas/personaConfig";
-import { shell, footer, button, MONO } from "./emailShell";
+import { shell, footer, button, MONO, esc } from "./emailShell";
+import { narrowAskSubject } from "@/lib/areas/narrowAsk";
 
 export interface DropAlert {
   listing_key: string;
@@ -414,6 +415,64 @@ export interface DigestActions {
   persona?: PersonaType;
   /** Signed links that reorder the picks for another persona. Shown only beside angles. */
   personaSwitch?: PersonaSwitchLink[];
+  /**
+   * The one-time ask to narrow a whole-city area to a part (src/lib/areas/narrowAsk.ts).
+   * Shown at the TOP of the email, because the readers it is for skim.
+   */
+  narrowArea?: NarrowAreaAsk;
+}
+
+export interface NarrowAreaAsk {
+  /** "Toronto" or "Ottawa". */
+  city: string;
+  /** New homes this email reports for the whole city (0 = do not quote a number). */
+  newCount: number;
+  period: "night" | "week";
+  /** The part most of the reader's opened homes sit in, when we can say so. */
+  suggested?: { name: string; hint: string; url: string } | null;
+  /** The narrow page with nothing pre-selected (all parts + "keep all"). */
+  pickUrl: string;
+  /** True on the first email that carries the ask: it also takes the subject line. */
+  firstAsk: boolean;
+}
+
+/** The ask, plain language per voice.md §5.1: what, why, and the one click. */
+export function narrowAreaHtml(a: NarrowAreaAsk): string {
+  const per = a.period === "night" ? "tonight" : "this week";
+  const count =
+    a.newCount > 0 ? ` That was ${a.newCount.toLocaleString("en-CA")} new homes ${per}.` : "";
+  const suggestion = a.suggested
+    ? `<div style="font-size:13px;color:#334155;line-height:1.5;margin-top:6px;">
+         Most of the homes you opened are in <strong>${esc(a.suggested.name)}</strong>
+         <span style="color:#64748b;">(${esc(a.suggested.hint)})</span>.
+       </div>
+       <div style="margin-top:10px;">${button(`Switch to ${esc(a.suggested.name)} &rarr;`, a.suggested.url)}</div>`
+    : "";
+  return `<div style="margin-top:14px;border-left:3px solid #0891b2;background:#f0f9ff;padding:12px 14px;">
+      <div style="font-size:14px;color:#0f172a;font-weight:600;line-height:1.4;">
+        You follow all of ${esc(a.city)}.${count}
+      </div>
+      <div style="font-size:13px;color:#334155;line-height:1.5;margin-top:4px;">
+        Pick the part you are looking in, and we will email you about that part only.
+      </div>
+      ${suggestion}
+      <div style="font-size:13px;margin-top:10px;">
+        <a href="${a.pickUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">${a.suggested ? "Pick another part" : `Pick a part of ${esc(a.city)}`} &rarr;</a>
+        <span style="color:#cbd5e1;"> &middot; </span>
+        <a href="${a.pickUrl}&amp;keep=1" style="color:#64748b;text-decoration:none;">Keep all of ${esc(a.city)}</a>
+      </div>
+    </div>`;
+}
+
+function narrowAreaText(a: NarrowAreaAsk): string {
+  const per = a.period === "night" ? "tonight" : "this week";
+  const lines = [
+    `You follow all of ${a.city}.` + (a.newCount > 0 ? ` That was ${a.newCount} new homes ${per}.` : ""),
+    "Pick the part you are looking in, and we will email you about that part only.",
+  ];
+  if (a.suggested) lines.push(`Most of the homes you opened are in ${a.suggested.name}. Switch: ${a.suggested.url}`);
+  lines.push(`Pick a part: ${a.pickUrl}`, `Keep all of ${a.city}: ${a.pickUrl}&keep=1`);
+  return lines.join("\n");
 }
 
 export interface FilterChipLink {
@@ -506,7 +565,10 @@ export function renderAlertsDigest(
   unsubscribeUrl?: string,
   actions: DigestActions = {}
 ): { subject: string; html: string; text: string } {
-  const subject = subjectFor(p);
+  // The first email that asks a whole-city reader to narrow also says so in the subject:
+  // the readers this is for skim the inbox and may never open the email.
+  const ask = actions.narrowArea;
+  const subject = ask?.firstAsk ? narrowAskSubject(ask.city, ask.newCount, ask.period) : subjectFor(p);
 
   const statusShown = p.statusChanges.slice(0, STATUS_EMAIL_ROW_CAP);
   const dropsShown = p.drops.slice(0, DROP_EMAIL_ROW_CAP);
@@ -538,6 +600,7 @@ export function renderAlertsDigest(
   const body = `
       <h1 style="font-size:18px;color:#0f172a;margin:0 0 4px;">Your watchlist &amp; market alerts</h1>
       <p style="font-family:${MONO};color:#475569;font-size:13px;margin:0;">${subject}</p>
+      ${ask ? narrowAreaHtml(ask) : ""}
       ${statusSection}
       ${dropsSection}
       ${bubblesSection}
@@ -629,6 +692,7 @@ export function renderAlertsDigest(
     controlLines.push(`Go back to a nightly email: ${actions.dailyUrl}`);
   if (actions.pauseUrl) controlLines.push(`Pause for 30 days: ${actions.pauseUrl}`);
   const text =
+    (ask ? narrowAreaText(ask) + "\n\n" : "") +
     textParts.join("\n\n") +
     `\n\nOpen your dashboard: ${SITE}/dashboard` +
     (actions.cadenceIsDerived

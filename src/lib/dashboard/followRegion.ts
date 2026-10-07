@@ -49,6 +49,101 @@ export function cleanRegionName(raw: unknown): string | null {
   return name;
 }
 
+export interface ReplaceRegionResult {
+  ok: boolean;
+  /** True when `from` was on the account and is now `to`. */
+  replaced: boolean;
+  regions: string[];
+  error: string | null;
+}
+
+/**
+ * Swap one area for another in place — "follow Scarborough instead of all of Toronto".
+ *
+ * Same contract as followRegion (merge the blob, reconcile the alert rows, never throw), plus
+ * one thing reconcile cannot know: the new alert row inherits the OLD row's switches. A reader
+ * who muted Toronto, or chose "every new listing", made that call; narrowing the area must not
+ * quietly undo it. Reconcile alone would create the part's row with today's defaults.
+ *
+ * The part takes the city's position in the list, so the dashboard keeps its order.
+ */
+export async function replaceRegion(
+  supabase: SupabaseClient,
+  userId: string,
+  from: string,
+  rawTo: unknown,
+  opts: { source: string; email?: string | null }
+): Promise<ReplaceRegionResult> {
+  const to = cleanRegionName(rawTo);
+  const nothing: ReplaceRegionResult = { ok: false, replaced: false, regions: [], error: null };
+  if (!to) return { ...nothing, error: "region_invalid" };
+
+  try {
+    const { data: prefs, error: readErr } = await supabase
+      .from("dashboard_prefs")
+      .select("config")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (readErr) return { ...nothing, error: readErr.message };
+
+    const config = (prefs?.config ?? {}) as Record<string, unknown>;
+    const existing = Array.isArray(config.regions)
+      ? (config.regions as unknown[]).filter((r): r is string => typeof r === "string")
+      : [];
+    const at = existing.findIndex((r) => r.toLowerCase() === from.toLowerCase());
+    // Already switched (a second tap, or another tab): report the state, change nothing.
+    if (at === -1) {
+      return { ok: true, replaced: false, regions: existing, error: null };
+    }
+
+    // The old row's switches, read BEFORE reconcile deletes it.
+    const { data: oldRows } = await supabase
+      .from("market_bubbles")
+      .select("alerts_enabled, alert_scope, filters, source")
+      .eq("user_id", userId)
+      .eq("area_type", "city");
+    const old = (oldRows ?? []).find(
+      (r) => ((r.source as { city?: string } | null)?.city ?? "").toLowerCase() === from.toLowerCase()
+    );
+
+    const regions = existing
+      .map((r, i) => (i === at ? to : r))
+      .filter((r, i, all) => all.findIndex((x) => x.toLowerCase() === r.toLowerCase()) === i);
+    const nextConfig = { ...config, regions };
+    const { error: writeErr } = await supabase
+      .from("dashboard_prefs")
+      .upsert(
+        { user_id: userId, config: nextConfig, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
+    if (writeErr) return { ...nothing, error: writeErr.message };
+
+    const alerts = await reconcileCityAlerts(supabase, userId, nextConfig);
+    if (old) {
+      await supabase
+        .from("market_bubbles")
+        .update({
+          alerts_enabled: old.alerts_enabled,
+          alert_scope: old.alert_scope,
+          filters: old.filters,
+        })
+        .eq("user_id", userId)
+        .eq("area_type", "city")
+        .eq("source->>city", to);
+    }
+
+    await recordActivation({
+      kind: "save_area",
+      userId,
+      email: opts.email ?? null,
+      context: { city: to, source: opts.source, replaced: from },
+    });
+    return { ok: true, replaced: true, regions, error: alerts.error };
+  } catch (e) {
+    return { ...nothing, error: e instanceof Error ? e.message : "replace failed" };
+  }
+}
+
 export async function followRegion(
   supabase: SupabaseClient,
   userId: string,
