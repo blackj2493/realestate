@@ -26,11 +26,18 @@ import {
   signalIds,
   toggleTerm,
 } from "@/lib/filters/descriptionFilters";
-import { SIGNAL_BY_ID, SIGNAL_ORDER } from "@/lib/listings/descriptionSignals";
+import { SIGNAL_BY_ID, SIGNAL_GROUP_LABEL, SIGNAL_ORDER } from "@/lib/listings/descriptionSignals";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
 
-export default function DescriptionFilterSection({ className }: { className?: string }) {
+export default function DescriptionFilterSection({
+  className,
+  bare = false,
+}: {
+  className?: string;
+  /** Inside a titled card (the mobile sheet): drop this section's own label and rule. */
+  bare?: boolean;
+}) {
   const universalFilters = useCommandCenterStore((s) => s.universalFilters);
   const setUniversalFilter = useCommandCenterStore((s) => s.setUniversalFilter);
   const activePersona = useCommandCenterStore((s) => s.activePersona);
@@ -69,8 +76,11 @@ export default function DescriptionFilterSection({ className }: { className?: st
   );
 
   return (
-    <section className={cn("space-y-3 border-t border-border/70 pt-4", className)} aria-label="In the description">
-      <span className={LABEL}>In the description</span>
+    <section
+      className={cn("space-y-3", !bare && "border-t border-border/70 pt-4", className)}
+      aria-label="In the description"
+    >
+      {!bare && <span className={LABEL}>In the description</span>}
 
       <div>
         <div className="flex min-h-[42px] flex-wrap items-center gap-1.5 border border-border bg-card px-2 py-1.5">
@@ -131,32 +141,56 @@ export default function DescriptionFilterSection({ className }: { className?: st
       </div>
 
       {signals.length > 0 && (
-        <div>
+        <div className="space-y-3">
           <span className={LABEL}>Ready-made · homes in view</span>
-          <ul className="mt-1.5 space-y-0.5">
-            {signals.map((id) => {
-              const on = selected.has(id);
-              const n = counts?.[id];
-              return (
-                <li key={id}>
-                  <label className="flex min-h-[36px] cursor-pointer items-center gap-2.5 text-sm text-foreground">
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={() => toggleSignal(id)}
-                      className="h-4 w-4 accent-cyan-600"
-                    />
-                    <span className="flex-1">{SIGNAL_BY_ID[id].label}</span>
-                    {n !== undefined && (
-                      <span className="font-mono text-xs font-semibold text-cyan-700 dark:text-cyan-400">
-                        {n.toLocaleString()}
-                      </span>
-                    )}
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
+          {(["home", "deal"] as const).map((group) => {
+            const ids = signals.filter((id) => SIGNAL_BY_ID[id].group === group);
+            if (!ids.length) return null;
+            return (
+              <div key={group}>
+                <div className="mb-1.5 text-xs font-semibold text-foreground">{SIGNAL_GROUP_LABEL[group]}</div>
+                <div className="flex flex-wrap gap-2" role="group" aria-label={SIGNAL_GROUP_LABEL[group]}>
+                  {ids.map((id) => {
+                    const on = selected.has(id);
+                    const n = counts?.[id];
+                    // A handful of homes is worth seeing, but it should not shout.
+                    const rare = n !== undefined && n < 10;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggleSignal(id)}
+                        className={cn(
+                          "inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 text-sm transition-colors",
+                          on
+                            ? "border-cyan-700 bg-cyan-700 text-white dark:border-cyan-500 dark:bg-cyan-600"
+                            : "border-border bg-card text-foreground hover:border-cyan-500/50"
+                        )}
+                      >
+                        {on && <span aria-hidden>✓</span>}
+                        {SIGNAL_BY_ID[id].label}
+                        {n !== undefined && (
+                          <span
+                            className={cn(
+                              "font-mono text-xs font-semibold",
+                              on
+                                ? "text-cyan-100"
+                                : rare
+                                  ? "text-muted-foreground"
+                                  : "text-cyan-700 dark:text-cyan-400"
+                            )}
+                          >
+                            {n.toLocaleString()}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </section>

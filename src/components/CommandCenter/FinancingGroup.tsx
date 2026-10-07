@@ -22,7 +22,14 @@ import InvestorChip from "./InvestorChip";
  * relationship in one line, and it moves the instant either slider moves — which is the
  * feedback the sliders could not give on their own.
  */
-export default function FinancingGroup({ controls }: { controls: ControlDef[] }) {
+export default function FinancingGroup({
+  controls,
+  bare = false,
+}: {
+  controls: ControlDef[];
+  /** Inside a titled card (the mobile Filters sheet): no top rule of its own. */
+  bare?: boolean;
+}) {
   const filters = useCommandCenterStore((s) => s.filters);
   if (controls.length === 0) return null;
 
@@ -30,7 +37,7 @@ export default function FinancingGroup({ controls }: { controls: ControlDef[] })
   const on = filters.cashflowPositiveOnly;
 
   return (
-    <section className="space-y-2 border-t border-border/70 pt-4">
+    <section className={bare ? "space-y-2" : "space-y-2 border-t border-border/70 pt-4"}>
       <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         <Calculator className="h-3 w-3" />
         Cashflow · at your financing
