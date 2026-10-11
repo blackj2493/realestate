@@ -108,15 +108,15 @@ function TypeIcon({ value }: { value: string }) {
   const drawing = DRAWINGS[value];
   if (drawing)
     return (
-      <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden {...stroke}>
+      <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" aria-hidden {...stroke}>
         {drawing}
       </svg>
     );
   const Icon = COMMERCIAL_ICONS[value] ?? Building2;
-  return <Icon className="h-6 w-6" strokeWidth={1.7} aria-hidden />;
+  return <Icon className="h-[22px] w-[22px]" strokeWidth={1.7} aria-hidden />;
 }
 
-/** "Condo Apartment" → "Condo apt": tiles are 80px wide. */
+/** "Condo Apartment" → "Condo apt": tiles are 78px wide. */
 const SHORT: Record<string, string> = {
   "Semi-Detached ": "Semi",
   "Att/Row/Townhouse": "Town",
@@ -159,14 +159,19 @@ export default function HomeTypeTiles({
             aria-label={opt.label}
             onClick={() => toggle(opt.value)}
             className={cn(
-              "flex h-[84px] w-[80px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-[1.5px] px-1 transition-colors",
+              "flex h-[80px] w-[78px] shrink-0 flex-col items-center justify-center gap-1 border px-1 transition-colors",
               on
-                ? "border-cyan-600 bg-cyan-50 text-cyan-700 dark:border-cyan-400 dark:bg-cyan-500/10 dark:text-cyan-300 dark:shadow-[0_0_14px_rgba(34,211,238,0.18)]"
+                ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
                 : "border-border bg-card text-muted-foreground hover:border-cyan-500/50 hover:text-foreground"
             )}
           >
             <TypeIcon value={opt.value} />
-            <span className={cn("text-xs font-semibold leading-tight", on ? "" : "text-foreground")}>
+            <span
+              className={cn(
+                "text-center text-[10px] font-semibold uppercase leading-tight tracking-wider",
+                on ? "" : "text-foreground"
+              )}
+            >
               {SHORT[opt.value] ?? opt.label}
             </span>
             {n !== undefined && (

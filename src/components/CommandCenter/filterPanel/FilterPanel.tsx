@@ -25,6 +25,7 @@ import {
   MessageSquareText,
   Ruler,
   Search,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -64,7 +65,9 @@ import DescriptionFilterSection from "../DescriptionFilterSection";
 import { investorChipLabel, isControlActive } from "../investorControls";
 import { activeLabels, summarise } from "../filterSheetSummary";
 import type { FilterItem, FilterToken } from "../filterTokens";
-import { FieldHeader, GroupLabel, NavRow, PanelCard, SwitchRow, sentenceCase } from "./primitives";
+import { FieldHeader, GroupLabel, LABEL, NavRow, PanelCard, SwitchRow, sentenceCase } from "./primitives";
+import PanelErrorBoundary from "./PanelErrorBoundary";
+import FundamentalToggle from "../FundamentalToggle";
 import HomeTypeTiles from "./HomeTypeTiles";
 import LensPicks from "./LensPicks";
 import CashflowCard from "./CashflowCard";
@@ -234,23 +237,26 @@ export default function FilterPanel({
   const empty = resultCount === 0 && anyActive && !isLoading;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-slate-100 dark:bg-background">
+    <div className="flex h-full min-h-0 flex-col bg-background">
       {/* ── Header ── */}
       <div className="shrink-0">
         {surface === "sheet" && (
-          <div {...dragHandleProps} className="flex cursor-grab touch-none justify-center pb-1 pt-2.5">
-            <span className="h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-700" aria-hidden />
+          <div {...dragHandleProps} className="flex cursor-grab touch-none justify-center pb-1 pt-2">
+            <span className="h-1 w-10 bg-border" aria-hidden />
           </div>
         )}
-        <div className={cn("flex min-h-[52px] items-center gap-2 px-4", surface === "drawer" ? "pt-3" : "pt-0.5")}>
+        <div className="flex min-h-[52px] items-center gap-2 border-b border-border px-4">
           {page === "main" ? (
             <>
-              <h2 className="flex-1 text-xl font-extrabold tracking-tight text-foreground">Filters</h2>
+              <h2 className="flex flex-1 items-center gap-2 font-mono text-sm font-semibold uppercase tracking-wider text-foreground">
+                <SlidersHorizontal className="h-4 w-4 text-cyan-700 dark:text-cyan-400" aria-hidden />
+                Filters
+              </h2>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close filters"
-                className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="-mr-2 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -260,17 +266,22 @@ export default function FilterPanel({
               <button
                 type="button"
                 onClick={() => setPage("main")}
-                className="-ml-2 flex min-h-[44px] items-center gap-0.5 rounded-full pl-1 pr-2 text-sm font-semibold text-cyan-700 hover:bg-muted dark:text-cyan-300"
+                className={cn(LABEL, "-ml-2 flex min-h-[44px] items-center gap-0.5 pl-1 pr-2 text-cyan-700 hover:text-cyan-600 dark:text-cyan-400")}
               >
-                <ChevronLeft className="h-5 w-5" aria-hidden />
+                <ChevronLeft className="h-4 w-4" aria-hidden />
                 Filters
               </button>
-              <h2 className="flex-1 truncate text-center text-base font-bold text-foreground">{PAGE_TITLE[page]}</h2>
+              <h2 className="flex-1 truncate text-center font-mono text-sm font-semibold uppercase tracking-wider text-foreground">
+                {PAGE_TITLE[page]}
+              </h2>
               <button
                 type="button"
                 onClick={clearPage}
                 disabled={!pageActive}
-                className="min-h-[44px] rounded-full px-2 text-sm font-semibold text-cyan-700 hover:bg-muted disabled:text-muted-foreground disabled:opacity-50 dark:text-cyan-300"
+                className={cn(
+                  LABEL,
+                  "min-h-[32px] border border-border px-2.5 text-muted-foreground transition-colors hover:border-rose-500/40 hover:text-rose-500 disabled:opacity-40 disabled:hover:border-border disabled:hover:text-muted-foreground"
+                )}
               >
                 Clear
               </button>
@@ -279,22 +290,22 @@ export default function FilterPanel({
         </div>
 
         {surface === "drawer" && page === "main" && (
-          <div className="px-4 pb-2">
-            <label className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 focus-within:border-cyan-500">
-              <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <div className="px-4 pt-3">
+            <label className="flex items-center gap-2 border border-border bg-card px-2.5 focus-within:border-cyan-500/50">
+              <Search className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Find a filter…"
                 aria-label="Find a filter"
-                className="w-full bg-transparent py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                className="w-full bg-transparent py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
             </label>
           </div>
         )}
 
         {page === "main" && !needle && tokens.length > 0 && (
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-2" aria-label="Filters you have set">
+          <div className="no-scrollbar flex gap-1.5 overflow-x-auto px-4 pt-3" aria-label="Filters you have set">
             {tokens.map((t) => (
               <button
                 key={t.id}
@@ -302,10 +313,10 @@ export default function FilterPanel({
                 onClick={t.onRemove}
                 aria-label={`Remove ${t.label}`}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                  "inline-flex min-h-[32px] shrink-0 items-center gap-1 border px-2 font-mono text-[11px] font-semibold transition-colors",
                   t.tone === "investor"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
-                    : "border-cyan-200 bg-cyan-50 text-cyan-800 hover:bg-cyan-100 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-200"
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                    : "border-cyan-500/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
                 )}
               >
                 {t.label}
@@ -317,7 +328,8 @@ export default function FilterPanel({
       </div>
 
       {/* ── Body ── */}
-      <div ref={bodyRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-6 pt-2">
+      <div ref={bodyRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 pb-6 pt-3">
+        <PanelErrorBoundary key={`${page}:${needle}`} onBack={() => setPage("main")} onReset={clearAll}>
         {needle ? (
           <SearchResults
             needle={needle}
@@ -330,14 +342,14 @@ export default function FilterPanel({
           <>
             {price && (
               <PanelCard>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-sm font-semibold text-foreground">Price</span>
-                  {transactionMode === "rent" && <span className="text-xs text-muted-foreground">per month</span>}
+                <div className="flex items-center justify-between">
+                  <span className={cn(LABEL, "text-muted-foreground")}>Price</span>
+                  {transactionMode === "rent" && <span className={cn(LABEL, "text-muted-foreground")}>per month</span>}
                 </div>
                 <div
                   className={cn(
-                    "text-[26px] font-extrabold tabular-nums tracking-tight",
-                    price.def.isActive(price.value) ? "text-foreground" : "text-muted-foreground"
+                    "font-mono text-xl font-semibold tabular-nums",
+                    price.def.isActive(price.value) ? "text-cyan-700 dark:text-cyan-400" : "text-muted-foreground"
                   )}
                 >
                   {price.def.isActive(price.value) ? price.def.chipLabel(price.value) : "Any price"}
@@ -370,8 +382,16 @@ export default function FilterPanel({
 
             <PanelCard>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold text-foreground">Home type</span>
-                <ClassToggle value={propertyClass} onChange={setPropertyClass} />
+                <span className={cn(LABEL, "text-muted-foreground")}>Home type</span>
+                <FundamentalToggle
+                  ariaLabel="Property class"
+                  value={propertyClass}
+                  onChange={setPropertyClass}
+                  options={[
+                    { value: "residential", label: "Residential" },
+                    { value: "commercial", label: "Commercial" },
+                  ]}
+                />
               </div>
               {homeType && <HomeTypeTiles def={homeType.def} value={homeType.value} onChange={homeType.onChange} />}
               {otherCore.map(({ def, value, onChange }) => (
@@ -391,7 +411,7 @@ export default function FilterPanel({
             />
 
             {showAdvanced && (detailDefs.length > 0 || showDescription || investorOn) && (
-              <div className="divide-y divide-border/60 overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgba(15,23,42,0.06)] dark:border dark:border-border dark:shadow-none">
+              <div className="divide-y divide-border border border-border bg-card">
                 {detailDefs.length > 0 && (
                   <NavRow
                     icon={<Ruler className="h-[18px] w-[18px]" aria-hidden />}
@@ -448,6 +468,7 @@ export default function FilterPanel({
             )
           )
         )}
+        </PanelErrorBoundary>
       </div>
 
       {/* ── Footer: within thumb reach ── */}
@@ -455,13 +476,13 @@ export default function FilterPanel({
         {empty && (
           <div
             role="status"
-            className="flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-200"
+            className="flex items-center justify-between gap-3 border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
           >
             <span>No {transactionMode === "rent" ? "rentals" : "homes"} match these filters.</span>
             <button
               type="button"
               onClick={undo.canUndo ? undo.undo : clearAll}
-              className="shrink-0 font-semibold underline underline-offset-2"
+              className={cn(LABEL, "shrink-0 underline underline-offset-2")}
             >
               {undo.canUndo ? "Undo last change" : "Clear all"}
             </button>
@@ -472,17 +493,20 @@ export default function FilterPanel({
             type="button"
             onClick={clearAll}
             disabled={!anyActive}
-            className="min-h-[48px] rounded-xl px-4 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+            className={cn(
+              "min-h-[44px] flex-1 border border-border px-4 font-mono text-xs font-semibold uppercase tracking-wider text-foreground",
+              "transition-colors hover:border-cyan-500/50 hover:text-cyan-600 active:bg-muted disabled:opacity-40 dark:hover:text-cyan-300"
+            )}
           >
-            Reset
+            Clear all
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[48px] flex-1 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-500 px-4 text-[15px] font-bold text-white shadow-[0_8px_20px_-10px_rgba(8,145,178,0.8)] transition-transform active:scale-[0.99] dark:from-cyan-500 dark:to-cyan-400 dark:text-slate-950"
+            className="min-h-[44px] flex-[2] bg-cyan-500 px-4 font-mono text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400 active:bg-cyan-600"
           >
             Show{" "}
-            <span className={cn("font-mono", isLoading && "animate-pulse opacity-70")}>
+            <span className={cn(isLoading && "animate-pulse opacity-70")}>
               {resultCount.toLocaleString("en-US")}
             </span>{" "}
             {noun}
@@ -603,37 +627,6 @@ function SearchResults({
         </PanelCard>
       )}
     </>
-  );
-}
-
-/** Residential / Commercial, as a small pill pair beside the "Home type" title. */
-function ClassToggle({
-  value,
-  onChange,
-}: {
-  value: "residential" | "commercial";
-  onChange: (v: "residential" | "commercial") => void;
-}) {
-  return (
-    <div role="radiogroup" aria-label="Property class" className="flex rounded-full bg-slate-100 p-0.5 dark:bg-slate-900">
-      {(["residential", "commercial"] as const).map((v) => (
-        <button
-          key={v}
-          type="button"
-          role="radio"
-          aria-checked={value === v}
-          onClick={() => onChange(v)}
-          className={cn(
-            "min-h-[32px] rounded-full px-3 text-xs font-semibold capitalize transition-all",
-            value === v
-              ? "bg-white text-foreground shadow-sm dark:bg-cyan-500/15 dark:text-cyan-300"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {v}
-        </button>
-      ))}
-    </div>
   );
 }
 

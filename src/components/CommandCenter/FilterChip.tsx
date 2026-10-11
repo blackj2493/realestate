@@ -230,10 +230,11 @@ function SegmentedStepper({
             aria-pressed={exact}
             onClick={() => onChange({ n: current, exact: !exact })}
             className={cn(
-              "rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors",
+              LABEL,
+              "border px-2 py-1 transition-colors",
               exact
-                ? "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
-                : "text-muted-foreground hover:text-foreground"
+                ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+                : "border-border text-muted-foreground hover:text-foreground"
             )}
           >
             Exact
@@ -341,16 +342,16 @@ function EnumChips({
             aria-pressed={on}
             onClick={() => toggle(opt.value)}
             className={cn(
-              "inline-flex min-h-[38px] items-center gap-1.5 rounded-full border px-3.5 text-sm transition-colors",
+              "inline-flex min-h-[40px] items-center gap-1.5 border px-3 text-xs font-semibold transition-colors",
               on
-                ? "border-cyan-700 bg-cyan-700 text-white dark:border-cyan-400 dark:bg-cyan-500/20 dark:text-cyan-200"
+                ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
                 : "border-border bg-card text-foreground hover:border-cyan-500/50"
             )}
           >
             {on && <span aria-hidden>✓</span>}
             {opt.label}
             {n !== undefined && !on && (
-              <span className="font-mono text-[11px] text-muted-foreground">{n.toLocaleString("en-US")}</span>
+              <span className="font-mono text-[10px] text-muted-foreground">{n.toLocaleString("en-US")}</span>
             )}
           </button>
         );

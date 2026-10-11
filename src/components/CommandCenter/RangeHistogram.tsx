@@ -13,7 +13,7 @@ interface RangeHistogramProps {
   lo: number;
   hi: number;
   loading?: boolean;
-  /** "panel": the taller, rounded bars of the Filters panel. */
+  /** "panel": the taller bars of the Filters panel. */
   variant?: "popover" | "panel";
 }
 
@@ -37,7 +37,7 @@ export default function RangeHistogram({
   const n = counts.length;
 
   if (loading && n === 0) {
-    return <div className={cn("w-full animate-pulse bg-muted/60", panel ? "h-12 rounded-lg" : "h-10")} aria-hidden />;
+    return <div className={cn("w-full animate-pulse bg-muted/60", panel ? "h-12" : "h-10")} aria-hidden />;
   }
   // Nothing to show, or the field carries no data in this population (e.g. the
   // empty gross_yield_est) — hide rather than render a misleading flat line.
@@ -63,8 +63,8 @@ export default function RangeHistogram({
               "flex-1 transition-colors",
               panel
                 ? inSelection
-                  ? "rounded-t-[3px] bg-gradient-to-t from-cyan-600 to-teal-400 dark:from-cyan-500 dark:to-cyan-300"
-                  : "rounded-t-[3px] bg-slate-200 dark:bg-slate-800"
+                  ? "bg-cyan-500/70"
+                  : "bg-slate-200 dark:bg-slate-800"
                 : inSelection
                   ? "bg-cyan-500/70"
                   : "bg-muted/50"
