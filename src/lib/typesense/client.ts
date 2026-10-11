@@ -408,6 +408,8 @@ export interface SearchOptions {
    * The caller moves any place string into `rawFilterBy` (locationFilterClause).
    */
   descriptionQuery?: string | null;
+  /** Return only `totalFound` (per_page 0): a count of what this search would match. */
+  countOnly?: boolean;
 }
 
 export interface SearchResult {
@@ -561,7 +563,8 @@ export async function searchListings(
     q: query || '*',
     query_by: 'City,CityRegion,PropertySubType',
     page,
-    per_page: perPage,
+    // A count fetches no documents, so the §4 display cap has nothing to apply to.
+    per_page: options.countOnly ? 0 : perPage,
   };
   // Description words replace the place query outright (see SearchOptions.descriptionQuery).
   if (options.descriptionQuery) {

@@ -7,6 +7,8 @@ interface NumberInputProps {
   min: number;
   max: number;
   onCommit: (n: number) => void;
+  /** Replaces the default boxy terminal styling (the Filters panel uses rounded fields). */
+  className?: string;
 }
 
 /**
@@ -14,7 +16,7 @@ interface NumberInputProps {
  * clamped number on blur/Enter. Uncontrolled + keyed by `value` so an external
  * change (slider drag) remounts it with the fresh value — no prop→state sync.
  */
-export default function NumberInput({ value, min, max, onCommit }: NumberInputProps) {
+export default function NumberInput({ value, min, max, onCommit, className }: NumberInputProps) {
   const commit = (el: HTMLInputElement) => {
     const n = Number(el.value.replace(/[^0-9.]/g, ""));
     if (!Number.isFinite(n) || el.value.trim() === "") {
@@ -33,7 +35,10 @@ export default function NumberInput({ value, min, max, onCommit }: NumberInputPr
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
       }}
-      className="w-full border border-border bg-background px-2 py-1 text-center font-mono text-xs text-foreground focus:border-cyan-500/60 focus:outline-none"
+      className={
+        className ??
+        "w-full border border-border bg-background px-2 py-1 text-center font-mono text-xs text-foreground focus:border-cyan-500/60 focus:outline-none"
+      }
     />
   );
 }

@@ -239,6 +239,15 @@ export interface CommandCenterState {
   descriptionSignalCounts: Record<string, number> | null;
   setDescriptionSignalCounts: (counts: Record<string, number> | null) => void;
 
+  // Filters-panel pick counts (src/lib/filters/filterPanelConfig.ts). While the panel is
+  // open it lists one filter_by fragment per lens pick; the page counts each on top of the
+  // live search, so a pick shows exactly how many homes in view tapping it leaves.
+  pickCountClauses: string[] | null;
+  setPickCountClauses: (clauses: string[] | null) => void;
+  /** Homes in view per clause, keyed by the clause itself; null while unknown. */
+  pickCounts: Record<string, number> | null;
+  setPickCounts: (counts: Record<string, number> | null) => void;
+
   // Commute-time filter (global, applies across personas)
   commute: CommuteState;
   setCommute: (patch: Partial<CommuteState>) => void;
@@ -516,6 +525,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setDescriptionCountsWanted: (wanted) => set({ descriptionCountsWanted: wanted }),
   descriptionSignalCounts: null,
   setDescriptionSignalCounts: (counts) => set({ descriptionSignalCounts: counts }),
+
+  pickCountClauses: null,
+  setPickCountClauses: (clauses) => set({ pickCountClauses: clauses }),
+  pickCounts: null,
+  setPickCounts: (counts) => set({ pickCounts: counts }),
 
   commute: { ...defaultCommute },
   setCommute: (patch) =>

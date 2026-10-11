@@ -13,6 +13,7 @@ import { isControlActive, investorChipLabel, resetControlToDefault, snapToActive
 import RangeHistogram from "./RangeHistogram";
 import NumberInput from "./NumberInput";
 import InfoDot from "@/components/ui/InfoDot";
+import { FieldHeader, PANEL_INPUT, PANEL_SLIDER, sentenceCase } from "./filterPanel/primitives";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -36,7 +37,17 @@ function bandCount(min: number, max: number, step: number): number {
  * metric's full distribution over the basic-filtered population (excludePersona),
  * so it never narrows to (or self-collapses on) the other investor controls.
  */
-function InvestorControlBody({ control }: { control: ControlDef }) {
+export function InvestorControlBody({
+  control,
+  variant = "popover",
+  histogram = true,
+}: {
+  control: ControlDef;
+  /** "panel": the Filters panel's larger slider, rounded inputs and plain-language header. */
+  variant?: "popover" | "panel";
+  /** False skips the distribution query (pages that open many sliders at once). */
+  histogram?: boolean;
+}) {
   const { filters, setFilter } = useCommandCenterStore();
   if (control.kind === "toggle") return null;
 
@@ -60,6 +71,8 @@ function InvestorControlBody({ control }: { control: ControlDef }) {
       bands={bands}
       setFilter={setFilter}
       filters={filters}
+      variant={variant}
+      histogram={histogram}
     />
   );
 }
@@ -74,7 +87,11 @@ function InvestorControlInner({
   bands,
   setFilter,
   filters,
+  variant,
+  histogram,
 }: {
+  variant: "popover" | "panel";
+  histogram: boolean;
   control: Exclude<ControlDef, { kind: "toggle" }>;
   lo: number;
   hi: number;
@@ -87,9 +104,11 @@ function InvestorControlInner({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   filters: any;
 }) {
+  const panel = variant === "panel";
   const { counts, maxCount, loading } = useRangeHistogram({
     filterKey: control.kind === "range" ? control.minKey : control.key,
-    field: control.field,
+    // No field = no query (the hook no-ops on an unsupported field).
+    field: histogram ? control.field : undefined,
     min,
     max,
     bands,
@@ -108,18 +127,36 @@ function InvestorControlInner({
       ? `${control.format(filters[control.minKey])}–${control.format(filters[control.maxKey])}`
       : control.format(filters[control.key]);
 
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <span className={cn(LABEL, "flex items-center gap-1 text-muted-foreground")}>
-          {control.label}
-          {control.glossaryKey && <InfoDot term={control.glossaryKey} />}
-        </span>
-        <span className="font-mono text-xs text-cyan-700 dark:text-cyan-400">{valueText}</span>
-      </div>
+  const active = isControlActive(control, filters);
+  const sliderStyle = panel ? PANEL_SLIDER : {};
+  const inputClass = panel ? PANEL_INPUT : undefined;
 
-      {supportsHistogram(control.field) && (
+  return (
+    <div className={cn("flex flex-col", panel ? "gap-3" : "gap-2")}>
+      {panel ? (
+        <FieldHeader
+          label={
+            <>
+              {sentenceCase(control.label)}
+              {control.glossaryKey && <InfoDot term={control.glossaryKey} />}
+            </>
+          }
+          value={active ? valueText : "Any"}
+          active={active}
+        />
+      ) : (
+        <div className="flex items-center justify-between">
+          <span className={cn(LABEL, "flex items-center gap-1 text-muted-foreground")}>
+            {control.label}
+            {control.glossaryKey && <InfoDot term={control.glossaryKey} />}
+          </span>
+          <span className="font-mono text-xs text-cyan-700 dark:text-cyan-400">{valueText}</span>
+        </div>
+      )}
+
+      {histogram && supportsHistogram(control.field) && (
         <RangeHistogram
+          variant={variant}
           counts={counts}
           maxCount={maxCount}
           min={min}
@@ -143,6 +180,7 @@ function InvestorControlInner({
               setFilter(control.minKey, a);
               setFilter(control.maxKey, b);
             }}
+            {...sliderStyle}
           />
           <div className="flex items-center gap-1.5">
             <NumberInput
@@ -150,6 +188,7 @@ function InvestorControlInner({
               min={min}
               max={filters[control.maxKey]}
               onCommit={(n) => setFilter(control.minKey, n)}
+              className={inputClass}
             />
             <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">to</span>
             <NumberInput
@@ -157,6 +196,7 @@ function InvestorControlInner({
               min={filters[control.minKey]}
               max={max}
               onCommit={(n) => setFilter(control.maxKey, n)}
+              className={inputClass}
             />
           </div>
         </>
@@ -170,6 +210,7 @@ function InvestorControlInner({
             ariaLabel={control.label}
             getAriaValueText={(v) => control.format(v)}
             onValueChange={([v]) => commit(v)}
+            {...sliderStyle}
           />
           <div className="flex items-center gap-1.5">
             <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -180,6 +221,7 @@ function InvestorControlInner({
               min={min}
               max={max}
               onCommit={(n) => commit(n)}
+              className={inputClass}
             />
           </div>
         </>

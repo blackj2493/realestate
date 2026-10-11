@@ -413,9 +413,9 @@ const C_STALE: ControlDef = {
  * broken; a reader who never touches them gets a "positive" list computed at someone
  * else's mortgage.
  *
- * Exported so the desktop drawer and the mobile sheet split them out of the chip rows
- * from ONE list. Adding a fourth financing input (amortization is the obvious one) means
- * adding its key here, not editing two components.
+ * Exported so the Filters panel (filterPanelConfig's INVESTOR_GROUPS) draws them as one
+ * card from ONE list. Adding a fourth financing input (amortization is the obvious one)
+ * means adding its key here, and a control for it in the cashflow card.
  */
 export const FINANCING_CONTROL_KEYS: readonly string[] = [
   "cashflowPositiveOnly",

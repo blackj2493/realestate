@@ -35,7 +35,7 @@ import { readLastCamera } from "@/lib/map/lastCamera";
 import { PERSONA_CONFIG } from "@/lib/personas/personaConfig";
 import { getMapMetric, bandFilterClause } from "@/lib/personas/mapMetrics";
 import { searchListings } from "@/lib/typesense/client";
-import type { ListingDocument, SearchResult } from "@/lib/typesense/client";
+import type { ListingDocument, SearchOptions, SearchResult } from "@/lib/typesense/client";
 import { FACET_FIELDS, readStepper } from "@/lib/filters/filterRegistry";
 import {
   DESCRIPTION_SIGNAL_FIELD,
@@ -157,6 +157,8 @@ function CommandCenterContent() {
     setLocation,
     descriptionCountsWanted,
     setDescriptionSignalCounts,
+    pickCountClauses,
+    setPickCounts,
     selectedProperty,
     setIsTerminalOpen,
     commute,
@@ -392,10 +394,11 @@ function CommandCenterContent() {
   // persona is the lens. The heatmap still colours by the active persona's
   // metric for whoever turns it on.
 
-  // Runs the public-Typesense active-listings query (For Sale / For Rent) and
-  // RETURNS the result — all the commute/school/draw/band/sort logic lives here,
-  // but it never touches state, so the fan-out below can run it in parallel.
-  const runActiveSearch = useCallback(async (): Promise<SearchResult> => {
+  // Builds the public-Typesense active-listings query (For Sale / For Rent) — all the
+  // commute/school/draw/band/sort logic lives here. runActiveSearch runs it and RETURNS the
+  // result without touching state, so the fan-out below can run it in parallel; the
+  // Filters-panel pick counts reuse the same options, so a count is exactly that search.
+  const activeSearchOptions = useCallback((): SearchOptions => {
     const investorLayer = isInvestorLayerActive(transactionMode, propertyClass);
     const coreClauses = buildTerminalCoreClauses({ transactionMode, propertyClass, universalFilters, filters });
     const schoolField = school.enabled ? schoolScoreField(school.level, school.system) : null;
@@ -437,7 +440,7 @@ function CommandCenterContent() {
     // deal-signal sort (cap rate / True DOM / lot width). The School lens still
     // overrides both, and the basic browse modes (rent / commercial) stay on price.
     const lensSort = activePersona === "smart" ? "EntryTimestamp" : persona.sortBy;
-    return await searchListings({
+    return {
       query: location || "*",
       rawFilterBy,
       geoPolygon,
@@ -450,8 +453,12 @@ function CommandCenterContent() {
       sortBy: schoolField ?? (investorLayer ? lensSort : BASIC_SORT),
       sortOrder: "desc",
       descriptionQuery,
-    });
+    };
   }, [activePersona, transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, school.program, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds, descriptionCountsWanted]);
+  const runActiveSearch = useCallback(
+    (): Promise<SearchResult> => searchListings(activeSearchOptions()),
+    [activeSearchOptions]
+  );
 
   const performSearch = useCallback(async () => {
     // First-load viewport hold (fix #4): on a bare cold start with no explicit
@@ -571,6 +578,40 @@ function CommandCenterContent() {
       setIsLoading(false);
     }
   }, [wantViewportScope, activeLayers, runActiveSearch, mapBounds, location, soldWindowDays, universalFilters, transactionMode, searchPin, setSoldLocked, setSoldCount, setSearchResult, setIsLoading, setError, setTotalCount, setDescriptionSignalCounts]);
+
+  // Filters-panel pick counts: one count per pick, each the live active search plus that
+  // pick's clause. Only while the panel is open (pickCountClauses is null otherwise) and
+  // only when an active layer is lit — sold comps carry none of the pick fields. Debounced
+  // so a slider drag in the panel settles before the counts are asked for.
+  useEffect(() => {
+    if (!pickCountClauses?.length || !queryPlan(activeLayers).active) {
+      setPickCounts(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const base = activeSearchOptions();
+      try {
+        const found = await Promise.all(
+          pickCountClauses.map((clause) =>
+            searchListings({
+              ...base,
+              rawFilterBy: [base.rawFilterBy, clause].filter(Boolean).join(" && "),
+              facetBy: undefined,
+              countOnly: true,
+            }).then((r) => r.totalFound)
+          )
+        );
+        if (!cancelled) setPickCounts(Object.fromEntries(pickCountClauses.map((c, i) => [c, found[i]])));
+      } catch {
+        if (!cancelled) setPickCounts(null);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [pickCountClauses, activeLayers, activeSearchOptions, setPickCounts]);
 
   // Drop any stale comps/search pin when the user navigates to a NEW area (location
   // change only — NOT on layer toggles, so the pin set alongside the Sold toggle in
