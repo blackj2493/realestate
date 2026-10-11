@@ -145,7 +145,12 @@ export default function FilterPanel({
   const [page, setPage] = React.useState<Page>("main");
   const [query, setQuery] = React.useState("");
   const bodyRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => bodyRef.current?.scrollTo({ top: 0 }), [page]);
+  // Block body on purpose: an effect's return value is its cleanup, and current Chrome makes
+  // scrollTo() return a Promise. Returned from an arrow, React later called that Promise as
+  // the cleanup on the next page change ("i is not a function") and took the terminal down.
+  React.useEffect(() => {
+    bodyRef.current?.scrollTo({ top: 0 });
+  }, [page]);
 
   usePanelChrome(onClose, page, () => setPage("main"));
   const undo = useUndoLastChange();
