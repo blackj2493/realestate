@@ -17,6 +17,7 @@
  */
 
 import {
+  FINANCING_CONTROL_KEYS,
   INVESTOR_CONTROLS,
   type ControlDef,
   type PersonaType,
@@ -97,7 +98,7 @@ export interface InvestorGroup {
 
 /** The "Investor signals" page: every investor control, each in exactly one group. */
 export const INVESTOR_GROUPS: InvestorGroup[] = [
-  { id: "cashflow", label: "Cashflow", ids: ["cashflowPositiveOnly", "downPaymentPct", "interestRatePct"] },
+  { id: "cashflow", label: "Cashflow", ids: [...FINANCING_CONTROL_KEYS] },
   { id: "yield", label: "Yield & cost", ids: ["minCapRate", "maxCarryCost", "maxCapitalBurn"] },
   { id: "timing", label: "Deal timing", ids: ["trueDomMin", "minPriceDrop", "staleOnly"] },
   {

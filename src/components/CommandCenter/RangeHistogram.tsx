@@ -13,6 +13,8 @@ interface RangeHistogramProps {
   lo: number;
   hi: number;
   loading?: boolean;
+  /** "panel": the taller, rounded bars of the Filters panel. */
+  variant?: "popover" | "panel";
 }
 
 /**
@@ -29,11 +31,13 @@ export default function RangeHistogram({
   lo,
   hi,
   loading,
+  variant = "popover",
 }: RangeHistogramProps) {
+  const panel = variant === "panel";
   const n = counts.length;
 
   if (loading && n === 0) {
-    return <div className="h-10 w-full animate-pulse bg-muted/60" aria-hidden />;
+    return <div className={cn("w-full animate-pulse bg-muted/60", panel ? "h-12 rounded-lg" : "h-10")} aria-hidden />;
   }
   // Nothing to show, or the field carries no data in this population (e.g. the
   // empty gross_yield_est) — hide rather than render a misleading flat line.
@@ -42,7 +46,7 @@ export default function RangeHistogram({
   const width = (max - min) / n;
 
   return (
-    <div className="flex h-10 items-end gap-px" aria-hidden>
+    <div className={cn("flex items-end", panel ? "h-12 gap-[3px]" : "h-10 gap-px")} aria-hidden>
       {counts.map((c, i) => {
         const bandLo = min + i * width;
         const bandHi = min + (i + 1) * width;
@@ -57,7 +61,13 @@ export default function RangeHistogram({
             style={{ height: `${heightPct}%` }}
             className={cn(
               "flex-1 transition-colors",
-              inSelection ? "bg-cyan-500/70" : "bg-muted/50"
+              panel
+                ? inSelection
+                  ? "rounded-t-[3px] bg-gradient-to-t from-cyan-600 to-teal-400 dark:from-cyan-500 dark:to-cyan-300"
+                  : "rounded-t-[3px] bg-slate-200 dark:bg-slate-800"
+                : inSelection
+                  ? "bg-cyan-500/70"
+                  : "bg-muted/50"
             )}
           />
         );

@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { FILTERS_BY_KEY, makePriceDef, coreFiltersForClass, moreFiltersForClass } from "@/lib/filters/filterRegistry";
 import { isInvestorLayerActive, typeOptionsForClass, priceConfig } from "@/lib/filters/fundamentals";
-import { PERSONA_CONFIG, INVESTOR_CONTROLS, defaultTerminalFilters } from "@/lib/personas/personaConfig";
+import { INVESTOR_CONTROLS, defaultTerminalFilters } from "@/lib/personas/personaConfig";
 import type { FilterDef, FilterValue } from "@/lib/filters/types";
 import FilterChip from "./FilterChip";
 import FundamentalToggle from "./FundamentalToggle";
@@ -27,7 +27,7 @@ import FilterDrawer from "./FilterDrawer";
 import ActiveFilterStrip from "./ActiveFilterStrip";
 import { buildFilterTokens } from "./filterTokens";
 import { formatResultNudge } from "./filterNudge";
-import { anyControlActive, isControlActive, controlId } from "./investorControls";
+import { anyControlActive, isControlActive } from "./investorControls";
 import { SCHOOL_LEVEL_LABEL } from "@/lib/schools/schoolLens";
 import { buildSchoolFilterClause } from "@/lib/schools/schoolFilterClause";
 
@@ -53,7 +53,6 @@ export default function FilterBar() {
     clearAddedFilters,
     searchResult,
     totalCount,
-    activePersona,
     filters,
     setFilter,
     setFilters,
@@ -127,12 +126,6 @@ export default function FilterBar() {
   const descActiveCount = showDescription ? descSignals.length + descTerms(descWords).length : 0;
 
   const nudge = formatResultNudge(searchResult?.listings.length ?? 0, totalCount);
-  // The active persona PINS this subset; every other investor signal stays reachable
-  // via "+ Add filter" (moreControls), and the query/strip operate over the FULL
-  // catalog so a signal set under any persona keeps applying + showing.
-  const controls = PERSONA_CONFIG[activePersona].controls;
-  const personaControlIds = new Set(controls.map(controlId));
-  const moreControls = INVESTOR_CONTROLS.filter((c) => !personaControlIds.has(controlId(c)));
 
   // Comp-only = no active (sale/rent) layer lit → hide the active-browse controls.
   const compOnly = !activeLayers.has("forSale") && !activeLayers.has("forRent");
@@ -246,6 +239,18 @@ export default function FilterBar() {
     lenses,
   });
 
+  // The phone sheet and the desktop drawer render the same FilterPanel from the same props.
+  const panelProps = {
+    coreItems,
+    tokens,
+    showInvestor: investorLayer,
+    showAdvanced: !compOnly,
+    showDescription,
+    clearAll,
+    anyActive,
+    resultCount: totalCount,
+  };
+
   return (
     <>
       {/* MOBILE (<md): layers stay inline (tab-like); all other filters move into
@@ -341,33 +346,8 @@ export default function FilterBar() {
           removable, with a single Clear all. Renders nothing when no filter is set. */}
       <ActiveFilterStrip tokens={tokens} onClearAll={clearAll} />
 
-      {sheetOpen && (
-        <MobileFilterSheet
-          onClose={() => setSheetOpen(false)}
-          coreItems={coreItems}
-          controls={controls}
-          moreControls={moreControls}
-          showInvestor={investorLayer}
-          showAdvanced={!compOnly}
-          clearAll={clearAll}
-          anyActive={anyActive}
-          resultCount={totalCount}
-          showDescription={showDescription}
-        />
-      )}
-
-      {drawerOpen && (
-        <FilterDrawer
-          onClose={() => setDrawerOpen(false)}
-          controls={controls}
-          moreControls={moreControls}
-          showInvestor={investorLayer}
-          clearAll={clearAll}
-          anyActive={anyActive}
-          resultCount={totalCount}
-          showDescription={showDescription}
-        />
-      )}
+      {sheetOpen && <MobileFilterSheet onClose={() => setSheetOpen(false)} {...panelProps} />}
+      {drawerOpen && <FilterDrawer onClose={() => setDrawerOpen(false)} {...panelProps} />}
     </>
   );
 }

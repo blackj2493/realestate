@@ -10,6 +10,8 @@ interface SliderProps
   rangeClassName?: string;
   /** Tailwind bg class for the thumb(s). Defaults to emerald. */
   thumbClassName?: string;
+  /** Classes for the track (height, colour, radius). Defaults to a thin slate bar. */
+  trackClassName?: string;
   /** Accessible name for each thumb (e.g. "Price"). */
   ariaLabel?: string;
   /** Screen-reader text for a thumb's current value (e.g. 650000 → "$650k"). */
@@ -19,7 +21,7 @@ interface SliderProps
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   SliderProps
->(({ className, rangeClassName, thumbClassName, ariaLabel, getAriaValueText, ...props }, ref) => {
+>(({ className, rangeClassName, thumbClassName, trackClassName, ariaLabel, getAriaValueText, ...props }, ref) => {
   // One thumb per value so range sliders get two draggable handles.
   const values = Array.isArray(props.value)
     ? (props.value as number[])
@@ -37,7 +39,7 @@ const Slider = React.forwardRef<
       )}
       {...props}
     >
-      <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden bg-slate-800">
+      <SliderPrimitive.Track className={cn("relative w-full grow overflow-hidden", trackClassName ?? "h-1.5 bg-slate-800")}>
         <SliderPrimitive.Range
           className={cn("absolute h-full", rangeClassName ?? "bg-cyan-700")}
         />
