@@ -148,7 +148,7 @@ export default function DescriptionFilterSection({
             if (!ids.length) return null;
             return (
               <div key={group}>
-                <div className="mb-1.5 text-xs font-semibold text-foreground">{SIGNAL_GROUP_LABEL[group]}</div>
+                <div className={cn(LABEL, "mb-1.5 text-foreground")}>{SIGNAL_GROUP_LABEL[group]}</div>
                 <div className="flex flex-wrap gap-2" role="group" aria-label={SIGNAL_GROUP_LABEL[group]}>
                   {ids.map((id) => {
                     const on = selected.has(id);
@@ -162,9 +162,9 @@ export default function DescriptionFilterSection({
                         aria-pressed={on}
                         onClick={() => toggleSignal(id)}
                         className={cn(
-                          "inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 text-sm transition-colors",
+                          "inline-flex min-h-[40px] items-center gap-1.5 border px-3 text-xs font-semibold transition-colors",
                           on
-                            ? "border-cyan-700 bg-cyan-700 text-white dark:border-cyan-500 dark:bg-cyan-600"
+                            ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
                             : "border-border bg-card text-foreground hover:border-cyan-500/50"
                         )}
                       >
@@ -173,9 +173,9 @@ export default function DescriptionFilterSection({
                         {n !== undefined && (
                           <span
                             className={cn(
-                              "font-mono text-xs font-semibold",
+                              "font-mono text-[10px] font-semibold",
                               on
-                                ? "text-cyan-100"
+                                ? "text-cyan-700 dark:text-cyan-300"
                                 : rare
                                   ? "text-muted-foreground"
                                   : "text-cyan-700 dark:text-cyan-400"

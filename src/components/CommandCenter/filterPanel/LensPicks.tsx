@@ -47,9 +47,9 @@ const LOOK: Record<string, { icon: LucideIcon; tone: Tone }> = {
 };
 
 const TONE: Record<Tone, string> = {
-  home: "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300",
-  yield: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
-  deal: "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300",
+  home: "border-cyan-500/40 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
+  yield: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  deal: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
 };
 
 function look(p: PickDef) {
@@ -77,10 +77,10 @@ export default function LensPicks({
   if (!picks.length) return null;
   return (
     <section aria-label={title} className="space-y-2">
-      <div className="flex items-center gap-1.5 px-1 text-[11px] font-bold uppercase tracking-[0.08em] text-cyan-700 dark:text-cyan-300">
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-400">
         {titleIcon}
         {title}
-        <span className="ml-auto font-medium normal-case tracking-normal text-muted-foreground">homes in view</span>
+        <span className="ml-auto text-muted-foreground">Homes in view</span>
       </div>
       <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {picks.map(({ pick, active, count }) => {
@@ -94,25 +94,28 @@ export default function LensPicks({
               disabled={empty}
               onClick={() => onToggle(pick)}
               className={cn(
-                "relative flex w-[136px] shrink-0 flex-col items-start gap-2 rounded-2xl border-[1.5px] bg-card p-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors dark:shadow-none",
-                active
-                  ? "border-cyan-600 dark:border-cyan-400 dark:shadow-[0_0_14px_rgba(34,211,238,0.18)]"
-                  : "border-transparent hover:border-cyan-500/40 dark:border-border",
-                empty && "cursor-not-allowed opacity-45 hover:border-transparent"
+                "relative flex w-[132px] shrink-0 flex-col items-start gap-2 border bg-card p-3 text-left transition-colors",
+                active ? "border-cyan-500/60 bg-cyan-500/10" : "border-border hover:border-cyan-500/50",
+                empty && "cursor-not-allowed opacity-40 hover:border-border"
               )}
             >
-              <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl", TONE[tone])}>
-                <Icon className="h-[18px] w-[18px]" aria-hidden />
+              <span className={cn("flex h-8 w-8 items-center justify-center border", TONE[tone])}>
+                <Icon className="h-4 w-4" aria-hidden />
               </span>
               {active && (
-                <span className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-600 text-white dark:bg-cyan-400 dark:text-slate-950">
+                <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center bg-cyan-500 text-slate-950">
                   <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
                 </span>
               )}
-              <span className="text-[13px] font-semibold leading-tight text-foreground">{pick.label}</span>
-              <span className="font-mono text-[11px] text-muted-foreground">
+              <span className="text-xs font-semibold leading-tight text-foreground">{pick.label}</span>
+              <span
+                className={cn(
+                  "font-mono text-[11px] font-semibold",
+                  active ? "text-cyan-700 dark:text-cyan-400" : "text-muted-foreground"
+                )}
+              >
                 {count === undefined ? (
-                  <span className="inline-block h-3 w-14 animate-pulse rounded bg-muted align-middle" aria-label="Counting" />
+                  <span className="inline-block h-3 w-14 animate-pulse bg-muted align-middle" aria-label="Counting" />
                 ) : (
                   `${count.toLocaleString("en-US")} ${count === 1 ? "home" : "homes"}`
                 )}

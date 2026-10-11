@@ -52,10 +52,10 @@ export default function MobileFilterSheet(props: Omit<FilterPanelProps, "surface
         type="button"
         aria-label="Close filters"
         onClick={onClose}
-        className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-background/80"
       />
       <div
-        className="relative h-[94dvh] overflow-hidden rounded-t-3xl shadow-[0_-12px_32px_rgba(15,23,42,0.18)]"
+        className="relative h-[94dvh] overflow-hidden border-t border-border"
         style={{
           transform: drag ? `translateY(${drag}px)` : undefined,
           transition: drag ? "none" : "transform 160ms ease-out",

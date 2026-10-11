@@ -8,35 +8,28 @@
  * number and moves it the instant a slider moves; without it, a reader who drags the rate
  * sees the result count hold still and decides the control is broken. The switch carries a
  * live count ("214 homes clear it") so the reader sees the effect before turning it on.
- *
- * It is the panel's one dark "instrument" card in both themes, with its own colours.
  */
 
 import React from "react";
 import { Calculator } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { breakEvenCapRate } from "@/lib/metrics/liveCashflow";
 import { CONTROL_BY_ID } from "@/lib/filters/filterPanelConfig";
-import { Switch } from "./primitives";
-
-const SLIDER = {
-  trackClassName: "h-1.5 rounded-full bg-white/15",
-  rangeClassName: "rounded-full bg-gradient-to-r from-cyan-400 to-teal-300",
-  thumbClassName: "h-6 w-6 rounded-full border-2 border-cyan-300 bg-white shadow-md",
-} as const;
+import { LABEL, PANEL_SLIDER, Switch } from "./primitives";
 
 function FinancingSlider({ id }: { id: "downPaymentPct" | "interestRatePct" }) {
   const value = useCommandCenterStore((s) => s.filters[id]);
   const setFilter = useCommandCenterStore((s) => s.setFilter);
   const c = CONTROL_BY_ID[id];
   if (!c || c.kind !== "slider") return null;
-  const label = id === "downPaymentPct" ? "Down payment" : "Your rate";
+  const label = id === "downPaymentPct" ? "Your down payment" : "Your rate";
   return (
     <div className="space-y-2">
-      <div className="flex items-baseline justify-between text-sm text-slate-300">
-        <span>{label}</span>
-        <span className="font-mono text-sm font-bold text-white">{c.format(value)}</span>
+      <div className="flex items-center justify-between">
+        <span className={cn(LABEL, "text-muted-foreground")}>{label}</span>
+        <span className="font-mono text-xs font-semibold text-cyan-700 dark:text-cyan-400">{c.format(value)}</span>
       </div>
       <Slider
         value={[value]}
@@ -46,7 +39,7 @@ function FinancingSlider({ id }: { id: "downPaymentPct" | "interestRatePct" }) {
         ariaLabel={label}
         getAriaValueText={c.format}
         onValueChange={([v]) => setFilter(id, v)}
-        {...SLIDER}
+        {...PANEL_SLIDER}
       />
     </div>
   );
@@ -59,27 +52,28 @@ export default function CashflowCard({ count }: { count: number | undefined }) {
   const breakEven = breakEvenCapRate(filters);
 
   return (
-    <div className="space-y-4 rounded-2xl bg-gradient-to-br from-slate-900 to-[#12304a] p-4 text-white shadow-[0_8px_24px_-12px_rgba(15,23,42,0.6)] ring-1 ring-white/5">
+    <section className="space-y-4 border border-border bg-card p-4" aria-label="Cashflow at your financing">
       <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-cyan-300">
+        <span className={cn(LABEL, "flex items-center gap-1.5 text-cyan-700 dark:text-cyan-400")}>
           <Calculator className="h-3.5 w-3.5" aria-hidden />
-          Cashflow at your financing
+          Cashflow · at your financing
         </span>
-        <span className="text-[11px] text-slate-400">assumptions</span>
+        <span className="text-[10px] text-muted-foreground">assumptions</span>
       </div>
 
       <FinancingSlider id="downPaymentPct" />
       <FinancingSlider id="interestRatePct" />
 
-      <p className="border-t border-white/10 pt-3 font-mono text-xs leading-relaxed text-slate-300">
+      <p className="border-t border-border/60 pt-3 font-mono text-[11px] leading-snug text-foreground">
         {filters.downPaymentPct}% down · {filters.interestRatePct.toFixed(2)}% · {filters.amortYears}yr →{" "}
-        <span className="font-bold text-teal-300">{breakEven.toFixed(2)}% cap</span> breaks even
+        <span className="font-semibold text-cyan-700 dark:text-cyan-300">{breakEven.toFixed(2)}% cap</span>{" "}
+        <span className="text-muted-foreground">breaks even</span>
       </p>
 
-      <div className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.07] px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3 border border-border bg-muted/30 px-3 py-2.5">
         <span className="min-w-0">
-          <span className="block text-sm font-semibold">Cashflow positive only</span>
-          <span className="block font-mono text-[11px] text-slate-400">
+          <span className="block text-sm font-medium text-foreground">Cashflow positive only</span>
+          <span className="block font-mono text-[11px] text-muted-foreground">
             {count === undefined
               ? "Counting…"
               : on
@@ -93,6 +87,6 @@ export default function CashflowCard({ count }: { count: number | undefined }) {
           label="Cashflow positive only"
         />
       </div>
-    </div>
+    </section>
   );
 }

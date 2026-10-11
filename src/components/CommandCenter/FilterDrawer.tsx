@@ -20,7 +20,7 @@ export default function FilterDrawer(props: Omit<FilterPanelProps, "surface" | "
         type="button"
         aria-label="Close filters"
         onClick={props.onClose}
-        className="absolute inset-0 bg-slate-950/30 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-background/70"
       />
       <div className="absolute right-0 top-0 h-full w-[440px] max-w-full border-l border-border shadow-2xl">
         <FilterPanel {...props} surface="drawer" />
