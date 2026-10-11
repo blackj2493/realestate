@@ -1,6 +1,6 @@
 {
-  "generatedForDateUtc": "2026-10-10",
-  "dataAsOf": "2026-10-10T04:41:12.819+00:00",
+  "generatedForDateUtc": "2026-10-11",
+  "dataAsOf": "2026-10-11T03:56:09.467+00:00",
   "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
   "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
   "angles": [
@@ -9,7 +9,7 @@
       "region": "Brampton",
       "headline": "33% of active Brampton listings have cut their asking price",
       "figure": "33%",
-      "sampleN": 1911,
+      "sampleN": 1913,
       "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
       "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
       "context": "typical reduction 8.3%"
@@ -17,9 +17,9 @@
     {
       "kind": "days_on_market",
       "region": "Brampton",
-      "headline": "The typical active Brampton listing has now sat 65 days",
-      "figure": "65 days",
-      "sampleN": 1911,
+      "headline": "The typical active Brampton listing has now sat 66 days",
+      "figure": "66 days",
+      "sampleN": 1913,
       "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
       "whySurprising": "Longest median true days-on-market of the markets tracked today."
     },
@@ -37,7 +37,7 @@
       "region": "Ottawa",
       "headline": "A 1-bed in Ottawa grosses about 6.9% rental yield",
       "figure": "6.9% gross yield",
-      "sampleN": 4299,
+      "sampleN": 4305,
       "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
       "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
     }
