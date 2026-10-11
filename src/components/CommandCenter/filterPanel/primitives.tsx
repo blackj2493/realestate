@@ -21,6 +21,14 @@ export const PANEL_SLIDER = {
     "h-6 w-6 rounded-full border-2 border-cyan-600 bg-white shadow-md dark:border-cyan-400 dark:bg-slate-950 dark:shadow-[0_0_12px_rgba(34,211,238,0.45)]",
 } as const;
 
+/**
+ * Registry labels are Title Case for chips ("Max Carry Cost (CAD/Mo)"); the panel reads as
+ * sentences ("Max carry cost (CAD/Mo)"). Acronyms (DOM, CAD) and words after "/" are kept.
+ */
+export function sentenceCase(label: string): string {
+  return label.replace(/(?<=\s)([A-Z])(?=[a-z])/g, (c) => c.toLowerCase());
+}
+
 /** Rounded number field used beside panel sliders. */
 export const PANEL_INPUT =
   "w-full rounded-lg border border-border bg-background px-2 py-2 text-center font-mono text-sm text-foreground focus:border-cyan-500 focus:outline-none";

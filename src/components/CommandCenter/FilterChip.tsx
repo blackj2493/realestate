@@ -13,7 +13,7 @@ import { supportsHistogram } from "@/lib/filters/histogram";
 import RangeHistogram from "./RangeHistogram";
 import NumberInput from "./NumberInput";
 import SqftBandControl from "./SqftBandControl";
-import { FieldHeader, PANEL_INPUT, PANEL_SLIDER, Segmented } from "./filterPanel/primitives";
+import { FieldHeader, PANEL_INPUT, PANEL_SLIDER, Segmented, sentenceCase } from "./filterPanel/primitives";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -146,7 +146,7 @@ function RangeControl({
   return (
     <div className={cn("flex flex-col", panel ? "gap-3" : "gap-2")}>
       {panel ? (
-        !hideHeader && <FieldHeader label={def.label} value={active ? def.chipLabel(value) : "Any"} active={active} />
+        !hideHeader && <FieldHeader label={sentenceCase(def.label)} value={active ? def.chipLabel(value) : "Any"} active={active} />
       ) : (
         <div className="flex items-center justify-between">
           <span className={cn(LABEL, "text-muted-foreground")}>{def.label}</span>
@@ -221,7 +221,7 @@ function SegmentedStepper({
   return (
     <div className="flex flex-col gap-2">
       <FieldHeader
-        label={def.label}
+        label={sentenceCase(def.label)}
         value={active ? def.chipLabel(value) : "Any"}
         active={active}
         extra={

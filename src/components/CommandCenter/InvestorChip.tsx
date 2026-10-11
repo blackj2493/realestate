@@ -13,7 +13,7 @@ import { isControlActive, investorChipLabel, resetControlToDefault, snapToActive
 import RangeHistogram from "./RangeHistogram";
 import NumberInput from "./NumberInput";
 import InfoDot from "@/components/ui/InfoDot";
-import { FieldHeader, PANEL_INPUT, PANEL_SLIDER } from "./filterPanel/primitives";
+import { FieldHeader, PANEL_INPUT, PANEL_SLIDER, sentenceCase } from "./filterPanel/primitives";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -137,7 +137,7 @@ function InvestorControlInner({
         <FieldHeader
           label={
             <>
-              {panelLabel(control.label)}
+              {sentenceCase(control.label)}
               {control.glossaryKey && <InfoDot term={control.glossaryKey} />}
             </>
           }
@@ -228,11 +228,6 @@ function InvestorControlInner({
       )}
     </div>
   );
-}
-
-/** "Max Carry Cost (CAD/Mo)" reads as a form field; the panel says "Max carry cost (CAD/Mo)". */
-function panelLabel(label: string): string {
-  return label.replace(/(?<=\s)([A-Z])(?=[a-z])/g, (c) => c.toLowerCase());
 }
 
 export default function InvestorChip({ control }: { control: ControlDef }) {

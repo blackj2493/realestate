@@ -64,7 +64,7 @@ import DescriptionFilterSection from "../DescriptionFilterSection";
 import { investorChipLabel, isControlActive } from "../investorControls";
 import { activeLabels, summarise } from "../filterSheetSummary";
 import type { FilterItem, FilterToken } from "../filterTokens";
-import { FieldHeader, GroupLabel, NavRow, PanelCard, SwitchRow } from "./primitives";
+import { FieldHeader, GroupLabel, NavRow, PanelCard, SwitchRow, sentenceCase } from "./primitives";
 import HomeTypeTiles from "./HomeTypeTiles";
 import LensPicks from "./LensPicks";
 import CashflowCard from "./CashflowCard";
@@ -336,7 +336,7 @@ export default function FilterPanel({
                 </div>
                 <div
                   className={cn(
-                    "font-mono text-2xl font-bold tracking-tight",
+                    "text-[26px] font-extrabold tabular-nums tracking-tight",
                     price.def.isActive(price.value) ? "text-foreground" : "text-muted-foreground"
                   )}
                 >
@@ -544,7 +544,11 @@ function DetailField({
     const active = def.isActive(value);
     return (
       <div className="space-y-3">
-        <FieldHeader label={def.label} value={active ? `${(value as string[]).length} selected` : "Any"} active={active} />
+        <FieldHeader
+          label={sentenceCase(def.label)}
+          value={active ? `${(value as string[]).length} selected` : "Any"}
+          active={active}
+        />
         <FilterControl def={def} value={value} onChange={onChange} variant="panel" enumLayout="chips" />
       </div>
     );
