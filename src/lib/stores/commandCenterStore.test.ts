@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useCommandCenterStore, MAX_SELECTED } from "./commandCenterStore";
+import { defaultTerminalFilters, type TerminalFilterState } from "@/lib/personas/personaConfig";
 
 const get = () => useCommandCenterStore.getState();
 const reset = () =>
@@ -70,5 +71,23 @@ describe("commandCenterStore — Compare selection cap", () => {
     get().toggleSelected("A"); // 0 → 1 is an ADD, not a removal
     expect(get().isSelectMode).toBe(true);
     expect(get().selectedIds.has("A")).toBe(true);
+  });
+});
+
+describe("setFilters", () => {
+  it("fills keys an old saved view never had from the defaults", () => {
+    // A view saved before the financing controls existed.
+    const old = { minCapRate: 5 } as unknown as TerminalFilterState;
+    useCommandCenterStore.getState().setFilters(old);
+    const f = useCommandCenterStore.getState().filters;
+    expect(f.minCapRate).toBe(5);
+    expect(f.interestRatePct).toBe(defaultTerminalFilters.interestRatePct);
+    expect(f.downPaymentPct).toBe(defaultTerminalFilters.downPaymentPct);
+  });
+
+  it("does not let an explicit undefined erase a default", () => {
+    const bad = { ...defaultTerminalFilters, interestRatePct: undefined } as unknown as TerminalFilterState;
+    useCommandCenterStore.getState().setFilters(bad);
+    expect(useCommandCenterStore.getState().filters.interestRatePct).toBe(defaultTerminalFilters.interestRatePct);
   });
 });

@@ -395,7 +395,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   filters: { ...defaultTerminalFilters },
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),
-  setFilters: (filters) => set({ filters: { ...filters } }),
+  // Saved views (MapLensesPanel, localStorage) and saved areas (bubble snapshots) restore
+  // whatever shape was current when they were saved. A view saved before the financing
+  // controls existed has no interestRatePct, and every control that formats it threw. Fill
+  // anything missing from the defaults so an old snapshot can never leave a key undefined.
+  setFilters: (filters) => set({ filters: { ...defaultTerminalFilters, ...withoutUndefined(filters) } }),
   resetFilters: () =>
     set({
       filters: { ...defaultTerminalFilters },
@@ -642,3 +646,8 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setPaletteOpen: (open) => set({ paletteOpen: open }),
   togglePalette: () => set((state) => ({ paletteOpen: !state.paletteOpen })),
 }));
+
+/** Drops keys whose value is undefined, so spreading a partial over defaults keeps the default. */
+function withoutUndefined<T extends object>(o: T): Partial<T> {
+  return Object.fromEntries(Object.entries(o ?? {}).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
