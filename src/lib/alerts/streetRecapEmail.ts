@@ -52,18 +52,28 @@ const mapUrl = (lat: number | null, lng: number | null): string =>
     ? `${SITE}/properties?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&z=14`
     : `${SITE}/properties`;
 
+/**
+ * Phone sizes. Gmail's app honours a head <style> for Gmail accounts; everything below also
+ * reads acceptably at the inline (desktop) sizes when it does not.
+ *
+ * LAYOUT RULES learned from the first real send (2026-10-12, read on a phone in Gmail's dark
+ * mode): no sentence set in the monospace face (a mono line wraps mid-phrase and strands a
+ * "·"), no value cell wider than its label (a nowrap note in the value column squeezed every
+ * label onto two lines), and no zebra or tinted backgrounds that the dark-mode inversion turns
+ * into muddy grey bands. Figures stay mono; words do not.
+ */
 const MOBILE_CSS = `
 @media only screen and (max-width:480px){
-  .sr-pad{padding:20px 18px 24px!important}
   .sr-figure{font-size:46px!important}
   .sr-unit{font-size:25px!important}
   .sr-lede{font-size:17px!important}
   .sr-because{font-size:15px!important}
-  .sr-tension{font-size:15px!important;padding:14px 14px!important}
-  .sr-sec{font-size:13px!important}
+  .sr-stat{font-size:20px!important}
+  .sr-cap{font-size:12px!important}
+  .sr-sec{font-size:12px!important}
   .sr-rl{font-size:15px!important}
   .sr-rv{font-size:15px!important}
-  .sr-note{font-size:13px!important}
+  .sr-note{font-size:14px!important}
 }`;
 
 /**
@@ -143,17 +153,22 @@ function headlineBlock(p: StreetRecapPayload): string {
     : `homes changed hands near <b>${esc(p.address)}</b> in ${p.monthLabel}.`;
 
   const where = placeName(p);
+  // What the figure is made of, said once. It replaced "Measured across every sale we have on
+  // record for the month", which filled the line without telling the reader anything.
+  const basis = hasDom
+    ? `Based on ${p.local.sales} sale${p.local.sales === 1 ? "" : "s"} ${where ? `in ${esc(where)}` : "near you"}. `
+    : "";
   const because = v
-    ? `Across ${esc(p.scope.city)} as a whole it was <b>${p.cityAgg?.medianDom} days</b>. ` +
-      `${where ? esc(where) : "Your area"} is moving ${v.faster ? "faster" : "slower"} than the city around it.`
+    ? `${basis}Across ${esc(p.scope.city)} as a whole it was <b>${p.cityAgg?.medianDom} days</b>, so ` +
+      `${where ? esc(where) : "your area"} is moving ${v.faster ? "faster" : "slower"} than the city around it.`
     : p.cityAgg?.medianDom != null
-      ? `Across ${esc(p.scope.city)} it was <b>${p.cityAgg.medianDom} days</b> — about the same.`
-      : `Measured across every sale we have on record for the month.`;
+      ? `${basis}Across ${esc(p.scope.city)} it was <b>${p.cityAgg.medianDom} days</b> — about the same.`
+      : basis.trim();
 
   return `
     <span class="sr-figure" style="font-family:${MONO};font-size:52px;font-weight:600;color:#0a1828;letter-spacing:-.02em;line-height:1;">${esc(figure)}<span class="sr-unit" style="font-size:27px;color:#55707f;font-weight:500;">${esc(unit)}</span></span>
     <p class="sr-lede" style="font-size:16px;line-height:1.5;color:#0a1828;margin:10px 0 0;">${lede}</p>
-    <p class="sr-because" style="font-size:14px;line-height:1.6;color:#3d5665;margin:13px 0 0;">${because}</p>`;
+    ${because ? `<p class="sr-because" style="font-size:14px;line-height:1.6;color:#3d5665;margin:12px 0 0;">${because}</p>` : ""}`;
 }
 
 /**
@@ -162,47 +177,84 @@ function headlineBlock(p: StreetRecapPayload): string {
  *
  * Sold homes took ~18 days. Homes still listed have been sitting ~63. That gap is the
  * market, stated in a way an owner can act on.
+ *
+ * Three figures side by side, each with a one-line caption: a table row of cells, which
+ * every client lays out, rather than one mono sentence that wrapped mid-phrase. The days
+ * figure is a MEDIAN, so the caption says "typical" — the old "30 days each" claimed every
+ * listing had sat exactly that long. The comparison sentence is printed only when the gap is
+ * real (STANDING_GAP_*): the first live send stated "Homes here either go quickly or they do
+ * not go at all" beside 28 days sold against 30 days listed, which says no such thing.
  */
-function tensionBlock(p: StreetRecapPayload): string {
+const STANDING_GAP_RATIO = 1.5;
+const STANDING_GAP_DAYS = 14;
+
+function standingBlock(p: StreetRecapPayload): string {
   const a = p.actives;
   if (!a || a.medianTrueDom == null) return "";
-  const cut = p.cutPct != null ? `<b>${whole(p.cutPct)}%</b> of them have already cut their asking price. ` : "";
-  return `
-    <div class="sr-tension" style="background:#f1f6f8;border:1px solid #d7e3e9;border-radius:5px;padding:15px 16px;margin:20px 0 0;">
-      <div style="font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#55707f;font-weight:700;">But that is only the homes that sold</div>
-      <div style="font-family:${MONO};font-size:20px;font-weight:600;color:#0a1828;margin-top:6px;">${a.active.toLocaleString("en-CA")} still for sale &middot; ${a.medianTrueDom} days each</div>
-      <div style="font-size:13px;color:#3d5665;margin-top:7px;line-height:1.5;">${cut}Homes here either go quickly or they do not go at all.</div>
-    </div>`;
+
+  const stat = (figure: string, caption: string) => `
+        <td valign="top" style="padding:0 6px 0 0;">
+          <div class="sr-stat" style="font-family:${MONO};font-size:22px;font-weight:600;color:#0a1828;line-height:1.1;white-space:nowrap;">${figure}</div>
+          <div class="sr-cap" style="font-size:12px;line-height:1.4;color:#55707f;margin-top:4px;">${caption}</div>
+        </td>`;
+  const cells = [
+    stat(a.active.toLocaleString("en-CA"), "homes still for sale"),
+    stat(`${a.medianTrueDom}<span style="font-size:14px;font-weight:500;color:#55707f;"> days</span>`, "typical time listed so far"),
+    p.cutPct != null ? stat(`${whole(p.cutPct)}%`, "have cut their price") : "",
+  ].filter(Boolean);
+
+  const sold = p.local.medianDom;
+  const gap =
+    sold != null && a.medianTrueDom >= sold * STANDING_GAP_RATIO && a.medianTrueDom - sold >= STANDING_GAP_DAYS
+      ? `<p class="sr-note" style="font-size:14px;line-height:1.6;color:#3d5665;margin:12px 0 0;">The homes still for sale have been listed ${a.medianTrueDom} days so far. The ones that sold took ${sold}.</p>`
+      : "";
+
+  return `${secHd("The homes that have not sold")}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">
+      <tr>${cells.join("")}</tr>
+    </table>${gap}`;
 }
 
+/**
+ * The month's figures as label / value rows. The secondary fact (a type's sale count, the
+ * city's above-asking share) sits UNDER the label as a caption, never beside the value: in
+ * the value column it was set nowrap, so it widened that column until every label wrapped.
+ * The value column holds one short figure and is sized to it.
+ */
 function rowsBlock(p: StreetRecapPayload): string {
-  const rows: { k: string; v: string; note?: string }[] = [];
+  type Row = { k: string; v: string; sub?: string } | { head: string };
+  const rows: Row[] = [];
   rows.push({ k: "Homes sold", v: String(p.local.sales) });
   if (p.abovePct != null) {
     rows.push({
       k: "Sold above asking",
       v: `${whole(p.abovePct)}%`,
-      note: p.cityAbovePct != null ? `${p.scope.city} ${whole(p.cityAbovePct)}%` : undefined,
+      sub: p.cityAbovePct != null ? `Across ${p.scope.city}: ${whole(p.cityAbovePct)}%` : undefined,
     });
   }
-  for (const t of printableTypes(p.local.byType)) {
-    rows.push({ k: typeLabel(t.type), v: `${t.medianDom} days`, note: `${t.sales} sold` });
+  const types = printableTypes(p.local.byType);
+  if (types.length) rows.push({ head: "Time to sell, by type" });
+  for (const t of types) {
+    rows.push({ k: tableLabel(t.type), v: `${t.medianDom} days`, sub: `${t.sales} sold` });
   }
 
   const tr = rows
-    .map((r, idx) => {
-      const bg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
-      const note = r.note
-        ? `<span style="color:#7a8f9c;font-weight:400;font-size:12px;"> &middot; ${esc(r.note)}</span>`
+    .map((r) => {
+      if ("head" in r) {
+        return `<tr><td colspan="2" style="padding:16px 0 2px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#55707f;font-weight:700;">${esc(r.head)}</td></tr>`;
+      }
+      const sub = r.sub
+        ? `<div style="font-size:12px;line-height:1.4;color:#7a8f9c;margin-top:2px;">${esc(r.sub)}</div>`
         : "";
       return `<tr>
-        <td class="sr-rl" style="padding:11px 12px;background:${bg};font-size:14px;color:#3d5665;">${esc(r.k)}</td>
-        <td class="sr-rv" align="right" style="padding:11px 12px;background:${bg};font-family:${MONO};font-size:14px;font-weight:600;color:#0a1828;white-space:nowrap;">${esc(r.v)}${note}</td>
+        <td class="sr-rl" valign="top" style="padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:14px;line-height:1.4;color:#3d5665;">${esc(r.k)}${sub}</td>
+        <td class="sr-rv" valign="top" align="right" style="padding:10px 0 10px 12px;border-bottom:1px solid #e2e8f0;font-family:${MONO};font-size:14px;font-weight:600;line-height:1.4;color:#0a1828;white-space:nowrap;">${esc(r.v)}</td>
       </tr>`;
     })
     .join("");
 
-  return `${secHd(`Near you, ${esc(p.monthLabel)}`)}
+  const where = placeName(p);
+  return `${secHd(`${where ? esc(where) : "Near you"}, ${esc(p.monthLabel)}`)}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">${tr}</table>`;
 }
 
@@ -230,6 +282,20 @@ const typeLabel = (t: string): string => {
   const w = typeWord(t);
   return w.charAt(0).toUpperCase() + w.slice(1);
 };
+
+/**
+ * Row labels in the HTML table, which want the plain category ("Semi-detached"), not the
+ * sentence word ("semi") that typeLabel capitalises for the plaintext part.
+ */
+const TABLE_LABEL: Record<string, string> = {
+  Detached: "Detached",
+  "Semi-Detached": "Semi-detached",
+  "Att/Row/Townhouse": "Townhouse",
+  "Condo Townhouse": "Condo townhouse",
+  "Condo Apartment": "Condo",
+  Link: "Linked home",
+};
+const tableLabel = (t: string): string => TABLE_LABEL[t.trim()] ?? typeLabel(t);
 const article = (w: string): string => ("aeiou".includes(w[0]?.toLowerCase() ?? "") ? "An" : "A");
 
 /**
@@ -266,7 +332,7 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
 
   const body = [
     headlineBlock(p),
-    tensionBlock(p),
+    standingBlock(p),
     rowsBlock(p),
     typeContrast(p),
     `<div style="margin:26px 0 0;">${button("See what's for sale near you &rarr;", ctaUrl)}</div>`,
@@ -282,7 +348,9 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
     .filter(Boolean)
     .join("\n");
 
-  const html = shell({ preheader, headerLabel: "YOUR STREET", body, headStyle: MOBILE_CSS });
+  // The month, one word: "YOUR STREET" wrapped onto two lines in Gmail's app, and it named a
+  // street where the figures describe a neighbourhood or a postal area.
+  const html = shell({ preheader, headerLabel: esc(p.monthLabel.toUpperCase()), body, headStyle: MOBILE_CSS });
 
   // ── Plaintext part. Required, not optional (§11.7 item 6). ──────────────────
   const t: string[] = [];
@@ -295,9 +363,9 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
   }
   if (p.actives?.medianTrueDom != null) {
     t.push(
-      `Still for sale: ${p.actives.active.toLocaleString("en-CA")} homes, ` +
-        `listed ${p.actives.medianTrueDom} days each` +
-        (p.cutPct != null ? `, ${whole(p.cutPct)}% of them already cut.` : "."),
+      `Still for sale: ${p.actives.active.toLocaleString("en-CA")} homes. ` +
+        `Typical time listed so far: ${p.actives.medianTrueDom} days.` +
+        (p.cutPct != null ? ` ${whole(p.cutPct)}% have cut their price.` : ""),
       ""
     );
   }
