@@ -7,16 +7,22 @@ import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
 import { SITE } from "@/lib/alerts/emailShell";
 import { unsubscribeUrl } from "@/lib/alerts/unsubscribe";
 import { recordActivation } from "@/lib/analytics/activation";
+import { isMissingRecapColumn, parseRecapChoice, watchConfirmationText } from "@/lib/alerts/addressWatchRequest";
 
 export const dynamic = "force-dynamic";
 
 /**
- * "Track this address" sign-up from the address-profile page (ADDRESS_PROFILES_PLAN P2).
+ * "Track this home" sign-up from the address pages (ADDRESS_PROFILES_PLAN P2).
  * Anonymous on purpose — mirrors /api/listing-alerts: the profile page serves visitors
  * whose address has NO listing (so listing_alerts' listing_key contract can't hold them).
- * Rows land in `address_watches` (migration 077, RLS service-only). The captured lead is
- * the value shipped here; delivery (matching new listings to watches in the nightly
- * worker) is the documented follow-up — same playbook listing_alerts shipped with.
+ * Rows land in `address_watches` (migration 077, RLS service-only). Delivery is the
+ * address-watch phase of the nightly alerts worker (scripts/worker/alerts.ts).
+ *
+ * `recap` (migration 155) is the visitor's answer to the monthly Street Recap tick-box —
+ * see parseRecapChoice. Tracking a home again re-activates the watch (an explicit request
+ * after an unsubscribe is fresh consent) and can switch the recap ON; it never switches
+ * the recap off, because an unticked box on a second visit is not a decision. Turning it
+ * off is the preference centre's job (/account/emails) or the unsubscribe link's.
  */
 const limiter = makeRateLimiter({ windowMs: 60_000, max: 5 });
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -54,25 +60,48 @@ export async function POST(req: NextRequest) {
 
     const addressKey = slugify(`${address} ${city}`);
     if (!addressKey) return bad("Address is required");
+    const recap = parseRecapChoice(body);
 
     const supabase = getServiceRoleClient();
-    // Idempotent: re-tracking the same address with the same email is a no-op.
-    const { error } = await supabase.from("address_watches").upsert(
-      {
-        email,
-        address_key: addressKey,
-        address,
-        city: city || null,
-        postal: postal || null,
-        lat,
-        lng,
-      },
-      { onConflict: "email,address_key", ignoreDuplicates: true }
-    );
+    const row = {
+      email,
+      address_key: addressKey,
+      address,
+      city: city || null,
+      postal: postal || null,
+      lat,
+      lng,
+    };
+    // Insert-only: an existing watch keeps its row (and its delivery baseline).
+    const insert = (withRecap: boolean) => {
+      const payload: Record<string, unknown> = withRecap && recap !== null ? { ...row, recap } : { ...row };
+      return supabase
+        .from("address_watches")
+        .upsert(payload, { onConflict: "email,address_key", ignoreDuplicates: true });
+    };
+    let recapStored = true;
+    let { error } = await insert(true);
+    if (error && recap !== null && isMissingRecapColumn(error)) {
+      // Migration 155 not applied yet: keep the watch, lose only the answer (the row stays
+      // NULL = never asked, so it is not mailed a recap).
+      console.warn("[address-watches] recap column missing — saved the watch without the answer");
+      recapStored = false;
+      ({ error } = await insert(false));
+    }
     if (error) {
       console.error("[address-watches] insert failed:", error.message);
       return NextResponse.json({ success: false, error: "Could not save your watch" }, { status: 500 });
     }
+
+    // A second "Track this home" on an existing row: re-activate it, and honour a tick.
+    // A no-op for the row just inserted. Best-effort — the watch above already exists.
+    const patch = recap === true && recapStored ? { status: "active", recap: true } : { status: "active" };
+    const { error: patchError } = await supabase
+      .from("address_watches")
+      .update(patch)
+      .eq("email", email)
+      .eq("address_key", addressKey);
+    if (patchError) console.error("[address-watches] re-activate failed:", patchError.message);
 
     // Activation milestone (0.3) — best-effort, never blocks the response.
     await recordActivation({
@@ -90,10 +119,11 @@ export async function POST(req: NextRequest) {
       replyTo: SENDERS.confirmation.replyTo,
       to: email,
       subject: `Watching ${address} for you`,
-      text:
-        `You're tracking ${where} on PureProperty.\n\n` +
-        `We'll email you if this address hits the market.\n\n` +
-        `Didn't sign up? Ignore this email, or unsubscribe: ${unsubscribeUrl(email, SITE)}`,
+      text: watchConfirmationText({
+        where,
+        recap: recap === true && recapStored,
+        unsubscribeUrl: unsubscribeUrl(email, SITE),
+      }),
       headers: {
         "List-Unsubscribe": `<${unsubscribeUrl(email, SITE)}>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",

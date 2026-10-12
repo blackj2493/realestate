@@ -565,29 +565,28 @@ export default async function AddressProfileView({
 
             {narrative && <p className="mt-5 max-w-[56ch] text-lg leading-relaxed text-foreground">{narrative}</p>}
 
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <a
-                href="#track"
-                className="inline-flex h-10 items-center rounded-md bg-cyan-600 px-5 text-sm font-bold text-white transition-colors hover:bg-cyan-500"
-              >
-                Put this home on my radar
-              </a>
-              {isConsumer ? (
-                ledgerCount > 0 && (
-                  <a href="#ledger" className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">
-                    Street sale ledger →
-                  </a>
-                )
-              ) : (
-                <Link href="/register" className="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">
-                  What did it last sell for? →
-                </Link>
-              )}
+            {/* The track control IS the hero call to action. It used to be a "Put this home
+                on my radar" link that jumped to a duplicate card at the foot of the page;
+                `id="track"` stays here so old #track links still land on it. */}
+            <div id="track" className="mt-5 scroll-mt-6">
+              <TrackAddressCard
+                address={profile.address}
+                city={profile.city}
+                postal={profile.postal}
+                lat={lat}
+                lng={lng}
+              />
             </div>
-            {!isConsumer && (
-              <p className="mt-2 font-mono text-[10px] text-muted-foreground">
-                free · no card · alerts when anything moves on this street
-              </p>
+            {isConsumer ? (
+              ledgerCount > 0 && (
+                <a href="#ledger" className="mt-3 inline-block text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                  Street sale ledger →
+                </a>
+              )
+            ) : (
+              <Link href="/register" className="mt-3 inline-block text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                What did it last sell for? →
+              </Link>
             )}
           </div>
 
@@ -675,16 +674,6 @@ export default async function AddressProfileView({
 
             <div id="ledger" className="scroll-mt-6 [content-visibility:auto] [contain-intrinsic-size:0px_480px]">
               <StreetLedgerCard isConsumer={isConsumer} gated={ledgerGated} publicLedger={ledgerPublic} />
-            </div>
-
-            <div id="track" className="scroll-mt-6">
-              <TrackAddressCard
-                address={profile.address}
-                city={profile.city}
-                postal={profile.postal}
-                lat={lat}
-                lng={lng}
-              />
             </div>
           </div>
         </div>
