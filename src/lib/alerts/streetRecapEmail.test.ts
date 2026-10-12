@@ -199,3 +199,54 @@ describe("an FSA is never printed as a place", () => {
     expect(html).not.toContain("Across Toronto");
   });
 });
+
+/**
+ * What the first real send (2026-10-12, K2J, read in Gmail on a phone) got wrong. Each of
+ * these was on screen in that email.
+ */
+describe("the standing-inventory block says only what the figures say", () => {
+  it("never claims a fixed time per listing — the figure is a median", () => {
+    const { html, text } = render();
+    expect(html).not.toContain("days each");
+    expect(text).not.toContain("days each");
+    expect(html).toContain("typical time listed so far");
+  });
+
+  it("drops the verdict that was printed whatever the data said", () => {
+    expect(render().html).not.toContain("either go quickly");
+  });
+
+  it("compares sold and still-listed time only when the gap is real", () => {
+    // 63 days listed against 18 to sell: a gap worth a sentence.
+    expect(render().html).toContain("The homes still for sale have been listed 63 days so far");
+    // 30 against 28 — the first live send — is not.
+    const close = payload({
+      local: { ...payload().local, medianDom: 28 },
+      actives: { active: 390, cutPrice: 121, medianTrueDom: 30 },
+    });
+    expect(render(close).html).not.toContain("have been listed 30 days so far");
+  });
+});
+
+describe("layout that survives a phone", () => {
+  it("puts a one-word label in the header bar, so it cannot wrap", () => {
+    const { html } = render();
+    expect(html).not.toContain("YOUR STREET");
+    expect(html).toContain(">AUGUST</span>");
+  });
+
+  it("keeps secondary facts out of the value column", () => {
+    const { html } = render();
+    // The city's above-asking share is a caption under its label, not a note after the value.
+    expect(html).toContain("Across Vaughan: 17%");
+    expect(html).not.toContain("&middot; Vaughan");
+    // Every value cell holds one short figure.
+    for (const m of html.matchAll(/class="sr-rv"[^>]*>([^<]*)</g)) expect(m[1].length).toBeLessThanOrEqual(10);
+  });
+
+  it("says what the headline figure is made of instead of filler", () => {
+    const { html } = render();
+    expect(html).toContain("Based on 115 sales in Patterson.");
+    expect(html).not.toContain("Measured across every sale");
+  });
+});
