@@ -39,6 +39,7 @@ import SaleRecordCard from "@/components/address/SaleRecordCard";
 import { resolveAddressSlug } from "@/lib/address/resolveProfile";
 import AddressProfileView from "@/components/address/AddressProfileView";
 import AreaInsights from "@/components/address/AreaInsights";
+import TrackAddressCard from "@/components/address/TrackAddressCard";
 import PropertyGallery from "@/app/(app)/properties/[id]/PropertyGallery";
 import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
 import { Suspense } from "react";
@@ -363,6 +364,21 @@ export default async function AddressPage({
             </p>
           </div>
         </header>
+
+        {/* Track this home. A home that sold, leased or came off the market recently lands
+            HERE rather than on the profile page, which held the only track control — so these
+            visitors, often the ones waiting for exactly this home to come back, had no way to
+            be told. The feed's own city ("Toronto C01") is what the nightly matcher compares,
+            so it is passed as-is. Address and city are public record; nothing VOW is sent. */}
+        <section id="track" className="mb-6 scroll-mt-6">
+          <TrackAddressCard
+            address={pub.address}
+            city={pub.city || cityName}
+            postal={null}
+            lat={pub.location?.[0] ?? null}
+            lng={pub.location?.[1] ?? null}
+          />
+        </section>
 
         {isConsumer ? (
           /* Signed-in consumer → VOW Listing Information + real gallery. */

@@ -23,8 +23,11 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { isStreamLive } from '@/lib/email/streams';
 
 const STASH_KEY = 'reno_funnel_pending';
+/** The monthly Street Recap is announced only while something sends it (streams.ts). */
+const RECAP_LIVE = isStreamLive('home_value');
 
 const INTERIOR_LABELS = ['', 'Executive (luxury)', 'Premium (updated)', 'Standard (average)', 'Economy (dated)', 'Minimal (original)'];
 const BASEMENT_LABELS = ['', 'Finished — high-end', '', 'Finished — standard', '', 'Unfinished', '', 'Partial / crawl space', '', 'None'];
@@ -136,10 +139,11 @@ export default function RenovationFunnel({
       })
         .then((res) => (res.ok ? res.json() : null))
         // `stored` is true only when the server kept an address, which only happens for a
-        // signed-in visitor. It is the one signal that decides whether to tell them about
-        // the monthly recap they are now on.
+        // signed-in visitor. It decides whether to tell them about the monthly recap they
+        // are now on — and only while the recap is live: this panel promised "The first
+        // arrives in early <month>" for weeks while nothing sent it.
         .then((j) => {
-          if (j?.stored) setRecap('on');
+          if (j?.stored && RECAP_LIVE) setRecap('on');
         })
         .catch(() => {
           /* capture is best-effort */

@@ -107,12 +107,15 @@ export async function loadRecapAudience(sb: SB): Promise<Recipient[]> {
   }
 
   // ── address_watches (migration 077). Email-keyed leads with no account. ──
-  // `status = 'active'` IS their consent: the one-click unsubscribe route flips it, so an
-  // opted-out lead simply stops appearing here.
+  // Their consent is TWO columns. `recap = true` (migration 155) is the tick-box on the Track
+  // this home card: the watch itself only asked for a listing alert, so a watcher who did not
+  // tick it (false) or was never asked (NULL) gets no recap. `status = 'active'` is the
+  // one-click unsubscribe, which stops everything.
   const { data: watches, error: wErr } = await sb
     .from("address_watches")
     .select("email, address, address_key, city, postal, lat, lng, created_at")
     .eq("status", "active")
+    .eq("recap", true)
     .order("created_at", { ascending: true })
     .limit(5000);
   if (wErr) throw new Error(`address_watches read failed: ${wErr.message}`);

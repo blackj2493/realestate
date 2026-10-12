@@ -111,3 +111,13 @@ export const EMAIL_STREAMS: EmailStream[] = [
 export const LIVE_EMAIL_STREAMS: EmailStream[] = EMAIL_STREAMS.filter(
   (s) => s.sender !== null && s.armedBy !== null
 );
+
+/**
+ * Whether a stream is live — the same test, for screens OUTSIDE the preference centre that
+ * promise one of these emails. The Track this home card offers the monthly Street Recap and
+ * the reno funnel announces it; both ask this first, so arming the stream here is what turns
+ * the offer on, and nothing offers it while nothing sends it.
+ */
+export function isStreamLive(key: StreamKey): boolean {
+  return LIVE_EMAIL_STREAMS.some((s) => s.key === key);
+}
