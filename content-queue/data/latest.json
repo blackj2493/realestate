@@ -1,6 +1,6 @@
 {
-  "generatedForDateUtc": "2026-10-12",
-  "dataAsOf": "2026-10-12T03:49:57.197+00:00",
+  "generatedForDateUtc": "2026-10-13",
+  "dataAsOf": "2026-10-13T03:51:39.739+00:00",
   "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
   "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
   "angles": [
@@ -9,17 +9,17 @@
       "region": "Brampton",
       "headline": "33% of active Brampton listings have cut their asking price",
       "figure": "33%",
-      "sampleN": 1778,
+      "sampleN": 1785,
       "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
       "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
-      "context": "typical reduction 8.1%"
+      "context": "typical reduction 8.2%"
     },
     {
       "kind": "days_on_market",
       "region": "Richmond Hill",
-      "headline": "The typical active Richmond Hill listing has now sat 67 days",
-      "figure": "67 days",
-      "sampleN": 1064,
+      "headline": "The typical active Richmond Hill listing has now sat 68 days",
+      "figure": "68 days",
+      "sampleN": 1069,
       "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
       "whySurprising": "Longest median true days-on-market of the markets tracked today."
     },
@@ -28,7 +28,7 @@
       "region": "Burlington",
       "headline": "Burlington is sitting at 3.2 months of supply",
       "figure": "3.2 months of supply",
-      "sampleN": 713,
+      "sampleN": 716,
       "sourceUrl": "https://www.pureproperty.ca/data/market-temperature",
       "whySurprising": "Least inventory of the 15 markets tracked today — ≈4–6 months is balanced, and below that tilts hard toward sellers."
     },
@@ -37,7 +37,7 @@
       "region": "Ottawa",
       "headline": "A 1-bed in Ottawa grosses about 6.9% rental yield",
       "figure": "6.9% gross yield",
-      "sampleN": 4005,
+      "sampleN": 4018,
       "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
       "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
     }
