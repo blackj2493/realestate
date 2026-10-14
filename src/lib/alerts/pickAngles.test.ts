@@ -3,6 +3,7 @@ import {
   PERSONA_ANGLES,
   angleReason,
   angleSubjectPhrase,
+  isBackOnMarket,
   pickAngles,
   type AngleCandidate,
   type ListingSignals,
@@ -134,5 +135,19 @@ describe("angleSubjectPhrase", () => {
     expect(cut(11_000)).toBe("an $11K price cut");
     expect(cut(110_000)).toBe("a $110K price cut");
     expect(cut(25_000)).toBe("a $25K price cut");
+  });
+});
+
+describe("isBackOnMarket", () => {
+  it("marks a relist whose stitched run is far older than the listing (78 Pieta Place)", () => {
+    expect(isBackOnMarket(cand("pieta", { entryMs: NOW - DAY }, { trueDom: 244 }), NOW)).toBe(true);
+  });
+
+  it("leaves a first listing alone, including a few days of feed lag", () => {
+    expect(isBackOnMarket(cand("fresh", { entryMs: NOW - 2 * DAY }, { trueDom: 5 }), NOW)).toBe(false);
+  });
+
+  it("says nothing without a True DOM", () => {
+    expect(isBackOnMarket(cand("unknown", { entryMs: NOW - DAY }), NOW)).toBe(false);
   });
 });

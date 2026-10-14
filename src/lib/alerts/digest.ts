@@ -164,6 +164,9 @@ function angleHeadline(bubbles: BubbleSection[], pickCount: number): string | nu
   return `${where}: ${list}`;
 }
 
+/** The text part's version of the row label. Only the exception is marked. */
+const relistTag = (l: NewListingAlert) => (l.relisted ? "[BACK ON THE MARKET] " : "");
+
 /** "1 pick" / "6 picks" — the chosen rows, said in words. */
 const pickWord = (n: number) => `${n} pick${n === 1 ? "" : "s"}`;
 
@@ -229,21 +232,38 @@ const REASON_STYLE: Record<ReasonTone, string> = {
   lock: "color:#0e7490;background:#ecfeff;",
 };
 
-/** The one line under an angle row. A sign-in tease links to the listing page. */
-function reasonHtml(pick: AnglePick<NewListingAlert>): string {
+/**
+ * The one line under an angle row. A sign-in tease links to the listing page. `titled`
+ * prefixes the angle's name — in a full list the row has no section heading to carry it.
+ */
+function reasonHtml(pick: AnglePick<NewListingAlert>, titled = false): string {
   const r = angleReason(pick);
+  const text = titled ? `${ANGLE_COPY[pick.angle].title} · ${r.text}` : r.text;
   const style = `display:inline-block;margin-top:6px;font-size:12px;font-weight:600;border-radius:4px;padding:3px 6px;${REASON_STYLE[r.tone]}`;
   return r.tone === "lock"
-    ? `<a href="${listingUrl(pick.listing.listing_key)}" style="${style}text-decoration:none;">${r.text} &rarr;</a>`
-    : `<div style="${style}">${r.text}</div>`;
+    ? `<a href="${listingUrl(pick.listing.listing_key)}" style="${style}text-decoration:none;">${text} &rarr;</a>`
+    : `<div style="${style}">${text}</div>`;
 }
 
-/** One listing row: thumb, address, city, brokerage (§4), price line, then `extra`. */
+/**
+ * "New listing" or "Back on the market" above the address. Every new-in-area row carries
+ * one: a relist sat beside first-time listings with nothing telling them apart (78 Pieta
+ * Place, 2026-10-14). The label is the whole disclosure — the history is VOW.
+ */
+function listingBadgeHtml(l: NewListingAlert): string {
+  const [text, style] = l.relisted
+    ? ["Back on the market", "color:#92400e;background:#fef3c7;"]
+    : ["New listing", "color:#0e7490;background:#e0f4f8;"];
+  return `<div style="margin-bottom:4px;"><span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:2px 6px;${style}">${text}</span></div>`;
+}
+
+/** One listing row: thumb, label, address, city, brokerage (§4), price line, then `extra`. */
 function listingRowHtml(l: NewListingAlert, extra: string): string {
   return `
       <tr>
         ${thumbCell(l.listing_key, l.thumb)}
         <td valign="top" style="padding:12px 0;border-bottom:1px solid #e2e8f0;">
+        ${listingBadgeHtml(l)}
         <a href="${listingUrl(l.listing_key)}" style="color:#0f172a;text-decoration:none;font-weight:600;font-size:14px;">
           ${l.address}
         </a>
@@ -304,15 +324,20 @@ function bubbleSectionHtml(b: BubbleSection, chips?: FilterChipLink[]): string {
   // links ARE the statement of scope, and they come with the way out of it.
   const scope = !b.filterLabel && chips?.length ? filterChipsHtml(b, chips) : filterLine;
   const title = `<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:14px;">${b.bubbleName}</div>${scope}`;
+  // In a full list the picks are tags on their own rows, not sections of their own.
+  const pickOf = new Map((b.showsAll ? (b.angles ?? []) : []).map((a) => [a.listing.listing_key, a]));
   const rows = b.listings
-    .map((l) =>
-      listingRowHtml(
+    .map((l) => {
+      const pick = pickOf.get(l.listing_key);
+      return listingRowHtml(
         l,
-        l.priceCut
-          ? `<div style="margin-top:4px;font-size:12px;color:#0f766e;font-weight:600;">Cut ${money(l.priceCut)} since it listed</div>`
-          : ""
-      )
-    )
+        pick
+          ? reasonHtml(pick, true)
+          : l.priceCut
+            ? `<div style="margin-top:4px;font-size:12px;color:#0f766e;font-weight:600;">Cut ${money(l.priceCut)} since it listed</div>`
+            : ""
+      );
+    })
     .join("");
   // A busy area names its full count in words rather than as a bare "+N more", because
   // there the number IS the point — but it is the denominator, not the ask. The rows above
@@ -331,7 +356,7 @@ function bubbleSectionHtml(b: BubbleSection, chips?: FilterChipLink[]): string {
         : `<div style="font-size:12px;margin-top:6px;">
              <a href="${areaUrl}" style="color:#0891b2;text-decoration:none;font-weight:600;">+${more} more in ${b.bubbleName} →</a>
            </div>`;
-  const body = b.angles?.length
+  const body = b.angles?.length && !b.showsAll
     ? angleRowsHtml(b.angles)
     : `<table style="width:100%;border-collapse:collapse;">${rows}</table>`;
   return `${title}${body}${overflow}`;
@@ -648,18 +673,23 @@ export function renderAlertsDigest(
           .map(
             (b) =>
               `• ${b.bubbleName}${b.filterLabel ? ` [${b.filterLabel}]` : ""} (${countLabel(b)} new):\n` +
-              (b.angles?.length
+              (b.angles?.length && !b.showsAll
                 ? b.angles
                     .map(
                       (a) =>
-                        `   ${ANGLE_COPY[a.angle].title.toUpperCase()}: ${a.listing.address}${a.listing.price != null ? ` — ${money(a.listing.price)}` : ""} — ${a.listing.brokerage || "Brokerage unavailable"}\n     ${angleReason(a).text}\n     ${listingUrl(a.listing.listing_key)}`
+                        `   ${ANGLE_COPY[a.angle].title.toUpperCase()}: ${relistTag(a.listing)}${a.listing.address}${a.listing.price != null ? ` — ${money(a.listing.price)}` : ""} — ${a.listing.brokerage || "Brokerage unavailable"}\n     ${angleReason(a).text}\n     ${listingUrl(a.listing.listing_key)}`
                     )
                     .join("\n")
                 : b.listings
-                    .map(
-                      (l) =>
-                        `   - ${l.address}${l.price != null ? ` — ${money(l.price)}` : ""}${l.brokerage ? ` — ${l.brokerage}` : ""}${l.priceCut ? `\n     Cut ${money(l.priceCut)} since it listed` : ""}\n     ${listingUrl(l.listing_key)}`
-                    )
+                    .map((l) => {
+                      const pick = b.showsAll ? b.angles?.find((a) => a.listing.listing_key === l.listing_key) : undefined;
+                      const why = pick
+                        ? `\n     ${ANGLE_COPY[pick.angle].title}: ${angleReason(pick).text}`
+                        : l.priceCut
+                          ? `\n     Cut ${money(l.priceCut)} since it listed`
+                          : "";
+                      return `   - ${relistTag(l)}${l.address}${l.price != null ? ` — ${money(l.price)}` : ""}${l.brokerage ? ` — ${l.brokerage}` : ""}${why}\n     ${listingUrl(l.listing_key)}`;
+                    })
                     .join("\n")) +
               (chipsFor(b)?.length
                 ? `\n   Get only some of these from tomorrow:\n` +

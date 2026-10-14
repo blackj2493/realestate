@@ -1,7 +1,7 @@
 /**
  * Bubble new-listing digest shaping — pure (§4). Enforces the anti-irritation
- * model from the spec: ≤6 rows per bubble, noisy bubbles collapse to a count,
- * a listing matching several of a user's bubbles appears once (first wins).
+ * model from the spec: a quiet area shows every new home, a busy one shows its picks and
+ * a count, a listing matching several of a user's bubbles appears once (first wins).
  *
  * "First wins" is only fair if FIRST means something. compareBubbleSpecificity defines
  * that order — see its own note.
@@ -33,6 +33,12 @@ export interface NewListingAlert {
   priceCut?: number | null;
   /** Signals the angle picks read (pickAngles). Two of them order picks and never print. */
   signals?: ListingSignals | null;
+  /**
+   * The home was for sale before this listing — an earlier campaign that expired or was
+   * pulled (see isBackOnMarket). Renders as a "Back on the market" label; the history
+   * behind it (dates, count, days) is VOW and stays on the site.
+   */
+  relisted?: boolean;
 }
 
 export interface BubbleMatches {
@@ -57,8 +63,16 @@ export interface BubbleSection {
   total: number;
   /** `total` is a floor (the worker's fetch cap bound) — the email renders it as "100+". */
   capped?: boolean;
-  /** ≤ BUBBLE_EMAIL_ROW_CAP rows, newest first. NEVER empty — see buildBubbleSections. */
+  /**
+   * NEVER empty — see buildBubbleSections. Every new home when `showsAll`, picks first;
+   * otherwise ≤ BUBBLE_EMAIL_ROW_CAP rows, or the angle picks.
+   */
   listings: NewListingAlert[];
+  /**
+   * The area was quiet enough (≤ BUBBLE_SHOW_ALL_MAX) that `listings` is EVERY new home.
+   * `angles`, when present, are then tags on some of those rows, not a replacement for them.
+   */
+  showsAll?: boolean;
   /**
    * The area produced more than BUBBLE_COLLAPSE_THRESHOLD new listings tonight. The rows
    * still render; this only adds the line naming the full count and linking to all of it.
@@ -67,8 +81,9 @@ export interface BubbleSection {
   /** Present when the bubble alerts on its saved filters (alert_scope 'filtered'). */
   filterLabel?: string | null;
   /**
-   * Unfiltered areas only: one pick per angle, in persona order. When present, `listings`
-   * holds exactly these homes in the same order and the renderer draws angle sections.
+   * One pick per angle, in persona order. With `showsAll` they tag their rows and lead the
+   * list. Without it (a busy unfiltered area) `listings` holds exactly these homes in the
+   * same order and the renderer draws angle sections.
    */
   angles?: AnglePick<NewListingAlert>[];
 }
@@ -86,6 +101,21 @@ export const BUBBLE_EMAIL_ROW_CAP = 6;
  * homes plus the count is strictly more useful and no longer than the tip it replaced.
  */
 export const BUBBLE_COLLAPSE_THRESHOLD = 20;
+
+/**
+ * At or under this many new homes, a section shows EVERY one of them.
+ *
+ * A reader who saves a school zone or a neighbourhood saved it to see what comes up there,
+ * all of it. Picks — one home per angle — dropped any home that fit no angle, so on
+ * 2026-10-14 an area with three new homes emailed one and hid the rest behind a link.
+ * Picks exist for the busy areas, where every home cannot fit.
+ *
+ * Measured on prod 2026-10-14 over 14 nights and 480 alerting areas: a neighbourhood
+ * area averages 1.5 new homes a night (90th percentile 8.5), a school or drawn area under
+ * 8, a whole city 43 (Toronto ~180). So 15 sends every home for nearly every small area,
+ * and keeps the picks for cities.
+ */
+export const BUBBLE_SHOW_ALL_MAX = 15;
 
 // ── Scan order: narrowest area first ────────────────────────────────────────
 /** The only fields the ordering needs — the worker's row and a test row both satisfy it. */
@@ -249,20 +279,34 @@ export function buildBubbleSections(
     const total = b.total - (b.matches.length - deduped.length);
     if (total <= 0) continue;
 
-    // Every section shows rows, however busy the area is. The row cap already bounds the
-    // email; a high count only changes what the line under the rows says.
+    // A quiet area shows every new home (BUBBLE_SHOW_ALL_MAX). The angle picks still run —
+    // they tag their rows with the reason and lead the list — but nothing is left out.
+    // A filtered area gets the tags too: the reader chose the homes, we still say which
+    // one stands out. Only when every home is in hand: a floor count is not "every".
+    const capped = (b.capped ?? false) && deduped.length === b.matches.length;
+    const showsAll = !capped && total <= BUBBLE_SHOW_ALL_MAX && deduped.length === total;
+
+    // A busy area shows rows, however busy it is. The row cap bounds the email; a high
+    // count only changes what the line under the rows says.
     //
     // WHICH six, though, is the whole value of a section over a city: 268 homes came up in
     // Toronto last night and six of them fit. comparePicks puts the best-priced first and
     // falls back to newest, so an area with no estimates behind it is unchanged.
     //
-    // An area with no saved filter goes further: one home per angle, each with a reason.
+    // A busy area with no saved filter goes further: one home per angle, each with a reason.
     // An area where no angle qualifies (land, commercial, a thin night) keeps the rows.
     const angles =
-      opts.persona && !b.filterLabel ? pickAngles(deduped, opts.persona, opts.nowMs ?? Date.now()) : [];
-    const rows = angles.length
-      ? angles.map((a) => a.listing)
-      : [...deduped].sort(comparePicks).slice(0, BUBBLE_EMAIL_ROW_CAP);
+      opts.persona && (showsAll || !b.filterLabel)
+        ? pickAngles(deduped, opts.persona, opts.nowMs ?? Date.now())
+        : [];
+    const ranked = [...deduped].sort(comparePicks);
+    let rows: NewListingAlert[];
+    if (showsAll) {
+      const picked = new Set(angles.map((a) => a.listing.listing_key));
+      rows = [...angles.map((a) => a.listing), ...ranked.filter((l) => !picked.has(l.listing_key))];
+    } else {
+      rows = angles.length ? angles.map((a) => a.listing) : ranked.slice(0, BUBBLE_EMAIL_ROW_CAP);
+    }
     if (rows.length === 0) continue;
     sections.push({
       bubbleId: b.bubbleId,
@@ -270,8 +314,9 @@ export function buildBubbleSections(
       total,
       // Only a floor while it is still the whole set the worker fetched. Once a narrower
       // area has taken rows off it, the count is exact again and the "+" would lie.
-      capped: (b.capped ?? false) && deduped.length === b.matches.length,
+      capped,
       listings: rows,
+      ...(showsAll ? { showsAll: true } : {}),
       highVolume: total > BUBBLE_COLLAPSE_THRESHOLD,
       filterLabel: b.filterLabel ?? null,
       ...(angles.length ? { angles } : {}),

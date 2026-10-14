@@ -7,6 +7,7 @@ import {
   parseNotifiedKeys,
   BUBBLE_EMAIL_ROW_CAP,
   BUBBLE_COLLAPSE_THRESHOLD,
+  BUBBLE_SHOW_ALL_MAX,
   NOTIFIED_KEY_RETENTION_MS,
   BUBBLE_LOOKBACK_MS,
   bubbleSearchSinceMs,
@@ -43,12 +44,28 @@ describe("buildBubbleSections", () => {
     expect(sections[0].total).toBe(3);
   });
 
-  it("caps rows at BUBBLE_EMAIL_ROW_CAP, keeping the true total", () => {
-    const many = Array.from({ length: 10 }, (_, i) => listing(`W${i}`, i));
+  it("shows EVERY home in a quiet area, up to BUBBLE_SHOW_ALL_MAX", () => {
+    // The regression this guards: a reader saved a school zone to see what comes up there,
+    // and the email showed one of three new homes (2026-10-14).
+    const many = Array.from({ length: BUBBLE_SHOW_ALL_MAX }, (_, i) => listing(`W${i}`, i));
+    const [s] = buildBubbleSections([bubble("b1", "Pocket A", many)]);
+    expect(s.listings).toHaveLength(BUBBLE_SHOW_ALL_MAX);
+    expect(s.showsAll).toBe(true);
+    expect(s.total).toBe(BUBBLE_SHOW_ALL_MAX);
+  });
+
+  it("caps rows at BUBBLE_EMAIL_ROW_CAP past BUBBLE_SHOW_ALL_MAX, keeping the true total", () => {
+    const many = Array.from({ length: BUBBLE_SHOW_ALL_MAX + 1 }, (_, i) => listing(`W${i}`, i));
     const [s] = buildBubbleSections([bubble("b1", "Pocket A", many)]);
     expect(s.listings).toHaveLength(BUBBLE_EMAIL_ROW_CAP);
-    expect(s.total).toBe(10);
+    expect(s.showsAll).toBeUndefined();
+    expect(s.total).toBe(BUBBLE_SHOW_ALL_MAX + 1);
     expect(s.highVolume).toBe(false);
+  });
+
+  it("never claims every home when it holds fewer rows than the count", () => {
+    const [s] = buildBubbleSections([bubble("b1", "Pocket A", [listing("W1", 1), listing("W2", 2)], 9)]);
+    expect(s.showsAll).toBeUndefined();
   });
 
   it("flags a noisy bubble as high volume but STILL sends rows", () => {
@@ -76,14 +93,14 @@ describe("buildBubbleSections", () => {
     // The regression this guards is the reason the section exists over a city feed. On one
     // Toronto night only 6 of the 20 best-priced listings sat inside the newest 100, so
     // newest-first was throwing away most of what the reader came for.
-    const rows = Array.from({ length: 12 }, (_, i) => ({ ...listing(`W${i}`, i), score: null as number | null }));
-    rows[11].score = 0.02; // newest, barely under
+    const rows = Array.from({ length: 30 }, (_, i) => ({ ...listing(`W${i}`, i), score: null as number | null }));
+    rows[29].score = 0.02; // newest, barely under
     rows[0].score = 0.25; // oldest, the best home of the night
     rows[3].score = 0.18;
     const [s] = buildBubbleSections([bubble("b1", "All of Toronto", rows)]);
-    expect(s.listings.slice(0, 3).map((l) => l.listing_key)).toEqual(["W0", "W3", "W11"]);
+    expect(s.listings.slice(0, 3).map((l) => l.listing_key)).toEqual(["W0", "W3", "W29"]);
     // The unscored remainder still fills the section, newest-first.
-    expect(s.listings.slice(3).map((l) => l.listing_key)).toEqual(["W10", "W9", "W8"]);
+    expect(s.listings.slice(3).map((l) => l.listing_key)).toEqual(["W28", "W27", "W26"]);
   });
 
   it("carries the fetch-cap flag, and drops it once de-dup makes the count exact", () => {
@@ -277,33 +294,59 @@ describe("bubbleSearchSinceMs", () => {
   });
 });
 
-describe("buildBubbleSections — angle picks for unfiltered areas", () => {
+describe("buildBubbleSections — angle picks", () => {
   const NOW = Date.UTC(2026, 9, 6);
   const withSignals = (key: string, over: Partial<NewListingAlert>): NewListingAlert => ({
     ...listing(key, NOW - 86_400_000),
     ...over,
   });
+  /** A busy night: enough plain homes to push the area past BUBBLE_SHOW_ALL_MAX. */
+  const filler = (n: number) => Array.from({ length: n }, (_, i) => listing(`plain${i}`, NOW - i));
 
-  it("replaces the plain rows with one home per angle when a persona is given", () => {
+  it("in a quiet area, tags the picks and still lists every other home after them", () => {
     const matches = [
       listing("plain1", NOW),
       withSignals("cut", { priceCut: 60_000 }),
       withSignals("suite", { signals: { suiteStatus: "EXISTING_SUITE" } }),
     ];
-    const [s] = buildBubbleSections([bubble("b1", "Vaughan", matches)], { persona: "smart", nowMs: NOW });
+    const [s] = buildBubbleSections([bubble("b1", "Near Pierre Berton PS", matches)], { persona: "smart", nowMs: NOW });
+    expect(s.showsAll).toBe(true);
     expect(s.angles?.map((a) => a.angle)).toEqual(["price_cut", "suite"]);
-    expect(s.listings.map((l) => l.listing_key)).toEqual(["cut", "suite"]);
+    expect(s.listings.map((l) => l.listing_key)).toEqual(["cut", "suite", "plain1"]);
     expect(s.total).toBe(3);
   });
 
-  it("leaves a filtered area exactly as it was", () => {
+  it("tags a quiet FILTERED area too — the reader chose the homes, we say which stands out", () => {
     const matches = [withSignals("cut", { priceCut: 60_000 }), listing("plain", NOW)];
     const [s] = buildBubbleSections([{ ...bubble("b1", "Vaughan", matches), filterLabel: "Detached" }], {
       persona: "smart",
       nowMs: NOW,
     });
+    expect(s.angles?.map((a) => a.listing.listing_key)).toEqual(["cut"]);
+    expect(s.listings.map((l) => l.listing_key)).toEqual(["cut", "plain"]);
+  });
+
+  it("in a busy unfiltered area, replaces the plain rows with one home per angle", () => {
+    const matches = [
+      ...filler(BUBBLE_SHOW_ALL_MAX),
+      withSignals("cut", { priceCut: 60_000 }),
+      withSignals("suite", { signals: { suiteStatus: "EXISTING_SUITE" } }),
+    ];
+    const [s] = buildBubbleSections([bubble("b1", "Vaughan", matches)], { persona: "smart", nowMs: NOW });
+    expect(s.showsAll).toBeUndefined();
+    expect(s.angles?.map((a) => a.angle)).toEqual(["price_cut", "suite"]);
+    expect(s.listings.map((l) => l.listing_key)).toEqual(["cut", "suite"]);
+    expect(s.total).toBe(BUBBLE_SHOW_ALL_MAX + 2);
+  });
+
+  it("leaves a busy filtered area exactly as it was", () => {
+    const matches = [withSignals("cut", { priceCut: 60_000 }), ...filler(BUBBLE_SHOW_ALL_MAX)];
+    const [s] = buildBubbleSections([{ ...bubble("b1", "Vaughan", matches), filterLabel: "Detached" }], {
+      persona: "smart",
+      nowMs: NOW,
+    });
     expect(s.angles).toBeUndefined();
-    expect(s.listings).toHaveLength(2);
+    expect(s.listings).toHaveLength(BUBBLE_EMAIL_ROW_CAP);
   });
 
   it("falls back to the plain rows when no angle qualifies", () => {

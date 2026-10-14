@@ -126,6 +126,30 @@ function hiddenDays(l: AngleCandidate, nowMs: number): number | null {
   return hidden >= NEGOTIATE_MIN_HIDDEN_DAYS ? hidden : null;
 }
 
+/**
+ * The stitched run is at least this many days longer than the listing itself: the home
+ * was for sale under an earlier listing that ended inside the stitch window
+ * (TemporalDistressEngine STITCH_WINDOW_DAYS, 35). A week clears the gap between the
+ * feed's EntryTimestamp and the night TrueDom was last computed.
+ */
+export const RELIST_MIN_HIDDEN_DAYS = 7;
+
+/**
+ * True when tonight's "new" listing is a home back on the market rather than a first
+ * listing. 78 Pieta Place (2026-10-14) expired on the 12th and relisted on the 14th with a
+ * True DOM of 244; the email presented it beside the first-time listings as though it
+ * were one of them.
+ *
+ * True DOM is VOW, so only this yes/no leaves the site — the same disclosure as the
+ * negotiate angle's sign-in tease. The days, dates and number of listings never print.
+ */
+export function isBackOnMarket(l: AngleCandidate, nowMs: number): boolean {
+  const dom = finite(l.signals?.trueDom);
+  if (dom == null) return false;
+  const listedDays = l.entryMs > 0 ? Math.max(0, (nowMs - l.entryMs) / DAY_MS) : 0;
+  return dom - listedDays >= RELIST_MIN_HIDDEN_DAYS;
+}
+
 function lotWidth(l: AngleCandidate): number | null {
   const w = finite(l.signals?.lotWidthFt);
   return w != null && w >= LAND_MIN_WIDTH_FT && w <= LAND_MAX_WIDTH_FT ? w : null;
