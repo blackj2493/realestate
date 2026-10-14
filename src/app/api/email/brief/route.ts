@@ -15,6 +15,11 @@
  * visit and then silently revert. So the tap writes the lens, then re-snaps the same rows
  * reconcile would, and the confirm page says that the dashboard changes too.
  *
+ * A MAP AREA (school, drawn, commute) is not a dashboard region: reconcileCityAlerts never
+ * touches it and the dashboard lens is not its filter. So a tap there writes a lens onto
+ * that one area and leaves the dashboard alone. An area that already carries its own map
+ * filters is refused, not overwritten — the tap would drop every filter but one.
+ *
  * WHAT IT NEVER DOES. It never creates a dashboard_prefs row. A row with no regions would
  * load as an empty dashboard ("server wins on load"), which is a far worse outcome than a
  * link that asks the reader to open the dashboard once.
@@ -32,6 +37,7 @@ import {
 import { PERSONA_PICK_LABEL } from "@/lib/alerts/digest";
 import { DEFAULT_ACTIVITY_LENS, normalizeConfig, type MarketActivityLens } from "@/lib/dashboard/config";
 import { SITE, esc } from "@/lib/alerts/emailShell";
+import { bubbleAlertFilter } from "@/lib/alerts/bubbleFilterClause";
 
 export const dynamic = "force-dynamic";
 
@@ -70,8 +76,8 @@ interface AreaRow {
   filters: unknown;
 }
 
-/** The area, only if it is a city area owned by this account. */
-async function ownedCityArea(sb: Sb, userId: string, bubbleId: string): Promise<AreaRow | null> {
+/** The area, only if this account owns it. */
+async function ownedArea(sb: Sb, userId: string, bubbleId: string): Promise<AreaRow | null> {
   const { data, error } = await sb
     .from("market_bubbles")
     .select("id, user_id, name, area_type, filters")
@@ -79,7 +85,7 @@ async function ownedCityArea(sb: Sb, userId: string, bubbleId: string): Promise<
     .maybeSingle();
   if (error || !data) return null;
   const row = data as AreaRow;
-  return row.user_id === userId && row.area_type === "city" ? row : null;
+  return row.user_id === userId ? row : null;
 }
 
 function lensOf(filters: unknown): MarketActivityLens | null {
@@ -91,10 +97,13 @@ function lensOf(filters: unknown): MarketActivityLens | null {
 type Outcome = { ok: true; message: string } | { ok: false; message: string };
 
 const FAIL = "This link couldn't be verified. Please use a link from a recent email, or change this from your dashboard.";
+const HAS_MAP_FILTERS =
+  "This area already has its own filters from the map. Change them there, so none of them is lost. Nothing was changed.";
 const NEEDS_DASHBOARD =
   "Open your dashboard once to finish setting up, then this link will work. Nothing was changed.";
 
 async function applyFilter(sb: Sb, userId: string, area: AreaRow, preset: ParsedBriefAction & { kind: "filter" }): Promise<Outcome> {
+  if (area.area_type !== "city") return applyMapAreaFilter(sb, userId, area, preset);
   const { data: prefs, error: prefsErr } = await sb
     .from("dashboard_prefs")
     .select("config")
@@ -145,6 +154,28 @@ async function applyFilter(sb: Sb, userId: string, area: AreaRow, preset: Parsed
   };
 }
 
+/** A school, drawn or commute area: filter that one area on its own lens. See the header. */
+async function applyMapAreaFilter(
+  sb: Sb,
+  userId: string,
+  area: AreaRow,
+  preset: ParsedBriefAction & { kind: "filter" }
+): Promise<Outcome> {
+  const own = lensOf(area.filters);
+  if (!own && bubbleAlertFilter(area.filters).label) return { ok: false, message: HAS_MAP_FILTERS };
+  const lens = applyPreset(own ?? DEFAULT_ACTIVITY_LENS, preset.preset);
+  const upd = await sb
+    .from("market_bubbles")
+    .update({ alert_scope: "filtered", filters: { lens } })
+    .eq("id", area.id)
+    .eq("user_id", userId);
+  if (upd.error) return { ok: false, message: FAIL };
+  return {
+    ok: true,
+    message: `Done. From tomorrow, ${esc(area.name)} sends ${FILTER_PRESETS[preset.preset].confirm}.`,
+  };
+}
+
 async function applyPersona(sb: Sb, userId: string, persona: ParsedBriefAction & { kind: "persona" }): Promise<Outcome> {
   const { data: prefs, error } = await sb.from("dashboard_prefs").select("config").eq("user_id", userId).maybeSingle();
   if (error) return { ok: false, message: FAIL };
@@ -169,7 +200,7 @@ async function apply(p: Params): Promise<Outcome> {
     if (!userId) return { ok: false, message: FAIL };
     const parsed = parseBriefAction(p.action as BriefAction);
     if (parsed.kind === "persona") return applyPersona(sb, userId, parsed);
-    const area = await ownedCityArea(sb, userId, p.bubbleId);
+    const area = await ownedArea(sb, userId, p.bubbleId);
     if (!area) return { ok: false, message: FAIL };
     return applyFilter(sb, userId, area, parsed);
   } catch (err) {
@@ -184,16 +215,19 @@ async function describe(p: Params): Promise<string | null> {
   if (parsed.kind === "persona")
     return `Order your nightly picks for ${PERSONA_PICK_LABEL[parsed.persona].toLowerCase()}?`;
   let where = "this area";
+  let isCity = true;
   try {
     const sb = getServiceRoleClient();
     const userId = await userIdFor(sb, p.email);
-    const area = userId ? await ownedCityArea(sb, userId, p.bubbleId) : null;
+    const area = userId ? await ownedArea(sb, userId, p.bubbleId) : null;
     if (!area) return null;
     where = esc(area.name);
+    isCity = area.area_type === "city";
   } catch {
     return null;
   }
-  return `Send ${FILTER_PRESETS[parsed.preset].confirm} in ${where} from tomorrow? This also sets the same filter on your dashboard.`;
+  // A map area's filter is its own; the dashboard is not touched (applyMapAreaFilter).
+  return `Send ${FILTER_PRESETS[parsed.preset].confirm} in ${where} from tomorrow?${isCity ? " This also sets the same filter on your dashboard." : ""}`;
 }
 
 function shell(inner: string): string {

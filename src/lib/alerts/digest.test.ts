@@ -543,3 +543,46 @@ describe("renderAlertsDigest — angle picks for an unfiltered area", () => {
     expect(html).toContain("Buying a home");
   });
 });
+
+describe("renderAlertsDigest — every home in a quiet area", () => {
+  const pieta = {
+    ...baseSection.listings[0],
+    listing_key: "N14029690",
+    address: "78 Pieta Place",
+    priceCut: 199_200,
+    relisted: true,
+    brokerage: "PIETA REALTY",
+    signals: { trueDom: 244 },
+  };
+  const plain = { ...baseSection.listings[0], listing_key: "N2", address: "71 Josephine Rd", brokerage: "JO REALTY" };
+  const quiet = {
+    ...baseSection,
+    bubbleName: "Near Pierre Berton Public School",
+    total: 2,
+    showsAll: true,
+    listings: [pieta, plain],
+    angles: [{ angle: "price_cut" as const, listing: pieta }],
+  };
+
+  it("lists every home, with the pick's reason as a tag rather than a section", () => {
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [quiet] }));
+    expect(html).toContain("78 Pieta Place");
+    expect(html).toContain("71 Josephine Rd");
+    expect(html).toContain("Biggest price cut · Cut $199,200 since it first listed");
+    // No angle section heading and blurb — the tag carries the name.
+    expect(html).not.toContain("Sellers who have already come down");
+    expect(html).not.toContain("more in Near Pierre Berton");
+    expect(text).toContain("71 Josephine Rd");
+    expect(text).toContain("Biggest price cut: Cut $199,200 since it first listed");
+  });
+
+  it("labels each row new or back on the market, and never prints the history behind it", () => {
+    const { html, text } = renderAlertsDigest(payload({ bubbles: [quiet] }));
+    expect(html).toContain("Back on the market");
+    expect(html).toContain("New listing");
+    expect(text).toContain("[BACK ON THE MARKET] 78 Pieta Place");
+    expect(text).not.toContain("[BACK ON THE MARKET] 71 Josephine Rd");
+    expect(html).not.toContain("244");
+    expect(text).not.toContain("244");
+  });
+});

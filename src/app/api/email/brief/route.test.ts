@@ -81,6 +81,23 @@ beforeEach(() => {
       filters: { lens: { ...DEFAULT_ACTIVITY_LENS, minBeds: 2 } },
     },
     { id: "theirs", user_id: "u2", name: "Markham", area_type: "city", alert_scope: "all", filters: null },
+    {
+      id: "school",
+      user_id: "u1",
+      name: "Near Pierre Berton Public School",
+      area_type: "school",
+      alert_scope: "all",
+      // A map save with every filter at its default — the 2026-10-14 case.
+      filters: { transactionMode: "sale", propertyClass: "residential", universalFilters: {} },
+    },
+    {
+      id: "drawn",
+      user_id: "u1",
+      name: "My drawn area",
+      area_type: "draw",
+      alert_scope: "all",
+      filters: { transactionMode: "sale", propertyClass: "residential", universalFilters: { price: [500_000, 900_000] } },
+    },
   ];
 });
 
@@ -139,6 +156,37 @@ describe("POST — filter links", () => {
     expect(db.dashboard_prefs).toHaveLength(0);
     const vau = db.market_bubbles.find((b) => b.id === "vau")!;
     expect((vau.filters as { lens: { minBeds: number } }).lens.minBeds).toBe(3);
+  });
+});
+
+describe("filter links on a map area", () => {
+  it("asks without promising a dashboard change", async () => {
+    const res = await GET(new Request(briefActionUrl(EMAIL, "filter:detached", SITE, "school")));
+    const html = await res.text();
+    expect(html).toContain("Send only detached homes in Near Pierre Berton Public School from tomorrow?");
+    expect(html).not.toContain("dashboard.</div>");
+    expect(html).not.toContain("also sets the same filter");
+  });
+
+  it("filters that one area and leaves the dashboard alone", async () => {
+    const before = structuredClone(db.dashboard_prefs[0].config);
+    const res = await post(briefActionUrl(EMAIL, "filter:detached", SITE, "school"));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("From tomorrow, Near Pierre Berton Public School sends only detached homes.");
+    const school = db.market_bubbles.find((b) => b.id === "school")!;
+    expect(school.alert_scope).toBe("filtered");
+    expect((school.filters as { lens: typeof DEFAULT_ACTIVITY_LENS }).lens.propertyTypes).toEqual(["detached"]);
+    expect(db.dashboard_prefs[0].config).toEqual(before);
+    // The city rows are not re-snapped from a map-area tap.
+    const tor = db.market_bubbles.find((b) => b.id === "tor")!;
+    expect((tor.filters as { lens: typeof DEFAULT_ACTIVITY_LENS }).lens.propertyTypes).toEqual([]);
+  });
+
+  it("refuses to overwrite an area's own map filters", async () => {
+    const res = await post(briefActionUrl(EMAIL, "filter:detached", SITE, "drawn"));
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain("already has its own filters");
+    expect(db.market_bubbles.find((b) => b.id === "drawn")!.alert_scope).toBe("all");
   });
 });
 

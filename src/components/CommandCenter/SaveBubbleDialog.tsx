@@ -21,6 +21,7 @@ import {
   type BubblePayload,
 } from "@/lib/bubbles/serialize";
 import { useBubblesStore, stashPendingBubble } from "@/lib/bubbles/useBubbles";
+import { hasActiveAlertFilters } from "@/lib/bubbles/hasActiveAlertFilters";
 
 interface Props {
   open: boolean;
@@ -106,6 +107,14 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
       chips.push(`≥ $${(minPrice / 1000).toFixed(0)}k`);
     return chips;
   }, [activePersona, filters]);
+
+  /**
+   * No filter narrows the search. The area still saves — a quiet area's email now lists
+   * every new home, which is often the point — but the reader should know before saving.
+   * A school area was saved this way and the email read as filtered to its owner (2026-10-14):
+   * the persona chip below looks like a filter and is not one.
+   */
+  const noFilters = useMemo(() => !hasActiveAlertFilters({ universalFilters }), [universalFilters]);
 
   /** Build the payload from current state, returning null on validation error. */
   const buildPayload = async (): Promise<BubblePayload | null> => {
@@ -261,6 +270,13 @@ export default function SaveBubbleDialog({ open, onOpenChange, areaType }: Props
                 </span>
               ))}
             </div>
+          )}
+
+          {noFilters && (
+            <p className="mt-3 border-l-2 border-amber-500/70 bg-amber-500/10 px-3 py-2 text-xs text-foreground">
+              No filters are set. Your email for this area will include every new home. To get only
+              some, close this, set filters on the map, then save.
+            </p>
           )}
 
           {error && <p className="mt-3 text-xs text-rose-700 dark:text-rose-400">{error}</p>}

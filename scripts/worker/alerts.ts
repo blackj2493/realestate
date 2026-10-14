@@ -47,6 +47,7 @@ import { buildTransactionClause, SALE_PRICE_FLOOR } from '@/lib/filters/fundamen
 import { bubbleAlertFilter } from '@/lib/alerts/bubbleFilterClause';
 import { aboveGradeBedsRangeClause } from '@/lib/filters/filterRegistry';
 import { pickScore, sanePriceCut, type PickEstimate } from '@/lib/alerts/pickRank';
+import { isBackOnMarket } from '@/lib/alerts/pickAngles';
 import {
   classifyStatusChange,
   isRelistScanBaseline,
@@ -909,20 +910,22 @@ async function readDigestPersonas(
 
 /**
  * The signed brief links for one digest (briefAction.ts): filter chips for each unfiltered
- * CITY area, and persona switches when the email carries angle picks. Drawn and commute
- * areas get no chips — their filters are a terminal snapshot, not the dashboard lens the
- * route writes — and keep the plain "set my filters" nudge.
+ * area, and persona switches when the email carries angle picks.
+ *
+ * A map area (school, drawn, commute) gets chips too — the route writes a lens onto that
+ * one area. Not when the area holds a map snapshot with real filters on an 'all' scope:
+ * the tap would replace those filters with one (`chipAreas` leaves such an area out).
  */
 function briefLinks(
   email: string,
   payload: DigestPayload,
   persona: PersonaType,
   hasDashboard: boolean,
-  areaTypeById: Map<string, string>
+  chipAreas: Set<string>
 ): { filterChips: Record<string, FilterChipLink[]>; persona: PersonaType; personaSwitch: PersonaSwitchLink[] } {
   const filterChips: Record<string, FilterChipLink[]> = {};
   for (const b of payload.bubbles) {
-    if (b.filterLabel || areaTypeById.get(b.bubbleId) !== 'city') continue;
+    if (b.filterLabel || !chipAreas.has(b.bubbleId)) continue;
     filterChips[b.bubbleId] = PERSONA_PRESETS[persona].map((id) => ({
       label: FILTER_PRESETS[id].label,
       url: briefActionUrl(email, `filter:${id}`, SITE, b.bubbleId),
@@ -1488,7 +1491,7 @@ async function main() {
 
         const fetched: NewListingAlert[] = docs.map((d) => {
           const num = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
-          return {
+          const row: NewListingAlert = {
             listing_key: String(d.id ?? ''),
             address: (d.UnparsedAddress as string) || 'New listing',
             city: (d.City as string) || null,
@@ -1520,6 +1523,8 @@ async function main() {
               severance: d.severance_candidate === true,
             },
           };
+          // A yes/no off the VOW True DOM — never the figure. See isBackOnMarket.
+          return { ...row, relisted: isBackOnMarket(row, runStartMs) };
         });
         const matches = filterFreshMatches(fetched, notified);
 
@@ -1647,7 +1652,11 @@ async function main() {
   const workspaceTouchedAt = await readWorkspaceTouchedAt(supabase, [...userIds]);
   // Only readers with an area section tonight need a persona — it orders angle picks.
   const personas = await readDigestPersonas(supabase, [...bubbleMatchesByUser.keys()], emails);
-  const areaTypeById = new Map<string, string>((bubbleData ?? []).map((b) => [b.id, b.area_type]));
+  const chipAreas = new Set<string>(
+    (bubbleData ?? [])
+      .filter((b) => b.area_type === 'city' || !bubbleAlertFilter(b.filters).label)
+      .map((b) => b.id)
+  );
 
   // ── The narrow ask (src/lib/areas/narrowAsk.ts) ────────────────────────────
   // Readers who follow ALL of Toronto or Ottawa are asked, at most three times, to pick a
@@ -1795,7 +1804,7 @@ async function main() {
       // that constraint is met: a derived weekly SAYS so, in the email, above the footer,
       // next to the one click that undoes it.
       cadenceIsDerived: cadence.derived,
-      ...briefLinks(email, payload, personas.byUser.get(userId) ?? 'smart', personas.hasDashboard.has(userId), areaTypeById),
+      ...briefLinks(email, payload, personas.byUser.get(userId) ?? 'smart', personas.hasDashboard.has(userId), chipAreas),
     });
     const out = await pacer.send({
       kind: 'watchlist-digest',
