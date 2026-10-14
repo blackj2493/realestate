@@ -12,6 +12,9 @@
  *   4. geocode       — Mapbox's neighbourhood for the point (covers homes with no record)
  *   5. proximity     — nearest sold (dense) + active vote
  *
+ * Street and proximity walk the whole vote ranking and take the first TRAINED community,
+ * so an untrained nearest community no longer ends the search with `via: none`.
+ *
  * `via` reports which rung answered (diagnosis; not VOW). Returns ONLY taxonomy labels
  * ({ city, cityRegion }); no price/address/date/count is ever returned. Postal is stripped
  * before matching (addressesMatch short-circuits on postal mismatch — the /address profile
@@ -25,53 +28,9 @@ import { getSoldPublicByAddress, getSoldPublicByAddressLoose } from '@/lib/sold/
 import { parseAddress, addressesMatch } from '@/lib/watchlist/disposition';
 import { geocodeCached } from '@/lib/address/resolveProfile';
 import { loadCohortTreeSafe } from '@/lib/avm/loadCohortTree';
-import { normalizeCityRegion, type CohortTree } from '@/lib/avm/cohorts';
+import { matchCohort, rankVotes, sameCity, type Vote } from '@/lib/reno/resolveArea';
 
 type Via = 'exact-active' | 'exact-sold' | 'street' | 'geocode' | 'proximity' | 'none';
-type Vote = { cr: string; city?: string };
-
-/** Map a raw (city, cityRegion) to a trained cohort — community match across the whole
- *  tree (more specific than City; immune to the City:=Toronto quirk), preferring a city match. */
-function matchCohort(
-  tree: CohortTree,
-  city: string | undefined,
-  cityRegion: string | undefined,
-): { city: string; cityRegion: string } | null {
-  if (!cityRegion) return null;
-  const target = normalizeCityRegion(cityRegion).trim().toLowerCase();
-  if (!target) return null;
-  const lc = (city ?? '').trim().toLowerCase();
-  let fallback: { city: string; cityRegion: string } | null = null;
-  for (const [c, comms] of Object.entries(tree)) {
-    for (const cm of comms) {
-      if (normalizeCityRegion(cm.cityRegion).trim().toLowerCase() === target) {
-        if (c.toLowerCase() === lc) return { city: c, cityRegion: cm.cityRegion };
-        fallback ??= { city: c, cityRegion: cm.cityRegion };
-      }
-    }
-  }
-  return fallback;
-}
-
-function pickWinner(active: Vote[], sold: string[]): { cityRegion: string | null; city: string | null } {
-  const score = new Map<string, number>();
-  const cityFor = new Map<string, string>();
-  sold.forEach((cr, i) => score.set(cr, (score.get(cr) ?? 0) + (sold.length - i) * 1.4));
-  active.forEach((v, i) => {
-    score.set(v.cr, (score.get(v.cr) ?? 0) + (active.length - i));
-    if (v.city && !cityFor.has(v.cr)) cityFor.set(v.cr, v.city);
-  });
-  let best: string | null = null;
-  let bestScore = -1;
-  for (const [cr, s] of score) {
-    if (s > bestScore) {
-      best = cr;
-      bestScore = s;
-    }
-  }
-  return best ? { cityRegion: best, city: cityFor.get(best) ?? null } : { cityRegion: null, city: null };
-}
-
 async function nearbyActiveVotes(client: Client, lat: number, lng: number, queryStr: string, radiusKm: number): Promise<Vote[]> {
   const votes: Vote[] = [];
   try {
@@ -157,7 +116,9 @@ export async function GET(req: NextRequest) {
     const sold =
       (await getSoldPublicByAddress(parsed, { ignoreUnit: true })) ??
       (await getSoldPublicByAddressLoose(parsed));
-    if (sold?.cityRegion) {
+    // The loose lookup matches street number + name only (postal is stripped above), so
+    // check the record is in the city the user typed or the geocoder found.
+    if (sold?.cityRegion && (sameCity(sold.city, parsed.city) || sameCity(sold.city, geoCity))) {
       const r = answer(sold.cityRegion, sold.city, 'exact-sold');
       if (r) return r;
     }
@@ -182,8 +143,7 @@ export async function GET(req: NextRequest) {
       nearbyActiveVotes(client, lat, lng, streetQ, 3),
       getSoldAreaVotes(lat, lng, 3, 25, streetQ),
     ]);
-    if (aS.length + sS.length >= 1) {
-      const w = pickWinner(aS, sS);
+    for (const w of rankVotes(aS, sS)) {
       const r = answer(w.cityRegion, w.city, 'street');
       if (r) return r;
     }
@@ -192,9 +152,11 @@ export async function GET(req: NextRequest) {
   // 5. PROXIMITY — nearest sold (dense) + active.
   if (hasGeo) {
     const [aP, sP] = await Promise.all([nearbyActiveVotes(client, lat, lng, '', 3), getSoldAreaVotes(lat, lng, 1.5, 20)]);
-    const w = pickWinner(aP, sP);
-    const r = answer(w.cityRegion, w.city, 'proximity');
-    if (r) return r;
+    // Walk the whole ranking: the nearest community may have no trained cohort.
+    for (const w of rankVotes(aP, sP)) {
+      const r = answer(w.cityRegion, w.city, 'proximity');
+      if (r) return r;
+    }
   }
 
   return NextResponse.json({ cityRegion: null, city: null, via: 'none' as Via });
