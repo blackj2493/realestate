@@ -252,7 +252,9 @@ export const GEO_DATASETS: GeoDataset[] = [
         name: "TRCA Regulated Floodplain (Floodline)",
         endpoint:
           "https://services1.arcgis.com/d0ZCwU7eGKVeNiEE/arcgis/rest/services/Floodline_TRCA_Polygon/FeatureServer/1",
-        simplifyDeg: 0.0001,
+        // TRCA republished this layer in UTM 17N (2026-09). Since then 0.0001 returns every
+        // geometry as null; 0.00001 keeps each shape within ~1 m and is ~5x smaller than none.
+        simplifyDeg: 0.00001,
       },
     ],
     flag: {
