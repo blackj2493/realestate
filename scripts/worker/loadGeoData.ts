@@ -79,17 +79,28 @@ async function fetchArcgis(source: GeoDatasetSource): Promise<GeoJsonFeature[]> 
       resultRecordCount: String(ARCGIS_PAGE),
     });
     if (source.simplifyDeg) params.set("maxAllowableOffset", String(source.simplifyDeg));
-    const res = await fetch(`${base}/query?${params.toString()}`);
-    if (!res.ok) throw new Error(`ArcGIS query ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    const fc = (await res.json()) as FeatureCollection & { error?: unknown };
-    if (fc.error) throw new Error(`ArcGIS error: ${JSON.stringify(fc.error)}`);
-    const page = Array.isArray(fc.features) ? fc.features : [];
+    let page = await fetchArcgisPage(base, params);
+    // A layer republished in another projection can turn a simplify tolerance into "drop the
+    // shape": every geometry comes back null (TRCA floodplain, 2026-10). Re-ask the page unsimplified.
+    if (source.simplifyDeg && page.length && page.every((f) => !f.geometry)) {
+      console.warn(`     ⚠️  maxAllowableOffset=${source.simplifyDeg} returned only null geometries — re-fetching unsimplified`);
+      params.delete("maxAllowableOffset");
+      page = await fetchArcgisPage(base, params);
+    }
     out.push(...page);
     console.log(`     … fetched ${out.length}`);
     if (page.length < ARCGIS_PAGE || out.length >= MAX_FEATURES) break;
     offset += ARCGIS_PAGE;
   }
   return out;
+}
+
+async function fetchArcgisPage(base: string, params: URLSearchParams): Promise<GeoJsonFeature[]> {
+  const res = await fetch(`${base}/query?${params.toString()}`);
+  if (!res.ok) throw new Error(`ArcGIS query ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const fc = (await res.json()) as FeatureCollection & { error?: unknown };
+  if (fc.error) throw new Error(`ArcGIS error: ${JSON.stringify(fc.error)}`);
+  return Array.isArray(fc.features) ? fc.features : [];
 }
 
 function readGeoJsonFile(path: string): GeoJsonFeature[] {
