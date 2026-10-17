@@ -227,6 +227,13 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
     const p = t.supabasePayload;
     return {
       listing_key: p.listing_key,
+      // Set on EVERY write, not just insert. The column default only fires on INSERT, so
+      // before this an updated listing kept its first-sync time, and every nightly delta
+      // that filters on synced_at (refresh-property-estimates, enrichGeoFlags,
+      // revalidateListings) skipped it: on 2026-10-17, 9,954 listings changed in 2 days
+      // but only 3,034 had a recent synced_at. X14081504 changed to Multiplex and kept a
+      // dwelling AVM value because the estimates delta never re-read it.
+      synced_at: new Date().toISOString(),
       full_payload: p.full_payload,
       media_urls: p.media_urls,
       derived_metrics: p.derived_metrics,
