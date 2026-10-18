@@ -186,6 +186,14 @@ function livingAreaRangeToInt(v: unknown): number | null {
 }
 
 /**
+ * Statuses that make a listing closed/sold, lower-case, matched against StandardStatus OR
+ * MlsStatus. Exported so reconcile-sold-from-vault.ts can filter the vault on the flat
+ * `listings.standard_status` column with exactly this list (one list, so the filter can
+ * never drop a row this predicate would accept).
+ */
+export const CLOSED_STATUSES: readonly string[] = ['closed', 'sold', 'closed sale', 'leased', 'terminated'];
+
+/**
  * Checks if a listing status indicates it has been sold/closed.
  * Uses strict RESO status normalization per system instructions.
  * 
@@ -200,16 +208,16 @@ export function isSoldListing(raw: any): boolean {
   // Active statuses (not sold)
   const ACTIVE_STATUSES = ['new', 'active', 'price change', 'extension'];
   
-  // Closed/Sold statuses.
+  // Closed/Sold statuses: CLOSED_STATUSES, exported above so the vault reconciler can
+  // pre-filter on the same list (reconcile-sold-from-vault.ts).
   //
-  // 'leased' is here for the MlsStatus side. A lease that closes normally carries
+  // 'leased' is in it for the MlsStatus side. A lease that closes normally carries
   // StandardStatus 'Closed' — which is why raw_vow_sold already holds 269,662 lease
   // closes — so the sale-shaped names alone have covered it in practice. But this
   // predicate ORs the two fields, and without 'leased' a record whose StandardStatus
   // is missing or unrecognized falls through to the safe default and is filed as
   // still-available. Exact match, so the conditional statuses ('leased conditional',
   // 'leased conditional escape') are untouched and stay visible by product policy.
-  const CLOSED_STATUSES = ['closed', 'sold', 'closed sale', 'leased', 'terminated'];
 
   // Check if it's a closed/sold status
   if (CLOSED_STATUSES.includes(standardStatus) || CLOSED_STATUSES.includes(mlStatus)) {
