@@ -55,6 +55,13 @@ import { deriveDealType, deriveDelistedDealType } from '../../src/lib/sold/dealT
 import { SOLD_LISTINGS_COLLECTION } from '../../src/lib/typesense/soldListingsSchema';
 
 const VAULT_PAGE = 1000;
+// Each page detoasts full_payload for every row (the ->> projections below), so a page
+// that runs in ~3s on a quiet database can pass the 8s role statement_timeout under IO
+// load. This step runs right after the 4-hour recompute: it failed on page 11
+// (2026-09-27) and page 87 (2026-10-18), each time after the work before it had
+// succeeded. On a timeout, retry the SAME cursor with a smaller page.
+const MIN_VAULT_PAGE = 125;
+const TIMEOUT = /statement timeout|57014/i;
 
 type Raw = Record<string, any>;
 
@@ -174,6 +181,8 @@ async function scan(opts: { updatedSince: string | null; maxPages: number; apply
 
   let lastKey = '';
   let page = 0;
+  // Shrinks on a statement timeout and stays small for the rest of the run.
+  let pageSize = VAULT_PAGE;
   const tally: Record<string, number> = {};
   let candidatesTotal = 0;
 
@@ -181,14 +190,22 @@ async function scan(opts: { updatedSince: string | null; maxPages: number; apply
     // Lightweight JSONB scalar PROJECTIONS only — never stream the ~50KB full_payload per
     // row (Disk IO budget, CLAUDE.md §12). Full payload is fetched below solely for the
     // handful of rows that turn out to be missing.
-    let q = supabase
-      .from('listings')
-      .select('listing_key, ms:full_payload->>MlsStatus, ss:full_payload->>StandardStatus, tt:full_payload->>TransactionType, pcd:full_payload->>PurchaseContractDate')
-      .order('listing_key', { ascending: true })
-      .limit(VAULT_PAGE);
-    if (updatedSince) q = q.gte('updated_at', updatedSince);
-    if (lastKey) q = q.gt('listing_key', lastKey);
-    const { data, error } = await q;
+    const readPage = (size: number) => {
+      let q = supabase
+        .from('listings')
+        .select('listing_key, ms:full_payload->>MlsStatus, ss:full_payload->>StandardStatus, tt:full_payload->>TransactionType, pcd:full_payload->>PurchaseContractDate')
+        .order('listing_key', { ascending: true })
+        .limit(size);
+      if (updatedSince) q = q.gte('updated_at', updatedSince);
+      if (lastKey) q = q.gt('listing_key', lastKey);
+      return q;
+    };
+    let { data, error } = await readPage(pageSize);
+    while (error && TIMEOUT.test(error.message) && pageSize > MIN_VAULT_PAGE) {
+      pageSize = Math.max(MIN_VAULT_PAGE, Math.floor(pageSize / 2));
+      console.warn(`   ⚠️  page ${page + 1}: statement timeout — retrying with ${pageSize} rows`);
+      ({ data, error } = await readPage(pageSize));
+    }
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as Array<{ listing_key: string; ms: string | null; ss: string | null; tt: string | null; pcd: string | null }>;
     if (rows.length === 0) break;
@@ -228,7 +245,7 @@ async function scan(opts: { updatedSince: string | null; maxPages: number; apply
       }
     }
 
-    if (rows.length < VAULT_PAGE) break;
+    if (rows.length < pageSize) break;
   }
 
   console.log(`\n📊 Scan complete: pages=${page}, in-window seen=${candidatesTotal}, ${JSON.stringify(tally)}`);
