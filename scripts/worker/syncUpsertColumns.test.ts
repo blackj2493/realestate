@@ -46,6 +46,12 @@ describe("sync.ts writes every column the transformer computes", () => {
     expect(upsertKeys()).toContain("sitemap_path");
   });
 
+  it("stamps synced_at on every write", () => {
+    // Not a transformer field: the column default sets it on INSERT only. Without it in
+    // the upsert, every nightly delta that filters on synced_at misses updated listings.
+    expect(upsertKeys()).toContain("synced_at");
+  });
+
   it("finds real keys in both files, so a rename cannot make this pass vacuously", () => {
     expect(payloadKeys().length).toBeGreaterThan(20);
     expect(upsertKeys()).toContain("listing_key");
