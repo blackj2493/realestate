@@ -41,6 +41,7 @@
 import 'dotenv/config';
 import { getServiceRoleClient } from '../../src/lib/supabase/client';
 import {
+  CLOSED_STATUSES,
   isSoldListing,
   extractSoldListingData,
   upsertSoldListings,
@@ -190,10 +191,18 @@ async function scan(opts: { updatedSince: string | null; maxPages: number; apply
     // Lightweight JSONB scalar PROJECTIONS only — never stream the ~50KB full_payload per
     // row (Disk IO budget, CLAUDE.md §12). Full payload is fetched below solely for the
     // handful of rows that turn out to be missing.
+    //
+    // Each projection still DETOASTS the payload in the database, so filter first on the
+    // flat `standard_status` column (no detoast): only rows the sale predicate could accept
+    // are projected. CLOSED_STATUSES is isSoldListing's own list (ingester.ts), pinned by
+    // closedStatuses.test.ts. Measured 2026-10-18: on a 5% sample, 0 of 6,998 in-window
+    // closed rows were dropped, rows read fall from 386k to ~156k, and a 250-row page took
+    // 0.05 s against 0.6 s for an unfiltered 1,000-row page.
     const readPage = (size: number) => {
       let q = supabase
         .from('listings')
         .select('listing_key, ms:full_payload->>MlsStatus, ss:full_payload->>StandardStatus, tt:full_payload->>TransactionType, pcd:full_payload->>PurchaseContractDate')
+        .in('standard_status', [...CLOSED_STATUSES])
         .order('listing_key', { ascending: true })
         .limit(size);
       if (updatedSince) q = q.gte('updated_at', updatedSince);
