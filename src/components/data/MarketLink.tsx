@@ -1,6 +1,3 @@
-"use client";
-
-import { useSyncExternalStore } from "react";
 import Link from "next/link";
 
 /**
@@ -20,37 +17,22 @@ import Link from "next/link";
  *
  * Only for rows keyed by a CITY. The neighbourhood-keyed boards (condo fees, over-asking,
  * rents) must not use this — `?city=` takes a municipality, not a neighbourhood.
+ *
+ * A plain in-tab link is right here, and the iframe case does not arise: each *Board is
+ * rendered by exactly one page — its own /data route — and nothing passes their `embed`
+ * prop. /embed/[tracker] does not use these components at all; it builds its own table
+ * from EmbedColumn value functions whose Market column is a plain string. Confirmed
+ * against the live embed HTML 2026-09-14: zero /properties?city= links in it. If that
+ * ever changes, a framed link would want target="_blank", the way the embed's own footer
+ * anchor already does.
  */
 export const marketMapHref = (region: string) => `/properties?city=${encodeURIComponent(region)}`;
 
-/** Whether we are rendered inside an iframe. Fixed for the life of the document. */
-const subscribeNever = () => () => {};
-const isFramed = () => window.self !== window.top;
-const notFramedOnServer = () => false;
-
 export function MarketLink({ region }: { region: string }) {
-  /**
-   * These tables also render inside /embed/[tracker], which publishers iframe into their
-   * own pages. Navigating our map *inside* someone else's iframe is the wrong outcome —
-   * a cramped frame, their chrome, and a frame-ancestors policy that may refuse it
-   * outright. So when we are framed, open in a new tab, which is what the embed's own
-   * footer anchor already does.
-   *
-   * Read from the browser rather than passed as a prop: RankingTable's column API gives
-   * render() the row only, so threading `embed` through would change that contract and
-   * every board using it. The server snapshot is `false`, so the markup ships the plain
-   * in-tab link — the correct default un-framed and with no JS.
-   */
-  const framed = useSyncExternalStore(subscribeNever, isFramed, notFramedOnServer);
-
-  const className =
-    "font-semibold text-[color:var(--dt-sig)] underline decoration-[color:var(--dt-sig)]/40 underline-offset-2 hover:decoration-[color:var(--dt-sig)] dark:text-cyan-400 dark:decoration-cyan-400/40 dark:hover:decoration-cyan-400";
-
   return (
     <Link
       href={marketMapHref(region)}
-      className={className}
-      {...(framed ? { target: "_blank", rel: "noopener" } : {})}
+      className="font-semibold text-[color:var(--dt-sig)] underline decoration-[color:var(--dt-sig)]/40 underline-offset-2 hover:decoration-[color:var(--dt-sig)] dark:text-cyan-400 dark:decoration-cyan-400/40 dark:hover:decoration-cyan-400"
     >
       {region}
     </Link>
