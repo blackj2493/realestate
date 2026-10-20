@@ -20,6 +20,7 @@
 
 import type {
   CommuteState,
+  SchoolProgram,
   SchoolState,
 } from "@/lib/stores/commandCenterStore";
 import type {
@@ -296,7 +297,10 @@ export interface StoreSettersForLoad {
  */
 export function applyBubbleToStore(
   bubble: Bubble,
-  setters: StoreSettersForLoad
+  setters: StoreSettersForLoad,
+  /** A school bubble's boundary programs (useSchoolPrograms). Without them the terminal
+   *  falls back to the 2.5 km radius, and shows more homes than the brief mails. */
+  schoolPrograms?: SchoolProgram[]
 ): void {
   const f = bubble.filters;
   // City alert rows carry no snapshot (or a dashboard-lens capture, which has no
@@ -339,7 +343,13 @@ export function applyBubbleToStore(
   if (bubble.area_type === "school" && bubble.source.kind === "school") {
     setters.setSchool({
       enabled: true,
-      targetSchool: { id: bubble.source.schoolKey, name: bubble.source.schoolName },
+      targetSchool: {
+        id: bubble.source.schoolKey,
+        name: bubble.source.schoolName,
+        programs: schoolPrograms,
+      },
+      // The home boundary — what "Near <school>" means in the brief (buildAreaClause).
+      program: "regular",
     });
     // School bubbles synthesize a circle; the polygon itself isn't stored in the
     // store (school filter uses NearbySchools membership, not a polygon). The

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   areaFilter,
+  areaKey,
+  bubbleToArea,
   regionArea,
   COMMUNITY_ALIASES,
   QUICK_PICK_MARKETS,
@@ -9,6 +11,8 @@ import {
   defaultAlertScopeForRegion,
 } from "./area";
 import { DEFAULT_ACTIVITY_LENS } from "./config";
+import { buildAreaClause } from "@/lib/bubbles/stats";
+import type { Bubble } from "@/lib/bubbles/serialize";
 
 describe("areaFilter — region resolution", () => {
   it("expands an umbrella community to its CityRegion members (Woodbridge → East/West)", () => {
@@ -149,5 +153,34 @@ describe("defaultAlertScopeForRegion", () => {
   it("keeps the breadth-only behaviour for a caller with no lens in hand", () => {
     expect(defaultAlertScopeForRegion("Toronto")).toBe("filtered");
     expect(defaultAlertScopeForRegion("Barrhaven")).toBe("all");
+  });
+});
+
+describe("school areas — the dashboard scopes like the brief", () => {
+  const bubble = {
+    id: "b1",
+    name: "Near Pierre Berton Public School",
+    area_type: "school",
+    polygon: [],
+    source: { kind: "school", schoolKey: "B66095-205611", schoolName: "Pierre Berton Public School", schoolPoint: [43.8, -79.5], radiusKm: 2.5 },
+  } as unknown as Bubble;
+
+  it("uses the attendance boundary when the school publishes a regular one", () => {
+    const area = bubbleToArea(bubble, ["regular"]);
+    expect(areaFilter(area)).toBe("SchoolCatchments:=`B66095-205611|regular`");
+    // The same string the nightly brief filters on.
+    expect(areaFilter(area)).toBe(buildAreaClause(bubble, { catchmentPrograms: ["regular"] }));
+  });
+
+  it("keeps the 2.5 km radius when there is no boundary, or no lookup yet", () => {
+    for (const programs of [undefined, [], ["french_immersion"] as const]) {
+      const area = bubbleToArea(bubble, programs);
+      expect(areaFilter(area)).toBe("NearbySchools:=`B66095-205611`");
+      expect(areaFilter(area)).toBe(buildAreaClause(bubble, { catchmentPrograms: programs }));
+    }
+  });
+
+  it("changes the area key when the scope changes, so the panels refetch", () => {
+    expect(areaKey(bubbleToArea(bubble, ["regular"]))).not.toBe(areaKey(bubbleToArea(bubble, [])));
   });
 });

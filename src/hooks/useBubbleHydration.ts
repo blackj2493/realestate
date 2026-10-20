@@ -16,6 +16,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { applyBubbleToStore, type Bubble } from "@/lib/bubbles/serialize";
 import { consumePendingBubble } from "@/lib/bubbles/useBubbles";
+import { fetchSchoolPrograms } from "@/lib/schools/useSchoolPrograms";
 
 export function useBubbleHydration(): void {
   const searchParams = useSearchParams();
@@ -59,6 +60,11 @@ export function useBubbleHydration(): void {
         if (!res.ok) return;
         const { item } = (await res.json()) as { item: Bubble };
         if (cancelled || !item) return;
+        const programs =
+          item.area_type === "school" && item.source.kind === "school"
+            ? await fetchSchoolPrograms(item.source.schoolKey)
+            : undefined;
+        if (cancelled) return;
         applyBubbleToStore(item, {
           setActivePersona,
           setFilters,
@@ -69,7 +75,7 @@ export function useBubbleHydration(): void {
           setSchool,
           clearDraw,
           setDrawPolygon,
-        });
+        }, programs);
       } catch {
         /* stale link or offline — leave Terminal in its current state */
       }

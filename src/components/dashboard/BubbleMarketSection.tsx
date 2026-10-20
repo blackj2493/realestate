@@ -42,6 +42,7 @@ import { buildFiltersSnapshot, type Bubble } from "@/lib/bubbles/serialize";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { bubbleToArea } from "@/lib/dashboard/area";
+import { useSchoolPrograms } from "@/lib/schools/useSchoolPrograms";
 import { hasActiveLensFilters, type MarketActivityLens } from "@/lib/dashboard/config";
 import { hasActiveAlertFilters } from "@/lib/bubbles/hasActiveAlertFilters";
 import type { BoardDef } from "@/lib/dashboard/boards";
@@ -68,12 +69,15 @@ const AREA_ICON: Record<Bubble["area_type"], typeof MapPin> = {
   city: MapPin,
 };
 
-function tagline(b: Bubble): string {
+function tagline(b: Bubble, inCatchment: boolean): string {
   if (b.area_type === "commute" && b.source.kind === "commute") {
     return `${b.source.minutes}-min ${b.source.mode} to ${b.source.destination.label}`;
   }
   if (b.area_type === "school" && b.source.kind === "school") {
-    return `Around ${b.source.schoolName}`;
+    // Name the scope the panels use, so the card cannot read as a different area than the brief.
+    return inCatchment
+      ? `In the ${b.source.schoolName} attendance area`
+      : `Within 2.5 km of ${b.source.schoolName}`;
   }
   return "Custom pocket sketched on the map";
 }
@@ -421,7 +425,13 @@ export default function BubbleMarketSection({
   autoOpenFirstRun,
 }: Props) {
   const router = useRouter();
-  const area = useMemo(() => bubbleToArea(bubble), [bubble]);
+  // A school area waits for its boundary lookup, so the panels never show the 2.5 km circle
+  // first and then swap to the (smaller) attendance area the brief uses.
+  const schoolKey =
+    bubble.area_type === "school" && bubble.source.kind === "school" ? bubble.source.schoolKey : null;
+  const programs = useSchoolPrograms(schoolKey);
+  const area = useMemo(() => bubbleToArea(bubble, programs), [bubble, programs]);
+  const areaReady = programs !== undefined;
   const Icon = AREA_ICON[bubble.area_type];
 
   return (
@@ -443,7 +453,7 @@ export default function BubbleMarketSection({
         </div>
       }
       title={bubble.name}
-      subtitle={tagline(bubble)}
+      subtitle={tagline(bubble, !!programs?.includes("regular"))}
       mobileDetail={<BubbleAlertToggle bubble={bubble} variant="detail" />}
       actions={
         <>
@@ -465,6 +475,10 @@ export default function BubbleMarketSection({
         </>
       }
     >
+      {!areaReady ? (
+        <p className="text-xs text-muted-foreground">Loading this area…</p>
+      ) : (
+        <>
       <MarketActivityPanel area={area} lens={lens} />
 
       <RegionStatTiles area={area} lens={lens} />
@@ -479,6 +493,8 @@ export default function BubbleMarketSection({
             <PlaylistBoard key={b.id} board={b} area={area} lens={lens} />
           ))}
         </div>
+      )}
+        </>
       )}
     </RegionDrilldown>
   );
