@@ -48,3 +48,34 @@ describe('subTypeFamily', () => {
     expect(isRentableSubType('Vacant Land')).toBe(false);
   });
 });
+
+describe('NO_COMPARABLE_FAMILY — rentable, but nothing may stand in for it', () => {
+  it('refuses to pool a mobile or modular home with freehold houses', () => {
+    // 827 of these carried a rent comp and every single one came from the pooled rung,
+    // i.e. the median rent of detached houses. That is how a $22,900 trailer published
+    // a 108% cap rate.
+    expect(subTypeFamily('MobileTrailer')).toBeNull();
+    expect(subTypeFamily('Modular Home')).toBeNull();
+  });
+
+  it('still treats them as RENTABLE, so their own-sub-type rungs stay open', () => {
+    // The distinction that matters: nothing comparable is not the same as nothing to
+    // rent. Collapsing the two would bar a mobile home from the nbhd / city_bath / city
+    // / county rungs, which key on the exact sub-type and are where its honest comp
+    // will come from once a cohort exists.
+    expect(isRentableSubType('MobileTrailer')).toBe(true);
+    expect(isRentableSubType('Modular Home')).toBe(true);
+  });
+
+  it('keeps vacant land both unpoolable AND unrentable', () => {
+    expect(subTypeFamily('Vacant Land')).toBeNull();
+    expect(isRentableSubType('Vacant Land')).toBe(false);
+  });
+
+  it('leaves ordinary houses and condos pooling as before', () => {
+    expect(subTypeFamily('Detached')).toBe('freehold');
+    expect(subTypeFamily('Semi-Detached')).toBe('freehold');
+    expect(subTypeFamily('Condo Apartment')).toBe('condo');
+    expect(subTypeFamily('Other')).toBe('freehold'); // 120 of these form real cohorts
+  });
+});

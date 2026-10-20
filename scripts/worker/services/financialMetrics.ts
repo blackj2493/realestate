@@ -31,6 +31,20 @@ export interface FinancialMetricsInput {
   transactionType?: string;
   taxAnnualAmount: number | null;
   associationFee: number | null;
+  /**
+   * TRREB LeasedLandFee — the ANNUAL ground rent on a home whose land is leased rather
+   * than owned (mobile-home parks, land-lease communities, a few Detached).
+   *
+   * It is a real recurring cost and the engine ignored it entirely, which is why
+   * land-lease housing published absurd yields: the PRICE buys only the structure while
+   * the RENT covers structure plus land, so revenue and basis measured different assets.
+   *
+   * ANNUAL, established by arithmetic rather than assumption: the median on affected
+   * listings is $5,635 against a median asking price near $23,000. Annual, that is 25%
+   * of price per year — steep but exactly what park land rent costs. Monthly, it would
+   * be 295% of the purchase price every year, which no one would pay.
+   */
+  leasedLandFee?: number | null;
   maintenanceExpense: number | null;
   insuranceExpense: number | null;
   baseMillRate: number;
@@ -44,6 +58,13 @@ export interface FinancialMetricsInput {
   suite_monthly_rent?: number;
   suite_monthly_rent_p10?: number;
 }
+
+/**
+ * Highest monthly condo fee this engine will treat as real. Above it the field is
+ * carrying something that is not a fee — see the guard for the four records and the
+ * measured distribution behind the number.
+ */
+export const MAX_MONTHLY_ASSOCIATION_FEE = 20_000;
 
 export interface FinancialMetrics {
   // Cap Rate
@@ -74,7 +95,7 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
     annual_rent, annual_rent_p10, has_rent_data,
     calculation_price, is_price_discovery,
     propertySubType, listPrice, transactionType, taxAnnualAmount,
-    associationFee, maintenanceExpense, insuranceExpense,
+    associationFee, maintenanceExpense, insuranceExpense, leasedLandFee,
     baseMillRate, isCondo,
     suite_monthly_rent, suite_monthly_rent_p10,
   } = input;
@@ -108,6 +129,43 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
   // or a data-entry error), every ratio metric is undefined. Return all-zeros rather than
   // dividing by `price||1` which yields astronomical cap rates / yields.
   if (!(calculation_price > 0) || !(listPrice > 0)) {
+    return {
+      cap_rate_est: 0,
+      cap_rate_floor: 0,
+      gross_yield_est: 0,
+      price_discovery_flag: is_price_discovery,
+      net_monthly_cashflow: 0,
+      cashflow_floor: 0,
+      tax_burden_ratio: 0,
+      assessment_status: 'UNASSESSED',
+      annual_opex: 0,
+      annual_revenue: 0,
+      vacancy_loss: 0,
+      mortgage_monthly: 0,
+    };
+  }
+
+  // === IMPLAUSIBLE-FEE GUARD ===
+  // A monthly condo fee has an upper bound, and the feed does not respect it. Measured
+  // over 30,080 active condos: median $615, p99 $2,127, p99.9 $5,026 — and a maximum of
+  // $1,248,367. Four listings exceed $20,000/mo, and those four are the four worst cap
+  // rates in the book:
+  //
+  //   C13229622  fee 1,248,367  ->  cap  -1,152%
+  //   W13554590  fee   624,012  ->  cap  -1,494%
+  //   W13717746  fee   104,238  ->  cap    -246%
+  //   N13535818  fee    82,389  ->  cap    -176%
+  //
+  // `hoa = fee * 12` turned the first into $15M of annual opex on a $1.3M condo.
+  //
+  // The ceiling is deliberately far above the real maximum. $12,906/mo on a $1.15M
+  // condo and $12,086/mo on a $23.5M penthouse are steep but real, and blanking a real
+  // listing to catch a typo is the worse trade. At $20,000 the guard catches exactly
+  // the four records where the field is carrying something that is not a fee.
+  //
+  // No credible cost input means no metric — the same rule as the price (#456), and for
+  // the same reason: a ratio built on a number we know is wrong is worse than absent.
+  if ((associationFee ?? 0) > MAX_MONTHLY_ASSOCIATION_FEE) {
     return {
       cap_rate_est: 0,
       cap_rate_floor: 0,
@@ -185,6 +243,10 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
   // HOA / Condo Fees
   const hoa = (associationFee || 0) * 12;
 
+  // GROUND RENT on leased land. Added to opex rather than netted off revenue because it
+  // is a cost of holding the asset, not a reduction in what a tenant pays.
+  const groundRent = leasedLandFee && leasedLandFee > 0 ? leasedLandFee : 0;
+
   // Management Fee (8% of gross rent)
   const managementFee = annualRevenue * 0.08;
   const managementFeeFloor = annualRevenueP10 * 0.10;
@@ -193,7 +255,7 @@ export function calculateFinancialMetrics(input: FinancialMetricsInput): Financi
   const utilities = !isCondo && propertySubType === 'Duplex' ? 3500 : 0;
 
   // Total Annual OpEx
-  const annualOpex = taxes + insurance + maintenance + hoa + managementFee + utilities;
+  const annualOpex = taxes + insurance + maintenance + hoa + groundRent + managementFee + utilities;
   const annualOpexFloor = taxes + (insurance * 1.2) + (maintenance * 1.5) + hoa + managementFeeFloor + utilities;
 
   // === CAP RATE ===
