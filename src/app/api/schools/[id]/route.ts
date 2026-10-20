@@ -4,12 +4,17 @@
  * synthesize the ~2.5 km circle polygon for a school market bubble.
  *
  *   GET /api/schools/[id]
- *   → { id, name, level, system, lat, lng, score, address }
+ *   → { id, name, level, system, lat, lng, score, address, programs }
+ *
+ * `programs` lists the programs the school publishes an attendance boundary for. The
+ * dashboard scopes a saved school area by it, the same way the nightly brief does.
  */
 
 import { NextResponse } from "next/server";
 import * as fs from "fs";
 import * as path from "path";
+import { getServiceRoleClient } from "@/lib/supabase/client";
+import { fetchCatchmentPrograms } from "@/lib/schools/catchmentPrograms";
 
 interface RawSchool {
   id: string;
@@ -38,5 +43,7 @@ export async function GET(
   const schools = load();
   const school = schools.find((s) => s.id === id);
   if (!school) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ school });
+  // Best-effort: a failed lookup returns an empty map, and every caller keeps the radius.
+  const programs = (await fetchCatchmentPrograms(getServiceRoleClient(), [id])).get(id) ?? [];
+  return NextResponse.json({ school: { ...school, programs } });
 }

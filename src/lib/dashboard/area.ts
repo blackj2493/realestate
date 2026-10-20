@@ -17,6 +17,8 @@
  */
 
 import type { Bubble } from "@/lib/bubbles/serialize";
+import type { SchoolProgram } from "@/lib/stores/commandCenterStore";
+import { catchmentToken } from "@/lib/schools/catchmentMembership";
 import { hasActiveLensFilters, type MarketActivityLens } from "./config";
 import { OTTAWA_AREAS } from "./ottawaAreas";
 import { CITY_PARTS, partForCity, partNamed } from "./cityParts";
@@ -41,6 +43,12 @@ export type Area =
       label: string;
       /** School id as indexed in `NearbySchools` on the properties collection. */
       schoolKey: string;
+      /**
+       * Programs the school publishes an attendance boundary for (catchmentPrograms.ts).
+       * With 'regular' the area is that boundary, as in the nightly brief; absent or
+       * without it, the 2.5 km radius. Absent means "not looked up", not "none".
+       */
+      programs?: readonly SchoolProgram[];
       /** Synthesized circle polygon (kept for symmetry / future use). */
       polygon: [number, number][];
     };
@@ -332,6 +340,13 @@ export function areaFilter(area: Area): string {
     return `(City:=\`${safe}\` || CityRegion:=\`${safe}\`)`;
   }
   if (area.kind === "school") {
+    // The same rule as the brief (buildAreaClause in src/lib/bubbles/stats.ts): the home
+    // ATTENDANCE BOUNDARY where the board publishes one, the 2.5 km radius where it does not.
+    // Before this the dashboard listed every home in the circle while the brief mailed only
+    // the boundary — 43 "new listings" on the card and no email (Pierre Berton, 2026-10-20).
+    if (area.programs?.includes("regular")) {
+      return `SchoolCatchments:=\`${catchmentToken(area.schoolKey, "regular").replace(/`/g, "")}\``;
+    }
     const safe = area.schoolKey.replace(/`/g, "");
     return `NearbySchools:=\`${safe}\``;
   }
@@ -350,6 +365,10 @@ export function areaLabel(area: Area): string {
  * dependency, or a cache key. Bubbles are id-keyed so renames don't invalidate.
  */
 export function areaKey(area: Area): string {
+  if (area.kind === "school") {
+    // The scope is part of the identity: the panels refetch when the boundary resolves.
+    return `school:${area.key}:${area.programs?.includes("regular") ? "catchment" : "radius"}`;
+  }
   return area.kind === "region" ? `region:${area.name}` : `${area.kind}:${area.key}`;
 }
 
@@ -361,11 +380,11 @@ export function regionArea(name: string): Area {
 /**
  * Convert a saved Bubble into an Area. Draw and commute bubbles both become
  * `polygon` (their polygons are stored identically — only the source metadata
- * differs). School bubbles use the NearbySchools membership filter, which is
- * what the live SchoolFilter on /properties already uses — exact match against
- * the ETL-precomputed 2.5 km catchment, not the synthesized circle polygon.
+ * differs). School bubbles scope by the school's attendance boundary when `programs`
+ * says it publishes one, and by the ETL-precomputed 2.5 km NearbySchools membership
+ * otherwise — never by the synthesized circle polygon. See areaFilter.
  */
-export function bubbleToArea(b: Bubble): Area {
+export function bubbleToArea(b: Bubble, programs?: readonly SchoolProgram[]): Area {
   if (b.area_type === "school" && b.source.kind === "school") {
     return {
       kind: "school",
@@ -373,6 +392,7 @@ export function bubbleToArea(b: Bubble): Area {
       label: b.name,
       schoolKey: b.source.schoolKey,
       polygon: b.polygon,
+      programs,
     };
   }
   return {
