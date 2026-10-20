@@ -1152,6 +1152,11 @@ export default function AlphaMap({
           <div className={`text-[10px] leading-tight ${catchmentHover.approximate ? "text-amber-700 dark:text-amber-300/90" : "text-emerald-700 dark:text-emerald-300/90"}`}>
             {catchmentHover.detail}
           </div>
+          {catchmentHover.note && (
+            <div className="mt-1 text-[10px] leading-tight text-amber-700 dark:text-amber-300/90">
+              {catchmentHover.note}
+            </div>
+          )}
         </div>
       )}
 

@@ -29,6 +29,7 @@ import { GeoJsonLayer, PolygonLayer } from "@deck.gl/layers";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { useCommandCenterStore, type SchoolProgram } from "@/lib/stores/commandCenterStore";
 import { synthesizeCirclePolygon, latLngPolygonToLngLat } from "@/lib/bubbles/serialize";
+import { boundaryNote } from "@/lib/schools/boundaryNotes";
 
 export interface CatchmentHover {
   x: number;
@@ -36,6 +37,8 @@ export interface CatchmentHover {
   name: string;
   detail: string;
   approximate: boolean;
+  /** The board's published file is known to lag its own decision for this zone. */
+  note?: string | null;
 }
 
 /** Reported when the selected school has no zone for the selected program. The map
@@ -240,6 +243,7 @@ export function useSchoolCatchmentLayers(opts: {
               name: p.school_name ?? "School zone",
               detail: `${bits}${score}`,
               approximate: false,
+              note: boundaryNote(p.board, p.school_name),
             });
           },
         })
@@ -270,7 +274,14 @@ export function useSchoolCatchmentLayers(opts: {
             // zoneLabel, not a hardcoded "Home catchment" — that caption on a French
             // Immersion zone is the misread this whole change exists to stop.
             const bits = [zoneLabel(p), p.board, p.year].filter(Boolean).join(" · ");
-            onHover({ x: info.x, y: info.y, name: p.school_name ?? "School zone", detail: `${bits}${score}`, approximate: false });
+            onHover({
+              x: info.x,
+              y: info.y,
+              name: p.school_name ?? "School zone",
+              detail: `${bits}${score}`,
+              approximate: false,
+              note: boundaryNote(p.board, p.school_name),
+            });
           },
         })
       );
