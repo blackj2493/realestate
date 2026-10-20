@@ -41,13 +41,21 @@ export const SENDERS = {
    * and they are the best engagement data this stream can produce. Do not make it
    * unmonitored the way the automated alert stream is.
    *
-   * TODO(Unit 1): move to `data@send.pureproperty.ca` once the send subdomain is verified in
-   * Resend, so recurring marketing volume stops riding the reputation that delivers sign-in
-   * codes (voice.md §11.7 item 2). The root domain is already Resend-verified, so this
-   * address works today and only the host changes.
+   * ON THE SEND SUBDOMAIN since 2026-09-24 (verified in Resend the same day). Recurring
+   * marketing volume no longer rides the reputation that delivers sign-in codes — a
+   * separation this stream needed badly: one week earlier it posted a 33% bounce rate on the
+   * root domain, because the audience query had no deliverability gate and mailed 98 QA
+   * accounts on a reserved TLD (see src/lib/email/deliverability.ts). That is fixed, and the
+   * 09-24 send bounced 0.9% — but the structural point stands whatever this week's rate is.
+   *
+   * The REPLY-TO stays on the root domain on purpose. Replies must land in the real
+   * `support@` mailbox; only the sending identity moves.
+   *
+   * A FRESH SUBDOMAIN HAS NO REPUTATION, so expect a dip for a week or two at this volume
+   * (~330/week). Check `last_event` on the first two sends rather than assuming.
    */
   dataDrop: {
-    from: "PureProperty Data <data@pureproperty.ca>",
+    from: "PureProperty Data <data@send.pureproperty.ca>",
     replyTo: "support@pureproperty.ca",
   },
   /**
@@ -62,7 +70,11 @@ export const SENDERS = {
    * without opening either. It also makes the reply useful: a reply to this stream is about
    * one address, not about a market.
    *
-   * TODO(Unit 1): move to the send subdomain alongside dataDrop once it is verified.
+   * STAYS ON THE ROOT DOMAIN for now, unlike dataDrop. `send.pureproperty.ca` is verified
+   * and ready, but this stream is not armed — `street-recap.yml` has no schedule and no
+   * pg_cron row, and `streams.ts` hides its toggle for exactly that reason. Moving a sender
+   * that never sends would be a change nobody could verify. Move it in the same PR that
+   * arms the stream, so the first send and the new identity are tested together.
    */
   streetRecap: {
     from: "PureProperty <homes@pureproperty.ca>",
