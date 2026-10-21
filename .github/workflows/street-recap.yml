@@ -6,26 +6,19 @@ name: Monthly Street Recap
 # NO `schedule:` BLOCK, DELIBERATELY. Migrations 127 and 128 moved every scheduled job in
 # this repo off GitHub's `schedule` trigger onto Supabase pg_cron, which calls
 # `dispatch_github_workflow()`. A workflow that keeps its own cron AND gains a pg_cron entry
-# fires twice — migration 128 says so in as many words. So this file offers only
-# workflow_dispatch, and arming it is a pg_cron row in a later migration, not an uncommented
-# line here.
+# fires twice — migration 128 says so in as many words.
 #
-# UNTIL THEN it runs only by hand, which is also how its first sends should happen.
-#
-# ARM IT when all three are true:
-#   1. migration 130 (the aggregate RPCs) is applied,
-#   2. a real send has gone out by hand and been read on a phone,
-#   3. `reno_lookups` and `address_watches` between them hold enough addresses that a send
-#      is worth the reputation — the whole reason the capture shipped first.
+# ARMED 2026-10-21 by migration 156 (`dispatch-street-recap`, '10 12 2 * *'). That dispatch
+# carries no inputs, so `dry_run` is false and `test_to` is empty: it is a real send. Retime
+# it in cron.job, never by adding a `schedule:` here. Manual runs (dry or test_to) stay safe.
 #
 # WHEN TO RUN IT: early in the month, because the recap reports the month BEFORE. The
 # worker computes that window itself (previousMonthWindow), so the label is true whenever
 # it runs — but sold data for a month keeps arriving for a few days after it ends, so the
 # 2nd is early enough to be timely and late enough to be near-complete.
 #
-# DO NOT REGISTER IN schedule-watchdog.yml UNTIL IT IS ARMED. A watchdog entry for a job
-# with no schedule is red forever, and a permanently-red canary is a canary nobody reads —
-# which is exactly how the 2026-08-14 metric break went unnoticed for two weeks.
+# REGISTERED IN schedule-watchdog.yml (age-only, 33 days). Unregister it there if this is
+# ever disarmed — a watchdog entry for a job with no schedule is red forever.
 
 on:
   workflow_dispatch:

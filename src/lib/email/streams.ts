@@ -87,11 +87,9 @@ export const EMAIL_STREAMS: EmailStream[] = [
     title: "Your street, monthly",
     desc: "What sold near a home you follow last month — how many, how fast, and how many went above asking.",
     sender: "scripts/worker/streetRecap.ts",
-    // NOT ARMED. street-recap.yml is workflow_dispatch-only and has no pg_cron row, so this
-    // has never sent: 0 of 538 addresses as of 2026-09-21. Set this once the pg_cron entry
-    // exists (and register the workflow in schedule-watchdog.yml at the same time, per the
-    // note in street-recap.yml) — until then the toggle must not be on /account/emails.
-    armedBy: null,
+    // Armed 2026-10-21 by migration 156: the 2nd of each month, 12:10 UTC. The workflow is
+    // also registered in schedule-watchdog.yml, so a missed month turns a canary red.
+    armedBy: "pg_cron: dispatch-street-recap",
   },
   {
     key: "product",

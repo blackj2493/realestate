@@ -86,12 +86,19 @@ describe("a live stream is armed, not merely shipped", () => {
     }
   });
 
-  it("keeps the unarmed street recap off the preference centre", () => {
-    // Explicit rather than incidental: this is the row the invariant was written for, and a
-    // future edit that quietly re-exposes it should fail here with a reason attached.
+  it("shows the street recap only because a pg_cron row arms it", () => {
+    // Explicit rather than incidental: this is the row the invariant was written for. It was
+    // unarmed (0 of 538 addresses as of 2026-09-21) until migration 156 scheduled it. The job
+    // name must match that migration, or the toggle points at a cron that does not exist.
     const recap = EMAIL_STREAMS.find((s) => s.key === "home_value");
     expect(recap?.sender, "the recap worker did ship").toBeTruthy();
-    expect(recap?.armedBy, "…but nothing calls it yet — 0 of 538 addresses as of 2026-09-21").toBeNull();
-    expect(LIVE_EMAIL_STREAMS.map((s) => s.key)).not.toContain("home_value");
+    expect(recap?.armedBy).toBe("pg_cron: dispatch-street-recap");
+    const migration = readFileSync(
+      path.join(process.cwd(), "supabase/migrations/156_pg_cron_street_recap.sql"),
+      "utf8",
+    );
+    expect(migration).toContain("cron.schedule('dispatch-street-recap'");
+    expect(migration).toContain("dispatch_github_workflow('street-recap.yml')");
+    expect(LIVE_EMAIL_STREAMS.map((s) => s.key)).toContain("home_value");
   });
 });

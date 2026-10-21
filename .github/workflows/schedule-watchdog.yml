@@ -77,6 +77,13 @@ jobs:
               { file: 'freshness-check.yml', label: 'Data Freshness Check',
                 maxAgeHours: 12, cronMinutesUtc: [28, 6 * 60 + 28, 12 * 60 + 28, 18 * 60 + 28],
                 maxDelayHours: 6, selfHeal: true },
+              // Monthly, armed by pg_cron (migration 156) on the 2nd at 12:10 UTC. AGE ONLY, no
+              // cronMinutesUtc: lastExpected() resolves DAILY slots, so a monthly job given one
+              // would read as late every day but the 2nd. 33 days covers a 31-day month plus
+              // two days of slip; a missed month is caught by the 4th. Never selfHeal — it
+              // mails real people, and the worker stamps each month so a re-run is the human's call.
+              { file: 'street-recap.yml', label: 'Monthly Street Recap',
+                maxAgeHours: 33 * 24 },
               // COMMENTED OUT UNTIL THE CRON IS ARMED. weekly-data-drop.yml ships with its
               // schedule off, so watching it would report a missed run every four hours
               // forever — and an alert that is always firing is one nobody reads, which is
