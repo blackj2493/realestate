@@ -13,7 +13,8 @@
  */
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { isDeliverable } from "@/lib/email/deliverability";
-import type { SoldAgg, ActiveAgg, TypeRow, RecapScope } from "./payload";
+import type { SoldAgg, ActiveAgg, TypeRow, RecapScope, RecapSchool } from "./payload";
+import { polygonsFromGeoJson } from "@/lib/schools/catchmentMembership";
 
 type SB = ReturnType<typeof getServiceRoleClient>;
 
@@ -46,6 +47,8 @@ export interface Recipient {
   cityRegion: string | null;
   /** First three characters of the postal code, when we have one. */
   fsa: string | null;
+  /** The type they told the reno funnel ("Semi-Detached"). Null for a watch. */
+  propertySubType: string | null;
   source: "reno" | "watch";
   at: string;
 }
@@ -66,7 +69,7 @@ export async function loadRecapAudience(sb: SB): Promise<Recipient[]> {
   // ── reno_lookups (migration 129). Signed-in rows only ever carry an address. ──
   const { data: lookups, error: lErr } = await sb
     .from("reno_lookups")
-    .select("user_id, address, address_key, lat, lng, city, city_region, created_at")
+    .select("user_id, address, address_key, lat, lng, city, city_region, property_sub_type, created_at")
     .not("user_id", "is", null)
     .not("address", "is", null)
     .order("created_at", { ascending: true })
@@ -101,6 +104,7 @@ export async function loadRecapAudience(sb: SB): Promise<Recipient[]> {
       city: (r.city as string) ?? null,
       cityRegion: (r.city_region as string) ?? null,
       fsa: null,
+      propertySubType: (r.property_sub_type as string) ?? null,
       source: "reno",
       at: r.created_at as string,
     });
@@ -134,6 +138,7 @@ export async function loadRecapAudience(sb: SB): Promise<Recipient[]> {
       city: (w.city as string) ?? null,
       cityRegion: null,
       fsa: postal.length >= 3 ? postal.slice(0, 3).toUpperCase() : null,
+      propertySubType: null,
       source: "watch",
       at: w.created_at as string,
     });
@@ -280,6 +285,21 @@ export async function loadRecapAggregates(
         byType: [],
       });
     }
+    // The city's type split, so "homes like yours" compares a semi with the city's semis
+    // rather than with every home in the city.
+    const cityTypes = await rpcChunked<TypeRowRaw>(sb, "street_recap_sold_types", "city", cityKeys, {
+      p_from: window.from,
+      p_to: window.to,
+    });
+    for (const t of cityTypes) {
+      const agg = sold.get(scopeKey("city", t.scope_key));
+      if (!agg) continue;
+      agg.byType.push({
+        type: t.property_sub_type,
+        sales: Number(t.sales),
+        medianDom: t.median_dom == null ? null : Number(t.median_dom),
+      });
+    }
     const act = await rpcChunked<ActiveRow>(sb, "street_recap_actives", "city", cityKeys);
     for (const a of act) {
       actives.set(scopeKey("city", a.scope_key), {
@@ -308,4 +328,69 @@ export function collectScopes(recipients: Recipient[]): {
     if (r.city) cities.add(r.city);
   }
   return { regions: [...regions], fsas: [...fsas], cities: [...cities] };
+}
+
+// ── School zone ──────────────────────────────────────────────────────────────
+
+/** Ray casting on one polygon (outer ring + holes), lng/lat order as GeoJSON stores it. */
+function inPolygon(lng: number, lat: number, poly: number[][][]): boolean {
+  let inside = false;
+  for (const ring of poly) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i];
+      const [xj, yj] = ring[j];
+      if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+type CatchmentRow = {
+  school_name: string | null;
+  language: string | null;
+  level: string | null;
+  system: string | null;
+  score: number | null;
+  geometry: unknown;
+};
+
+/**
+ * The public elementary school whose home catchment holds this point, or null.
+ *
+ * Regular program only — a French Immersion zone spans several home catchments and is not
+ * "your school". Where a board splits elementary by grade (TDSB junior / intermediate), the
+ * junior zone wins: it is the school a child starts at. English public first, then English
+ * Catholic, then French-language boards (whose zones overlay the English ones and serve a
+ * small share of families). A planned school ("Unnamed ES (Newmarket Southeast)", found in
+ * the first dry run) is not a school anyone attends, so it is skipped. No school is ever
+ * guessed: a point outside every published boundary gets no school section.
+ */
+export async function loadSchoolFor(sb: SB, lat: number | null, lng: number | null): Promise<RecapSchool | null> {
+  if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const d = 0.0005;
+  const { data, error } = await sb.rpc("school_catchments_in_bbox", {
+    min_lng: lng - d,
+    min_lat: lat - d,
+    max_lng: lng + d,
+    max_lat: lat + d,
+    p_panel: "elementary",
+    p_program: "regular",
+  });
+  if (error || !data) return null;
+
+  const hits = (data as CatchmentRow[]).filter((r) => {
+    if (!r.school_name || r.school_name.trim().toLowerCase().startsWith("unnamed ")) return false;
+    const geom = typeof r.geometry === "string" ? JSON.parse(r.geometry) : r.geometry;
+    return polygonsFromGeoJson(geom).some((poly) => inPolygon(lng, lat, poly));
+  });
+  const rank = (r: CatchmentRow) =>
+    (/^fr/i.test(r.language ?? "") ? 4 : 0) +
+    (r.system === "catholic" ? 2 : 0) +
+    (r.level === "intermediate" ? 1 : 0);
+  const best = hits.sort((a, b) => rank(a) - rank(b))[0];
+  if (!best) return null;
+  return {
+    name: best.school_name!,
+    score: typeof best.score === "number" && Number.isFinite(best.score) ? best.score : null,
+  };
 }
