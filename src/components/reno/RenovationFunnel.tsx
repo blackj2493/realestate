@@ -245,6 +245,50 @@ export default function RenovationFunnel({
     setRecap('off');
   };
 
+  /* ── The monthly recap, once an address has actually been kept ──
+     Shown only when the server says it stored one, which only happens for a signed-in
+     visitor. An anonymous visitor already has the better call to action — signing in —
+     and a second one competing with it would cost the more valuable conversion.
+
+     IT TELLS, IT DOES NOT ASK. `email_prefs` is opt-out by design (migration 106), so
+     this person is already on the list; a subscribe button they do not need would be
+     theatre. What they are owed is to know, and one click out. It sits where the result
+     used to offer "Track this home's value", so the confirmation is the tracking. */
+  const tracking =
+    recap === 'hidden' ? null : (
+      <Card className="p-4">
+        {recap === 'off' ? (
+          <p className="text-sm text-muted-foreground">
+            Turned off. You can switch it back on any time in{' '}
+            <a className="underline underline-offset-2" href="/account/emails">
+              email settings
+            </a>
+            .
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                We&apos;ll send you a monthly note about {communityDisplay ?? 'this area'}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                What sold nearby, how fast, and how many went above asking. No estimate of
+                your home&apos;s value. The first arrives in early {firstRecapMonth}.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void declineRecap()}
+              disabled={recap === 'saving'}
+              className="shrink-0 text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-60"
+            >
+              {recap === 'saving' ? 'Saving…' : 'Not for me'}
+            </button>
+          </div>
+        )}
+      </Card>
+    );
+
   const numSel = (label: string, value: number, on: (n: number) => void) => (
     <div className="space-y-1.5">
       <Label className="text-[11px] text-muted-foreground">{label}</Label>
@@ -420,51 +464,11 @@ export default function RenovationFunnel({
             cityRegion={form.cityRegion}
             lat={coords?.lat ?? null}
             lng={coords?.lng ?? null}
+            tracking={tracking}
           />
         </div>
       )}
 
-      {/* ── The monthly recap, once an address has actually been kept ──
-          Shown only when the server says it stored one, which only happens for a signed-in
-          visitor. An anonymous visitor already has the better call to action — signing in —
-          and a second one competing with it would cost the more valuable conversion.
-
-          IT TELLS, IT DOES NOT ASK. `email_prefs` is opt-out by design (migration 106), so
-          this person is already on the list; a subscribe button they do not need would be
-          theatre. What they are owed is to know, and one click out. */}
-      {recap !== 'hidden' && (
-        <Card className="p-4">
-          {recap === 'off' ? (
-            <p className="text-sm text-muted-foreground">
-              Turned off. You can switch it back on any time in{' '}
-              <a className="underline underline-offset-2" href="/account/emails">
-                email settings
-              </a>
-              .
-            </p>
-          ) : (
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">
-                  We&apos;ll send you a monthly note about {communityDisplay ?? 'this area'}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  What sold nearby, how fast, and how many went above asking. No estimate of
-                  your home&apos;s value. The first arrives in early {firstRecapMonth}.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void declineRecap()}
-                disabled={recap === 'saving'}
-                className="shrink-0 text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-60"
-              >
-                {recap === 'saving' ? 'Saving…' : 'Not for me'}
-              </button>
-            </div>
-          )}
-        </Card>
-      )}
     </div>
   );
 }

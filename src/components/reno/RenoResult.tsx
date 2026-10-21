@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Lock, Home, TrendingUp, TrendingDown, LineChart } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Lock, Home, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import type { AVMResult } from '@/lib/avm/types';
 import type { ValueAddReport } from '@/lib/avm/valueAdd/types';
@@ -38,6 +39,7 @@ export default function RenoResult({
   cityRegion,
   lat,
   lng,
+  tracking,
 }: {
   result: RenoResultData;
   city: string;
@@ -50,6 +52,12 @@ export default function RenoResult({
   cityRegion?: string | null;
   lat?: number | null;
   lng?: number | null;
+  /**
+   * What happens to this home after the result: the funnel's monthly-recap confirmation,
+   * or nothing. It replaces a "Track this home's value" button that only opened the search
+   * map — it saved nothing and promised a follow-up that never came.
+   */
+  tracking?: ReactNode;
 }) {
   const where = community || city || 'your area';
   const rules = localRulesFor(city);
@@ -294,12 +302,7 @@ export default function RenoResult({
               </Link>
             </>
           ) : (
-            <Link
-              href="/properties"
-              className="mt-1 flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-500 active:bg-emerald-700 [touch-action:manipulation]"
-            >
-              <LineChart className="h-4 w-4" aria-hidden /> Track this home’s value →
-            </Link>
+            tracking
           )}
           <ShareChallengeButton communitySlug={communitySlug} community={community} />
         </div>
