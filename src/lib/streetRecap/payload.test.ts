@@ -208,3 +208,47 @@ describe("no city rollup", () => {
     ).toBeNull();
   });
 });
+
+describe("homes like yours", () => {
+  const withTypes = (over: Partial<BuildInput> = {}) =>
+    input({
+      candidates: [
+        {
+          scope: scope("region", "Patterson"),
+          sold: sold({ byType: [{ type: "Semi-Detached ", sales: 12, medianDom: 15 }, { type: "Detached", sales: 3, medianDom: 30 }] }),
+        },
+      ],
+      city: {
+        scope: scope("city", "Vaughan"),
+        sold: sold({ sales: 686, byType: [{ type: "Semi-Detached", sales: 90, medianDom: 22 }] }),
+      },
+      ...over,
+    });
+
+  it("picks the reader's type, matching through the feed's trailing space", () => {
+    const p = buildStreetRecapPayload(withTypes({ homeType: "Semi-Detached" }))!;
+    expect(p.home).toEqual({ type: "Semi-Detached", sales: 12, medianDom: 15, cityMedianDom: 22 });
+  });
+
+  it("drops the type below the floor rather than print a thin count", () => {
+    expect(buildStreetRecapPayload(withTypes({ homeType: "Detached" }))!.home).toBeNull();
+  });
+
+  it("has no type for a watcher", () => {
+    expect(buildStreetRecapPayload(withTypes())!.home).toBeNull();
+  });
+});
+
+describe("the month before", () => {
+  it("reads the previous month for the scope the ladder chose", () => {
+    const p = buildStreetRecapPayload(
+      input({ prevSold: (s) => (s.label === "Patterson" ? sold({ sales: 20, aboveAsking: 8 }) : null) })
+    )!;
+    expect(p.prevAbovePct).toBe(40);
+  });
+
+  it("stays null when last month was below the floor", () => {
+    const p = buildStreetRecapPayload(input({ prevSold: () => sold({ sales: 3, aboveAsking: 3 }) }))!;
+    expect(p.prevAbovePct).toBeNull();
+  });
+});

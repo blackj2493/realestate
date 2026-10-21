@@ -8,16 +8,19 @@
  * who accepted VOW terms and one who never did — no gate, no second variant, no risk of
  * leaking a figure or its direction. A test enforces it.
  *
+ * ONE SIGN-IN LINK (owner decision 2026-10-21). VOW Agreement §(f) keeps analytics built from
+ * sold data on the password-protected site, so sold prices, True DOM and closed-lease rents
+ * never print here. The email gives everything it can print, then ONE link — "See what they
+ * sold for" — to the page that shows the rest after sign-in. Four locked teasers were tried
+ * in a mockup and read like an advert; one reason to click is enough. The True DOM of homes
+ * still for sale used to print in a "homes that have not sold" block; it is VOW, so it went.
+ *
  * Plain language (voice.md §5.1): "days to sell", "cut their asking price" and "sold above
  * asking" are self-explanatory, so none of them is glossed. Nothing here needs a glossary.
  */
-import { SITE, MONO, esc, shell, footer, button } from "./emailShell";
+import { SITE, MONO, esc, shell, footer, button, link } from "./emailShell";
 import { utmTagger } from "@/lib/email/utm";
-import {
-  printableTypes,
-  domVerdict,
-  type StreetRecapPayload,
-} from "@/lib/streetRecap/payload";
+import type { StreetRecapPayload } from "@/lib/streetRecap/payload";
 
 export interface RecapRenderInput {
   payload: StreetRecapPayload;
@@ -84,16 +87,6 @@ const MOBILE_CSS = `
 const whole = (n: number | null | undefined): string | null =>
   n == null ? null : String(Math.round(n));
 
-// ── Subject ───────────────────────────────────────────────────────────────────
-
-/**
- * The subject leads on whatever the hero block leads on. They must agree: a subject about
- * a count opening onto a hero about days reads as two emails stapled together.
- *
- * The PREHEADER carries the interesting part, in order of what is actually worth saying:
- * the city comparison when it is big enough to be a claim, then the standing-inventory gap
- * (usually the strongest thing we know), then the above-asking share.
- */
 /**
  * A place a reader would say out loud, or null.
  *
@@ -104,159 +97,6 @@ const whole = (n: number | null | undefined): string | null =>
  */
 const placeName = (p: StreetRecapPayload): string | null =>
   p.scope.kind === "fsa" ? null : p.scope.label;
-
-function subjectFor(p: StreetRecapPayload): { subject: string; preheader: string } {
-  const v = domVerdict(p);
-  const where = placeName(p);
-
-  const preheader =
-    v && p.cityAgg?.medianDom != null
-      ? `Across ${p.scope.city} it took ${p.cityAgg.medianDom} days.` +
-        (p.actives?.medianTrueDom != null
-          ? ` The ones that didn't sell have been listed ${p.actives.medianTrueDom}.`
-          : "")
-      : p.actives?.medianTrueDom != null
-        ? `The ones that didn't sell are still listed after ${p.actives.medianTrueDom} days.`
-        : p.abovePct != null
-          ? `${whole(p.abovePct)}% of them went above asking.`
-          : `What changed near ${p.address} in ${p.monthLabel}.`;
-
-  if (p.local.medianDom != null) {
-    return {
-      subject: where
-        ? `Homes in ${where} sold in ${p.local.medianDom} days last month`
-        : `Homes near you sold in ${p.local.medianDom} days last month`,
-      preheader,
-    };
-  }
-  return {
-    subject: where
-      ? `${p.local.sales} homes sold in ${where} last month`
-      : `${p.local.sales} homes sold near you last month`,
-    preheader,
-  };
-}
-
-// ── Fragments ─────────────────────────────────────────────────────────────────
-
-const secHd = (t: string) =>
-  `<h2 class="sr-sec" style="font-size:12px;color:#334155;text-transform:uppercase;letter-spacing:.10em;margin:24px 0 8px;">${t}</h2>`;
-
-function headlineBlock(p: StreetRecapPayload): string {
-  const v = domVerdict(p);
-  const hasDom = p.local.medianDom != null;
-  const figure = hasDom ? String(p.local.medianDom) : String(p.local.sales);
-  const unit = hasDom ? " days" : " sold";
-
-  const lede = hasDom
-    ? `is how long a home near <b>${esc(p.address)}</b> took to sell in ${p.monthLabel}.`
-    : `homes changed hands near <b>${esc(p.address)}</b> in ${p.monthLabel}.`;
-
-  const where = placeName(p);
-  // What the figure is made of, said once. It replaced "Measured across every sale we have on
-  // record for the month", which filled the line without telling the reader anything.
-  const basis = hasDom
-    ? `Based on ${p.local.sales} sale${p.local.sales === 1 ? "" : "s"} ${where ? `in ${esc(where)}` : "near you"}. `
-    : "";
-  const because = v
-    ? `${basis}Across ${esc(p.scope.city)} as a whole it was <b>${p.cityAgg?.medianDom} days</b>, so ` +
-      `${where ? esc(where) : "your area"} is moving ${v.faster ? "faster" : "slower"} than the city around it.`
-    : p.cityAgg?.medianDom != null
-      ? `${basis}Across ${esc(p.scope.city)} it was <b>${p.cityAgg.medianDom} days</b> — about the same.`
-      : basis.trim();
-
-  return `
-    <span class="sr-figure" style="font-family:${MONO};font-size:52px;font-weight:600;color:#0a1828;letter-spacing:-.02em;line-height:1;">${esc(figure)}<span class="sr-unit" style="font-size:27px;color:#55707f;font-weight:500;">${esc(unit)}</span></span>
-    <p class="sr-lede" style="font-size:16px;line-height:1.5;color:#0a1828;margin:10px 0 0;">${lede}</p>
-    ${because ? `<p class="sr-because" style="font-size:14px;line-height:1.6;color:#3d5665;margin:12px 0 0;">${because}</p>` : ""}`;
-}
-
-/**
- * The standing-inventory block — the most useful thing we know, and the line no
- * home-value email says, because they all lead with a price instead.
- *
- * Sold homes took ~18 days. Homes still listed have been sitting ~63. That gap is the
- * market, stated in a way an owner can act on.
- *
- * Three figures side by side, each with a one-line caption: a table row of cells, which
- * every client lays out, rather than one mono sentence that wrapped mid-phrase. The days
- * figure is a MEDIAN, so the caption says "typical" — the old "30 days each" claimed every
- * listing had sat exactly that long. The comparison sentence is printed only when the gap is
- * real (STANDING_GAP_*): the first live send stated "Homes here either go quickly or they do
- * not go at all" beside 28 days sold against 30 days listed, which says no such thing.
- */
-const STANDING_GAP_RATIO = 1.5;
-const STANDING_GAP_DAYS = 14;
-
-function standingBlock(p: StreetRecapPayload): string {
-  const a = p.actives;
-  if (!a || a.medianTrueDom == null) return "";
-
-  const stat = (figure: string, caption: string) => `
-        <td valign="top" style="padding:0 6px 0 0;">
-          <div class="sr-stat" style="font-family:${MONO};font-size:22px;font-weight:600;color:#0a1828;line-height:1.1;white-space:nowrap;">${figure}</div>
-          <div class="sr-cap" style="font-size:12px;line-height:1.4;color:#55707f;margin-top:4px;">${caption}</div>
-        </td>`;
-  const cells = [
-    stat(a.active.toLocaleString("en-CA"), "homes still for sale"),
-    stat(`${a.medianTrueDom}<span style="font-size:14px;font-weight:500;color:#55707f;"> days</span>`, "typical time listed so far"),
-    p.cutPct != null ? stat(`${whole(p.cutPct)}%`, "have cut their price") : "",
-  ].filter(Boolean);
-
-  const sold = p.local.medianDom;
-  const gap =
-    sold != null && a.medianTrueDom >= sold * STANDING_GAP_RATIO && a.medianTrueDom - sold >= STANDING_GAP_DAYS
-      ? `<p class="sr-note" style="font-size:14px;line-height:1.6;color:#3d5665;margin:12px 0 0;">The homes still for sale have been listed ${a.medianTrueDom} days so far. The ones that sold took ${sold}.</p>`
-      : "";
-
-  return `${secHd("The homes that have not sold")}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">
-      <tr>${cells.join("")}</tr>
-    </table>${gap}`;
-}
-
-/**
- * The month's figures as label / value rows. The secondary fact (a type's sale count, the
- * city's above-asking share) sits UNDER the label as a caption, never beside the value: in
- * the value column it was set nowrap, so it widened that column until every label wrapped.
- * The value column holds one short figure and is sized to it.
- */
-function rowsBlock(p: StreetRecapPayload): string {
-  type Row = { k: string; v: string; sub?: string } | { head: string };
-  const rows: Row[] = [];
-  rows.push({ k: "Homes sold", v: String(p.local.sales) });
-  if (p.abovePct != null) {
-    rows.push({
-      k: "Sold above asking",
-      v: `${whole(p.abovePct)}%`,
-      sub: p.cityAbovePct != null ? `Across ${p.scope.city}: ${whole(p.cityAbovePct)}%` : undefined,
-    });
-  }
-  const types = printableTypes(p.local.byType);
-  if (types.length) rows.push({ head: "Time to sell, by type" });
-  for (const t of types) {
-    rows.push({ k: tableLabel(t.type), v: `${t.medianDom} days`, sub: `${t.sales} sold` });
-  }
-
-  const tr = rows
-    .map((r) => {
-      if ("head" in r) {
-        return `<tr><td colspan="2" style="padding:16px 0 2px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#55707f;font-weight:700;">${esc(r.head)}</td></tr>`;
-      }
-      const sub = r.sub
-        ? `<div style="font-size:12px;line-height:1.4;color:#7a8f9c;margin-top:2px;">${esc(r.sub)}</div>`
-        : "";
-      return `<tr>
-        <td class="sr-rl" valign="top" style="padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:14px;line-height:1.4;color:#3d5665;">${esc(r.k)}${sub}</td>
-        <td class="sr-rv" valign="top" align="right" style="padding:10px 0 10px 12px;border-bottom:1px solid #e2e8f0;font-family:${MONO};font-size:14px;font-weight:600;line-height:1.4;color:#0a1828;white-space:nowrap;">${esc(r.v)}</td>
-      </tr>`;
-    })
-    .join("");
-
-  const where = placeName(p);
-  return `${secHd(`${where ? esc(where) : "Near you"}, ${esc(p.monthLabel)}`)}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">${tr}</table>`;
-}
 
 /**
  * Feed sub-types read like database values, because they are. In a sentence they need to
@@ -298,26 +138,221 @@ const TABLE_LABEL: Record<string, string> = {
 const tableLabel = (t: string): string => TABLE_LABEL[t.trim()] ?? typeLabel(t);
 const article = (w: string): string => ("aeiou".includes(w[0]?.toLowerCase() ?? "") ? "An" : "A");
 
-/**
- * The line a reader forwards to a neighbour — but only when there is a contrast worth
- * forwarding.
- *
- * Real August data made the case: Patterson detached sold in 23 days and townhouses in 21.
- * "A detached home sells in 23 days. A townhouse takes 21." is not an insight, it is two
- * numbers next to each other. Below MIN_SPREAD the sentence is dropped entirely rather than
- * padded — the email is already saying enough.
- */
-const MIN_TYPE_SPREAD_DAYS = 5;
+/** Plurals for the hero: "24 semis sold". */
+const TYPE_PLURAL: Record<string, string> = {
+  Detached: "detached homes",
+  "Semi-Detached": "semis",
+  "Att/Row/Townhouse": "townhouses",
+  "Condo Townhouse": "condo townhouses",
+  "Condo Apartment": "condos",
+  Link: "linked homes",
+};
+const typePlural = (t: string): string => TYPE_PLURAL[t.trim()] ?? `${typeWord(t)}s`;
 
-function typeContrast(p: StreetRecapPayload): string {
-  const types = printableTypes(p.local.byType);
-  if (types.length < 2) return "";
-  const [a, b] = types;
-  if (a.medianDom == null || b.medianDom == null) return "";
-  if (Math.abs(a.medianDom - b.medianDom) < MIN_TYPE_SPREAD_DAYS) return "";
-  const aw = typeWord(a.type);
-  const bw = typeWord(b.type);
-  return `<p class="sr-note" style="font-size:14px;line-height:1.6;color:#3d5665;margin:14px 0 0;">${article(aw)} ${esc(aw)} near you now sells in ${a.medianDom} days. ${article(bw).toLowerCase() === "an" ? "An" : "A"} ${esc(bw)} takes ${b.medianDom}.</p>`;
+/** The analytics page's type keys (src/lib/dashboard/propertyTypes.ts). */
+const ANALYTICS_TYPE: Record<string, string> = {
+  Detached: "detached",
+  "Semi-Detached": "semi",
+  "Att/Row/Townhouse": "town",
+  "Condo Townhouse": "town",
+  "Condo Apartment": "condo",
+  Link: "link",
+};
+
+/**
+ * The one sign-in link: the analytics page for the reader's area and type, which shows the
+ * sold prices, the price range and True DOM to a signed-in reader. The neighbourhood when we
+ * have it, else the city of the cohort. Never the FSA — analytics does not know it.
+ */
+function soldUrl(p: StreetRecapPayload): string {
+  const region = p.scope.kind === "region" ? p.scope.label : p.scope.city || null;
+  const q = new URLSearchParams();
+  if (region) q.set("region", region);
+  const t = p.home ? ANALYTICS_TYPE[p.home.type] : undefined;
+  if (t) q.set("types", t);
+  const qs = q.toString();
+  return `${SITE}/analytics${qs ? `?${qs}` : ""}`;
+}
+
+/** Two months must differ by at least this many points for an arrow; below it is noise. */
+const MIN_ABOVE_SHIFT = 5;
+
+/** Price-cut share at or above which "If you ever sell" warns about starting high. */
+const MANY_CUTS_PCT = 25;
+
+/** A city comparison is a claim only past this many days (see domVerdict). */
+const MIN_DOM_GAP = 3;
+
+// ── Hero figures ──────────────────────────────────────────────────────────────
+
+/**
+ * The reader's own type when it clears the floor ("24 semis"), else every home in the
+ * cohort. The comparison follows the same choice, so a semi is never compared with every
+ * home in the city.
+ */
+function heroFigures(p: StreetRecapPayload): {
+  count: number;
+  noun: string;
+  dom: number | null;
+  cityDom: number | null;
+} {
+  if (p.home) {
+    return {
+      count: p.home.sales,
+      noun: typePlural(p.home.type),
+      dom: p.home.medianDom,
+      cityDom: p.home.cityMedianDom,
+    };
+  }
+  return {
+    count: p.local.sales,
+    noun: p.local.sales === 1 ? "home" : "homes",
+    dom: p.local.medianDom,
+    cityDom: p.cityAgg?.medianDom ?? null,
+  };
+}
+
+// ── Subject ───────────────────────────────────────────────────────────────────
+
+/** The subject leads on the hero's figure; the preheader on the strongest printable fact. */
+function subjectFor(p: StreetRecapPayload): { subject: string; preheader: string } {
+  const where = placeName(p);
+  const h = heroFigures(p);
+  const gap = h.dom != null && h.cityDom != null ? h.cityDom - h.dom : null;
+  const pace =
+    gap != null && Math.abs(gap) >= MIN_DOM_GAP
+      ? `, ${gap > 0 ? "faster" : "slower"} than ${p.scope.city}`
+      : "";
+
+  const subject = `${h.count} ${h.noun} sold ${where ? `in ${where}` : "near you"} in ${p.monthLabel}${pace}`;
+
+  const bits: string[] = [];
+  if (pace && h.dom != null && h.cityDom != null) bits.push(`${h.dom} days near you, ${h.cityDom} across the city.`);
+  else if (h.dom != null) bits.push(`They took a typical ${h.dom} days to sell.`);
+  if (p.cutPct != null) bits.push(`${whole(p.cutPct)}% of homes for sale near you have cut their price.`);
+  else if (p.abovePct != null) bits.push(`${whole(p.abovePct)}% sold over asking.`);
+  return { subject, preheader: bits.join(" ") || `What changed near ${p.address} in ${p.monthLabel}.` };
+}
+
+// ── Fragments ─────────────────────────────────────────────────────────────────
+
+const secHd = (t: string) =>
+  `<h2 class="sr-sec" style="font-size:12px;color:#334155;text-transform:uppercase;letter-spacing:.10em;margin:28px 0 8px;">${t}</h2>`;
+
+const para = (html: string) =>
+  `<p class="sr-note" style="font-size:15px;line-height:1.6;color:#0a1828;margin:0;">${html}</p>`;
+
+function heroBlock(p: StreetRecapPayload, soldHref: string): string {
+  const h = heroFigures(p);
+  const gap = h.dom != null && h.cityDom != null ? h.cityDom - h.dom : null;
+  const where = placeName(p);
+
+  const parts = [`near <b>${esc(p.address)}</b> in ${esc(p.monthLabel)}.`];
+  if (h.dom != null) parts.push(`They took a typical <b>${h.dom} days</b> to sell.`);
+  if (gap != null && Math.abs(gap) >= MIN_DOM_GAP) {
+    parts.push(
+      `Across ${esc(p.scope.city)} it was ${h.cityDom} days, so ${where ? esc(where) : "your area"} is moving ${gap > 0 ? "faster" : "slower"}.`
+    );
+  } else if (h.cityDom != null) {
+    parts.push(`Across ${esc(p.scope.city)} it was about the same.`);
+  }
+
+  return `${secHd(p.home ? "Homes like yours" : "Homes near you")}
+    <span class="sr-figure" style="font-family:${MONO};font-size:52px;font-weight:600;color:#0a1828;letter-spacing:-.02em;line-height:1;">${h.count}<span class="sr-unit" style="font-size:24px;color:#55707f;font-weight:500;"> ${esc(h.noun)} sold</span></span>
+    <p class="sr-lede" style="font-size:16px;line-height:1.55;color:#0a1828;margin:10px 0 0;">${parts.join(" ")}</p>
+    <div style="margin:16px 0 0;">${button("See what they sold for &rarr;", soldHref)}</div>
+    <p class="sr-cap" style="font-size:12px;line-height:1.5;color:#55707f;margin:8px 0 0;">Sold prices, the price range for homes like yours, and the real time to sell. Shown on PureProperty when you sign in.</p>`;
+}
+
+/** One sentence on what the market numbers mean together, or nothing when they say nothing. */
+function marketMeaning(p: StreetRecapPayload, prevMonth: string): string | null {
+  if (p.abovePct == null || p.prevAbovePct == null) return null;
+  const shift = p.abovePct - p.prevAbovePct;
+  if (shift <= -MIN_ABOVE_SHIFT) {
+    return p.cutPct != null && p.cutPct >= MANY_CUTS_PCT
+      ? `Fewer homes sold over asking than in ${prevMonth}, and many sellers have cut their price. Buyers near you have more choice.`
+      : `Fewer homes sold over asking than in ${prevMonth}. Buyers near you are competing less.`;
+  }
+  if (shift >= MIN_ABOVE_SHIFT) {
+    return `More homes sold over asking than in ${prevMonth}. Buyers near you are competing harder.`;
+  }
+  return null;
+}
+
+function marketBlock(p: StreetRecapPayload, prevMonth: string): string {
+  const stat = (figure: string, caption: string) => `
+        <td valign="top" style="padding:0 8px 0 0;">
+          <div class="sr-stat" style="font-family:${MONO};font-size:22px;font-weight:600;color:#0a1828;line-height:1.1;white-space:nowrap;">${figure}</div>
+          <div class="sr-cap" style="font-size:12px;line-height:1.4;color:#55707f;margin-top:4px;">${caption}</div>
+        </td>`;
+
+  const cells: string[] = [];
+  if (p.abovePct != null) {
+    const prev =
+      p.prevAbovePct != null && Math.abs(p.abovePct - p.prevAbovePct) >= MIN_ABOVE_SHIFT
+        ? `<br>${p.abovePct < p.prevAbovePct ? "&#9660;" : "&#9650;"} from ${whole(p.prevAbovePct)}% in ${esc(prevMonth)}`
+        : "";
+    cells.push(stat(`${whole(p.abovePct)}%`, `sold over asking${prev}`));
+  }
+  if (p.actives) cells.push(stat(p.actives.active.toLocaleString("en-CA"), "homes for sale now"));
+  if (p.cutPct != null) cells.push(stat(`${whole(p.cutPct)}%`, "of those have cut their price"));
+  if (!cells.length) return "";
+
+  const meaning = marketMeaning(p, prevMonth);
+  return `${secHd("The market around you")}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;table-layout:fixed;">
+      <tr>${cells.join("")}</tr>
+    </table>${meaning ? `<p class="sr-note" style="font-size:14px;line-height:1.6;color:#3d5665;margin:12px 0 0;">${meaning}</p>` : ""}`;
+}
+
+/**
+ * Advice an owner can use, from listing data only (price cuts are IDX). It reads the cut
+ * share, so the text changes with the market instead of repeating the market block: many
+ * cuts warn about starting high, few cuts say a fair first price sells here.
+ */
+function sellNote(p: StreetRecapPayload): string | null {
+  if (p.cutPct == null) return null;
+  return p.cutPct >= MANY_CUTS_PCT
+    ? `${whole(p.cutPct)}% of the homes for sale near you have cut their price. A home that starts too high waits longer, and buyers notice the cut.`
+    : `Only ${whole(p.cutPct)}% of the homes for sale near you have cut their price. Here, a home priced right at the start usually sells without a cut.`;
+}
+
+function sellBlock(p: StreetRecapPayload): string {
+  const n = sellNote(p);
+  if (!n) return "";
+  return `${secHd("If you ever sell")}
+    <p style="font-size:16px;font-weight:700;color:#0a1828;margin:0 0 6px;">The first price matters most</p>
+    ${para(n)}`;
+}
+
+function renoBlock(p: StreetRecapPayload, href: string): string {
+  if (p.source !== "reno") return "";
+  return `${secHd("Your renovation check")}
+    ${para("You checked what a renovation adds to your home. Run it again to see it with this month's sales and leases.")}
+    <p style="margin:10px 0 0;font-size:15px;">${link("See your result again &rarr;", href)}</p>`;
+}
+
+function schoolBlock(p: StreetRecapPayload, href: string): string {
+  const s = p.school;
+  if (!s) return "";
+  const score = s.score != null ? ` (score ${s.score.toFixed(1)}/10, from EQAO results)` : "";
+  return `${secHd("Your school zone")}
+    ${para(`Your home is in the zone for <b>${esc(s.name)}</b>${score}.`)}
+    <p style="margin:10px 0 0;font-size:15px;">${link("See the school zones near you &rarr;", href)}</p>`;
+}
+
+/** Replies go to SENDERS.streetRecap.replyTo, a monitored inbox. */
+const PRICE_CHECK =
+  "Thinking about what your home could sell for? Reply to this email for a free price check from a licensed agent.";
+
+/** "September" for an "October" recap. */
+function monthBefore(label: string): string {
+  const i = new Date(`${label} 15, 2000`).getMonth();
+  if (Number.isNaN(i)) return "last month";
+  return new Date(Date.UTC(2000, (i + 11) % 12, 15, 12)).toLocaleDateString("en-CA", {
+    month: "long",
+    timeZone: "UTC",
+  });
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -325,22 +360,27 @@ function typeContrast(p: StreetRecapPayload): string {
 export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): RecapRendered {
   const p = i.payload;
   const { subject, preheader } = subjectFor(p);
+  const prevMonth = monthBefore(p.monthLabel);
 
   const tag: Tagger = utmTagger(UTM_SOURCE, campaignOf(p.monthLabel, now));
   const manageUrl = tag(i.manageUrl, "manage");
-  const ctaUrl = tag(mapUrl(i.lat, i.lng), "cta");
+  const soldHref = tag(soldUrl(p), "sold");
+  const renoHref = tag(`${SITE}/whats-my-home-hiding`, "reno");
+  const schoolHref = tag(mapUrl(i.lat, i.lng), "schools");
+
+  const intro =
+    p.source === "reno"
+      ? "You get this because you checked a home on PureProperty."
+      : `You get this because you asked us to watch ${esc(p.address)}.`;
 
   const body = [
-    headlineBlock(p),
-    standingBlock(p),
-    rowsBlock(p),
-    typeContrast(p),
-    `<div style="margin:26px 0 0;">${button("See what's for sale near you &rarr;", ctaUrl)}</div>`,
-    footer({
-      intro: `You get this because you asked us to watch ${esc(p.address)}.`,
-      manageUrl,
-      unsubscribeUrl: i.unsubscribeUrl,
-    }).replace(
+    heroBlock(p, soldHref),
+    marketBlock(p, prevMonth),
+    sellBlock(p),
+    renoBlock(p, renoHref),
+    schoolBlock(p, schoolHref),
+    `<p class="sr-note" style="font-size:14px;line-height:1.6;color:#3d5665;margin:28px 0 0;">${PRICE_CHECK}</p>`,
+    footer({ intro, manageUrl, unsubscribeUrl: i.unsubscribeUrl }).replace(
       "Data is deemed reliable",
       `Aggregate figures only. No estimate of your home's value.<br>Data is deemed reliable`
     ),
@@ -348,48 +388,43 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
     .filter(Boolean)
     .join("\n");
 
-  // The month, one word: "YOUR STREET" wrapped onto two lines in Gmail's app, and it named a
-  // street where the figures describe a neighbourhood or a postal area.
+  // The month, one word: "YOUR STREET" wrapped onto two lines in Gmail's app.
   const html = shell({ preheader, headerLabel: esc(p.monthLabel.toUpperCase()), body, headStyle: MOBILE_CSS });
 
-  // ── Plaintext part. Required, not optional (§11.7 item 6). ──────────────────
+  // ── Plaintext part. Required, not optional (§11.7 item 6). Same sections, same rules. ──
+  const h = heroFigures(p);
   const t: string[] = [];
   t.push(`${(placeName(p) ?? "NEAR YOU").toUpperCase()} — ${p.monthLabel.toUpperCase()}`, "");
-  if (p.local.medianDom != null) {
-    t.push(`${p.local.medianDom} days is how long a home near ${p.address} took to sell.`, "");
-    if (p.cityAgg?.medianDom != null) t.push(`Across ${p.scope.city} it was ${p.cityAgg.medianDom} days.`, "");
-  } else {
-    t.push(`${p.local.sales} homes sold near ${p.address} in ${p.monthLabel}.`, "");
-  }
-  if (p.actives?.medianTrueDom != null) {
+  t.push(`${h.count} ${h.noun} sold near ${p.address} in ${p.monthLabel}.`);
+  if (h.dom != null) t.push(`They took a typical ${h.dom} days to sell.`);
+  if (h.dom != null && h.cityDom != null) t.push(`Across ${p.scope.city} it was ${h.cityDom} days.`);
+  t.push("", "See what they sold for (sign in):", soldHref, "");
+  t.push("THE MARKET AROUND YOU");
+  if (p.abovePct != null) {
     t.push(
-      `Still for sale: ${p.actives.active.toLocaleString("en-CA")} homes. ` +
-        `Typical time listed so far: ${p.actives.medianTrueDom} days.` +
-        (p.cutPct != null ? ` ${whole(p.cutPct)}% have cut their price.` : ""),
-      ""
+      `  Sold over asking: ${whole(p.abovePct)}%` +
+        (p.prevAbovePct != null ? ` (${whole(p.prevAbovePct)}% in ${prevMonth})` : "")
     );
   }
-  t.push(`NEAR YOU, ${p.monthLabel.toUpperCase()}`, "");
-  t.push(`  ${"Homes sold".padEnd(24)}${p.local.sales}`);
-  if (p.abovePct != null) t.push(`  ${"Sold above asking".padEnd(24)}${whole(p.abovePct)}%`);
-  for (const ty of printableTypes(p.local.byType)) {
-    t.push(`  ${typeLabel(ty.type).padEnd(24)}${ty.medianDom} days (${ty.sales} sold)`);
-  }
+  if (p.actives) t.push(`  Homes for sale now: ${p.actives.active.toLocaleString("en-CA")}`);
+  if (p.cutPct != null) t.push(`  Of those, cut their price: ${whole(p.cutPct)}%`);
+  const m = marketMeaning(p, prevMonth);
+  if (m) t.push("", m);
   t.push("");
-  // Parity with the HTML part: the same sentence, under the same spread rule.
-  const tc = printableTypes(p.local.byType);
-  if (tc.length >= 2 && tc[0].medianDom != null && tc[1].medianDom != null &&
-      Math.abs(tc[0].medianDom - tc[1].medianDom) >= MIN_TYPE_SPREAD_DAYS) {
+  const sn = sellNote(p);
+  if (sn) t.push("IF YOU EVER SELL", sn, "");
+  if (p.source === "reno") t.push("YOUR RENOVATION CHECK", "See your result again:", renoHref, "");
+  if (p.school) {
     t.push(
-      `${article(typeWord(tc[0].type))} ${typeWord(tc[0].type)} near you now sells in ` +
-        `${tc[0].medianDom} days. ${article(typeWord(tc[1].type))} ${typeWord(tc[1].type)} ` +
-        `takes ${tc[1].medianDom}.`,
+      "YOUR SCHOOL ZONE",
+      `${p.school.name}${p.school.score != null ? ` (score ${p.school.score.toFixed(1)}/10)` : ""}`,
+      schoolHref,
       ""
     );
   }
-  t.push("See what's for sale near you:", ctaUrl, "");
+  t.push(PRICE_CHECK, "");
   t.push("--");
-  t.push(`You get this because you asked us to watch ${p.address}.`);
+  t.push(intro);
   t.push(`Manage emails:  ${manageUrl}`);
   t.push(`Unsubscribe:    ${i.unsubscribeUrl}`);
   t.push("");

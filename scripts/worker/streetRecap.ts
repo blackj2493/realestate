@@ -36,6 +36,7 @@ import {
   loadRecapAudience,
   loadRecapAggregates,
   collectScopes,
+  loadSchoolFor,
   scopeKey,
   type Recipient,
 } from "@/lib/streetRecap/data";
@@ -240,6 +241,14 @@ async function main(): Promise<void> {
   });
   console.log(`   aggregates: ${sold.size} sold cohorts, ${actives.size} inventory cohorts`);
 
+  // The month before, for the above-asking change. Same scopes, same RPCs, earlier window.
+  // previousMonthWindow() of a day inside this window is the month before it.
+  const [wy, wm] = win.from.split("-").map(Number);
+  const prevWin = previousMonthWindow(Date.UTC(wy, wm - 1, 15, 12));
+  const prev = await loadRecapAggregates(sb, scopes, { from: prevWin.from, to: prevWin.to });
+  const prevSold = (scope: RecapScope): SoldAgg | null =>
+    prev.sold.get(scopeKey(scope.kind, scope.label)) ?? null;
+
   let considered = 0;
   let sentCount = 0;
   let gated = 0;
@@ -258,6 +267,10 @@ async function main(): Promise<void> {
       actives: (geo.activesKey ? actives.get(geo.activesKey) : undefined) ?? null,
       dataAsOf: nowIso,
       monthLabel: win.label,
+      homeType: r.propertySubType,
+      prevSold,
+      school: await loadSchoolFor(sb, r.lat, r.lng),
+      source: r.source,
     });
     if (!payload) {
       skippedNoPayload++;
@@ -277,7 +290,9 @@ async function main(): Promise<void> {
     if (DRY) {
       console.log(
         `   DRY ${r.email} → ${payload.scope.kind}/${payload.scope.label} ` +
-          `(${payload.local.sales} sales, ${payload.local.medianDom ?? "—"}d) [${r.source}]`
+          `(${payload.local.sales} sales, ${payload.local.medianDom ?? "—"}d) [${r.source}]` +
+          (payload.home ? ` home=${payload.home.type}:${payload.home.sales}` : "") +
+          (payload.school ? ` school=${payload.school.name}` : "")
       );
       sentCount++;
       continue;

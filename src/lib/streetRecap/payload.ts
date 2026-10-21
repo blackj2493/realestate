@@ -50,6 +50,26 @@ export interface ActiveAgg {
   medianTrueDom: number | null;
 }
 
+/** The reader's own school zone. Public data (EQAO-derived score), so it prints in full. */
+export interface RecapSchool {
+  name: string;
+  /** PureProperty School Score, 0-10. Null when the board's school has no EQAO result. */
+  score: number | null;
+}
+
+/**
+ * "Homes like yours": the reader's own property type in the chosen cohort, when that type
+ * alone clears MIN_SALES. Counts and days only — the prices behind it stay on the site.
+ */
+export interface HomeTypeAgg {
+  /** Verbatim feed type, "Semi-Detached". */
+  type: string;
+  sales: number;
+  medianDom: number | null;
+  /** The same type across the comparison city, when the city has enough of them. */
+  cityMedianDom: number | null;
+}
+
 export interface StreetRecapPayload {
   scope: RecapScope;
   /** The home the reader asked us about. Rendered, never used to compute. */
@@ -66,6 +86,12 @@ export interface StreetRecapPayload {
   /** Share of standing inventory that has cut, 0-100. */
   cutPct: number | null;
   dataAsOf: string | null;
+  home: HomeTypeAgg | null;
+  /** Above-asking share for the same cohort the month before. Null when it was too thin. */
+  prevAbovePct: number | null;
+  school: RecapSchool | null;
+  /** Where the address came from: a reno user is sent back to the renovation tool. */
+  source: "reno" | "watch";
 }
 
 export interface BuildInput {
@@ -86,7 +112,17 @@ export interface BuildInput {
   dataAsOf: string | null;
   /** What the email calls the window, from previousMonthWindow(). */
   monthLabel: string;
+  /** The reader's property type, from the reno funnel. Null for a watch. */
+  homeType?: string | null;
+  /** The previous month's figures for a cohort, looked up by the scope the builder chose. */
+  prevSold?: (scope: RecapScope) => SoldAgg | null;
+  school?: RecapSchool | null;
+  source?: "reno" | "watch";
 }
+
+/** Feed types carry stray spaces ("Semi-Detached " in prod), so compare trimmed. */
+const sameType = (a: string, b: string): boolean =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
 
 const pct = (n: number, d: number): number | null =>
   d > 0 ? Math.round((n / d) * 1000) / 10 : null;
@@ -164,6 +200,14 @@ export function buildStreetRecapPayload(i: BuildInput): StreetRecapPayload | nul
   const isCity = chosen.scope.kind === "city";
   const cityAgg = isCity ? null : (city?.sold ?? null);
 
+  const typeRow = i.homeType
+    ? chosen.sold.byType.find((t) => sameType(t.type, i.homeType!) && t.sales >= MIN_SALES)
+    : undefined;
+  const cityTypeRow = typeRow
+    ? cityAgg?.byType.find((t) => sameType(t.type, typeRow.type) && t.sales >= MIN_SALES)
+    : undefined;
+  const prev = i.prevSold?.(chosen.scope) ?? null;
+
   return {
     scope: chosen.scope,
     address: i.address,
@@ -178,6 +222,17 @@ export function buildStreetRecapPayload(i: BuildInput): StreetRecapPayload | nul
         ? pct(i.actives.cutPrice, i.actives.active)
         : null,
     dataAsOf: i.dataAsOf,
+    home: typeRow
+      ? {
+          type: typeRow.type.trim(),
+          sales: typeRow.sales,
+          medianDom: typeRow.medianDom,
+          cityMedianDom: cityTypeRow?.medianDom ?? null,
+        }
+      : null,
+    prevAbovePct: prev && prev.sales >= MIN_SALES ? pct(prev.aboveAsking, prev.sales) : null,
+    school: i.school ?? null,
+    source: i.source ?? "watch",
   };
 }
 

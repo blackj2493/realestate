@@ -3,14 +3,14 @@ import { renderStreetRecapEmail } from "./streetRecapEmail";
 import { SITE } from "./emailShell";
 import type { StreetRecapPayload } from "@/lib/streetRecap/payload";
 
-const NOW = Date.parse("2026-09-15T12:00:00Z");
+const NOW = Date.parse("2026-11-02T12:00:00Z");
 const UNSUB = `${SITE}/api/email/unsubscribe?e=a%40b.com&s=sig`;
 const MANAGE = `${SITE}/account/emails`;
 
 const payload = (over: Partial<StreetRecapPayload> = {}): StreetRecapPayload => ({
   scope: { kind: "region", label: "Patterson", city: "Vaughan" },
   address: "128 Maplecrest Ave",
-  monthLabel: "August",
+  monthLabel: "October",
   local: {
     sales: 115,
     aboveAsking: 30,
@@ -18,7 +18,6 @@ const payload = (over: Partial<StreetRecapPayload> = {}): StreetRecapPayload => 
     byType: [
       { type: "Detached", sales: 100, medianDom: 17 },
       { type: "Att/Row/Townhouse", sales: 38, medianDom: 14 },
-      { type: "Condo Apartment", sales: 13, medianDom: 40 },
     ],
   },
   cityAgg: { sales: 686, aboveAsking: 116, medianDom: 21, byType: [] },
@@ -26,30 +25,37 @@ const payload = (over: Partial<StreetRecapPayload> = {}): StreetRecapPayload => 
   abovePct: 26,
   cityAbovePct: 16.9,
   cutPct: 25.8,
-  dataAsOf: "2026-09-15T04:00:00Z",
+  dataAsOf: "2026-11-02T04:00:00Z",
+  home: { type: "Detached", sales: 100, medianDom: 17, cityMedianDom: 23 },
+  prevAbovePct: 41,
+  school: { name: "Johnny Lombardi PS", score: 8.7 },
+  source: "reno",
   ...over,
 });
 
 const render = (p = payload(), lat: number | null = 43.86, lng: number | null = -79.51) =>
-  renderStreetRecapEmail(
-    { payload: p, lat, lng, unsubscribeUrl: UNSUB, manageUrl: MANAGE },
-    NOW
-  );
+  renderStreetRecapEmail({ payload: p, lat, lng, unsubscribeUrl: UNSUB, manageUrl: MANAGE }, NOW);
 
-const hrefs = (html: string): string[] =>
-  [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+const hrefs = (html: string): string[] => [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
 
 /**
- * The invariant the whole design rests on. No price means one rendering serves a reader who
- * accepted VOW terms and one who never did — no gate, no second variant, nothing to leak.
+ * VOW Agreement §(f): analytics built from sold data stay on the signed-in site. No price,
+ * and no True DOM — the 63 days the homes still for sale have been listed is VOW, so it must
+ * not print even though the payload carries it.
  */
-describe("the recap carries no price, ever", () => {
-  it("has no dollar figure in either part", () => {
-    for (const p of [payload(), payload({ cityAgg: null, cityAbovePct: null }), payload({ actives: null, cutPct: null })]) {
-      const { html, text, subject } = render(p);
-      expect(html).not.toContain("$");
-      expect(text).not.toContain("$");
-      expect(subject).not.toContain("$");
+describe("VOW: nothing sold-derived beyond counts and shares", () => {
+  it("has no dollar figure in any part", () => {
+    for (const p of [payload(), payload({ home: null }), payload({ actives: null, cutPct: null })]) {
+      const { html, text, subject, preheader } = render(p);
+      for (const s of [html, text, subject, preheader]) expect(s).not.toContain("$");
+    }
+  });
+
+  it("never prints the True DOM of the homes still for sale", () => {
+    const { html, text, preheader } = render();
+    for (const s of [html, text, preheader]) {
+      expect(s).not.toContain("63");
+      expect(s).not.toMatch(/listed so far/i);
     }
   });
 
@@ -58,122 +64,106 @@ describe("the recap carries no price, ever", () => {
     expect(html).toContain("No estimate of your home's value");
     expect(text).toContain("No estimate of your home's value");
   });
+
+  it("has exactly one sign-in link, to analytics for the area and type", () => {
+    const sold = hrefs(render().html).filter((h) => h.includes("utm_content=sold"));
+    expect(sold).toHaveLength(1);
+    expect(sold[0]).toContain("/analytics?");
+    expect(sold[0]).toContain("region=Patterson");
+    expect(sold[0]).toContain("types=detached");
+  });
 });
 
-/**
- * MONO is a font STACK, not a declaration. Interpolating it bare swallows the property that
- * follows — the numbers stop being monospace and the next rule is silently corrupted. The
- * shell has already been bitten once by a MONO quoting bug (a double quote truncating the
- * style attribute), so this is worth pinning.
- */
 describe("monospace numbers", () => {
   it("emits a valid font-family declaration everywhere it uses MONO", () => {
     const { html } = render();
     expect(html).toContain("font-family:ui-monospace");
-    // A bare interpolation shows up as `…;ui-monospace…` with no property name.
     expect(html).not.toMatch(/;ui-monospace/);
   });
 });
 
-describe("subject and lead", () => {
-  it("leads on the comparison when the neighbourhood differs from its city", () => {
-    const { subject, preheader } = render();
-    expect(subject).toBe("Homes in Patterson sold in 18 days last month");
-    expect(preheader).toContain("Across Vaughan it took 21");
+describe("homes like yours", () => {
+  it("leads on the reader's own type and compares it with the same type in the city", () => {
+    const { subject, html } = render();
+    expect(subject).toBe("100 detached homes sold in Patterson in October, faster than Vaughan");
+    expect(html).toContain("Homes like yours");
+    expect(html).toContain("Across Vaughan it was 23 days");
   });
 
-  it("falls back to a count when there is no days-to-sell figure", () => {
-    const { subject } = render(payload({ local: { ...payload().local, medianDom: null } }));
-    expect(subject).toBe("115 homes sold in Patterson last month");
+  it("falls back to every home when the type is unknown or too thin", () => {
+    const { subject, html } = render(payload({ home: null }));
+    expect(subject).toBe("115 homes sold in Patterson in October, faster than Vaughan");
+    expect(html).toContain("Homes near you");
   });
 
-  it("names the city when the ladder fell all the way through", () => {
-    const { subject } = render(
-      payload({ scope: { kind: "city", label: "Vaughan", city: "Vaughan" }, cityAgg: null })
-    );
-    expect(subject).toContain("Vaughan");
+  it("makes no pace claim when the gap is under three days", () => {
+    const { subject } = render(payload({ home: { type: "Detached", sales: 100, medianDom: 17, cityMedianDom: 18 } }));
+    expect(subject).not.toMatch(/faster|slower/);
+  });
+});
+
+describe("the market around you", () => {
+  it("shows the above-asking change and what it means", () => {
+    const { html } = render();
+    expect(html).toContain("from 41% in September");
+    expect(html).toContain("Buyers near you have more choice");
+  });
+
+  it("says nothing about the change when it is small", () => {
+    const { html } = render(payload({ prevAbovePct: 28 }));
+    expect(html).not.toContain("in September");
+    expect(html).not.toContain("Buyers near you");
+  });
+});
+
+describe("if you ever sell", () => {
+  it("warns about starting high when many homes have cut", () => {
+    expect(render().html).toContain("A home that starts too high waits longer");
+  });
+
+  it("says the opposite when few have cut", () => {
+    const { html } = render(payload({ cutPct: 9 }));
+    expect(html).toContain("Only 9% of the homes for sale near you have cut their price");
+    expect(html).not.toContain("starts too high");
+  });
+
+  it("drops the section without a cut share", () => {
+    expect(render(payload({ cutPct: null })).html).not.toContain("If you ever sell");
+  });
+});
+
+describe("reno and school sections", () => {
+  it("sends a reno user back to the tool, and not a watcher", () => {
+    expect(render().html).toContain("Your renovation check");
+    const watch = render(payload({ source: "watch" }));
+    expect(watch.html).not.toContain("Your renovation check");
+    expect(watch.html).toContain("you asked us to watch 128 Maplecrest Ave");
+  });
+
+  it("names the school zone with its score, and drops it when there is none", () => {
+    expect(render().html).toContain("<b>Johnny Lombardi PS</b> (score 8.7/10");
+    expect(render(payload({ school: null })).html).not.toContain("Your school zone");
+  });
+
+  it("points the school link at a camera on the home", () => {
+    const s = hrefs(render().html).find((h) => h.includes("utm_content=schools"))!;
+    expect(s).toContain("lat=43.86000");
+    expect(s).not.toContain("city=");
   });
 });
 
 describe("links", () => {
-  it("points the CTA at a camera on the watched home, tagged", () => {
-    const cta = hrefs(render().html).find((h) => h.includes("utm_content=cta"))!;
-    expect(cta).toContain("lat=43.86000");
-    expect(cta).toContain("lng=-79.51000");
-    // A text filter would pin the map and empty it the moment they pan past the boundary.
-    expect(cta).not.toContain("city=");
-    expect(cta).toContain("utm_source=street_recap");
-    expect(cta).toContain("utm_campaign=2026-august");
-  });
-
-  it("degrades to the plain map when the home has no coordinates", () => {
-    const cta = hrefs(render(payload(), null, null).html).find((h) => h.includes("utm_content=cta"))!;
-    expect(cta).toContain("/properties?");
-    expect(cta).not.toContain("lat=");
-  });
-
-  it("never tags the unsubscribe link", () => {
-    const unsub = hrefs(render().html).filter((h) => h.includes("/api/email/unsubscribe"));
+  it("tags every site link but the unsubscribe", () => {
+    const all = hrefs(render().html);
+    const unsub = all.filter((h) => h.includes("/api/email/unsubscribe"));
     expect(unsub.length).toBeGreaterThan(0);
     for (const h of unsub) expect(h).not.toContain("utm_");
+    for (const h of all.filter((x) => x.startsWith(SITE) && !x.includes("/api/email/unsubscribe"))) {
+      expect(h).toContain("utm_source=street_recap");
+    }
   });
 });
 
-describe("degrading gracefully", () => {
-  it("drops the standing-inventory block rather than printing a dash", () => {
-    const { html } = render(payload({ actives: null, cutPct: null }));
-    expect(html).not.toContain("still for sale");
-    expect(html).toContain("Homes sold");
-  });
-
-  it("names property types the way a person would, not the way the feed does", () => {
-    const p = payload({
-      local: {
-        ...payload().local,
-        byType: [
-          { type: "Att/Row/Townhouse", sales: 40, medianDom: 14 },
-          { type: "Condo Apartment", sales: 20, medianDom: 40 },
-        ],
-      },
-    });
-    const { html } = render(p);
-    expect(html).toContain("A townhouse near you now sells in 14 days");
-    expect(html).toContain("A condo takes 40");
-    expect(html).not.toContain("Att/Row/Townhouse near you");
-  });
-
-  it("drops the contrast line when the two types are barely different", () => {
-    // Real August data: Patterson detached 23 days, townhouse 21. Two numbers beside each
-    // other is not an insight.
-    const p = payload({
-      local: {
-        ...payload().local,
-        byType: [
-          { type: "Detached", sales: 28, medianDom: 23 },
-          { type: "Att/Row/Townhouse", sales: 19, medianDom: 21 },
-        ],
-      },
-    });
-    expect(render(p).html).not.toContain("near you now sells in");
-  });
-
-  it("renders a thin type list without inventing rows", () => {
-    const p = payload({
-      local: { ...payload().local, byType: [{ type: "Detached", sales: 100, medianDom: 17 }] },
-    });
-    const { html } = render(p);
-    expect(html).toContain("Detached");
-    // The "a townhouse sells in X, a condo takes Y" line needs two cohorts; with one it goes.
-    expect(html).not.toContain("takes");
-  });
-});
-
-/**
- * An FSA is a sorting code, not a place. "Homes in N7G sold in 23 days" tells someone in
- * Strathroy nothing about Strathroy — and the first live dry run produced exactly that
- * scope for all three real recipients, because the geocoder's city and the feed's never
- * match. The email says "near you" and lets the address do the locating.
- */
 describe("an FSA is never printed as a place", () => {
   const fsaPayload = () =>
     payload({
@@ -181,72 +171,17 @@ describe("an FSA is never printed as a place", () => {
       address: "35 Parliament Street",
       cityAgg: null,
       cityAbovePct: null,
+      home: null,
     });
 
-  it("says 'near you' in the subject rather than the postal code", () => {
+  it("says 'near you' rather than the postal code", () => {
     const { subject, html, text } = render(fsaPayload());
-    expect(subject).toBe("Homes near you sold in 18 days last month");
-    expect(subject).not.toContain("M5A");
-    expect(html).not.toContain("M5A");
-    expect(text).not.toContain("M5A");
+    expect(subject).toBe("115 homes sold near you in October");
+    for (const s of [subject, html, text]) expect(s).not.toContain("M5A");
   });
 
-  it("still renders a complete email with no city comparison at all", () => {
-    const { html } = render(fsaPayload());
-    expect(html).toContain("35 Parliament Street");
-    expect(html).toContain("still for sale");
-    // No comparison to overclaim, so none is made.
-    expect(html).not.toContain("Across Toronto");
-  });
-});
-
-/**
- * What the first real send (2026-10-12, K2J, read in Gmail on a phone) got wrong. Each of
- * these was on screen in that email.
- */
-describe("the standing-inventory block says only what the figures say", () => {
-  it("never claims a fixed time per listing — the figure is a median", () => {
-    const { html, text } = render();
-    expect(html).not.toContain("days each");
-    expect(text).not.toContain("days each");
-    expect(html).toContain("typical time listed so far");
-  });
-
-  it("drops the verdict that was printed whatever the data said", () => {
-    expect(render().html).not.toContain("either go quickly");
-  });
-
-  it("compares sold and still-listed time only when the gap is real", () => {
-    // 63 days listed against 18 to sell: a gap worth a sentence.
-    expect(render().html).toContain("The homes still for sale have been listed 63 days so far");
-    // 30 against 28 — the first live send — is not.
-    const close = payload({
-      local: { ...payload().local, medianDom: 28 },
-      actives: { active: 390, cutPrice: 121, medianTrueDom: 30 },
-    });
-    expect(render(close).html).not.toContain("have been listed 30 days so far");
-  });
-});
-
-describe("layout that survives a phone", () => {
-  it("puts a one-word label in the header bar, so it cannot wrap", () => {
-    const { html } = render();
-    expect(html).not.toContain("YOUR STREET");
-    expect(html).toContain(">AUGUST</span>");
-  });
-
-  it("keeps secondary facts out of the value column", () => {
-    const { html } = render();
-    // The city's above-asking share is a caption under its label, not a note after the value.
-    expect(html).toContain("Across Vaughan: 17%");
-    expect(html).not.toContain("&middot; Vaughan");
-    // Every value cell holds one short figure.
-    for (const m of html.matchAll(/class="sr-rv"[^>]*>([^<]*)</g)) expect(m[1].length).toBeLessThanOrEqual(10);
-  });
-
-  it("says what the headline figure is made of instead of filler", () => {
-    const { html } = render();
-    expect(html).toContain("Based on 115 sales in Patterson.");
-    expect(html).not.toContain("Measured across every sale");
+  it("sends the sign-in link to the city, never the FSA", () => {
+    const sold = hrefs(render(fsaPayload()).html).find((h) => h.includes("utm_content=sold"))!;
+    expect(sold).toContain("region=Toronto");
   });
 });
