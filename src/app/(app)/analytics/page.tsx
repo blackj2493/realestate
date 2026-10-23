@@ -68,6 +68,8 @@ export default async function AnalyticsPage({
   const usp = new URLSearchParams();
   if (typeof sp.region === "string") usp.set("region", sp.region);
   if (typeof sp.types === "string") usp.set("types", sp.types);
+  // Kept through sign-in so the email's "See what a price cut cost sellers" lands on the panel.
+  if (typeof sp.panel === "string" && /^[a-z-]{1,40}$/.test(sp.panel)) usp.set("panel", sp.panel);
   const rawRegion = (usp.get("region") || "").trim();
   const region = rawRegion || DEFAULT_REGION;
   const typeKeys = parseTypeKeys(usp);

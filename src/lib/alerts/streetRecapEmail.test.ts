@@ -117,6 +117,25 @@ describe("the market around you", () => {
 });
 
 describe("if you ever sell", () => {
+  it("links to the price-cut panel as text, never with its figures", () => {
+    const { html, text } = render();
+    const cut = hrefs(html).filter((h) => h.includes("utm_content=price-cut"));
+    expect(cut).toHaveLength(1);
+    expect(cut[0]).toContain("/analytics?");
+    expect(cut[0]).toContain("region=Patterson");
+    expect(cut[0]).toContain("types=detached");
+    expect(cut[0]).toContain("panel=price-cut-cost");
+    expect(html).toContain("See what a price cut cost sellers here");
+    expect(text).toContain("panel=price-cut-cost");
+    // Still one button: the price-cut link is a text link, not a second call to action.
+    expect(html.match(/See what they sold for/g)).toHaveLength(1);
+    expect(html).not.toMatch(/of (their|the) first asking price/i);
+  });
+
+  it("has no price-cut link when the section is dropped", () => {
+    expect(render(payload({ cutPct: null })).html).not.toContain("panel=price-cut-cost");
+  });
+
   it("warns about starting high when many homes have cut", () => {
     expect(render().html).toContain("A home that starts too high waits longer");
   });

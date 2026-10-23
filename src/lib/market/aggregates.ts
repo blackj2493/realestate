@@ -21,6 +21,7 @@
 import { unstable_cache } from "next/cache";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { variantsForKeys } from "@/lib/dashboard/propertyTypes";
+import { parseCutRows, type PriceCutCost } from "@/lib/market/priceCutCost";
 import type { BasementFilter } from "@/lib/dashboard/config";
 import type { AnalyticsInitial } from "@/app/(app)/analytics/AnalyticsClient";
 
@@ -681,6 +682,32 @@ export function getPriceLedgerCached(region: string): Promise<PriceLedger> {
   return unstable_cache(
     () => computePriceLedger(region),
     ["market-price-ledger", "v2", region.toLowerCase()], // v2 = migration 153 (region_aliases); v1 = migrations 069/070
+    { revalidate: 86400 }
+  )();
+}
+
+// ── The cost of a price cut (migration 157) ─────────────────────────────────────────
+// Sold houses grouped by how far the ask was cut; shaping lives in priceCutCost.ts.
+
+const PRICE_CUT_COST_MONTHS = 12;
+
+async function computePriceCutCost(region: string, typeKeys: string[]): Promise<PriceCutCost> {
+  const sb = getServiceRoleClient();
+  const variants = variantsForKeys(typeKeys);
+  const { data, error } = await sb.rpc("region_price_cut_outcomes", {
+    p_region: region,
+    p_subtypes: variants.length ? variants : null,
+    p_months: PRICE_CUT_COST_MONTHS,
+  });
+  if (error) throw new Error(error.message);
+  return { months: PRICE_CUT_COST_MONTHS, groups: parseCutRows(data) };
+}
+
+/** Cached price-cut cost for a region + type scope. Caller must pass the VOW gate first. */
+export function getPriceCutCostCached(region: string, typeKeys: string[]): Promise<PriceCutCost> {
+  return unstable_cache(
+    () => computePriceCutCost(region, typeKeys),
+    ["market-price-cut-cost", "v1", region.toLowerCase(), typeKey(typeKeys)], // v1 = migration 157
     { revalidate: 86400 }
   )();
 }
