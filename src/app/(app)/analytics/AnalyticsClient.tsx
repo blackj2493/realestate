@@ -33,6 +33,7 @@ import {
   type RegionStatsResp,
 } from "@/lib/dashboard/marketAggregates";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/dashboard/propertyTypes";
+import { PriceCutCostPanel, PRICE_CUT_PANEL_ID } from "./PriceCutCostPanel";
 
 const DEFAULT_REGION = "Brampton";
 
@@ -1250,6 +1251,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
   const chart = useChartTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
+  // A deep link to one panel (the Street Recap email sends `?panel=price-cut-cost`). Read
+  // once: the URL mirror below rewrites the query without it, and that must not re-scroll.
+  const [focusPanel] = useState(() => searchParams.get("panel"));
 
   // When the server prefetched a scope, seed state from it so the first render matches
   // (initial.region/typeKeys were derived from the same URL the server read).
@@ -1538,6 +1542,9 @@ export default function AnalyticsClient({ initial }: { initial?: AnalyticsInitia
 
         {/* Tier-1 B: Price-cut pressure */}
         <PriceCutPanel cuts={cuts} loading={loading} />
+
+        {/* What a cut cost sellers (sold data, migration 157). The Street Recap links here. */}
+        <PriceCutCostPanel region={region} typeKeys={typeKeys} focus={focusPanel === PRICE_CUT_PANEL_ID} />
 
         {/* Phase-3: Multi-cut price ledger (every reduction, accrues nightly) */}
         <PriceLedgerPanel l={ledger} loading={loading} />

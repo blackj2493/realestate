@@ -174,6 +174,17 @@ function soldUrl(p: StreetRecapPayload): string {
   return `${SITE}/analytics${qs ? `?${qs}` : ""}`;
 }
 
+/**
+ * The same analytics page, scrolled to "The cost of a price cut". A plain text link under
+ * "If you ever sell", not a second button: "See what they sold for" stays the one main
+ * action (owner decision 2026-10-23). The figures are sold data, so they stay on the page.
+ */
+function cutUrl(p: StreetRecapPayload): string {
+  const u = new URL(soldUrl(p));
+  u.searchParams.set("panel", "price-cut-cost");
+  return u.toString();
+}
+
 /** Two months must differ by at least this many points for an arrow; below it is noise. */
 const MIN_ABOVE_SHIFT = 5;
 
@@ -317,12 +328,15 @@ function sellNote(p: StreetRecapPayload): string | null {
     : `Only ${whole(p.cutPct)}% of the homes for sale near you have cut their price. Here, a home priced right at the start usually sells without a cut.`;
 }
 
-function sellBlock(p: StreetRecapPayload): string {
+const CUT_LINK_TEXT = "See what a price cut cost sellers here";
+
+function sellBlock(p: StreetRecapPayload, href: string): string {
   const n = sellNote(p);
   if (!n) return "";
   return `${secHd("If you ever sell")}
     <p style="font-size:16px;font-weight:700;color:#0a1828;margin:0 0 6px;">The first price matters most</p>
-    ${para(n)}`;
+    ${para(n)}
+    <p style="margin:10px 0 0;font-size:15px;">${link(`${CUT_LINK_TEXT} &rarr;`, href)}</p>`;
 }
 
 function renoBlock(p: StreetRecapPayload, href: string): string {
@@ -365,6 +379,7 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
   const tag: Tagger = utmTagger(UTM_SOURCE, campaignOf(p.monthLabel, now));
   const manageUrl = tag(i.manageUrl, "manage");
   const soldHref = tag(soldUrl(p), "sold");
+  const cutHref = tag(cutUrl(p), "price-cut");
   const renoHref = tag(`${SITE}/whats-my-home-hiding`, "reno");
   const schoolHref = tag(mapUrl(i.lat, i.lng), "schools");
 
@@ -376,7 +391,7 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
   const body = [
     heroBlock(p, soldHref),
     marketBlock(p, prevMonth),
-    sellBlock(p),
+    sellBlock(p, cutHref),
     renoBlock(p, renoHref),
     schoolBlock(p, schoolHref),
     `<p class="sr-note" style="font-size:14px;line-height:1.6;color:#3d5665;margin:28px 0 0;">${PRICE_CHECK}</p>`,
@@ -412,7 +427,7 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
   if (m) t.push("", m);
   t.push("");
   const sn = sellNote(p);
-  if (sn) t.push("IF YOU EVER SELL", sn, "");
+  if (sn) t.push("IF YOU EVER SELL", sn, `${CUT_LINK_TEXT} (sign in):`, cutHref, "");
   if (p.source === "reno") t.push("YOUR RENOVATION CHECK", "See your result again:", renoHref, "");
   if (p.school) {
     t.push(
