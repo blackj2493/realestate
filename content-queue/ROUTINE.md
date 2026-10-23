@@ -1,8 +1,8 @@
 # Content routine — editorial contract
 
 This file is the instruction set for the scheduled Claude Code routine that drafts
-daily marketing content. **Point the schedule at this file** rather than pasting
-instructions into the schedule config.
+marketing content **twice a week**. **Point the schedule at this file** rather than
+pasting instructions into the schedule config.
 
 ## Why this lives in the repo
 
@@ -16,16 +16,64 @@ claimed `no Canadian source` had published the over-ask rate before — false, a
 same claim had been corrected in production two days earlier — because nothing scanned
 the place it was written. Rules that live where nothing checks them are rules we break.
 
+## Cadence
+
+The routine runs **Tuesday and Thursday at 8 a.m. Toronto time**. Each run drafts the
+post for the **next day**: Wednesday and Friday, posted by hand between 9 and 11 a.m.
+Toronto time.
+
+Why these slots: across 17,301 posts in five Ontario housing subreddits (Sep 2025 –
+Aug 2026), posts made 9 a.m.–noon reached the subreddit's top 10% 1.25× as often as
+average, and data posts in that window 1.65× as often. Weekday mornings beat weekend
+mornings (13.6% against 10.0%). The old daily run drafted the same leaders of the same
+15 markets every day; two strong posts a week replace it.
+
 ## The job
 
-1. Read `content-queue/data/latest.json`. It is written each morning by the
-   `content-data-snapshot` GitHub Action from the same nightly precompute the public
-   `/data` trackers render.
-2. Draft content for each angle it contains.
-3. Write `content-queue/YYYY-MM-DD.md` and open a PR.
+1. **Find the insight for the post day.** Look in `content-queue/insights/` for a file
+   whose `post_on:` date is tomorrow (UTC date of the run + 1). If one exists, it is the
+   post. Its figures are pre-computed, aggregate and checked; it carries a
+   `callback_url` and the target subreddit.
+2. **No insight file for tomorrow?** Fall back to `content-queue/data/latest.json`
+   (written each morning by the `content-data-snapshot` GitHub Action from the same
+   nightly precompute the public `/data` trackers render). Before you use an angle,
+   read the last four `content-queue/YYYY-MM-DD.md` files on this branch: **leave out
+   any angle with the same `kind` and `region` as one already drafted there**. If no
+   angle is left, do not pad: write a short file that says no fresh insight is queued
+   for tomorrow, and open the PR so the founder sees the gap.
+3. Draft the post, then write `content-queue/YYYY-MM-DD.md` (the run date) and open a PR.
 
 **Nothing posts automatically, ever.** The human in the loop is the product, not a
 formality — this repo's whole posture is draft-only.
+
+## The website callback
+
+Every post exists to send a reader to the one page on pureproperty.ca that answers
+their **next** question about **their own** home, street or area. A data post with no
+place to go next earns upvotes and no signups. Reddit sent 5 of the 19 tracked signups
+in the week to 2026-10-08 — every one of them through a link.
+
+- Use the insight file's `callback_url`. For a `latest.json` angle, use its `sourceUrl`.
+- Write the callback as the answer to a question the post raises — "what does this
+  look like on your street?" — not as an advert.
+- Always add UTM tags: `?utm_source=reddit&utm_medium=social&utm_campaign=<slug>`
+  (`utm_source=x` on X). Without them the signup shows only a referrer host, and we
+  cannot tell which post worked.
+- If the page needs a free account to show the full answer, say so in the same line.
+  A reader who feels tricked costs more than the click is worth.
+
+Callback map (pick the page that matches the topic):
+
+| Topic | Page |
+| :--- | :--- |
+| Renovations, what an upgrade adds | `/whats-my-home-hiding` |
+| Condo fees | `/data/condo-fees` |
+| Rents, rent against price | `/data/rents`, `/data/rent-vs-buy` |
+| Days on market, relists | `/data/days-on-market` |
+| Price cuts | `/data/price-cuts` |
+| Over-asking, bidding | `/data/over-asking` |
+| Market balance, seasonality, a city's trend | `/analytics` (add `?region=<City>`) |
+| One address | `/address` profile pages |
 
 ## Hard rules
 
@@ -34,7 +82,8 @@ These are not style preferences. Each has a real cost behind it.
 - **Cite figures verbatim.** Use the `figure` string from the angle exactly as given.
   Never recompute, round differently, or derive a second number from it. You cannot
   see the live site or the database; a figure you construct is a figure you invented.
-- **Link only to the angle's `sourceUrl`.** No other URLs.
+- **Link only to the insight's `callback_url` or the angle's `sourceUrl`.** No other
+  URLs.
 - **Aggregates only.** Never an individual listing, address, or sold price. This is a
   VOW licence condition, not a preference.
 - **Name the sample when it is thin.** Below about n=25, say the count in the draft.
@@ -64,21 +113,34 @@ Used verbatim where a disclosure is required:
 > I'm a licensed Ontario realtor and I built PureProperty — a free data tool — because
 > the board sits on numbers like this and the consumer sites won't show them.
 
-**Where it is required:** Reddit, X, video.
-**Where it is not:** LinkedIn — see below.
+**Where it is required:** X, video.
+**Where it is not:** LinkedIn — see below. Reddit uses the brand line instead.
+
+### Reddit brand line
+
+Reddit posts go out from the **official PureProperty account** (since 2026-10), so
+they speak as "we", not "I". The account name already says who is talking; the line
+says what we are and who runs it:
+
+> We're PureProperty, an Ontario housing-data site run by a licensed Ontario realtor.
 
 ---
 
 # Platforms
 
-Draft every angle for Reddit, X and video. Draft **one** angle per day for LinkedIn,
-picked by the rotation below.
+Draft **one** post per run: the insight for the post day. Draft it for Reddit first,
+then X. Draft video and LinkedIn only when the insight file asks for them.
 
 ## Reddit
 
-Target sub is named per angle. A real body, not a one-liner. Open with the figure,
-be honest about the sample, close with a genuine question or an AMA line. Disclosure
-required, one line, not a paragraph.
+Target sub is named in the insight file (or per angle). A real body, not a one-liner.
+Open with the figure, be honest about the sample, give the method in two lines, and
+end with the caveats. Then the website callback (see above), then a genuine question
+for the thread. The brand line goes once, near the top.
+
+Check the subreddit's own rule on links before you place the callback. Where links
+in a post body are not welcome, put the callback in a **first comment** and say so in
+the draft.
 
 ## X — chart first, not thread first
 
@@ -218,7 +280,7 @@ draft is.
 
 ## Lead with the pick. This is the most important part of the file.
 
-**The first thing in the file is one post to publish today, chosen by you.**
+**The first thing in the file is the one post to publish tomorrow morning.**
 
 Four angles across four platforms is about thirteen drafts a day, against a
 realistic capacity of two or three. That is a menu, not a queue — and a menu of
@@ -232,14 +294,14 @@ things before coffee".
 
 The section is titled `## ⭐ Post this one today` and contains, in this order:
 
-1. **Which platform**, and why this angle over the others — one sentence. Usually
-   X, because that is the daily cadence; LinkedIn on the two days a week its
-   rotation comes up.
+1. **Where and when**: the subreddit, and the post day and time (Wednesday or Friday,
+   9–11 a.m. Toronto time).
 2. **The chart spec**, complete, so nothing has to be looked up.
-3. **The post text**, final, ready to paste.
+3. **The post text**, final, ready to paste: title, body, and the website callback
+   with its UTM tags (in the body or as a first comment, per the subreddit's rule).
 4. **The alt text.**
 5. **One line on what to check before posting** — the figure against the live
-   tracker, and whether the thread or timing still makes sense.
+   tracker or the insight file, and that the callback page loads.
 
 Pick the angle a stranger would find most surprising, not the one with the biggest
 sample or the tidiest number. Everything else in the file stays exactly as it is,
@@ -252,11 +314,11 @@ Write `content-queue/YYYY-MM-DD.md` containing:
 1. The `## ⭐ Post this one today` section above, first, before anything else.
 2. A header naming the source file and its `dataAsOf`, and stating that nothing posts
    automatically.
-3. The founder disclosure line, once, verbatim.
-4. A small-sample note if any angle is thin.
-5. One section per angle: the verbatim figure, region, sample, source URL, why it is
-   surprising, then the drafts — `(a)` Reddit, `(b)` X, `(c)` video, and `(d)`
-   LinkedIn on the one angle that gets it, labelled with its type.
+3. The disclosure lines (Reddit brand line; founder line for X), once each, verbatim.
+4. A small-sample note if any figure is thin.
+5. One section for the post: the verbatim figures, region, sample, source or insight
+   file, callback URL, why it is surprising, then the drafts — `(a)` Reddit, `(b)` X,
+   and `(c)` video or `(d)` LinkedIn only if the insight file asks for them.
    The X draft carries **two** parts under `(b)`: the **chart spec** (capture,
    highlight, overlay title, watermark) and then the post text with its alt text.
    A post with no chart spec is an incomplete draft — the operator cannot ship it
