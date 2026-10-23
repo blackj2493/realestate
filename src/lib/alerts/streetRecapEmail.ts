@@ -20,6 +20,7 @@
  */
 import { SITE, MONO, esc, shell, footer, button, link } from "./emailShell";
 import { utmTagger } from "@/lib/email/utm";
+import { formatRegionParts } from "@/lib/regions/formatRegionLabel";
 import type { StreetRecapPayload } from "@/lib/streetRecap/payload";
 
 export interface RecapRenderInput {
@@ -96,7 +97,36 @@ const whole = (n: number | null | undefined): string | null =>
  * locating — which is true regardless of how the feed files their town.
  */
 const placeName = (p: StreetRecapPayload): string | null =>
-  p.scope.kind === "fsa" ? null : p.scope.label;
+  p.scope.kind === "fsa" ? null : areaName(p.scope.label);
+
+/**
+ * The city of the cohort, as a reader says it. Toronto's "city" is a TRREB district code,
+ * and its display name lists only two of the district's neighbourhoods: "Waterfront
+ * Communities, faster than Cabbagetown & St. James Town" reads as a comparison with a
+ * different neighbourhood. So a Toronto neighbourhood compares with "nearby areas". When
+ * the district itself is the scope, there is nothing to compare, and the name is fine.
+ */
+const cityName = (p: StreetRecapPayload): string =>
+  p.scope.kind !== "city" && formatRegionParts(p.scope.city).code ? "nearby areas" : areaName(p.scope.city);
+
+/**
+ * A board's area name, as a person would say it. DISPLAY ONLY — the raw value still keys
+ * the analytics link (soldUrl), because analytics matches on it.
+ *
+ *  - "Toronto E03"                 → "Danforth & East York"   (formatRegionParts)
+ *  - "713 - Ingleside"             → "Ingleside"              (Ottawa board number)
+ *  - "Waterfront Communities C8"   → "Waterfront Communities" (TRREB district suffix)
+ *  - "Borden Farm/Stewart Farm/…"  → "Borden Farm"            (Ottawa lists 2-4 names)
+ *
+ * The first name of a list is the board's own lead name for the area. Printing all four
+ * made a subject line of 90 characters that read like a form field.
+ */
+export function areaName(raw: string): string {
+  let n = formatRegionParts(raw).name.trim();
+  n = n.replace(/\s+[CEW]\d{1,2}$/i, "").trim() || n;
+  if (n.includes("/")) n = n.split("/")[0].trim() || n;
+  return n;
+}
 
 /**
  * Feed sub-types read like database values, because they are. In a sentence they need to
@@ -232,13 +262,13 @@ function subjectFor(p: StreetRecapPayload): { subject: string; preheader: string
   const gap = h.dom != null && h.cityDom != null ? h.cityDom - h.dom : null;
   const pace =
     gap != null && Math.abs(gap) >= MIN_DOM_GAP
-      ? `, ${gap > 0 ? "faster" : "slower"} than ${p.scope.city}`
+      ? `, ${gap > 0 ? "faster" : "slower"} than ${cityName(p)}`
       : "";
 
   const subject = `${h.count} ${h.noun} sold ${where ? `in ${where}` : "near you"} in ${p.monthLabel}${pace}`;
 
   const bits: string[] = [];
-  if (pace && h.dom != null && h.cityDom != null) bits.push(`${h.dom} days near you, ${h.cityDom} across the city.`);
+  if (pace && h.dom != null && h.cityDom != null) bits.push(`${h.dom} days near you, ${h.cityDom} across ${cityName(p)}.`);
   else if (h.dom != null) bits.push(`They took a typical ${h.dom} days to sell.`);
   if (p.cutPct != null) bits.push(`${whole(p.cutPct)}% of homes for sale near you have cut their price.`);
   else if (p.abovePct != null) bits.push(`${whole(p.abovePct)}% sold over asking.`);
@@ -262,10 +292,10 @@ function heroBlock(p: StreetRecapPayload, soldHref: string): string {
   if (h.dom != null) parts.push(`They took a typical <b>${h.dom} days</b> to sell.`);
   if (gap != null && Math.abs(gap) >= MIN_DOM_GAP) {
     parts.push(
-      `Across ${esc(p.scope.city)} it was ${h.cityDom} days, so ${where ? esc(where) : "your area"} is moving ${gap > 0 ? "faster" : "slower"}.`
+      `Across ${esc(cityName(p))} it was ${h.cityDom} days, so ${where ? esc(where) : "your area"} is moving ${gap > 0 ? "faster" : "slower"}.`
     );
   } else if (h.cityDom != null) {
-    parts.push(`Across ${esc(p.scope.city)} it was about the same.`);
+    parts.push(`Across ${esc(cityName(p))} it was about the same.`);
   }
 
   return `${secHd(p.home ? "Homes like yours" : "Homes near you")}
@@ -412,7 +442,7 @@ export function renderStreetRecapEmail(i: RecapRenderInput, now = Date.now()): R
   t.push(`${(placeName(p) ?? "NEAR YOU").toUpperCase()} — ${p.monthLabel.toUpperCase()}`, "");
   t.push(`${h.count} ${h.noun} sold near ${p.address} in ${p.monthLabel}.`);
   if (h.dom != null) t.push(`They took a typical ${h.dom} days to sell.`);
-  if (h.dom != null && h.cityDom != null) t.push(`Across ${p.scope.city} it was ${h.cityDom} days.`);
+  if (h.dom != null && h.cityDom != null) t.push(`Across ${cityName(p)} it was ${h.cityDom} days.`);
   t.push("", "See what they sold for (sign in):", soldHref, "");
   t.push("THE MARKET AROUND YOU");
   if (p.abovePct != null) {

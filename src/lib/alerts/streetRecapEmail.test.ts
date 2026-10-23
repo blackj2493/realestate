@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderStreetRecapEmail } from "./streetRecapEmail";
+import { areaName, renderStreetRecapEmail } from "./streetRecapEmail";
 import { SITE } from "./emailShell";
 import type { StreetRecapPayload } from "@/lib/streetRecap/payload";
 
@@ -204,3 +204,33 @@ describe("an FSA is never printed as a place", () => {
     expect(sold).toContain("region=Toronto");
   });
 });
+
+describe("area names a reader would say", () => {
+  it.each([
+    ["Toronto E03", "Danforth & East York"],
+    ["713 - Ingleside", "Ingleside"],
+    ["1118 - Avalon East", "Avalon East"],
+    ["Waterfront Communities C8", "Waterfront Communities"],
+    ["Rouge E11", "Rouge"],
+    ["7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills", "Borden Farm"],
+    ["Dovercourt-Wallace Emerson-Junction", "Dovercourt-Wallace Emerson-Junction"],
+    ["Oakville", "Oakville"],
+  ])("%s → %s", (raw, name) => {
+    expect(areaName(raw)).toBe(name);
+  });
+
+  it("never prints a board code in the subject or the body, but keeps it in the link", () => {
+    const r = render(payload({ scope: { kind: "region", label: "713 - Ingleside", city: "Toronto E03" } }));
+    expect(r.subject).toContain("in Ingleside");
+    for (const s of [r.subject, r.html, r.text]) {
+      expect(s).not.toContain("713 - ");
+      expect(s).not.toMatch(/Toronto E03/);
+    }
+    expect(r.subject).toContain("than nearby areas");
+    expect(r.html).toContain("Across nearby areas");
+    const sold = hrefs(r.html).filter((h) => h.includes("utm_content=sold"));
+    expect(r.html).not.toContain("Danforth");
+    expect(decodeURIComponent(sold[0])).toContain("region=713 - Ingleside".replace(/ /g, "+"));
+  });
+});
+

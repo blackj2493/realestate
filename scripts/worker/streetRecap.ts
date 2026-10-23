@@ -294,6 +294,12 @@ async function main(): Promise<void> {
           (payload.home ? ` home=${payload.home.type}:${payload.home.sales}` : "") +
           (payload.school ? ` school=${payload.school.name}` : "")
       );
+      // The subject is what a reader sees first, and where a raw board code would show.
+      const preview = renderStreetRecapEmail(
+        { payload, lat: r.lat, lng: r.lng, unsubscribeUrl: "", manageUrl: MANAGE_URL },
+        now
+      );
+      console.log(`       subject: ${preview.subject}`);
       sentCount++;
       continue;
     }
