@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { localityMatch, fsaOf, ledgerRowHref } from "./streetLedger";
+import { localityMatch, fsaOf, ledgerRowHref, keepDisplayable } from "./streetLedger";
 import { extractListingKey } from "@/lib/listings/listingPath";
 
 const row = (over: Partial<{ listingKey: string; address: string; city: string }> = {}) => ({
@@ -142,5 +142,38 @@ describe("ledgerRowHref", () => {
       const slug = href!.split("/").pop()!;
       expect(extractListingKey(slug), JSON.stringify(over)).toBe("X12639568");
     }
+  });
+});
+
+describe("keepDisplayable (seller opt-out gate)", () => {
+  const c = (listingKey: string) => ({ listingKey });
+
+  it("keeps rows the seller allows, in the original order", () => {
+    const out = keepDisplayable(
+      [c("A1"), c("B2"), c("C3")],
+      [
+        { listing_key: "C3", internet_display: "true", internet_address_display: "true" },
+        { listing_key: "A1", internet_display: null, internet_address_display: null },
+        { listing_key: "B2", internet_display: "true", internet_address_display: "true" },
+      ]
+    );
+    expect(out.map((r) => r.listingKey)).toEqual(["A1", "B2", "C3"]);
+  });
+
+  it("drops a row when either switch is off (C13661766, 188 Maplehurst Avenue)", () => {
+    const out = keepDisplayable(
+      [c("C13661766"), c("X1"), c("X2")],
+      [
+        { listing_key: "C13661766", internet_display: "false", internet_address_display: "false" },
+        { listing_key: "X1", internet_display: "true", internet_address_display: "false" },
+        { listing_key: "X2", internet_display: "false", internet_address_display: "true" },
+      ]
+    );
+    expect(out).toEqual([]);
+  });
+
+  it("fails closed: a candidate with no flag row is dropped", () => {
+    expect(keepDisplayable([c("A1"), c("B2")], [{ listing_key: "A1" }]).map((r) => r.listingKey)).toEqual(["A1"]);
+    expect(keepDisplayable([c("A1")], [])).toEqual([]);
   });
 });

@@ -17,10 +17,11 @@
  * postal-FSA equality first, then city equality/prefix, then shared Ottawa-group
  * membership. Flat-column ilike scan, cached 6h per (street, city, fsa) so the
  * force-dynamic profile page doesn't re-scan 280k rows. The two seller opt-out
- * aliases below are the only `raw_payload` reads, and Postgres projects them after
- * the LIMIT, so at most SCAN_LIMIT rows detoast per uncached call — measured over
- * PostgREST at +11 to +46ms median on the heaviest street tokens in the book
- * (Maplehurst / Yonge / Main, 8 paired runs each, 2026-09-02).
+ * flags are the only `raw_payload` reads. They are fetched in a SEPARATE primary-key
+ * query for the verified candidates: in the scan query Postgres evaluated them for
+ * every token match before the sort, and that detoast drained the Disk IO budget
+ * (2026-10-24, see fetchLedger). The token scan uses the pg_trgm index from
+ * migration 158.
  *
  * The scan itself is the cost that matters, and it is not always survivable: a very
  * common token ("Yonge") has been seen to exceed the statement timeout, in which case
@@ -137,6 +138,23 @@ export function localityMatch(
   return false;
 }
 
+/**
+ * The candidates whose seller allows display, in their original order. Either switch
+ * removes the row — the ledger exists to publish an address. A candidate with NO flag
+ * row is removed too: the gate fails closed. Exported for tests.
+ */
+export function keepDisplayable<T extends { listingKey: string }>(
+  candidates: T[],
+  flagRows: Array<Record<string, unknown>>
+): T[] {
+  const allowed = new Set<string>();
+  for (const f of flagRows) {
+    if (isOptedOutValue(f.internet_display) || isOptedOutValue(f.internet_address_display)) continue;
+    allowed.add(String(f.listing_key ?? ""));
+  }
+  return candidates.filter((c) => allowed.has(c.listingKey));
+}
+
 const fetchLedger = unstable_cache(
   async (streetName: string, city: string, fsa: string | null): Promise<StreetLedgerGated | null> => {
     const token = probeToken(streetName);
@@ -144,24 +162,16 @@ const fetchLedger = unstable_cache(
     try {
       const sb = getServiceRoleClient();
       const safeToken = token.replace(/[%_,()]/g, "");
+      // Flat columns only. The seller opt-out flags live in raw_payload, and Postgres
+      // evaluates a `raw_payload->>` alias in the SCAN, below the sort — so asking for
+      // them here detoasted the payload of EVERY token match, not the SCAN_LIMIT rows
+      // returned ("Main": 1,276 detoasts for 200 rows, 2026-10-24). At ~4k uncached
+      // calls a day that was ~100 GB/day of disk reads and drained the Supabase Disk IO
+      // budget. The flags are now read in a second, primary-key query for the
+      // candidates that survive the street + locality check (at most SCAN_LIMIT).
       const { data, error } = await sb
         .from("raw_vow_sold")
-        .select(
-          "listing_key, unparsed_address, city, city_region, close_price, purchase_contract_date, property_sub_type, " +
-            // Seller opt-out (internetDisplay.ts, PR #475). This card prints a street
-            // address and a close price, so the switches that take the listing and
-            // address pages down have to reach it too.
-            //
-            // Nothing else can reach it. #475 works by keeping opted-out records OUT of
-            // the two Typesense collections (plus purgeInternetDisplayOptOuts.ts for the
-            // documents already there). This query does not read an index — it reads
-            // raw_vow_sold directly, which is where the opt-out itself is recorded. So a
-            // purged record stays purged everywhere except here unless the gate is on
-            // this read. Verified 2026-09-02: C13661766 (188 Maplehurst Avenue, the home
-            // #475 was written for) carries both flags false and still matched this scan.
-            "internet_display:raw_payload->>InternetEntireListingDisplayYN, " +
-            "internet_address_display:raw_payload->>InternetAddressDisplayYN"
-        )
+        .select("listing_key, unparsed_address, city, city_region, close_price, purchase_contract_date, property_sub_type")
         .ilike("unparsed_address", `%${safeToken}%`)
         .eq("transaction_type", SALE_TRANSACTION_TYPE)
         .gte("close_price", MIN_CLOSE_PRICE)
@@ -172,12 +182,8 @@ const fetchLedger = unstable_cache(
         return null;
       }
 
-      const sales: LedgerSale[] = [];
-      // Through `unknown`: supabase-js cannot type a `->>` JSON alias, so it widens the
-      // whole row to GenericStringError and a direct cast no longer overlaps.
-      for (const r of data as unknown as Array<Record<string, unknown>>) {
-        // Either switch removes the row — the ledger exists to publish an address.
-        if (isOptedOutValue(r.internet_display) || isOptedOutValue(r.internet_address_display)) continue;
+      const candidates: LedgerSale[] = [];
+      for (const r of data as Array<Record<string, unknown>>) {
         const rowAddress = typeof r.unparsed_address === "string" ? r.unparsed_address : "";
         const parsed = parseAddress(rowAddress);
         if (!streetNamesMatch(streetName, parsed.streetName)) continue;
@@ -194,7 +200,7 @@ const fetchLedger = unstable_cache(
         const close = Number(r.close_price); // NUMERIC arrives as a string via PostgREST
         const dateISO = typeof r.purchase_contract_date === "string" ? r.purchase_contract_date : "";
         if (!(close >= MIN_CLOSE_PRICE) || !dateISO) continue;
-        sales.push({
+        candidates.push({
           listingKey: String(r.listing_key ?? ""),
           address: rowAddress.split(",")[0].trim(),
           city: typeof r.city === "string" ? r.city : "",
@@ -202,8 +208,42 @@ const fetchLedger = unstable_cache(
           dateISO: dateISO.slice(0, 10),
           subType: typeof r.property_sub_type === "string" && r.property_sub_type ? r.property_sub_type : null,
         });
-        if (sales.length >= MAX_SALES) break;
       }
+
+      // Seller opt-out (internetDisplay.ts, PR #475). This card prints a street
+      // address and a close price, so the switches that take the listing and
+      // address pages down have to reach it too.
+      //
+      // Nothing else can reach it. #475 works by keeping opted-out records OUT of
+      // the two Typesense collections (plus purgeInternetDisplayOptOuts.ts for the
+      // documents already there). This card does not read an index — it reads
+      // raw_vow_sold directly, which is where the opt-out itself is recorded. So a
+      // purged record stays purged everywhere except here unless the gate is on
+      // this read. Verified 2026-09-02: C13661766 (188 Maplehurst Avenue, the home
+      // #475 was written for) carries both flags false and still matched this scan.
+      let flags: Array<Record<string, unknown>> = [];
+      if (candidates.length) {
+        const res = await sb
+          .from("raw_vow_sold")
+          .select(
+            "listing_key, " +
+              "internet_display:raw_payload->>InternetEntireListingDisplayYN, " +
+              "internet_address_display:raw_payload->>InternetAddressDisplayYN"
+          )
+          .in(
+            "listing_key",
+            candidates.map((c) => c.listingKey)
+          );
+        // Fail closed: without the flags no row can be shown.
+        if (res.error || !res.data) {
+          if (res.error) console.error("[streetLedger] opt-out read failed:", res.error.message);
+          return null;
+        }
+        // Through `unknown`: supabase-js cannot type a `->>` JSON alias, so it widens the
+        // whole row to GenericStringError and a direct cast no longer overlaps.
+        flags = res.data as unknown as Array<Record<string, unknown>>;
+      }
+      const sales = keepDisplayable(candidates, flags).slice(0, MAX_SALES);
 
       // Title-case the street for display ("cappamore drive" → "Cappamore Drive").
       const streetLabel = streetName.replace(/\b[a-z]/g, (c) => c.toUpperCase());
