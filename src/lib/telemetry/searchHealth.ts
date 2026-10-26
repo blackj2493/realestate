@@ -33,6 +33,8 @@ function sessionId(): string {
 export function reportSearchFailure(err: unknown, durationMs: number, context?: Record<string, unknown>): void {
   try {
     if (typeof window === "undefined") return;
+    // Automated browsers (headless crawlers, test runners) abort requests — not an outage.
+    if (navigator.webdriver) return;
 
     const now = Date.now();
     const last = Number(window.sessionStorage.getItem(LAST_SENT_KEY) ?? 0);

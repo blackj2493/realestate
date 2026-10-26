@@ -52,6 +52,21 @@ export function evaluateSearchHealth(s: SearchHealthSnapshot): SearchHealthDecis
 export const REPORTABLE_KINDS = ['timeout', 'network', 'http_error'] as const;
 export type ReportableKind = (typeof REPORTABLE_KINDS)[number];
 
+/**
+ * Crawlers and headless renderers that run the page's JS. They abort third-party requests
+ * after a few seconds, so a crawl of listing pages reports one fast "Network Error" per
+ * page, each from a fresh session (2026-10-25: 129 listing pages in 13h tripped the burst
+ * rule while the cluster was healthy). Their failures say nothing about real users.
+ */
+const BOT_UA =
+  /bot|crawl|spider|slurp|headless|lighthouse|inspectiontool|mediapartners|facebookexternalhit|bingpreview|python|curl|wget|httpclient|phantomjs|puppeteer|playwright/i;
+
+/** True when a request's User-Agent is a crawler/headless client — or is missing. */
+export function isBotUserAgent(ua: string | null | undefined): boolean {
+  if (!ua || !ua.trim()) return true;
+  return BOT_UA.test(ua);
+}
+
 /** Classify a caught search error into a reportable kind. */
 export function classifySearchError(err: unknown): ReportableKind {
   const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase();
