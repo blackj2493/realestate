@@ -9,6 +9,7 @@ import {
   ALERT_COOLDOWN_MS,
   BURST_WINDOW_MS,
   GRIND_WINDOW_MS,
+  isBotUserAgent,
   type ReportableKind,
 } from "@/lib/telemetry/searchHealthPolicy";
 
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest) {
   try {
     const rl = limiter.check(clientIpFrom(req));
     if (!rl.allowed) return ok(); // silently drop — a beacon never needs a 429 story
+    // A crawler's aborted requests are not a user-facing outage — never count them.
+    const ua = req.headers.get("user-agent");
+    if (isBotUserAgent(ua)) return ok();
 
     const body = (await req.json().catch(() => null)) as {
       kind?: unknown;
@@ -60,6 +64,8 @@ export async function POST(req: NextRequest) {
       path: str(ctxIn.path, 200),
       message: str(ctxIn.message, 300),
       fn: str(ctxIn.fn, 50),
+      // Kept so the next alert can tell real browsers from a crawler the regex missed.
+      ua: str(ua, 200),
     };
 
     const supabase = getServiceRoleClient();
