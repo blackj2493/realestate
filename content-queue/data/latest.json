@@ -1,43 +1,43 @@
 {
-  "generatedForDateUtc": "2026-10-25",
-  "dataAsOf": "2026-10-25T04:02:17.05+00:00",
+  "generatedForDateUtc": "2026-10-26",
+  "dataAsOf": "2026-10-26T03:59:45.281+00:00",
   "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
   "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
   "angles": [
     {
       "kind": "price_cuts",
-      "region": "Whitby",
-      "headline": "33% of active Whitby listings have cut their asking price",
+      "region": "Brampton",
+      "headline": "33% of active Brampton listings have cut their asking price",
       "figure": "33%",
-      "sampleN": 493,
+      "sampleN": 1756,
       "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
       "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
-      "context": "typical reduction 7.1%"
+      "context": "typical reduction 8.3%"
     },
     {
       "kind": "days_on_market",
       "region": "Hamilton",
-      "headline": "The typical active Hamilton listing has now sat 61 days",
-      "figure": "61 days",
-      "sampleN": 2325,
+      "headline": "The typical active Hamilton listing has now sat 55 days",
+      "figure": "55 days",
+      "sampleN": 2197,
       "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
       "whySurprising": "Longest median true days-on-market of the markets tracked today."
     },
     {
       "kind": "inventory",
-      "region": "Richmond Hill",
-      "headline": "Richmond Hill is sitting at 6.2 months of supply",
-      "figure": "6.2 months of supply",
-      "sampleN": 1134,
+      "region": "Burlington",
+      "headline": "Burlington is sitting at 3.2 months of supply",
+      "figure": "3.2 months of supply",
+      "sampleN": 713,
       "sourceUrl": "https://www.pureproperty.ca/data/market-temperature",
-      "whySurprising": "Most inventory of the 15 markets tracked today — ≈4–6 months is balanced, and above that tilts toward buyers."
+      "whySurprising": "Least inventory of the 15 markets tracked today — ≈4–6 months is balanced, and below that tilts hard toward sellers."
     },
     {
       "kind": "rental_yield",
       "region": "Ottawa",
       "headline": "A 1-bed in Ottawa grosses about 6.9% rental yield",
       "figure": "6.9% gross yield",
-      "sampleN": 4220,
+      "sampleN": 3962,
       "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
       "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
     }
