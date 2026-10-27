@@ -1,34 +1,34 @@
 {
-  "generatedForDateUtc": "2026-10-26",
-  "dataAsOf": "2026-10-26T03:59:45.281+00:00",
+  "generatedForDateUtc": "2026-10-27",
+  "dataAsOf": "2026-10-27T05:00:12.737+00:00",
   "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
   "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
   "angles": [
     {
       "kind": "price_cuts",
-      "region": "Brampton",
-      "headline": "33% of active Brampton listings have cut their asking price",
+      "region": "Whitby",
+      "headline": "33% of active Whitby listings have cut their asking price",
       "figure": "33%",
-      "sampleN": 1756,
+      "sampleN": 467,
       "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
       "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
-      "context": "typical reduction 8.3%"
+      "context": "typical reduction 7.0%"
     },
     {
       "kind": "days_on_market",
       "region": "Hamilton",
-      "headline": "The typical active Hamilton listing has now sat 55 days",
-      "figure": "55 days",
-      "sampleN": 2197,
+      "headline": "The typical active Hamilton listing has now sat 59 days",
+      "figure": "59 days",
+      "sampleN": 2216,
       "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
       "whySurprising": "Longest median true days-on-market of the markets tracked today."
     },
     {
       "kind": "inventory",
       "region": "Burlington",
-      "headline": "Burlington is sitting at 3.2 months of supply",
-      "figure": "3.2 months of supply",
-      "sampleN": 713,
+      "headline": "Burlington is sitting at 3.3 months of supply",
+      "figure": "3.3 months of supply",
+      "sampleN": 722,
       "sourceUrl": "https://www.pureproperty.ca/data/market-temperature",
       "whySurprising": "Least inventory of the 15 markets tracked today — ≈4–6 months is balanced, and below that tilts hard toward sellers."
     },
@@ -37,7 +37,7 @@
       "region": "Ottawa",
       "headline": "A 1-bed in Ottawa grosses about 6.9% rental yield",
       "figure": "6.9% gross yield",
-      "sampleN": 3962,
+      "sampleN": 3997,
       "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
       "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
     }
