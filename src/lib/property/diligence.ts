@@ -171,6 +171,67 @@ export function buildDiligenceFlags(p: RawPayload, external: DiligenceFlag[] = [
     });
   }
 
+  // A failed deal stays visible only as a status on the same listing: the current
+  // MlsStatus while it is fresh, then PriorMlsStatus after the next change.
+  if ([str(p, "MlsStatus"), str(p, "PriorMlsStatus")].some((s) => s && /deal fell through/i.test(s)))
+    f.push({
+      id: "deal_fell_through",
+      kind: "warn",
+      severity: 52,
+      title: "An accepted offer on this listing fell through",
+      source: "TRREB status history",
+      ask: "Ask why the earlier deal ended (inspection, financing or appraisal) and what has changed since.",
+    });
+
+  // Oil, propane and wood mean a fuel tank or a wood stove: insurance, fuel cost and
+  // inspection questions that gas or electric heat never raises.
+  const fuels = dedupe([...list(p, "HeatSourceMulti"), ...list(p, "HeatSource")]).filter((s) =>
+    /^(oil|propane|wood)$/i.test(s),
+  );
+  if (fuels.length) {
+    const oil = fuels.some((s) => /^oil$/i.test(s));
+    f.push({
+      id: "fuel_heat",
+      kind: "warn",
+      severity: oil ? 43 : 37,
+      title: `Heated by ${fuels.map((s) => s.toLowerCase()).join(" / ")}`,
+      source: "TRREB feed",
+      ask: oil
+        ? "Oil tanks can limit insurance — ask the tank's age and location, and get an insurance quote before you firm up."
+        : "Ask for a year of fuel bills, whether the tank is owned or rented, and a WETT inspection for any wood stove.",
+    });
+  }
+
+  // Private water and sewage: WaterSource carries the well ("Drilled Well"); the flat
+  // Water field is almost always empty in the feed.
+  const water = meaningful(list(p, "WaterSource")).filter((s) => /well|lake|river|cistern/i.test(s));
+  if (str(p, "Water") === "Well" && !water.length) water.push("Well");
+  const sewer = meaningful(list(p, "Sewer")).filter((s) => /septic|holding tank/i.test(s));
+  if (water.length || sewer.length)
+    f.push({
+      id: "private_services",
+      kind: "warn",
+      severity: 41,
+      title: `Private water / sewage: ${dedupe([...water, ...sewer]).join(" · ")}`,
+      source: "TRREB feed",
+      ask: [
+        water.length ? "Lenders often require a potable-water test — ask for the latest results and the flow rate." : "",
+        sewer.length ? "Ask the septic system's age and last pump-out, and add a septic inspection as a condition." : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+
+  if (!commercial && list(p, "PetsAllowed").some((s) => /^no$/i.test(s)))
+    f.push({
+      id: "no_pets",
+      kind: "warn",
+      severity: 30,
+      title: "The condo does not allow pets",
+      source: "TRREB feed",
+      ask: "Confirm the pet rules in the declaration when you review the status certificate.",
+    });
+
   if (p.SeasonalDwelling === true)
     f.push({
       id: "seasonal",

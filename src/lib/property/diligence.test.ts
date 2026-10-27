@@ -152,3 +152,37 @@ describe("buildDiligenceFlags — commercial", () => {
     expect(flags.find((f) => f.id === "rented_equipment")?.title).toContain("transfers with the home");
   });
 });
+
+describe("buildDiligenceFlags — services, status and condo rules", () => {
+  const ids = (p: Record<string, unknown>) => buildDiligenceFlags(p).map((f) => f.id);
+
+  it("flags a deal that fell through, from the current or the prior status", () => {
+    expect(ids({ MlsStatus: "Deal Fell Through" })).toContain("deal_fell_through");
+    expect(ids({ MlsStatus: "Price Change", PriorMlsStatus: "Deal Fell Through" })).toContain("deal_fell_through");
+    expect(ids({ MlsStatus: "New", PriorMlsStatus: "Draft" })).not.toContain("deal_fell_through");
+  });
+
+  it("flags oil, propane and wood heat but not gas or electric", () => {
+    const oil = buildDiligenceFlags({ HeatSource: "Oil", HeatSourceMulti: ["Oil", "Wood"] }).find((f) => f.id === "fuel_heat");
+    expect(oil?.title).toBe("Heated by oil / wood");
+    expect(oil?.ask).toMatch(/insurance/i);
+    expect(buildDiligenceFlags({ HeatSourceMulti: ["Propane"] }).find((f) => f.id === "fuel_heat")?.ask).toMatch(/fuel bills/i);
+    expect(ids({ HeatSource: "Gas", HeatSourceMulti: ["Electric", "Gas"] })).not.toContain("fuel_heat");
+  });
+
+  it("flags a well and a septic system, with an ask for each", () => {
+    const flag = buildDiligenceFlags({ WaterSource: ["Drilled Well"], Sewer: ["Septic"] }).find(
+      (f) => f.id === "private_services",
+    );
+    expect(flag?.title).toBe("Private water / sewage: Drilled Well · Septic");
+    expect(flag?.ask).toMatch(/water test/i);
+    expect(flag?.ask).toMatch(/septic/i);
+    expect(ids({ Water: "Well" })).toContain("private_services");
+    expect(ids({ WaterSource: ["Unknown"], Sewer: ["Sewer"], Water: "Municipal" })).not.toContain("private_services");
+  });
+
+  it("flags a condo that does not allow pets", () => {
+    expect(ids({ PetsAllowed: ["No"] })).toContain("no_pets");
+    expect(ids({ PetsAllowed: ["Yes-with Restrictions"] })).not.toContain("no_pets");
+  });
+});
