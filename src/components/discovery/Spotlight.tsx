@@ -18,6 +18,7 @@ import { createPortal } from "react-dom";
 import { ArrowLeft, ArrowRight, Check, ExternalLink, X } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { expandCollapsedAncestors } from "@/lib/dom/expandCollapsed";
 import { useDiscovery } from "@/lib/discovery/useDiscovery";
 import { getFeature } from "@/lib/discovery/featureRegistry";
 import { useIsMac, formatShortcut } from "@/hooks/useIsMac";
@@ -69,6 +70,9 @@ function useTargetBox(selector: string | undefined, stepKey: string): Box | null
       if (el) {
         if (!scrolled) {
           scrolled = true;
+          // A target in a closed mobile section (the room map under All details)
+          // has no box until its collapse opens.
+          expandCollapsedAncestors(el);
           el.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
         }
         measure();

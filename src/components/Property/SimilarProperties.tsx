@@ -11,6 +11,7 @@ import type {
   SimilarSoldCard,
 } from "@/app/api/properties/[id]/similar/route";
 import type { MatchTier } from "@/lib/property/similarListings";
+import { track } from "@/lib/analytics/posthog";
 
 interface SimilarResponse {
   forSale: SimilarForSaleCard[];
@@ -37,6 +38,32 @@ interface Props {
   isCommercial?: boolean;
   /** Lease subject → comp against For-Lease inventory instead of For-Sale. */
   isLease?: boolean;
+  /**
+   * Which rows to render. The listing page places the for-sale row high (right after
+   * the numbers) and the sold row in the market zone; both parts share ONE request.
+   */
+  part?: "all" | "forSale" | "sold";
+  /** Where this instance sits — reported with each card click. */
+  placement?: "mobile_top" | "desktop_top" | "market" | "bottom";
+}
+
+// One request per subject even when the for-sale and sold rows mount separately
+// (and the for-sale row mounts twice, once per breakpoint).
+const inflight = new Map<string, Promise<SimilarResponse | null>>();
+function fetchSimilar(url: string): Promise<SimilarResponse | null> {
+  let p = inflight.get(url);
+  if (!p) {
+    if (inflight.size > 20) inflight.clear();
+    p = fetch(url)
+      .then((r) => (r.ok ? (r.json() as Promise<SimilarResponse>) : null))
+      .catch(() => null);
+    inflight.set(url, p);
+    // A failed fetch must not stick for the rest of the session.
+    p.then((d) => {
+      if (!d) inflight.delete(url);
+    });
+  }
+  return p;
 }
 
 const TIER_BADGE: Record<MatchTier, { label: string; cls: string } | null> = {
@@ -56,11 +83,13 @@ function Badge({ tier }: { tier: MatchTier }) {
   );
 }
 
-function Row({ title, children, badge, action }: {
+function Row({ title, children, badge, action, onCardClick }: {
   title: string;
   badge: MatchTier;
   action?: React.ReactNode;
   children: React.ReactNode;
+  /** Called with the 1-based position of the clicked card. */
+  onCardClick?: (position: number) => void;
 }) {
   return (
     <div className="mb-6">
@@ -69,13 +98,31 @@ function Row({ title, children, badge, action }: {
         <Badge tier={badge} />
         <span className="ml-auto">{action}</span>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-2">{children}</div>
+      <div
+        className="flex gap-4 overflow-x-auto pb-2"
+        onClickCapture={(e) => {
+          if (!onCardClick || !(e.target as HTMLElement).closest("a")) return;
+          const cell = (e.target as HTMLElement).closest<HTMLElement>("[data-pos]");
+          if (cell) onCardClick(Number(cell.dataset.pos));
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Position marker around a card; `display: contents` keeps the row's flex layout. */
+function Pos({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <div className="contents" data-pos={n}>
+      {children}
     </div>
   );
 }
 
 export default function SimilarProperties(props: Props) {
-  const { subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area, isCommercial = false, isLease = false } = props;
+  const { subjectId, cityRegion, city, subType, beds, bedsAbove, bedsBelow, garage, baths, listPrice, area, isCommercial = false, isLease = false, part = "all", placement = "bottom" } = props;
   const [data, setData] = useState<SimilarResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -97,13 +144,9 @@ export default function SimilarProperties(props: Props) {
       ...(isLease ? { lease: "1" } : {}),
     });
     setLoading(true);
-    fetch(`/api/properties/${subjectId}/similar?${qs.toString()}`)
-      .then((r) => (r.ok ? r.json() : null))
+    fetchSimilar(`/api/properties/${subjectId}/similar?${qs.toString()}`)
       .then((j) => {
         if (alive) setData(j);
-      })
-      .catch(() => {
-        if (alive) setData(null);
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -132,6 +175,11 @@ export default function SimilarProperties(props: Props) {
   const hasSold = data.sold.length > 0 || (data.soldLocked && data.soldCount > 0);
   const hasForSale = data.forSale.length > 0;
   if (!hasForSale && !hasSold) return null;
+  const showForSale = part !== "sold";
+  const showSold = part !== "forSale";
+  if (part === "sold" && !hasSold) return null;
+  const clicked = (kind: "for_sale" | "sold") => (position: number) =>
+    track("similar_listing_clicked", { listingId: subjectId, kind, position, placement });
 
   // "Browse more homes" lands on the interactive map (terminal), framed on this listing's
   // area — region-tightest (CityRegion) first, else the city — via the same ?city= seed the
@@ -147,24 +195,33 @@ export default function SimilarProperties(props: Props) {
   ) : null;
 
   return (
-    <section className="mt-8 border-t border-border pt-6">
-      <h2 className="mb-4 text-lg font-bold text-foreground">Comparable Properties</h2>
+    <section className={part === "all" ? "mt-8 border-t border-border pt-6" : "mt-6"}>
+      {part === "all" && <h2 className="mb-4 text-lg font-bold text-foreground">Comparable Properties</h2>}
 
       {/* For Sale (or For Lease — a lease subject comps against lease inventory) */}
-      {hasForSale ? (
-        <Row title={`${isLease ? "For Lease" : "For Sale"} in ${areaName}`} badge={data.matchQuality.forSale} action={seeAll}>
-          {data.forSale.map((c) => (
-            <ForSaleCompCard key={c.id} card={c} />
-          ))}
-        </Row>
-      ) : (
-        <p className="mb-6 text-sm text-muted-foreground">No comparable active listings in {areaName} right now.</p>
-      )}
+      {showForSale &&
+        (hasForSale ? (
+          <Row
+            title={`${isLease ? "For Lease" : "For Sale"} in ${areaName}`}
+            badge={data.matchQuality.forSale}
+            action={seeAll}
+            onCardClick={clicked("for_sale")}
+          >
+            {data.forSale.map((c, i) => (
+              <Pos key={c.id} n={i + 1}>
+                <ForSaleCompCard card={c} />
+              </Pos>
+            ))}
+          </Row>
+        ) : (
+          <p className="mb-6 text-sm text-muted-foreground">No comparable active listings in {areaName} right now.</p>
+        ))}
 
       {/* Recently Sold (or Recently Leased — lease subjects comp against closed leases) */}
-      {hasSold && (
+      {showSold && hasSold && (
         <Row
           title={`Recently ${isLease ? "Leased" : "Sold"} in ${areaName}`}
+          onCardClick={data.soldLocked ? undefined : clicked("sold")}
           badge={data.soldLocked ? "none" : data.matchQuality.sold}
           action={
             data.soldLocked ? (
@@ -185,17 +242,21 @@ export default function SimilarProperties(props: Props) {
                   card={{} as SimilarSoldCard}
                 />
               ))
-            : data.sold.map((c) => <SoldCompCard key={c.id} card={c} leased={isLease} />)}
+            : data.sold.map((c, i) => (
+                <Pos key={c.id} n={i + 1}>
+                  <SoldCompCard card={c} leased={isLease} />
+                </Pos>
+              ))}
         </Row>
       )}
 
-      {data.matchQuality.forSale === "sparse" && (
+      {showForSale && data.matchQuality.forSale === "sparse" && (
         <p className="text-xs text-muted-foreground">Limited comparable activity in {areaName}.</p>
       )}
 
       {/* Buyer-facing next step — a prominent path to more inventory on the interactive
           map, framed on this listing's city/region (not the static SEO list). */}
-      {browseHref && (
+      {showForSale && browseHref && (
         <div className="mt-4 flex justify-center">
           <Link
             href={browseHref}

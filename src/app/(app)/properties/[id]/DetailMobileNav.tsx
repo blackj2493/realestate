@@ -13,6 +13,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
+import { expandCollapsedAncestors } from "@/lib/dom/expandCollapsed";
 
 export interface NavSection {
   id: string;
@@ -46,10 +47,9 @@ export default function DetailMobileNav({ sections }: { sections: NavSection[] }
     e.preventDefault();
     const el = document.getElementById(id);
     if (!el) return;
-    // Expand the target if it's a CSS peer-checkbox collapse (e.g. History), then
-    // scroll once it has its final height.
-    const toggle = document.getElementById(`${id}-toggle`);
-    if (toggle instanceof HTMLInputElement) toggle.checked = true;
+    // Expand the target if it sits in a CSS peer-checkbox collapse (History, All
+    // details), then scroll once it has its final height.
+    expandCollapsedAncestors(el);
     setActive(id);
     requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
   };

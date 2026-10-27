@@ -71,6 +71,7 @@ import {
 } from "@/lib/address/streetLedger";
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
+import MobileCollapse from "./MobileCollapse";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
 import IntelligencePanel, { type IntelligenceTile } from "@/components/Property/IntelligencePanel";
 import { shouldRender as valueAddWillRender, buildView as buildValueAddView } from "@/components/Property/forceAppreciationView";
@@ -636,14 +637,39 @@ export default async function PropertyPage({
 
   // Mobile section jumper — matches the zoned mobile scroll order (the Numbers
   // panel sits second); ids are shared with the desktop layout's anchors.
+  // 2026-10-27: the for-sale comps moved up to right after the numbers, and the sold
+  // comps above the (now closed) history, to keep the carousels near the top.
   const navSections = [
     { id: "overview", label: "Overview" },
     { id: "numbers", label: "Numbers" },
+    { id: "similar", label: "Similar" },
     { id: "details", label: "Details" },
     ...(rooms.length > 0 ? [{ id: "rooms", label: "Rooms" }] : []),
-    { id: "history", label: "History" },
+    { id: "area", label: "Area" },
     { id: "comps", label: "Comps" },
+    { id: "history", label: "History" },
   ];
+
+  // Shared by the three comps placements (mobile top, desktop top, market zone);
+  // SimilarProperties dedupes the request across them.
+  const similarProps = {
+    subjectId: id,
+    cityRegion: p.CityRegion ?? null,
+    city: p.City ?? null,
+    subType: p.PropertySubType ?? null,
+    beds: p.BedroomsTotal ?? 0,
+    bedsAbove: p.BedroomsAboveGrade ?? 0,
+    bedsBelow: p.BedroomsBelowGrade ?? 0,
+    garage: p.CoveredSpaces ?? null,
+    baths: p.BathroomsTotalInteger ?? 0,
+    listPrice: price,
+    area: areaSqftOrNull ?? 0,
+    isCommercial,
+    // All lease subjects (residential rentals included) comp against For-Lease
+    // actives + DealType=leased closings — sale comps under a rental compare a
+    // monthly rent against purchase prices.
+    isLease,
+  };
 
   // The consolidated Intelligence panel replaces the stacked analysis cards for
   // the standard case (active residential sale). Sold / lease / commercial keep
@@ -1583,6 +1609,13 @@ export default async function PropertyPage({
 
               {/* Property History (timeline + campaign/sale tables) lives in the full-width band below the grid. */}
               <CondoFeeStabilityCard feeStability={detail.feeStability} />
+
+              {/* MOBILE ONLY: similar for-sale homes right after the numbers — the
+                  carousel keeps a phone reader browsing, so it sits ~2 screens down
+                  instead of ~7 (owner call 2026-10-27). Desktop's row is below the grid. */}
+              <div id="similar" className="scroll-mt-28 lg:hidden">
+                <SimilarProperties {...similarProps} part="forSale" placement="mobile_top" />
+              </div>
             </div>
           </div>
 
@@ -1613,27 +1646,52 @@ export default async function PropertyPage({
               </div>
             )}
 
-            {/* Property Data Sheet — full TRREB payload, registry-driven. */}
-            <div id="details" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_720px]">
-              <PropertyDataSheet groups={datasheet} />
-            </div>
-
-            {/* Zoning — municipal open data (NOT MLS), its own attributed card. */}
-            <ZoningCard code={p.zoning_designation} desc={p.zoning_desc} sourceKey={p.zoning_source} />
-
-            {/* Room Dimensions — proportional, drawn-to-scale room map */}
-            {rooms.length > 0 && (
-              <div id="rooms" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_520px]">
-                <RoomMap rooms={rooms} className="mb-6" />
+            {/* Data sheet + zoning + room map: one closed row on phones ("All details"),
+                unchanged on desktop. */}
+            <MobileCollapse
+              id="home-details"
+              title="All details"
+              sub={rooms.length > 0 ? "Data sheet · zoning · room map" : "Data sheet · zoning"}
+            >
+              {/* Property Data Sheet — full TRREB payload, registry-driven. */}
+              <div id="details" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_720px]">
+                <PropertyDataSheet groups={datasheet} />
               </div>
-            )}
 
-            {/* Schools — "Schools near this home" is a dwelling lens; off for commercial. */}
-            {!isCommercial && <NearbySchools listingId={id} />}
+              {/* Zoning — municipal open data (NOT MLS), its own attributed card. */}
+              <ZoningCard code={p.zoning_designation} desc={p.zoning_desc} sourceKey={p.zoning_source} />
 
-            {/* Grocery + recreation proximity */}
-            <NearbyAmenities listingId={id} />
+              {/* Room Dimensions — proportional, drawn-to-scale room map */}
+              {rooms.length > 0 && (
+                <div id="rooms" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_520px]">
+                  <RoomMap rooms={rooms} className="mb-6" />
+                </div>
+              )}
+            </MobileCollapse>
+
+            {/* THE AREA — schools and amenities as closed rows on phones (each card
+                is long), unchanged on desktop. The census neighbourhood row joins here. */}
+            <div id="area" className="scroll-mt-28">
+              <div className="lg:hidden"><ZoneLabel>The Area</ZoneLabel></div>
+
+              {/* Schools — "Schools near this home" is a dwelling lens; off for commercial. */}
+              {!isCommercial && (
+                <MobileCollapse id="area-schools" title="Schools" sub="Zoned schools and scores">
+                  <NearbySchools listingId={id} />
+                </MobileCollapse>
+              )}
+
+              {/* Grocery + recreation proximity */}
+              <MobileCollapse id="area-nearby" title="Nearby" sub="Groceries, parks and recreation">
+                <NearbyAmenities listingId={id} />
+              </MobileCollapse>
+            </div>
           </div>
+        </div>
+
+        {/* DESKTOP ONLY: similar for-sale homes directly below the first band. */}
+        <div className="hidden lg:block">
+          <SimilarProperties {...similarProps} part="forSale" placement="desktop_top" />
         </div>
 
         {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — rents + history + comps. ── */}
@@ -1656,15 +1714,24 @@ export default async function PropertyPage({
               internal signal that moved /data at all (see MarketDataLinks' header). */}
           <MarketDataLinks city={marketName} isLease={isLease} />
 
+        {/* ── Recently Sold (or Leased) comps — moved ABOVE the history (2026-10-27) so
+             the carousel is not the last thing on the page. The for-sale row renders
+             higher up (mobile: after the numbers; desktop: below the first band).
+             Commercial subjects use exact-subtype + area/price matching; commercial
+             leases comp against For-Lease inventory (commercial-gap Phase 1). ── */}
+        <div id="comps" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">
+          <SimilarProperties {...similarProps} part="sold" placement="market" />
+        </div>
+
         <section id="history" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px]">
-          {/* Mobile: default-OPEN, still collapsible behind a tap (defaultChecked).
-              Pure CSS (a peer checkbox), so it stays server-rendered — no client
-              boundary, no hydration flash. Desktop (md+) always shows it and hides
-              the toggle. */}
-          <input type="checkbox" id="history-toggle" defaultChecked className="peer sr-only" tabIndex={-1} aria-hidden="true" />
+          {/* Mobile: CLOSED by default since 2026-10-27 (it sat between the reader and
+              the comps), opened by a tap or by any jump to #history. Pure CSS (a peer
+              checkbox), so it stays server-rendered — no client boundary, no
+              hydration flash. Desktop (md+) always shows it and hides the toggle. */}
+          <input type="checkbox" id="history-toggle" className="peer sr-only" />
           <label
             htmlFor="history-toggle"
-            className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-border py-3 peer-checked:[&_svg]:rotate-180 md:hidden"
+            className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-border py-3 peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500 peer-checked:[&_svg]:rotate-180 md:hidden"
           >
             <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-foreground">
               Property History
@@ -1700,29 +1767,6 @@ export default async function PropertyPage({
           </div>
         </section>
 
-        {/* ── Comparable Properties (For Sale + Recently Sold), lazy client island.
-             Commercial subjects use exact-subtype + area/price matching; commercial
-             leases comp against For-Lease inventory (commercial-gap Phase 1). ── */}
-        <div id="comps" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">
-        <SimilarProperties
-          subjectId={id}
-          cityRegion={p.CityRegion ?? null}
-          city={p.City ?? null}
-          subType={p.PropertySubType ?? null}
-          beds={p.BedroomsTotal ?? 0}
-          bedsAbove={p.BedroomsAboveGrade ?? 0}
-          bedsBelow={p.BedroomsBelowGrade ?? 0}
-          garage={p.CoveredSpaces ?? null}
-          baths={p.BathroomsTotalInteger ?? 0}
-          listPrice={price}
-          area={areaSqftOrNull ?? 0}
-          isCommercial={isCommercial}
-          // All lease subjects (residential rentals included) comp against For-Lease
-          // actives + DealType=leased closings — sale comps under a rental compare a
-          // monthly rent against purchase prices.
-          isLease={isLease}
-        />
-        </div>
         </section>
 
         {/* IDX consumer notice — unconditional on every listing page (§6.3(i)+(k)),
