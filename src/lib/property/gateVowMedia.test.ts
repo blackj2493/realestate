@@ -36,6 +36,7 @@ function detailWith(status: ListingStatus, media: string[]): ListingDetail {
     geoFlags: [],
     geoChecked: false,
     geoCheckedAt: null,
+    census: null,
     rooms: [],
   } as unknown as ListingDetail;
 }

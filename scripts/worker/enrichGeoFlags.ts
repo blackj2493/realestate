@@ -295,13 +295,20 @@ async function runScanSweep(client: Client, sourceDates: Record<string, string>)
 
     if (!DRY_RUN && upKeys.length) {
       const up = await client.query(
-        `INSERT INTO listing_geo_flags (listing_key, flags, checked, computed_at, geom)
-         SELECT k, f::jsonb, c, now(),
-                CASE WHEN lng IS NULL THEN NULL ELSE ST_SetSRID(ST_MakePoint(lng, lat), 4326) END
-         FROM unnest($1::text[], $2::text[], $3::boolean[], $4::float8[], $5::float8[]) AS t(k, f, c, lng, lat)
+        // census_dauid: the Census 2021 DA that holds the point (migration 160), so the
+        // page's "The area" card is one PK read. NULL off-Ontario or without a point.
+        `INSERT INTO listing_geo_flags (listing_key, flags, checked, computed_at, geom, census_dauid)
+         SELECT k, f::jsonb, c, now(), pt,
+                (SELECT d.dauid FROM census_da d WHERE pt IS NOT NULL AND ST_Intersects(d.geom, pt) LIMIT 1)
+         FROM (
+           SELECT k, f, c,
+                  CASE WHEN lng IS NULL THEN NULL ELSE ST_SetSRID(ST_MakePoint(lng, lat), 4326) END AS pt
+           FROM unnest($1::text[], $2::text[], $3::boolean[], $4::float8[], $5::float8[]) AS t(k, f, c, lng, lat)
+         ) u
          ON CONFLICT (listing_key) DO UPDATE
            SET flags = EXCLUDED.flags, checked = EXCLUDED.checked,
-               computed_at = EXCLUDED.computed_at, geom = EXCLUDED.geom`,
+               computed_at = EXCLUDED.computed_at, geom = EXCLUDED.geom,
+               census_dauid = EXCLUDED.census_dauid`,
         [upKeys, upFlags, upChecked, upLng, upLat],
       );
       written += up.rowCount ?? 0;

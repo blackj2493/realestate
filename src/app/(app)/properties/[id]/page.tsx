@@ -13,7 +13,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock, Gauge, Tag, Hammer, Wallet, Lightbulb } from "lucide-react";
+import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock, Gauge, Tag, Hammer, Wallet, Lightbulb, MapPinned } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
@@ -88,6 +88,7 @@ import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
 import { Suspense } from "react";
 import NearbySchools from "./NearbySchools";
+import AreaCard, { areaSummary } from "@/components/Property/AreaCard";
 import NearbyAmenities from "./NearbyAmenities";
 import TypicalRents from "./TypicalRents";
 import PropertyNotFound from "./PropertyNotFound";
@@ -580,6 +581,20 @@ export default async function PropertyPage({
   // public IDX fields, so the gated payload carries them for anon too. Residential
   // leases only; commercial leases get the basis-aware CommercialLeaseSnapshot instead.
   const rentalGlance = isLease && !isCommercial ? buildRentalGlance(view.full_payload) : null;
+  // The area (Census 2021, public). Dwelling facts, so off for commercial. The rent check
+  // uses what ONE tenant pays for the whole home (not the main-unit comp rent), or the
+  // asking rent on a lease; for anon on a sale listing that estimate is VOW-gated.
+  const census = isCommercial ? null : view.census;
+  const censusLine = census ? areaSummary(census) : null;
+  const areaCard = census ? (
+    <AreaCard
+      census={census}
+      listingId={id}
+      rentMonthly={isLease ? price || null : (view.wholeHomeMonthlyRent ?? view.compMonthlyRent)}
+      rentLocked={!isLease && !isAuthed}
+      initialLens={lens === "smart" ? "owner" : "investor"}
+    />
+  ) : null;
   const jsonLd = buildJsonLd(id, detail);
   // Calculator geography + rate seed. TRREB encodes the City of Toronto as
   // district codes ("Toronto C01".."W10"), all prefixed "Toronto", so a
@@ -1473,6 +1488,22 @@ export default async function PropertyPage({
                           </div>
                         ),
                       },
+                      // The area — Census 2021 facts around the home. Public, not VOW-gated.
+                      census && censusLine
+                        ? {
+                            key: "area",
+                            label: "The area",
+                            icon: <MapPinned className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
+                            sheetTitle: "The area",
+                            value: (
+                              <span className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
+                                {censusLine}
+                              </span>
+                            ),
+                            sub: `Census 2021 · vs ${census.cityName}`,
+                            detail: areaCard,
+                          }
+                        : null,
                     ].filter(Boolean) as IntelligenceTile[]
                   }
                   footer={
@@ -1670,7 +1701,7 @@ export default async function PropertyPage({
             </MobileCollapse>
 
             {/* THE AREA — schools and amenities as closed rows on phones (each card
-                is long), unchanged on desktop. The census neighbourhood row joins here. */}
+                is long), unchanged on desktop. Neighbourhood (Census 2021) is the last row. */}
             <div id="area" className="scroll-mt-28">
               <div className="lg:hidden"><ZoneLabel>The Area</ZoneLabel></div>
 
@@ -1685,6 +1716,13 @@ export default async function PropertyPage({
               <MobileCollapse id="area-nearby" title="Nearby" sub="Groceries, parks and recreation">
                 <NearbyAmenities listingId={id} />
               </MobileCollapse>
+
+              {/* Neighbourhood — Census 2021 facts (tenure, commute, moves, rent check). */}
+              {areaCard && (
+                <MobileCollapse id="area-neighbourhood" title="Neighbourhood" sub={censusLine ?? "Census 2021"}>
+                  {areaCard}
+                </MobileCollapse>
+              )}
             </div>
           </div>
         </div>
