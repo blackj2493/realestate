@@ -25,9 +25,9 @@
  * delete. Run it with no flag after every sync as a canary: a healthy system prints
  * zero documents to remove, because the gates caught them upstream.
  *
- * Note: the flags live inside jsonb with no index, so each census query is a full
- * scan and takes minutes on `listings`. That is why this is an admin script and not
- * a request-path check.
+ * Note: the flags live inside jsonb. Migration 159 adds a partial index over the
+ * opted-out rows of each table, so the census queries below read only those rows.
+ * Before 159 each one was a full detoast scan (~4 min, ~10 GB of disk reads a day).
  *
  * Usage:
  *   npx.cmd tsx --env-file=.env scripts/admin/purgeInternetDisplayOptOuts.ts
@@ -63,6 +63,11 @@ function tsClient(): Client {
  * switch removes the listing everywhere; the address switch removes the /address
  * page, which is the only thing sold_listings feeds — so both matter to that
  * collection, and only the first matters to `properties`.
+ *
+ * KEEP THE SQL LITERAL AND UNCHANGED. Migration 159's partial indexes serve these
+ * queries only while the WHERE clause matches their predicates exactly; a bound
+ * parameter or a reworded clause silently falls back to the full scan.
+ * optoutIndexPredicates.test.ts checks the two stay in step.
  */
 async function optedOutKeys(
   c: pg.Client,
@@ -133,7 +138,7 @@ async function main() {
 
   console.log(APPLY ? '\n🔥 APPLY — documents will be deleted\n' : '\n🔎 DRY RUN — nothing will be deleted (pass --apply)\n');
 
-  console.log('Reading opt-out flags from Postgres (full jsonb scan — minutes)...');
+  console.log('Reading opt-out flags from Postgres (partial indexes, migration 159)...');
   const fromListings = await optedOutKeys(c, 'listings', 'full_payload', false);
   console.log(`  listings:         ${fromListings.size} opted out`);
   const fromSold = await optedOutKeys(c, 'raw_vow_sold', 'raw_payload', true);
