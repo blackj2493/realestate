@@ -70,6 +70,26 @@ export interface FindingDef {
 
 export const FINDINGS: FindingDef[] = [
   {
+    // PRIOR ART: power-of-sale and foreclosure discounts are well studied (US
+    // foreclosure-discount literature; Ontario brokerages publish POS guides). This piece
+    // claims none of that is new. What it adds is a measured Ontario figure from closed
+    // MLS® sales, compared within neighbourhood x type x bedrooms x size x quarter, with
+    // the condition caveat (lender "as-is" boilerplate) reported as a range.
+    slug: "ontario-power-of-sale-discount",
+    title: "Power-of-sale houses sell for about $96,000 less",
+    seoTitle: "Power of Sale in Ontario: How Much Less Buyers Paid, 2024–2026",
+    standfirst:
+      "Ontario power-of-sale houses sold for 10.8% less than similar homes in the same neighbourhood — about $96,000 on a typical house — and 84% sold under asking, against 75% of other houses. They are also becoming more common: 0.41% of sales this summer, up from 0.26%.",
+    description:
+      "Power-of-sale houses in Ontario sold 10.8% (about $96,000) below similar homes nearby, and 84% sold under asking vs 75%. Their share of sales rose from 0.26% to 0.41%, and to 1.87% in Brampton. Analysis of MLS® sales, July 2024 to September 2026.",
+    eyebrow: "PureProperty Data Desk",
+    published: "2026-10-28",
+    trackerSlug: "over-asking",
+    basis: "266,536 MLS® sales, July 2024 to September 2026",
+    coverage: "Ontario, with Toronto and Brampton",
+    status: "live",
+  },
+  {
     // PRIOR ART: Wahi has published a monthly GTA overbid/underbid report since July
     // 2022, and Redfin has run "share sold above final list price" in the US for
     // years. This piece does not claim the metric is new. What it claims is the cut:
