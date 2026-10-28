@@ -5,6 +5,7 @@ import type { EvidenceLink, TheRead } from "@/lib/property/theRead";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 import { onLensChanged, persistLens } from "@/lib/personas/lensPersistence";
 import { track } from "@/lib/analytics/posthog";
+import { expandCollapsedAncestors } from "@/lib/dom/expandCollapsed";
 
 const CHIPS: { id: PersonaType; label: string }[] = [
   { id: "cashflow", label: "Cashflow" },
@@ -23,9 +24,7 @@ function jumpToEvidence(target: string) {
   const el =
     document.querySelector<HTMLElement>(target) ?? document.querySelector<HTMLElement>("#financials");
   if (!el) return;
-  const host = el.closest<HTMLElement>("[id]");
-  const toggle = host ? document.getElementById(`${host.id}-toggle`) : null;
-  if (toggle instanceof HTMLInputElement) toggle.checked = true;
+  expandCollapsedAncestors(el);
   requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
 }
 

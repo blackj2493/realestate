@@ -88,6 +88,15 @@ export type AnalyticsEvents = {
   'read_persona_switched': { listingId: string; persona: string };
   'read_evidence_clicked': { listingId: string; target: string };
 
+  // Comparable-listings carousels on the listing page. `placement` says where the row
+  // sat (the for-sale row moved up on mobile 2026-10-27), so before/after is comparable.
+  'similar_listing_clicked': {
+    listingId: string;
+    kind: 'for_sale' | 'sold';
+    position: number;
+    placement: 'mobile_top' | 'desktop_top' | 'market' | 'bottom';
+  };
+
   // Things to Know — the "worth asking" question sheet copied to the clipboard.
   'diligence_questions_copied': { listingId: string; count: number };
 
