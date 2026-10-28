@@ -26,7 +26,7 @@
  */
 import { Client } from "pg";
 import * as fs from "fs";
-import * as readline from "readline";
+import { readProfile } from "./profile";
 import dotenv from "dotenv";
 import { buildAreaFacts, type AreaFacts, type ProfileValues } from "@/lib/census/areaFacts";
 dotenv.config({ path: [".env.local", ".env"] });
@@ -42,38 +42,6 @@ const BACKFILL_BATCH = 5000;
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 ? process.argv[i + 1] : undefined;
-}
-
-interface ProfileRow {
-  dguid: string;
-  level: string;
-  code: string;
-  name: string;
-  v: ProfileValues;
-}
-
-/** "Toronto, City (C)" → "Toronto"; "Whitchurch-Stouffville, Town (T)" → "Whitchurch-Stouffville". */
-export function cityName(geoName: string): string {
-  return geoName.replace(/,\s[^,]+\s\([A-Z-]+\)$/, "").trim();
-}
-
-async function readProfile(file: string) {
-  const da = new Map<string, { csd: string; v: ProfileValues }>();
-  const csd = new Map<string, { name: string; v: ProfileValues }>();
-  let curCsd: string | null = null;
-  const rl = readline.createInterface({ input: fs.createReadStream(file), crlfDelay: Infinity });
-  for await (const line of rl) {
-    if (!line) continue;
-    const r = JSON.parse(line) as ProfileRow;
-    if (r.level === "Census subdivision") {
-      curCsd = r.code;
-      csd.set(r.code, { name: cityName(r.name), v: r.v });
-    } else if (r.level === "Dissemination area") {
-      if (!curCsd) throw new Error(`DA ${r.code} before any CSD row`);
-      da.set(r.code, { csd: curCsd, v: r.v });
-    }
-  }
-  return { da, csd };
 }
 
 // ── shapefile (polygon, type 5) + dbf ───────────────────────────────────────────────────

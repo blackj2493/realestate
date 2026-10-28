@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import SignInLink from "@/components/auth/SignInLink";
-import { rentCheck, type AreaFacts, type AreaStats } from "@/lib/census/areaFacts";
+import { FACTS, fmtFact, rentCheck, type AreaFacts, type FactKey } from "@/lib/census/areaFacts";
 import { track } from "@/lib/analytics/posthog";
 
 /**
@@ -16,33 +16,11 @@ import { track } from "@/lib/analytics/posthog";
  */
 export type AreaLens = "investor" | "family" | "owner";
 
-type FactKey = keyof Omit<AreaStats, "households">;
-
-const FACTS: Record<FactKey, { label: string; unit: "pct" | "min" | "money" }> = {
-  rentPct: { label: "Households that rent", unit: "pct" },
-  ownPct: { label: "Households that own", unit: "pct" },
-  moved5Pct: { label: "Moved in the last 5 years", unit: "pct" },
-  aptPct: { label: "Homes that are apartments", unit: "pct" },
-  bed3PlusPct: { label: "Homes with 3+ bedrooms", unit: "pct" },
-  builtBefore1981Pct: { label: "Homes built before 1981", unit: "pct" },
-  transitWalkBikePct: { label: "Transit, walk or bike to work", unit: "pct" },
-  drivePct: { label: "Drive to work", unit: "pct" },
-  medianCommuteMin: { label: "Typical commute", unit: "min" },
-  tenantCostBurdenPct: { label: "Renters paying 30%+ of income on housing", unit: "pct" },
-  medianIncome: { label: "Typical household income", unit: "money" },
-};
-
 const LENSES: Array<{ id: AreaLens; label: string; facts: FactKey[] }> = [
   { id: "investor", label: "Investor", facts: ["rentPct", "moved5Pct", "aptPct", "tenantCostBurdenPct"] },
   { id: "family", label: "Family", facts: ["bed3PlusPct", "transitWalkBikePct", "builtBefore1981Pct", "medianCommuteMin"] },
   { id: "owner", label: "Living here", facts: ["medianCommuteMin", "drivePct", "ownPct", "medianIncome"] },
 ];
-
-function fmt(v: number, unit: "pct" | "min" | "money"): string {
-  if (unit === "pct") return `${Math.round(v)}%`;
-  if (unit === "min") return `${Math.round(v)} min`;
-  return `$${Math.round(v / 1000)}k`;
-}
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-CA")}`;
 
@@ -105,10 +83,10 @@ export default function AreaCard({
                 <div className="flex items-baseline justify-between gap-3">
                   <dt className="text-[13px] text-foreground">{r.label}</dt>
                   <dd className="shrink-0 text-right">
-                    <span className="font-mono text-[15px] font-bold text-foreground">{fmt(r.here!, r.unit)}</span>
+                    <span className="font-mono text-[15px] font-bold text-foreground">{fmtFact(r.here!, r.unit)}</span>
                     {r.city != null && (
                       <span className="ml-2 font-mono text-[11px] text-muted-foreground">
-                        {census.cityName} {fmt(r.city, r.unit)}
+                        {census.cityName} {fmtFact(r.city, r.unit)}
                       </span>
                     )}
                   </dd>
