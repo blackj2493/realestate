@@ -38,6 +38,7 @@ import { searchListings } from "@/lib/typesense/client";
 import type { ListingDocument, SearchOptions, SearchResult } from "@/lib/typesense/client";
 import { FACET_FIELDS, readStepper } from "@/lib/filters/filterRegistry";
 import {
+  DESC_SIGNALS_KEY,
   DESCRIPTION_SIGNAL_FIELD,
   descriptionTextQuery,
   isDescriptionFilterActive,
@@ -59,6 +60,7 @@ import { syncChips } from "@/lib/search/chipApply";
 import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { passesDealGrade } from "@/lib/dealScore/gradeFilter";
 import { hydrateTerminalPersona } from "@/lib/personas/personaStore";
+import { isDescriptionSignalId } from "@/lib/listings/descriptionSignals";
 
 /**
  * Reverse map: raw PropertySubType spelling → dashboard key used by the sold route.
@@ -81,6 +83,13 @@ const SUBTYPE_TO_DASHBOARD_KEY: ReadonlyMap<string, string> = new Map(
 // reset only on a full page reload — exactly the intended lifetime.
 let seededCityValue: string | null = null;
 let seededCenterKey: string | null = null;
+let seededSignalValue: string | null = null;
+
+/** Valid description-signal ids in a `?signal=a,b` param; unknown ids are dropped. */
+function signalParamIds(raw: string | null): string[] {
+  if (!raw) return [];
+  return [...new Set(raw.split(",").map((s) => s.trim()).filter(isDescriptionSignalId))];
+}
 
 // Same remount problem, second casualty: the mobile list/map toggle. It used to be
 // per-instance useState defaulting to "map", so every Back from a listing dropped the
@@ -324,6 +333,19 @@ function CommandCenterContent() {
     transactionMode,
   ]);
 
+  // Description-signal deep link (?signal=power_of_sale[,needs_work]) — opens the
+  // terminal with those "In the description" filters already ticked, so a post or email
+  // can link straight to e.g. every power-of-sale listing instead of telling the reader
+  // which lens and pick to find. Seeds once per distinct value (module scope, like the
+  // city seed) so clearing the chip afterwards is not undone by a remount.
+  useEffect(() => {
+    const raw = searchParams.get("signal");
+    if (!DESCRIPTION_SEARCH_ENABLED || !raw || seededSignalValue === raw) return;
+    seededSignalValue = raw;
+    const ids = signalParamIds(raw);
+    if (ids.length) setUniversalFilter(DESC_SIGNALS_KEY, ids);
+  }, [searchParams, setUniversalFilter]);
+
   const persona = PERSONA_CONFIG[activePersona];
 
   // First-load scope detector (fix #4). A "bare cold start" has none of: a typed/
@@ -341,6 +363,9 @@ function CommandCenterContent() {
     Math.abs(lngParam) <= 180 &&
     !(latParam === 0 && lngParam === 0);
   const hasCityParam = Boolean(searchParams.get("city") || searchParams.get("search"));
+  // A signal link asks for a rare kind of listing (power of sale is ~1 in 200), so it
+  // opens province-wide; the viewport box would show a handful and hide the rest.
+  const hasSignalParam = DESCRIPTION_SEARCH_ENABLED && signalParamIds(searchParams.get("signal")).length > 0;
   const wantViewportScope =
     !location &&
     !drawPolygon &&
@@ -348,6 +373,7 @@ function CommandCenterContent() {
     !searchPin &&
     !hasCenterParam &&
     !hasCityParam &&
+    !hasSignalParam &&
     !hasStructuredParams(searchParams);
 
   // NO saved-market seed here. Opening the terminal on the user's first saved dashboard
