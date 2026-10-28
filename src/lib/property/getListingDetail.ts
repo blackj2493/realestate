@@ -11,6 +11,7 @@
 
 import { cache as reactCache } from "react";
 import { getServiceRoleClient } from "@/lib/supabase/client";
+import type { AreaFacts } from "@/lib/census/areaFacts";
 import { isListingDisplayOptedOut } from "@/lib/compliance/internetDisplay";
 import { getSoldPhotoUrls } from "@/lib/property/soldPhotos";
 import { searchListings } from "@/lib/typesense/client";
@@ -200,6 +201,8 @@ export function gateVowDerived(detail: ListingDetail, isAuthed: boolean): Listin
     geoFlags: detail.geoFlags,
     geoChecked: detail.geoChecked,
     geoCheckedAt: detail.geoCheckedAt,
+    // Census facts are public (Statistics Canada), not VOW data — pass through.
+    census: detail.census ?? null,
   };
 }
 
@@ -286,8 +289,10 @@ async function fetchAreaSuiteRent(cityRegion: string | null, city: string | null
  * every warm key kept serving the old field-less object, `subType` arrived undefined,
  * and the card fell back to the generic wording on exactly the listings with traffic.
  * A new field on a cached shape is invisible until the key changes with it.
+ *
+ * v13 is a SHAPE bump: `census` (Census 2021 area facts) is a new field.
  */
-export const DETAIL_SHAPE_VERSION = "v12-fee-cohort-subtype";
+export const DETAIL_SHAPE_VERSION = "v13-census-area";
 
 /**
  * Has this listing key's seller switched "Distribute to Internet" off? One indexed PK
@@ -393,6 +398,12 @@ export interface ListingDetail {
   geoChecked: boolean;
   /** When the geo check last ran (listing_geo_flags.computed_at). */
   geoCheckedAt: string | null;
+  /**
+   * Census 2021 facts for the blocks around the home and its city (census_da_area, via
+   * listing_geo_flags.census_dauid). PUBLIC data (Statistics Canada) → not VOW-gated;
+   * null when the listing has no point or no DA.
+   */
+  census: AreaFacts | null;
   /** Per-room dimensions (live ProptX /PropertyRooms; best-effort, [] on miss/failure). */
   rooms: RoomData[];
 }
@@ -1009,6 +1020,30 @@ export const getListingDetail = cache(
       console.error(`[getListingDetail] Geo flags failed for ${listingKey}:`, geoErr);
     }
 
+    // Census 2021 area facts: the listing's DA, then its facts — two PK reads, precomputed
+    // offline by loadCensus.ts. Kept apart from the geo-flags read above, so a failure here
+    // (e.g. migration 160 not yet applied) costs only this card, never the flags.
+    let census: AreaFacts | null = null;
+    try {
+      const { data: dRow } = await withTimeout(
+        supabase.from("listing_geo_flags").select("census_dauid").eq("listing_key", listingKey).maybeSingle(),
+        4000,
+        "Census DA"
+      );
+      const dauid = typeof dRow?.census_dauid === "string" ? dRow.census_dauid : null;
+      if (dauid) {
+        const { data: aRow } = await withTimeout(
+          supabase.from("census_da_area").select("facts").eq("dauid", dauid).maybeSingle(),
+          4000,
+          "Census area"
+        );
+        const facts = aRow?.facts as AreaFacts | undefined;
+        if (facts && facts.v === 1) census = facts;
+      }
+    } catch (censusErr) {
+      console.error(`[getListingDetail] Census area failed for ${listingKey}:`, censusErr);
+    }
+
     // `listings.media_urls` is only ever filled while a listing is ACTIVE, so a property
     // that entered our data already-sold has an empty column while its photos sit in
     // raw_vow_sold.photos. Recover them — one indexed PK lookup, and only on the empty
@@ -1053,6 +1088,7 @@ export const getListingDetail = cache(
       geoFlags,
       geoChecked,
       geoCheckedAt,
+      census,
       rooms,
     };
   }
