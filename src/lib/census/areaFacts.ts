@@ -180,6 +180,18 @@ export function buildAreaFacts(pool: ProfileValues[], city: ProfileValues, cityN
   };
 }
 
+/**
+ * One line for the closed row and the panel tile: "46% rent · 31 min commute". Server-safe
+ * (the page builds it), so it lives here, not in the client AreaCard.
+ */
+export function areaSummary(c: AreaFacts): string | null {
+  const parts: string[] = [];
+  if (c.here.rentPct != null) parts.push(`${Math.round(c.here.rentPct)}% rent`);
+  if (c.here.medianCommuteMin != null) parts.push(`${c.here.medianCommuteMin} min commute`);
+  if (c.here.moved5Pct != null) parts.push(`${Math.round(c.here.moved5Pct / 10)} in 10 moved in 5 yrs`);
+  return parts.length ? parts.join(" · ") : null;
+}
+
 export interface RentCheck {
   /** Yearly household income at which this rent is 30% of income. */
   incomeNeeded: number;
