@@ -1,6 +1,6 @@
 {
-  "generatedForDateUtc": "2026-10-28",
-  "dataAsOf": "2026-10-28T04:44:00.555+00:00",
+  "generatedForDateUtc": "2026-10-29",
+  "dataAsOf": "2026-10-29T04:51:33.91+00:00",
   "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
   "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
   "angles": [
@@ -9,17 +9,17 @@
       "region": "Oakville",
       "headline": "33% of active Oakville listings have cut their asking price",
       "figure": "33%",
-      "sampleN": 1097,
+      "sampleN": 1105,
       "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
       "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
-      "context": "typical reduction 7.4%"
+      "context": "typical reduction 7.5%"
     },
     {
       "kind": "days_on_market",
       "region": "Hamilton",
       "headline": "The typical active Hamilton listing has now sat 61 days",
       "figure": "61 days",
-      "sampleN": 2246,
+      "sampleN": 2265,
       "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
       "whySurprising": "Longest median true days-on-market of the markets tracked today."
     },
@@ -28,7 +28,7 @@
       "region": "Burlington",
       "headline": "Burlington is sitting at 3.3 months of supply",
       "figure": "3.3 months of supply",
-      "sampleN": 729,
+      "sampleN": 739,
       "sourceUrl": "https://www.pureproperty.ca/data/market-temperature",
       "whySurprising": "Least inventory of the 15 markets tracked today — ≈4–6 months is balanced, and below that tilts hard toward sellers."
     },
@@ -37,7 +37,7 @@
       "region": "Ottawa",
       "headline": "A 1-bed in Ottawa grosses about 6.9% rental yield",
       "figure": "6.9% gross yield",
-      "sampleN": 4016,
+      "sampleN": 4064,
       "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
       "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
     }
