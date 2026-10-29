@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AreaFacts, AreaStats } from "./areaFacts";
-import { areaSummary, plainLines, rentCheckText, shareInWords } from "./plainFacts";
+import { areaRows, areaSummary, barWidth, fmtRowValue, peopleOfTen, rentCheckText, shareInWords } from "./plainFacts";
 
 const stats = (s: Partial<AreaStats>): AreaStats => ({
   households: 1000,
@@ -29,19 +29,35 @@ const facts: AreaFacts = {
   incomeGroups: [],
 };
 
-describe("plainLines", () => {
-  it("leads each figure with what it means", () => {
-    expect(plainLines(facts)).toEqual([
-      { label: "Mostly owners", text: "14% of homes here are rented. In Mississauga, 30% are." },
-      { label: "Mostly houses", text: "4% of homes here are apartments. In Mississauga, 38% are." },
-      { label: "People stay", text: "29% moved in during the last 5 years. In Mississauga, 33% did." },
-      { label: "Commute", text: "26 minutes is typical here. In Mississauga, 29 minutes." },
+describe("areaRows", () => {
+  it("leads each row with what it means, then here and the city", () => {
+    const rows = areaRows(facts);
+    expect(rows.map((r) => [r.key, r.label, r.here, r.city, r.unit, r.max])).toEqual([
+      ["tenure", "Mostly owners", 14, 30, "%", 100],
+      ["type", "Mostly houses", 4, 38, "%", 100],
+      ["moves", "People stay", 29, 33, "%", 100],
+      ["commute", "26 min commute", 26, 29, "min", 60],
     ]);
+    expect(rows[0].text).toBe("14% of homes here are rented. In Mississauga, 30% are.");
+    expect(rows[3].text).toBe("26 minutes is typical here. In Mississauga, 29 minutes.");
   });
 
   it("drops a missing figure and a missing city figure", () => {
-    const lines = plainLines({ ...facts, here: stats({ rentPct: 65 }), city: stats({}) });
-    expect(lines).toEqual([{ label: "Mostly renters", text: "65% of homes here are rented." }]);
+    const rows = areaRows({ ...facts, here: stats({ rentPct: 65 }), city: stats({}) });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ label: "Mostly renters", city: null, text: "65% of homes here are rented." });
+  });
+});
+
+describe("bar helpers", () => {
+  it("formats and scales the values", () => {
+    expect(fmtRowValue(14.4, "%")).toBe("14%");
+    expect(fmtRowValue(26, "min")).toBe("26 min");
+    expect(barWidth(30, 60)).toBe(50);
+    expect(barWidth(75, 60)).toBe(100);
+    expect(peopleOfTen(47)).toBe(5);
+    expect(peopleOfTen(3)).toBe(0);
+    expect(peopleOfTen(100)).toBe(10);
   });
 });
 
