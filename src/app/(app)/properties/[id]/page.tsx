@@ -1763,11 +1763,11 @@ export default async function PropertyPage({
         </div>
 
         <section id="history" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px]">
-          {/* Mobile: CLOSED by default since 2026-10-27 (it sat between the reader and
-              the comps), opened by a tap or by any jump to #history. Pure CSS (a peer
+          {/* Mobile: OPEN by default again (2026-10-29 — closed-by-default hid too much;
+              the comps now sit above it anyway), folded away by a tap. Pure CSS (a peer
               checkbox), so it stays server-rendered — no client boundary, no
               hydration flash. Desktop (md+) always shows it and hides the toggle. */}
-          <input type="checkbox" id="history-toggle" className="peer sr-only" />
+          <input type="checkbox" id="history-toggle" defaultChecked className="peer sr-only" />
           <label
             htmlFor="history-toggle"
             className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-border py-3 peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500 peer-checked:[&_svg]:rotate-180 md:hidden"
