@@ -1,0 +1,45 @@
+{
+  "generatedForDateUtc": "2026-10-30",
+  "dataAsOf": "2026-10-30T05:07:32.747+00:00",
+  "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
+  "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
+  "angles": [
+    {
+      "kind": "price_cuts",
+      "region": "Oakville",
+      "headline": "34% of active Oakville listings have cut their asking price",
+      "figure": "34%",
+      "sampleN": 1111,
+      "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
+      "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
+      "context": "typical reduction 7.5%"
+    },
+    {
+      "kind": "days_on_market",
+      "region": "Hamilton",
+      "headline": "The typical active Hamilton listing has now sat 66 days",
+      "figure": "66 days",
+      "sampleN": 2297,
+      "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
+      "whySurprising": "Longest median true days-on-market of the markets tracked today."
+    },
+    {
+      "kind": "inventory",
+      "region": "Burlington",
+      "headline": "Burlington is sitting at 3.4 months of supply",
+      "figure": "3.4 months of supply",
+      "sampleN": 749,
+      "sourceUrl": "https://www.pureproperty.ca/data/market-temperature",
+      "whySurprising": "Least inventory of the 15 markets tracked today — ≈4–6 months is balanced, and below that tilts hard toward sellers."
+    },
+    {
+      "kind": "rental_yield",
+      "region": "Ottawa",
+      "headline": "A 1-bed in Ottawa grosses about 7.0% rental yield",
+      "figure": "7.0% gross yield",
+      "sampleN": 4100,
+      "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
+      "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
+    }
+  ]
+}
