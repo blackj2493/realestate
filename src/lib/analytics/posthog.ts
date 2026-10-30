@@ -98,7 +98,6 @@ export type AnalyticsEvents = {
   };
 
   // The area (Census 2021) card — which lens a reader picks.
-  'area_lens_switched': { listingId: string; lens: 'investor' | 'family' | 'owner' };
 
   // Things to Know — the "worth asking" question sheet copied to the clipboard.
   'diligence_questions_copied': { listingId: string; count: number };

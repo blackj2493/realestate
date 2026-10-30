@@ -13,7 +13,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock, Gauge, Tag, Hammer, Wallet, Lightbulb, MapPinned } from "lucide-react";
+import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock, Gauge, Tag, Hammer, Wallet, Lightbulb } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
@@ -89,7 +89,7 @@ import ListingActions from "./ListingActions";
 import { Suspense } from "react";
 import NearbySchools from "./NearbySchools";
 import AreaCard from "@/components/Property/AreaCard";
-import { areaSummary } from "@/lib/census/areaFacts";
+import { areaSummary } from "@/lib/census/plainFacts";
 import NearbyAmenities from "./NearbyAmenities";
 import TypicalRents from "./TypicalRents";
 import PropertyNotFound from "./PropertyNotFound";
@@ -590,10 +590,8 @@ export default async function PropertyPage({
   const areaCard = census ? (
     <AreaCard
       census={census}
-      listingId={id}
       rentMonthly={isLease ? price || null : (view.wholeHomeMonthlyRent ?? view.compMonthlyRent)}
       rentLocked={!isLease && !isAuthed}
-      initialLens={lens === "smart" ? "owner" : "investor"}
     />
   ) : null;
   const jsonLd = buildJsonLd(id, detail);
@@ -1489,22 +1487,6 @@ export default async function PropertyPage({
                           </div>
                         ),
                       },
-                      // The area — Census 2021 facts around the home. Public, not VOW-gated.
-                      census && censusLine
-                        ? {
-                            key: "area",
-                            label: "The area",
-                            icon: <MapPinned className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
-                            sheetTitle: "The area",
-                            value: (
-                              <span className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
-                                {censusLine}
-                              </span>
-                            ),
-                            sub: `Census 2021 · vs ${census.cityName}`,
-                            detail: areaCard,
-                          }
-                        : null,
                     ].filter(Boolean) as IntelligenceTile[]
                   }
                   footer={
@@ -1718,7 +1700,8 @@ export default async function PropertyPage({
                 <NearbyAmenities listingId={id} />
               </MobileCollapse>
 
-              {/* Neighbourhood — Census 2021 facts (tenure, commute, moves, rent check). */}
+              {/* Neighbourhood — Census 2021 facts as plain sentences, plus the rent check. The
+                  only place on the page: owner call 2026-10-29 removed the Numbers-panel tile. */}
               {areaCard && (
                 <MobileCollapse id="area-neighbourhood" title="Neighbourhood" sub={censusLine ?? "Census 2021"}>
                   {areaCard}
