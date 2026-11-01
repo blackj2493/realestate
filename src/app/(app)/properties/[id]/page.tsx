@@ -95,6 +95,7 @@ import TypicalRents from "./TypicalRents";
 import PropertyNotFound from "./PropertyNotFound";
 import DetailMobileNav from "./DetailMobileNav";
 import ClampText from "./ClampText";
+import { conditionalNotice } from "@/lib/listings/statusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +200,7 @@ interface RawListing {
   AssociationFee?: number;
   PublicRemarks?: string;
   StandardStatus?: string;
+  MlsStatus?: string;
   DaysOnMarket?: number;
   OriginalEntryTimestamp?: string;
   TransactionType?: string;
@@ -1152,6 +1154,14 @@ export default async function PropertyPage({
                   )}
                   <span className="text-cyan-700 dark:text-cyan-400">Full analysis ↓</span>
                 </a>
+              )}
+              {/* A conditional deal is still "active" in the IDX feed, so the page would
+                  read as a plain for-sale home. The search card shows the same status as
+                  a "Sold Cond." chip (statusBadge.ts). IDX field, so not gated. */}
+              {isActiveListing && conditionalNotice(p.MlsStatus) && (
+                <p className="mt-1 max-w-prose rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-800 dark:text-amber-200">
+                  {conditionalNotice(p.MlsStatus)}
+                </p>
               )}
               {status.kind === "delisted" && (
                 <p className="mt-1 text-sm text-amber-700 dark:text-amber-300/80">

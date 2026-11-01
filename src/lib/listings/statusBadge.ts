@@ -27,3 +27,25 @@ export function statusBadge(status: string | undefined | null): StatusBadge | nu
   const label = (status ?? "").trim().replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
   return { label, tone: "neutral" };
 }
+
+/**
+ * The listing page's line under the price for a conditional deal. The page resolves these
+ * listings as "active" (they are still StandardStatus=Active in the IDX feed), so without
+ * it a reader who lands from a link, an alert or a search engine sees a plain for-sale
+ * home. Same prefix rule as `statusBadge`. An escape clause means the seller can still
+ * take other offers, which is the one case where an offer today can still win.
+ */
+export function conditionalNotice(status: string | undefined | null): string | null {
+  const s = (status ?? "").toLowerCase().trim();
+  if (s.startsWith("sold conditional")) {
+    return s.includes("escape")
+      ? "Sold conditionally, with an escape clause. The seller accepted an offer with conditions, but can still take other offers."
+      : "Sold conditionally. The seller accepted an offer with conditions. If the conditions are not met, the home comes back on the market.";
+  }
+  if (s.startsWith("leased conditional")) {
+    return s.includes("escape")
+      ? "Leased conditionally, with an escape clause. The landlord accepted an offer with conditions, but can still take other offers."
+      : "Leased conditionally. The landlord accepted an offer with conditions. If the conditions are not met, the home comes back on the market.";
+  }
+  return null;
+}
