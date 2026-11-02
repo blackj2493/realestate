@@ -1,6 +1,6 @@
 {
-  "generatedForDateUtc": "2026-11-01",
-  "dataAsOf": "2026-11-01T04:06:49.296+00:00",
+  "generatedForDateUtc": "2026-11-02",
+  "dataAsOf": "2026-11-02T04:11:19.239+00:00",
   "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
   "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
   "angles": [
@@ -9,35 +9,35 @@
       "region": "Oakville",
       "headline": "34% of active Oakville listings have cut their asking price",
       "figure": "34%",
-      "sampleN": 1116,
+      "sampleN": 1034,
       "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
       "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
-      "context": "typical reduction 7.5%"
+      "context": "typical reduction 7.7%"
     },
     {
       "kind": "days_on_market",
-      "region": "Hamilton",
-      "headline": "The typical active Hamilton listing has now sat 71 days",
-      "figure": "71 days",
-      "sampleN": 2321,
+      "region": "Oakville",
+      "headline": "The typical active Oakville listing has now sat 66 days",
+      "figure": "66 days",
+      "sampleN": 1034,
       "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
       "whySurprising": "Longest median true days-on-market of the markets tracked today."
     },
     {
       "kind": "inventory",
-      "region": "Richmond Hill",
-      "headline": "Richmond Hill is sitting at 6.4 months of supply",
-      "figure": "6.4 months of supply",
-      "sampleN": 1107,
+      "region": "Ajax",
+      "headline": "Ajax is sitting at 3.5 months of supply",
+      "figure": "3.5 months of supply",
+      "sampleN": 308,
       "sourceUrl": "https://www.pureproperty.ca/data/market-temperature",
-      "whySurprising": "Most inventory of the 15 markets tracked today — ≈4–6 months is balanced, and above that tilts toward buyers."
+      "whySurprising": "Least inventory of the 15 markets tracked today — ≈4–6 months is balanced, and below that tilts hard toward sellers."
     },
     {
       "kind": "rental_yield",
       "region": "Ottawa",
       "headline": "A 1-bed in Ottawa grosses about 7.0% rental yield",
       "figure": "7.0% gross yield",
-      "sampleN": 4148,
+      "sampleN": 3756,
       "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
       "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
     }
