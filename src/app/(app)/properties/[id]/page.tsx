@@ -656,8 +656,9 @@ export default async function PropertyPage({
 
   // Mobile section jumper — matches the zoned mobile scroll order (the Numbers
   // panel sits second); ids are shared with the desktop layout's anchors.
-  // 2026-10-27: the for-sale comps moved up to right after the numbers, and the sold
-  // comps above the (now closed) history, to keep the carousels near the top.
+  // 2026-10-27: the for-sale comps moved up to right after the numbers.
+  // 2026-11-03: on phones the history comes before the sold comps and the market data,
+  // and the neighbourhood (Census) moves to the end (owner call: history matters more).
   const navSections = [
     { id: "overview", label: "Overview" },
     { id: "numbers", label: "Numbers" },
@@ -665,8 +666,8 @@ export default async function PropertyPage({
     { id: "details", label: "Details" },
     ...(rooms.length > 0 ? [{ id: "rooms", label: "Rooms" }] : []),
     { id: "area", label: "Area" },
-    { id: "comps", label: "Comps" },
     { id: "history", label: "History" },
+    { id: "comps", label: "Comps" },
   ];
 
   // Shared by the three comps placements (mobile top, desktop top, market zone);
@@ -1696,8 +1697,9 @@ export default async function PropertyPage({
               )}
             </MobileCollapse>
 
-            {/* THE AREA — schools and amenities as closed rows on phones (each card
-                is long), unchanged on desktop. Neighbourhood (Census 2021) is the last row. */}
+            {/* THE AREA — schools and amenities as foldable rows on phones (each card
+                is long), unchanged on desktop. On phones the neighbourhood (Census 2021)
+                renders at the end of the market zone instead (owner call 2026-11-03). */}
             <div id="area" className="scroll-mt-28">
               <div className="lg:hidden"><ZoneLabel>The Area</ZoneLabel></div>
 
@@ -1713,13 +1715,10 @@ export default async function PropertyPage({
                 <NearbyAmenities listingId={id} />
               </MobileCollapse>
 
-              {/* Neighbourhood — Census 2021 facts as plain sentences, plus the rent check. The
-                  only place on the page: owner call 2026-10-29 removed the Numbers-panel tile. */}
-              {areaCard && (
-                <MobileCollapse id="area-neighbourhood" title="Neighbourhood" sub={censusLine ?? "Census 2021"}>
-                  {areaCard}
-                </MobileCollapse>
-              )}
+              {/* Neighbourhood — Census 2021 facts as plain sentences, plus the rent check
+                  (owner call 2026-10-29 removed the Numbers-panel tile). Desktop only here;
+                  the phone copy is the last row of the market zone below. */}
+              {areaCard && <div className="hidden lg:block">{areaCard}</div>}
             </div>
           </div>
         </div>
@@ -1729,14 +1728,18 @@ export default async function PropertyPage({
           <SimilarProperties {...similarProps} part="forSale" placement="desktop_top" />
         </div>
 
-        {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — rents + history + comps. ── */}
-        <section id="market" className="scroll-mt-28 lg:mt-6">
-          <div className="lg:hidden"><ZoneLabel>The Market</ZoneLabel></div>
+        {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — rents + history + comps.
+             Phones reorder it with flex `order` (owner call 2026-11-03): history first,
+             then the zone label, sold comps, the rent/price grids and /data links, and the
+             neighbourhood last. Desktop (lg, block flow) keeps the source order. ── */}
+        <section id="market" className="flex scroll-mt-28 flex-col lg:mt-6 lg:block">
+          <div className="order-2 lg:hidden"><ZoneLabel>The Market</ZoneLabel></div>
 
           {/* Sell + rent grids LEAD the market zone (owner call 2026-07-24: prominent
               placement) — actual close medians (+ middle-50% ranges on sale prices)
               for consumers, asking for anon. Sale listings show prices first, rentals
               rents first. Streamed; self-hides on thin samples or missing coords. */}
+          <div className="order-4 lg:order-none">
           {!isCommercial && (
             <Suspense fallback={null}>
               <TypicalRents listingId={id} salesFirst={!isLease} />
@@ -1748,17 +1751,18 @@ export default async function PropertyPage({
               mind — and because a body link with descriptive anchor text is the only
               internal signal that moved /data at all (see MarketDataLinks' header). */}
           <MarketDataLinks city={marketName} isLease={isLease} />
+          </div>
 
         {/* ── Recently Sold (or Leased) comps — moved ABOVE the history (2026-10-27) so
              the carousel is not the last thing on the page. The for-sale row renders
              higher up (mobile: after the numbers; desktop: below the first band).
              Commercial subjects use exact-subtype + area/price matching; commercial
              leases comp against For-Lease inventory (commercial-gap Phase 1). ── */}
-        <div id="comps" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">
+        <div id="comps" className="order-3 scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px] lg:order-none">
           <SimilarProperties {...similarProps} part="sold" placement="market" />
         </div>
 
-        <section id="history" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px]">
+        <section id="history" className="order-1 scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px] lg:order-none">
           {/* Mobile: OPEN by default again (2026-10-29 — closed-by-default hid too much;
               the comps now sit above it anyway), folded away by a tap. Pure CSS (a peer
               checkbox), so it stays server-rendered — no client boundary, no
@@ -1801,6 +1805,16 @@ export default async function PropertyPage({
           )}
           </div>
         </section>
+
+        {/* MOBILE ONLY: the neighbourhood (Census 2021), last on phones. Desktop's copy is
+            in the area column above. */}
+        {areaCard && (
+          <div className="order-5 mt-4 lg:hidden">
+            <MobileCollapse id="area-neighbourhood" title="Neighbourhood" sub={censusLine ?? "Census 2021"}>
+              {areaCard}
+            </MobileCollapse>
+          </div>
+        )}
 
         </section>
 
