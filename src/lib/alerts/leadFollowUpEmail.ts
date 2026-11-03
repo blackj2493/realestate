@@ -3,8 +3,15 @@
  * question / price-opinion request (api/viewing-requests). Tier-0 speed-to-lead: the top
  * of the brokerage funnel.
  *
- * Mode B "plain note" from the human identity (SENDERS.leadFollowUp = Tanmay). Phase-1
- * framing — delivers data/insight, makes NO representation claim (voice.md §3/§10).
+ * Mode B "plain note" from the human identity (SENDERS.leadFollowUp = Tanmay), signed
+ * with the registrant's full name, brokerage and direct line (voice.md §3, updated
+ * 2026-11-03).
+ *
+ * VIEWING REQUESTS ASK FOR A TIME, NOT FOR PATIENCE. October 2026: a renter replied to
+ * the old "figures are on the way" note within 11 minutes asking to view the unit in an
+ * hour. The note gave her no phone number and promised rent history she did not ask
+ * for. A viewing request is a request to book, so that lane now asks for two times and
+ * gives the number to text. The figure lists below apply to questions and price checks.
  *
  * FOUR LANES. The first version promised one fixed set of figures: days on market "for
  * sale", price history, and monthly carrying cost. Those are the right figures for a
@@ -155,6 +162,21 @@ const INTENT_COPY: Record<LeadIntent, { subject: (where: string) => string; open
   },
 };
 
+/**
+ * The one thing a viewing lead should send back, per lane. A landlord decides on a
+ * tenant fast, so the tenant lanes ask for what the landlord asks first.
+ */
+const VIEWING_ASK: Record<LeadLane, string | null> = {
+  "residential-sale": null,
+  "residential-lease":
+    "So the landlord can say yes quickly, it helps to send your move-in date and how many people will live there.",
+  "commercial-sale": "It helps to know what you plan to run there, so I can check the zoning first.",
+  "commercial-lease":
+    "It helps to know what you plan to run there and when you need it, so I can check with the landlord first.",
+};
+
+const P = `font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 14px;`;
+
 export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
   subject: string;
   html: string;
@@ -165,32 +187,57 @@ export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
   const lane = input.lane ?? "residential-sale";
   const intent = input.intent ?? "viewing";
   const unsub = marketingUnsubscribeUrl(input.email, SITE);
+  const { phone, name, credential } = SENDERS.leadFollowUp;
 
   const { subject: subjectOf, opener } = INTENT_COPY[intent];
   const subject = subjectOf(where);
-  const preheader = LANE_PREHEADER[lane];
-  const figures = LANE_FIGURES[lane];
+
+  // Each paragraph is plain text; html and text are built from the same list so the two
+  // parts can never say different things.
+  let preheader: string;
+  let paras: string[];
+  let figures: string[] = [];
+  if (intent === "viewing") {
+    preheader = `Reply with a time, or text me at ${phone}.`;
+    paras = [
+      `${opener} ${where}. I can set up a showing.`,
+      `Reply with two times that work for you, or call or text me at ${phone} — a text is the fastest way to book.`,
+      ...(VIEWING_ASK[lane] ? [VIEWING_ASK[lane] as string] : []),
+    ];
+  } else {
+    preheader = LANE_PREHEADER[lane];
+    figures = LANE_FIGURES[lane];
+    paras = [
+      `${opener} ${where}. I'll come back to you personally, and soon, with the figures that matter on this one:`,
+    ];
+  }
+  const closing =
+    intent === "viewing"
+      ? []
+      : [`Is there anything specific you want me to check first? If a call is easier, call or text me at ${phone}.`];
 
   const items = figures.map((f) => `<li style="margin:0 0 8px;">${esc(f)}</li>`).join("");
+  const htmlPara = (s: string, i: number) =>
+    i === 0 && s.includes(where)
+      ? `<p style="${P}">${esc(s).replace(esc(where), `<b>${esc(where)}</b>`)}</p>`
+      : `<p style="${P}">${esc(s)}</p>`;
 
   const body = `
-    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 14px;">Hi ${esc(fn)},</p>
-    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 14px;">${esc(opener)} <b>${esc(where)}</b>. I'll come back to you personally, and soon, with the figures that matter on this one:</p>
-    <ul style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 18px;padding-left:20px;">${items}</ul>
-    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 22px;">Is there anything specific you want me to check first?</p>
-    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0;">— Tanmay, PureProperty</p>
+    <p style="${P}">Hi ${esc(fn)},</p>
+    ${paras.map(htmlPara).join("\n    ")}
+    ${items ? `<ul style="${P}margin:0 0 18px;padding-left:20px;">${items}</ul>` : ""}
+    ${closing.map((s) => `<p style="${P}">${esc(s)}</p>`).join("")}
+    <p style="${P}margin:22px 0 0;">— ${esc(name)}<br><span style="color:#475569;font-size:13px;">${esc(credential)} · ${esc(phone)}</span></p>
     <p style="color:#94a3b8;font-size:11px;margin-top:30px;line-height:1.6;">You asked us about this property on PureProperty.ca. <a href="${unsub}" style="color:#94a3b8;">Not interested — stop these</a>.</p>`;
 
   const text = [
     `Hi ${fn},`,
     "",
-    `${opener} ${where}. I'll come back to you personally, and soon, with the figures that matter on this one:`,
-    "",
-    ...figures.map((f) => `- ${f}`),
-    "",
-    "Is there anything specific you want me to check first?",
-    "",
-    "— Tanmay, PureProperty",
+    ...paras.flatMap((p) => [p, ""]),
+    ...(figures.length ? [...figures.map((f) => `- ${f}`), ""] : []),
+    ...closing.flatMap((p) => [p, ""]),
+    `— ${name}`,
+    `${credential} · ${phone}`,
     "",
     `Not interested — stop these: ${unsub}`,
   ].join("\n");

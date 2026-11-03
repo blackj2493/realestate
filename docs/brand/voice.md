@@ -99,12 +99,17 @@ relationship forms (welcome, lead follow-up). Hold the voice — flex the warmth
   property): from a human identity, `replyTo` set to a monitored inbox. **The name is
   phased** because the founder is currently registered with another brokerage and
   PureProperty is not yet a registered brokerage:
-  - **Phase 1 (now, pre-brokerage):** sign as **`— Tanmay, PureProperty`** — a real
-    first name, **no title, no "Realty/Brokerage" suffix**. (Whoever signs as Tanmay
-    must be the real person who actually reads and replies to these leads — the name is
-    not a mascot.) Do **not** claim agent/representation status. The follow-up delivers
-    *data and insight* (True DOM, price history, Capital Burn Rate), not an offer to
-    represent the buyer. This keeps us honest and compliant while registered elsewhere.
+  - **Phase 1 (now, pre-brokerage) — UPDATED 2026-11-03 (owner decision):** sign as
+    the registrant, not the site: **`— Tanmay Rao`** + `Sales Representative, eXp
+    Realty, Brokerage · 647-466-2109` (`SENDERS.leadFollowUp`). The lead reply is
+    Tanmay's own outreach as an eXp registrant, so RECO wants the registered name and the
+    brokerage name on it — the old first-name-only sign-off hid both. PureProperty is
+    still never presented as a brokerage. **A viewing request gets a booking reply**
+    (two times + the direct line to text), not a promise of figures: in October 2026 a
+    renter answered the figures note within 11 minutes asking to view within the hour,
+    and the note had no phone number. Questions and price checks keep the figures list.
+  - _Superseded wording (pre-2026-11-03):_ `— Tanmay, PureProperty`, no title, data-only
+    framing.
   - **Phase 2 (brokerage live):** switch to a **real, RECO-registered person** — full
     name + credential, e.g. `— Jagdeep [Last], Broker of Record, PureProperty Realty`.
     Representation offers activate here. In Ontario, client-facing real estate comms

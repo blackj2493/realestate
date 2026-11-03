@@ -12,6 +12,10 @@
 export interface Sender {
   from: string;
   replyTo?: string;
+  /** Human senders only: the registrant identity a personal note signs with. */
+  phone?: string;
+  name?: string;
+  credential?: string;
 }
 
 const ALERTS_FROM =
@@ -28,6 +32,11 @@ export const SENDERS = {
   leadFollowUp: {
     from: "Tanmay at PureProperty <tanmay@pureproperty.ca>",
     replyTo: "tanmay@pureproperty.ca",
+    /** Direct line for leads. A text is the fastest way to book a showing. */
+    phone: "647-466-2109",
+    /** RECO: a registrant's own outreach names the registrant and the brokerage. */
+    name: "Tanmay Rao",
+    credential: "Sales Representative, eXp Realty, Brokerage",
   },
   /**
    * Weekly Data Drop — the editorial/marketing stream (WS2).
