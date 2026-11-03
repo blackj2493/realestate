@@ -24,7 +24,21 @@ export interface LeadIntentDef {
   placeholder: string;
   /** Only "viewing" needs a preferred-time picker. */
   showTime: boolean;
+  /** Buyer qualifiers (timeline + already represented). Price checks only: the one
+   *  rung that produced every sale-side lead and the first closed deal (2026). */
+  qualify: boolean;
+  /** Label for the optional phone field. */
+  phoneLabel: string;
 }
+
+/** Allowlisted answers — the API rejects anything else, so the stored tag stays clean. */
+export const TIMELINE_OPTIONS = [
+  "Ready to make an offer",
+  "Within 3 months",
+  "3 to 12 months",
+  "Just researching",
+] as const;
+export const AGENT_OPTIONS = ["No", "Yes"] as const;
 
 export const LEAD_INTENTS: Record<LeadIntent, LeadIntentDef> = {
   viewing: {
@@ -36,6 +50,8 @@ export const LEAD_INTENTS: Record<LeadIntent, LeadIntentDef> = {
     submitLabel: "Request Viewing",
     placeholder: "Anything specific you'd like to see?",
     showTime: true,
+    qualify: false,
+    phoneLabel: "Phone — the fastest way to book a time",
   },
   question: {
     id: "question",
@@ -46,6 +62,8 @@ export const LEAD_INTENTS: Record<LeadIntent, LeadIntentDef> = {
     submitLabel: "Send question",
     placeholder: "e.g. Is it tenanted? Any pending special assessment? What's the real monthly hydro + gas?",
     showTime: false,
+    qualify: false,
+    phoneLabel: "Phone",
   },
   price_opinion: {
     id: "price_opinion",
@@ -56,6 +74,8 @@ export const LEAD_INTENTS: Record<LeadIntent, LeadIntentDef> = {
     submitLabel: "Request our read",
     placeholder: "We'll reply with our take on the price vs recent comparable sales.",
     showTime: false,
+    qualify: true,
+    phoneLabel: "Phone — the fastest way to get the answer",
   },
 };
 

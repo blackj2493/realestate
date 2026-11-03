@@ -3,6 +3,7 @@ import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
 import { sendLeadFollowUp, fetchLeadLane, type LeadIntent } from "@/lib/alerts/leadFollowUpEmail";
 import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
+import { TIMELINE_OPTIONS, AGENT_OPTIONS } from "@/components/Property/leadIntents";
 
 export const dynamic = "force-dynamic";
 
@@ -47,9 +48,21 @@ export async function POST(req: NextRequest) {
     const intent =
       typeof body?.intent === "string" && body.intent in INTENT_LABELS ? body.intent : "viewing";
     const leadLabel = INTENT_LABELS[intent];
+    // Buyer qualifiers (price checks). Allowlisted, so an unknown value is dropped rather
+    // than stored; both are optional and never block the lead.
+    const pick = <T extends readonly string[]>(v: unknown, allowed: T) =>
+      typeof v === "string" && (allowed as readonly string[]).includes(v) ? v : "";
+    const timeline = intent === "price_opinion" ? pick(body?.timeline, TIMELINE_OPTIONS) : "";
+    const hasAgent = intent === "price_opinion" ? pick(body?.hasAgent, AGENT_OPTIONS) : "";
+    const qualifiers = [timeline && `[Timeline: ${timeline}]`, hasAgent && `[Has agent: ${hasAgent}]`]
+      .filter(Boolean)
+      .join(" ");
     // Non-viewing intents tag the message so the lead type survives without a schema change.
+    // The intent tag stays FIRST: lead reporting matches on the "[Price" prefix.
     const taggedMessage =
-      intent === "viewing" ? message || null : `[${leadLabel}]${message ? ` ${message}` : ""}`;
+      intent === "viewing"
+        ? message || null
+        : [`[${leadLabel}]`, qualifiers, message].filter(Boolean).join(" ");
 
     if (!LISTING_KEY_RE.test(listingKey)) return bad("Invalid listing key");
     if (!name || name.length > MAX.name) return bad("Name is required");
@@ -86,6 +99,8 @@ export async function POST(req: NextRequest) {
         `Email: ${email}`,
         phone && `Phone: ${phone}`,
         preferredTime && `Preferred time: ${preferredTime}`,
+        timeline && `Buying timeline: ${timeline}`,
+        hasAgent && `Working with an agent: ${hasAgent}`,
         message && `Message: ${message}`,
       ].filter(Boolean).join("\n"),
     });
