@@ -21,6 +21,7 @@
  * never fail the lead capture / terms acceptance that triggered it). Callers get a
  * SendResult instead of an exception; the failure is already logged + recorded.
  */
+import { tagEmailLinks } from "./emailUtm";
 import { Resend } from "resend";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { undeliverableReason } from "@/lib/email/deliverability";
@@ -67,7 +68,10 @@ async function recordFailure(kind: string, reason: string, to: string | string[]
 }
 
 export async function sendTransactionalEmail(input: SendEmailInput): Promise<SendResult> {
-  const { kind, to, from, subject, html, text, replyTo, headers } = input;
+  const { kind, to, from, subject, replyTo, headers } = input;
+  // Every own-site link gets UTM tags here, once, for every email kind (see emailUtm.ts):
+  // without them a digest click lands in analytics as "direct".
+  const { html, text } = tagEmailLinks(kind, input.html, input.text);
 
   // Deliverability backstop. Every sender in the repo funnels through here, so this is the
   // one place that can promise the provider never sees an address that cannot receive mail.
