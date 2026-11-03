@@ -153,10 +153,10 @@ export type AnalyticsEvents = {
     /** A seller named their home, so they land on its /address page. */
     sellerAddress: boolean;
   };
-  /** The selling-plan card on an /address page was opened (the form shown). */
-  'selling_plan_opened': Record<string, never>;
-  /** A selling-plan request was accepted by the server — a seller lead. */
-  'selling_plan_requested': { hasPhone: boolean };
+  /** An address-page offer card was opened (the form shown): selling plan or home report. */
+  'address_offer_opened': { intent: 'selling_plan' | 'home_report' };
+  /** An address-page offer request was accepted by the server — a lead. */
+  'address_offer_requested': { intent: 'selling_plan' | 'home_report'; hasPhone: boolean };
 
   // First saved home (src/components/watchlist). A reader who saved a home on signup day
   // came back on a later day at 81% vs 33-34% without one (2026-10-04, 422 signups).

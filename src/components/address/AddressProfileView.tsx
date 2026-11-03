@@ -62,6 +62,7 @@ import PulseCard from "./PulseCard";
 import ActivityTicker, { type TickerItem } from "./ActivityTicker";
 import IfListedToday, { type ListedTodayBand } from "./IfListedToday";
 import SellingPlanCard from "./SellingPlanCard";
+import HomeReportCard from "./HomeReportCard";
 import { dominantSubType } from "./listedTodayDefault";
 import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import ActivityFeed from "./ActivityFeed";
@@ -619,6 +620,13 @@ export default async function AddressProfileView({
             <SaleRecordCard record={saleRecord} />
           </div>
         )}
+
+        {/* Home report (2026-11): our history reaches back only to mid-2024, so the full
+            story of this home is offered as a written report instead. Near the top: it is
+            the question most visitors of a specific address came with. */}
+        <div className="mt-5">
+          <HomeReportCard address={[streetAddress, profile.city].filter(Boolean).join(", ")} />
+        </div>
 
         {nearby && <ActivityTicker items={tickerItems} radiusKm={nearby.radiusKm} />}
 

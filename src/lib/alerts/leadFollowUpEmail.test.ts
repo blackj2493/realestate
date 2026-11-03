@@ -233,3 +233,17 @@ describe("selling plan (address-page seller offer)", () => {
     expect(text).not.toMatch(/costs to own/i);
   });
 });
+
+describe("home report (address-page report offer)", () => {
+  it("promises more than the history, and never names REALTOR or MLS", () => {
+    const { subject, text, html } = renderLeadFollowUpEmail({ ...base, listingKey: "", intent: "home_report" });
+    expect(subject).toBe("Your report on 12 Main St, Toronto");
+    expect(text).toMatch(/listed, sold or leased/);
+    expect(text).toMatch(/what changed between sales/);
+    expect(text).toMatch(/likely worth today/);
+    expect(text).toMatch(/what to check before you buy/);
+    // The signature carries the registrant line by design; the BODY must not pitch MLS.
+    expect(text.split("— Tanmay")[0]).not.toMatch(/MLS/);
+    expect(html).toBeTruthy();
+  });
+});

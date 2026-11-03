@@ -127,6 +127,20 @@ describe('POST /api/viewing-requests', () => {
     expect((sendSpy.mock.calls[0][0] as { subject: string }).subject).toBe('Selling plan — 12 Main St, Mississauga');
   });
 
+  it('home report: address-identified like the selling plan', async () => {
+    const res = await POST(makeReq({
+      intent: 'home_report',
+      address: '7 Elm Ave, Toronto',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+    }) as never);
+    expect(res.status).toBe(200);
+    const row = insertSpy.mock.calls[0][0];
+    expect(row.listing_key).toBe('');
+    expect(row.message).toBe('[Home report]');
+    expect((sendSpy.mock.calls[0][0] as { subject: string }).subject).toBe('Home report — 7 Elm Ave, Toronto');
+  });
+
   it('selling plan without an address is rejected; other intents still need a listing key', async () => {
     const a = await POST(makeReq({ intent: 'selling_plan', name: 'Jane', email: 'jane@example.com' }) as never);
     expect(a.status).toBe(400);
