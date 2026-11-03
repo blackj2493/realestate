@@ -134,7 +134,7 @@ export type AnalyticsEvents = {
   /** The Terms screen rendered. Four required fields sit between here and completion. */
   'auth_terms_viewed': { firstRun: boolean };
   /** Submitted Terms with something missing — says WHICH gate turned them back. */
-  'auth_terms_blocked': { reason: 'missing_confirmation' | 'missing_market' };
+  'auth_terms_blocked': { reason: 'missing_confirmation' | 'missing_goal' | 'missing_market' };
   /**
    * Terms accepted and a market chosen. The account is now real and reachable.
    *
@@ -143,7 +143,20 @@ export type AnalyticsEvents = {
    * saved areas are in that state, and the readers sitting there unsubscribe at 27.8%.
    * Crossed against `market`, it also names which markets are handing someone a firehose.
    */
-  'auth_signup_completed': { market: string; narrowed: boolean; homeTypes: number; minBeds: number };
+  'auth_signup_completed': {
+    market: string;
+    narrowed: boolean;
+    homeTypes: number;
+    minBeds: number;
+    /** "What brings you here?" (2026-11): buying / selling / investing / renting / researching. */
+    goal: string;
+    /** A seller named their home, so they land on its /address page. */
+    sellerAddress: boolean;
+  };
+  /** An address-page offer card was opened (the form shown): selling plan or home report. */
+  'address_offer_opened': { intent: 'selling_plan' | 'home_report' };
+  /** An address-page offer request was accepted by the server — a lead. */
+  'address_offer_requested': { intent: 'selling_plan' | 'home_report'; hasPhone: boolean };
 
   // First saved home (src/components/watchlist). A reader who saved a home on signup day
   // came back on a later day at 81% vs 33-34% without one (2026-10-04, 422 signups).

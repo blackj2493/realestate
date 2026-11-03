@@ -100,8 +100,8 @@ export default async function WelcomePage({
             VOW Access Terms
           </h1>
           <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted-foreground">
-            One step before you can view sold data and valuations — then tell us which area
-            to follow for you.
+            One step before you can view sold data and valuations — then tell us what brings
+            you here and which area to follow for you.
           </p>
 
           <div className="mt-6">

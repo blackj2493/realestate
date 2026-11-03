@@ -42,7 +42,7 @@ export type LeadLane =
   | "commercial-lease";
 
 /** The CTA-ladder intents from api/viewing-requests. Mirrors INTENT_LABELS there. */
-export type LeadIntent = "viewing" | "question" | "price_opinion";
+export type LeadIntent = "viewing" | "question" | "price_opinion" | "selling_plan" | "home_report";
 
 export interface LeadFollowUpInput {
   name: string;
@@ -160,7 +160,31 @@ const INTENT_COPY: Record<LeadIntent, { subject: (where: string) => string; open
     subject: (where) => `Your price check on ${where}`,
     opener: "Got your request for a price check on",
   },
+  selling_plan: {
+    subject: (where) => `Your selling plan — ${where}`,
+    opener: "Got your request for a selling plan for",
+  },
+  home_report: {
+    subject: (where) => `Your report on ${where}`,
+    opener: "Got your request for the full report on",
+  },
 };
+
+/** What the home report covers — the same four points the address-page card promises. */
+const HOME_REPORT_FIGURES = [
+  "every time it was listed, sold or leased, with each price change",
+  "what changed between sales, such as renovations and additions",
+  "what it is likely worth today, compared with recent sales on the street",
+  "what to check before you buy: flood zones, rail lines, permits and the school catchment",
+];
+
+/** What a homeowner's selling plan covers — the same four points the address-page card promises. */
+const SELLING_PLAN_FIGURES = [
+  "the price to list at, and what similar homes on and near your street actually sold for",
+  "how long homes like yours really take to sell, counting the ones that came down and went back up",
+  "which upgrades are worth doing before you list, and which are not",
+  "when to list, and which homes you would be competing with today",
+];
 
 /**
  * The one thing a viewing lead should send back, per lane. A landlord decides on a
@@ -204,6 +228,14 @@ export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
       `Reply with two times that work for you, or call or text me at ${phone} — a text is the fastest way to book.`,
       ...(VIEWING_ASK[lane] ? [VIEWING_ASK[lane] as string] : []),
     ];
+  } else if (intent === "home_report") {
+    preheader = "Your report on this home is on the way.";
+    figures = HOME_REPORT_FIGURES;
+    paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
+  } else if (intent === "selling_plan") {
+    preheader = "Your selling plan is on the way.";
+    figures = SELLING_PLAN_FIGURES;
+    paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
   } else {
     preheader = LANE_PREHEADER[lane];
     figures = LANE_FIGURES[lane];

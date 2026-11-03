@@ -38,6 +38,15 @@
  * The copy beneath it names BOTH outcomes, so skipping is an informed choice rather than a
  * surprise on night one. Budget is deliberately not asked: MarketActivityLens carries no
  * price field, and asking a question we would then ignore is worse than not asking.
+ *
+ * AND IT ASKS "WHAT BRINGS YOU HERE?" (2026-11) — one tap, required like the market.
+ * `profiles.signup_intent` was empty for every account before this, so nothing could tell a
+ * buyer from a seller from a renter. A seller may name their home (optional); with an
+ * address they land on that home's /address page instead of the map, because a seller's
+ * first question is "what is mine worth, and what sold on my street?". There is NO contact
+ * offer here on purpose: a realtor offer at signup reads as a sales funnel to an audience
+ * that already asks whether we are a marketing account. Help is offered later, where the
+ * person is already looking at a price (the address page's selling-plan card, listings).
  */
 
 import { useState, useEffect } from "react";
@@ -54,6 +63,9 @@ import { track } from "@/lib/analytics/posthog";
 import { readTouches } from "@/lib/analytics/touch";
 import { marketSourceFromNext } from "@/lib/auth/seedMarket";
 import { markSaveOffer } from "@/lib/watchlist/saveOffer";
+import { SIGNUP_GOALS, type SignupGoal } from "@/lib/auth/signupIntent";
+import { addressProfileHref } from "@/lib/search/searchTarget";
+import SellerAddressField from "./SellerAddressField";
 import {
   getConfig,
   saveConfig,
@@ -106,6 +118,9 @@ export default function AcceptTermsForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [market, setMarket] = useState<string | null>(null);
+  // "What brings you here?" — required, one tap. A seller may also name their home.
+  const [goal, setGoal] = useState<SignupGoal | null>(null);
+  const [sellAddress, setSellAddress] = useState("");
   // A city too big to follow whole (Toronto) opens its parts instead of being picked.
   const [openCity, setOpenCity] = useState<string | null>(null);
   // The optional narrowing answer. Empty means "everything", which is what every account
@@ -137,7 +152,7 @@ export default function AcceptTermsForm({
 
   const allChecked = notAgent && bonaFide && agree;
   // Both halves are required. An account with no area is an account we can never mail.
-  const ready = allChecked && market !== null;
+  const ready = allChecked && goal !== null && market !== null;
 
   const submit = async () => {
     // Which gate turned them back is the actionable half. "Missing market" would argue for
@@ -146,6 +161,11 @@ export default function AcceptTermsForm({
     if (!allChecked) {
       track("auth_terms_blocked", { reason: "missing_confirmation" });
       setError("All three confirmations are required.");
+      return;
+    }
+    if (!goal) {
+      track("auth_terms_blocked", { reason: "missing_goal" });
+      setError("Tell us what brings you here.");
       return;
     }
     if (!market) {
@@ -172,6 +192,8 @@ export default function AcceptTermsForm({
           // Where this visitor came from (lib/analytics/touch). Saved once, on the first
           // acceptance only; the server re-validates it and never fails a signup over it.
           touches: readTouches(),
+          // Why they joined. The server validates it and never fails a signup over it.
+          intent: { goal, address: goal === "selling" ? sellAddress.trim() || undefined : undefined },
         }),
       });
       if (!res.ok) {
@@ -187,6 +209,8 @@ export default function AcceptTermsForm({
       // high skip rate is a market whose readers are about to get a city-wide firehose.
       track("auth_signup_completed", {
         market,
+        goal,
+        sellerAddress: goal === "selling" && sellAddress.trim().length > 0,
         narrowed: homeTypes.length > 0 || minBeds > 0,
         homeTypes: homeTypes.length,
         minBeds,
@@ -212,6 +236,16 @@ export default function AcceptTermsForm({
         });
       } catch {
         /* private mode / quota — never block entry over a convenience cache */
+      }
+
+      // A seller who named their home lands on it: the address page answers their first
+      // question (what sold on my street) and carries the selling-plan offer. An explicit
+      // `next` still wins below only when no address was given.
+      const sellerHref = goal === "selling" && sellAddress.trim() ? addressProfileHref(sellAddress.trim()) : null;
+      if (sellerHref) {
+        router.replace(sellerHref);
+        router.refresh();
+        return;
       }
 
       if (firstRun) {
@@ -258,6 +292,38 @@ export default function AcceptTermsForm({
         I agree to the VOW Terms of Use and will use this data for personal, non-commercial purposes
         only.
       </CheckRow>
+
+      <div className="border-t border-border pt-4">
+        <p className="terminal-font text-[11px] uppercase tracking-wider text-muted-foreground">
+          What brings you here?
+        </p>
+        <div role="group" aria-label="What brings you here" className="mt-3 flex flex-wrap gap-2">
+          {SIGNUP_GOALS.map((g) => {
+            const active = goal === g.id;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setGoal(active ? null : g.id)}
+                className={cn(
+                  "min-h-[36px] border px-3 py-1.5 text-xs transition-colors",
+                  active
+                    ? "border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                    : "border-border bg-card text-muted-foreground hover:border-cyan-600/60 hover:text-foreground"
+                )}
+              >
+                {g.label}
+              </button>
+            );
+          })}
+        </div>
+        {goal === "selling" && (
+          <div className="mt-3">
+            <SellerAddressField value={sellAddress} onChange={setSellAddress} />
+          </div>
+        )}
+      </div>
 
       <div className="border-t border-border pt-4">
         <p className="terminal-font text-[11px] uppercase tracking-wider text-muted-foreground">

@@ -221,3 +221,29 @@ describe("signature (RECO: registrant name + brokerage)", () => {
     expect(render("residential-sale", "price_opinion").text).toMatch(/call or text me at 647-466-2109/);
   });
 });
+
+describe("selling plan (address-page seller offer)", () => {
+  it("promises the four parts of the plan, not buyer figures", () => {
+    const { subject, text } = renderLeadFollowUpEmail({ ...base, listingKey: "", intent: "selling_plan" });
+    expect(subject).toBe("Your selling plan — 12 Main St, Toronto");
+    expect(text).toMatch(/price to list at/);
+    expect(text).toMatch(/really take to sell/);
+    expect(text).toMatch(/upgrades are worth doing/);
+    expect(text).toMatch(/when to list/i);
+    expect(text).not.toMatch(/costs to own/i);
+  });
+});
+
+describe("home report (address-page report offer)", () => {
+  it("promises more than the history, and never names REALTOR or MLS", () => {
+    const { subject, text, html } = renderLeadFollowUpEmail({ ...base, listingKey: "", intent: "home_report" });
+    expect(subject).toBe("Your report on 12 Main St, Toronto");
+    expect(text).toMatch(/listed, sold or leased/);
+    expect(text).toMatch(/what changed between sales/);
+    expect(text).toMatch(/likely worth today/);
+    expect(text).toMatch(/what to check before you buy/);
+    // The signature carries the registrant line by design; the BODY must not pitch MLS.
+    expect(text.split("— Tanmay")[0]).not.toMatch(/MLS/);
+    expect(html).toBeTruthy();
+  });
+});
