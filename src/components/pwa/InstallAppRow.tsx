@@ -1,7 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { useInstallPrompt, useInstallPlatform } from "@/lib/pwa/useInstallPrompt";
+import { useInstallPrompt, useMenuInstallMode } from "@/lib/pwa/useInstallPrompt";
 
 interface InstallAppRowProps {
   /** Called first on tap — the drawer closes itself before the prompt/sheet appears. */
@@ -10,23 +10,29 @@ interface InstallAppRowProps {
 
 /**
  * "Install app" row for the mobile navigation drawer — the one place a user goes
- * looking for it, as opposed to the nudge that comes looking for them. Renders only
- * where an install is possible right now, and never once installed.
+ * looking for it, as opposed to the nudge that comes looking for them. Shows in every
+ * iPhone/iPad and Android browser tab (menuInstallMode): Chrome's dialog when Chrome
+ * offers it, else the how-to sheet. Hidden when running from the home screen.
  */
 export default function InstallAppRow({ onAction }: InstallAppRowProps) {
-  const platform = useInstallPlatform();
+  const mode = useMenuInstallMode();
   const promptInstall = useInstallPrompt((s) => s.promptInstall);
-  const openIosSheet = useInstallPrompt((s) => s.openIosSheet);
+  const openStepsSheet = useInstallPrompt((s) => s.openStepsSheet);
 
-  if (platform === "installed" || platform === "unsupported") return null;
+  if (mode === null) return null;
 
   return (
     <button
       type="button"
       onClick={() => {
         onAction?.();
-        if (platform === "ios") openIosSheet("menu");
-        else void promptInstall("menu");
+        if (mode === "ios-steps") openStepsSheet("ios", "menu");
+        else if (mode === "android-steps") openStepsSheet("android", "menu");
+        else
+          void promptInstall("menu").then((r) => {
+            // The held event can go stale; show the steps rather than do nothing.
+            if (r === "unavailable" && /Android/i.test(navigator.userAgent)) openStepsSheet("android", "menu");
+          });
       }}
       // Mirrors the nav link rows above it (MobileNav.tsx) so it reads as one list.
       className="terminal-font flex w-full items-center gap-3 border-l-2 border-transparent px-4 py-3 text-left text-[12px] uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-card hover:text-cyan-700 dark:hover:text-cyan-400"
