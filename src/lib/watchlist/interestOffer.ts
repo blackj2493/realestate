@@ -107,3 +107,23 @@ export function takeInterestOffer(
   write(store, book);
   return reason;
 }
+
+/**
+ * Third visit to the same SALE listing → offer the free price second-opinion (2026-11).
+ * The price-opinion form produced every sale-side lead and the one closed deal; readers who
+ * keep returning to one home (52 people, 145 homes with 3+ visits in 30 days) are the ones
+ * weighing an offer. Separate flag from the save offer; claimed once per home.
+ */
+export const OPINION_MIN_VISITS = 3;
+
+export function takeOpinionOffer(listingKey: string, store = localStore()): boolean {
+  if (!store || !listingKey) return false;
+  const k = norm(listingKey);
+  const book = read(store);
+  const e = book[k] as (Entry & { opinionOffered?: boolean }) | undefined;
+  if (!e || e.opinionOffered || e.visits < OPINION_MIN_VISITS) return false;
+  e.opinionOffered = true;
+  book[k] = e;
+  write(store, book);
+  return true;
+}

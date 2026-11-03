@@ -167,6 +167,10 @@ export type AnalyticsEvents = {
   'signup_save_offer_dismissed': { listingKey: string };
   /** One-tap save offered because the reader showed interest (2026-11): a repeat visit to the
    *  same listing, or arrival from one of our emails. Measured apart from the signup offer. */
+  /** Third visit to the same sale listing → free price second-opinion offered (2026-11). */
+  'opinion_offer_shown': { listingKey: string };
+  'opinion_offer_clicked': { listingKey: string };
+  'opinion_offer_dismissed': { listingKey: string };
   'save_offer_shown': { listingKey: string; reason: 'repeat_view' | 'from_email' };
   'save_offer_accepted': { listingKey: string; reason: 'repeat_view' | 'from_email' };
   'save_offer_dismissed': { listingKey: string; reason: 'repeat_view' | 'from_email' };

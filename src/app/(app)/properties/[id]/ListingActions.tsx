@@ -7,6 +7,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useWatchlistStore } from "@/lib/watchlist/useWatchlist";
 import ScheduleViewingForm from "@/components/Property/ScheduleViewingForm";
 import CtaLadder from "@/components/Property/CtaLadder";
+import OpinionNudge from "@/components/Property/OpinionNudge";
 import SellingPlanCard from "@/components/address/SellingPlanCard";
 
 /**
@@ -57,6 +58,8 @@ export default function ListingActions({
 
       {statusKind === "active" && (
         <>
+          {/* Third visit to this sale listing → free price second-opinion (2026-11). */}
+          {!isLease && <OpinionNudge listingKey={id} />}
           <CtaLadder listingKey={id} isLease={isLease} />
           {/* Shared form: rendered (event-only) so every ladder rung opens it inline. */}
           <ScheduleViewingForm listingKey={id} address={address} price={price} renderTrigger={false} />

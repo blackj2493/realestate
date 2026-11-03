@@ -62,3 +62,25 @@ describe("takeInterestOffer", () => {
     expect(takeInterestOffer("W1", "", null)).toBeNull();
   });
 });
+
+describe("takeOpinionOffer", () => {
+  it("offers the price opinion on the third visit, once", async () => {
+    const { takeOpinionOffer } = await import("./interestOffer");
+    const s = memStore();
+    recordListingVisit("C9", 0, s);
+    recordListingVisit("C9", VISIT_GAP_MS, s);
+    expect(takeOpinionOffer("C9", s)).toBe(false);
+    recordListingVisit("C9", 2 * VISIT_GAP_MS, s);
+    expect(takeOpinionOffer("C9", s)).toBe(true);
+    recordListingVisit("C9", 3 * VISIT_GAP_MS, s);
+    expect(takeOpinionOffer("C9", s)).toBe(false);
+  });
+
+  it("is independent of the save offer", async () => {
+    const { takeOpinionOffer } = await import("./interestOffer");
+    const s = memStore();
+    for (let i = 0; i < 3; i++) recordListingVisit("C8", i * VISIT_GAP_MS, s);
+    expect(takeInterestOffer("C8", "", s)).toBe("repeat_view");
+    expect(takeOpinionOffer("C8", s)).toBe(true);
+  });
+});
