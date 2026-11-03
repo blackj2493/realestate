@@ -25,6 +25,11 @@
  * value means any" identically as no filter, because all three should behave exactly as
  * signup behaved before the question existed. There is no shape of it worth a 400: failing
  * a Terms acceptance over a chip would be the tail wagging the dog.
+ *
+ * `intent` — "What brings you here?" (2026-11) — is stored in `profiles.signup_intent` on
+ * every acceptance that sends a usable one. Same posture as `filter`: an unusable value is
+ * dropped, never a 400, and a failed write never fails the acceptance. It was empty for
+ * every account before this; see lib/auth/signupIntent.
  */
 
 import { NextResponse } from "next/server";
@@ -34,6 +39,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cleanSignupRegion, seedSignupRegion } from "@/lib/dashboard/seedSignupRegion";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { saveSignupAttribution } from "@/lib/analytics/signupAttribution";
+import { cleanSignupIntent } from "@/lib/auth/signupIntent";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +53,7 @@ export async function POST(request: Request) {
     region?: unknown;
     filter?: unknown;
     touches?: unknown;
+    intent?: unknown;
   } = {};
   try {
     body = await request.json();
@@ -88,6 +95,20 @@ export async function POST(request: Request) {
     console.warn("[accept-terms] no region in body — pre-deploy client bundle?");
   }
 
+  // Why this account joined (profiles.signup_intent). Best-effort, like the seed above.
+  const intent = cleanSignupIntent(body.intent);
+  if (intent && result.userId) {
+    try {
+      const { error } = await getServiceRoleClient()
+        .from("profiles")
+        .update({ signup_intent: { ...intent, at: new Date().toISOString() } })
+        .eq("id", result.userId);
+      if (error) console.error("[accept-terms] intent save failed:", error.message);
+    } catch (e) {
+      console.error("[accept-terms] intent save threw (acceptance recorded):", e);
+    }
+  }
+
   // Where this account came from (migration 152). First acceptance only — a re-accept
   // after a Terms bump is not a signup. Never fails the response, like the seed above.
   if (result.firstAcceptance && result.userId) {
@@ -109,5 +130,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, region: region ?? null, seeded, filtered });
+  return NextResponse.json({ ok: true, region: region ?? null, seeded, filtered, intent: intent?.goal ?? null });
 }

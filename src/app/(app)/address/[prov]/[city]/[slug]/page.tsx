@@ -39,6 +39,7 @@ import SaleRecordCard from "@/components/address/SaleRecordCard";
 import { resolveAddressSlug } from "@/lib/address/resolveProfile";
 import AddressProfileView from "@/components/address/AddressProfileView";
 import AreaInsights from "@/components/address/AreaInsights";
+import SellingPlanCard from "@/components/address/SellingPlanCard";
 import TrackAddressCard from "@/components/address/TrackAddressCard";
 import PropertyGallery from "@/app/(app)/properties/[id]/PropertyGallery";
 import { Redact, UnlockCta } from "@/components/Property/teaserPrimitives";
@@ -379,6 +380,15 @@ export default async function AddressPage({
             lng={pub.location?.[1] ?? null}
           />
         </section>
+
+        {/* Seller offer (2026-11). This keyed page is where a homeowner lands when their home
+            has a past sale on record, so the offer must be here too, not only on the profile
+            view. Not on a lease record (that reader is a tenant). Address only; nothing VOW. */}
+        {pub.dealKind !== "leased" && (
+          <section className="mb-6">
+            <SellingPlanCard address={[pub.address, cityName].filter(Boolean).join(", ")} />
+          </section>
+        )}
 
         {isConsumer ? (
           /* Signed-in consumer → VOW Listing Information + real gallery. */

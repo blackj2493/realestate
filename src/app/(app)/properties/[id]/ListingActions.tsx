@@ -7,6 +7,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { useWatchlistStore } from "@/lib/watchlist/useWatchlist";
 import ScheduleViewingForm from "@/components/Property/ScheduleViewingForm";
 import CtaLadder from "@/components/Property/CtaLadder";
+import SellingPlanCard from "@/components/address/SellingPlanCard";
 
 /**
  * Right-rail actions for the full listing page. "Add to Comparison" feeds the same
@@ -46,6 +47,14 @@ export default function ListingActions({
 
   return (
     <div className="space-y-2 pt-2">
+      {/* Seller offer (2026-11) on a SOLD / off-market sale record. A signed-in owner who
+          looks up their own home is redirected here from /address (the full sold report),
+          so without this the offer would never reach most sellers. Not on lease records:
+          that reader is a tenant, not an owner. */}
+      {statusKind !== "active" && !isLease && address && (
+        <SellingPlanCard address={[address, city].filter(Boolean).join(", ")} />
+      )}
+
       {statusKind === "active" && (
         <>
           <CtaLadder listingKey={id} isLease={isLease} />

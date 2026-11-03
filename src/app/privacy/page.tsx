@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 // TODO(legal): have this document reviewed by counsel for accuracy against actual
 // data practices and PIPEDA (see the final section) before relying on it.
-const EFFECTIVE_DATE = "June 1, 2026";
+const EFFECTIVE_DATE = "November 4, 2026";
 const CONTACT_EMAIL = "support@pureproperty.ca";
 
 const TITLE = "PureProperty.ca Privacy Policy";
@@ -35,6 +35,8 @@ const SECTIONS: LegalSection[] = [
     paragraphs: [
       `Account and authentication information. To create and access an account, we collect your email address, which we use to send passwordless "magic-link" sign-in emails. Because authentication is passwordless, we do not collect or store a password. We also generate and maintain session tokens that keep you securely signed in across visits.`,
       `Profile and watchlist information. When you use optional features, we store the listings you add to your watchlist and the preferences associated with your account, so that your saved properties and settings can be synchronized across the devices you sign in from. If you opt in to price-drop alerts, we record that preference and the specific listings you wish to be alerted about.`,
+      `Why you joined. When you accept the Terms, we ask what brings you here (buying, selling, investing, renting, or just researching). If you are selling, you may also give your home's address. We use these answers to show you the pages and emails that fit your reason for joining, and we store them with your account.`,
+      `Requests you send us. When you ask for a viewing, a second opinion on a price, or a selling plan for your home, we collect the name, email address, optional phone number, address and message you give us, and we use them only to answer your request.`,
       `Usage, device, and technical information. As you use the Service, we automatically collect product-usage analytics (such as the features you interact with and the searches you run), your IP address, and device and browser characteristics. We also use cookies and browser local and session storage to operate the Service, as described in the Cookies section below.`,
       `VOW access records. When you are signed in and view sold or off-market listing data ("VOW" data), we keep a minimal record that your account accessed that listing at that time. We are required by the real estate board that licenses this data to maintain such an access record and to make it available to the board on request. These records contain only your account identifier, the listing accessed, and the time — no listing prices or other content — and are kept for a limited retention period and then deleted.`,
       `We collect only the personal information that is reasonably necessary for the purposes described in this Policy, and we limit our collection accordingly.`,

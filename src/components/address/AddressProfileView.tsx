@@ -61,6 +61,7 @@ import MarketGrids from "./MarketGrids";
 import PulseCard from "./PulseCard";
 import ActivityTicker, { type TickerItem } from "./ActivityTicker";
 import IfListedToday, { type ListedTodayBand } from "./IfListedToday";
+import SellingPlanCard from "./SellingPlanCard";
 import { dominantSubType } from "./listedTodayDefault";
 import { parseAddress, streetNamesMatch } from "@/lib/watchlist/disposition";
 import ActivityFeed from "./ActivityFeed";
@@ -638,6 +639,10 @@ export default async function AddressProfileView({
                 defaultType={listedTodayDefaultType}
               />
             )}
+
+            {/* Seller offer (2026-11): directly under the asking band, where a homeowner is
+                already reading prices. Shown to everyone; the request needs no account. */}
+            <SellingPlanCard address={[streetAddress, profile.city].filter(Boolean).join(", ")} />
 
             {/* Sell + rent grids directly under the sale-side band (owner: prominent
                 placement — the model's estimate, what homes actually sold for, and what
