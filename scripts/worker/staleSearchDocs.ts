@@ -1,7 +1,8 @@
 /**
  * Stale search-doc reconciliation for the Typesense `properties` collection.
  *
- * Query A (IDX) only ever fetches `StandardStatus eq 'Active'`, so a listing
+ * Query A (IDX) only ever fetches live inventory (`StandardStatus eq 'Active'`, plus
+ * conditional deals under 'Active Under Contract' — feedStatusFilter.ts), so a listing
  * that leaves Active is never seen by the active sync again — its `properties`
  * doc freezes at its last Active state ("New", "Price Change", ...) and keeps
  * showing as For Sale/For Lease forever. Query B (VOW sold) deliberately skips
