@@ -287,8 +287,11 @@ export async function generateMetadata({
   const description = cleanDescription(p.PublicRemarks) || fallbackDescription;
   // Frozen-Active payloads (Terminated/Expired/Suspended) must noindex too — trust
   // the resolved status, not the stale payload field.
+  // A conditional deal is StandardStatus 'Active Under Contract' (feedStatusFilter.ts):
+  // still live IDX inventory, so it stays indexable like any active listing.
   const isActive =
-    detail.status.kind === "active" && (p.StandardStatus ?? "Active") === "Active";
+    detail.status.kind === "active" &&
+    ["Active", "Active Under Contract"].includes(p.StandardStatus ?? "Active");
   // Metadata is built from the UNGATED detail (it has no viewer, and is shared by every
   // request), so a sold listing's lead photo would be republished in the og:image tag to
   // any scraper — around the gate the page itself now applies. Photos on a closed record

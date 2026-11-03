@@ -44,6 +44,7 @@ import { runDelistedSync, pruneOldDelisted } from './delistedIndexer';
 import { isDelistedDealType } from '@/lib/sold/dealType';
 import { isListingDisplayOptedOut, isAddressDisplayOptedOut } from '@/lib/compliance/internetDisplay';
 import { parseLivingAreaRange } from '@/lib/condo/feeStability';
+import { ACTIVE_STATUS_FILTER, CONDITIONAL_STATUS_FILTER } from './feedStatusFilter';
 
 // ============================================================================
 // Sold Listing Types
@@ -442,7 +443,7 @@ export async function upsertSoldListings(
 const API_BASE_URL = (process.env.AMPRE_API_URL || 'https://query.ampre.ca/odata').trim();
 
 // FEED ISOLATION: Separate tokens for IDX (Active) and VOW (Sold) feeds
-// IDX_TOKEN: Used ONLY for active inventory (StandardStatus eq 'Active')
+// IDX_TOKEN: Used ONLY for active inventory (Active + conditional deals, feedStatusFilter.ts)
 // VOW_TOKEN: Used ONLY for historical closed/sold (StandardStatus eq 'Closed')
 const IDX_TOKEN = (process.env.PROPTX_IDX_TOKEN || '').trim();
 const VOW_TOKEN = (process.env.PROPTX_VOW_TOKEN || '').trim();
@@ -641,9 +642,9 @@ export async function fetchActiveListingsBatch(
     throw new Error('lastSyncTimestamp must be provided');
   }
   
-  // Query A (Active Sync): StandardStatus eq 'Active' + ModificationTimestamp filter
-  // Routes to Typesense listings table
-  const statusFilter = `StandardStatus eq 'Active'`;
+  // Query A (Active Sync): Active + conditional deals (feedStatusFilter.ts) + ModificationTimestamp
+  // filter. Routes to Typesense listings table
+  const statusFilter = ACTIVE_STATUS_FILTER;
   const modFilter = `ModificationTimestamp gt ${lastSyncTimestamp}`;
   const combinedFilter = `${statusFilter} and (${modFilter})`;
   
@@ -706,7 +707,7 @@ const SOLD_STATUS_FILTER = `(StandardStatus eq 'Closed' or MlsStatus eq 'Sold')`
 const SOLD_DELTA_MAX_PAGES = 150;
 
 const ACTIVE_CURSOR_ROW_ID = 'active';
-const ACTIVE_STATUS_FILTER = `StandardStatus eq 'Active'`;
+// ACTIVE_STATUS_FILTER (Active + conditional deals) lives in feedStatusFilter.ts.
 /** Active delta page cap. Normal daily active churn ≈ 5.5k mods (~55 pages); 400 gives
  *  multi-day catch-up slack (~40k records). A capped run reports caughtUp=false and resumes
  *  from the 'active' cursor next run — nothing is lost (mirrors Query B). */
@@ -967,6 +968,62 @@ async function fetchActivePage(filter: string, skip = 0): Promise<any[]> {
   return result.data.value ?? [];
 }
 
+/** Persist one Query-A page: rooms, media, then the ETL pipeline (vault + search index). */
+async function persistActiveListings(listings: any[], errors: string[]): Promise<void> {
+  const supabaseClient = getServiceRoleClient();
+  console.log('   📐 Enriching batch with room dimensions...');
+  const roomsAttached = await enrichActiveListingsWithRooms(listings);
+  console.log(`   📐 Rooms attached to ${roomsAttached}/${listings.length} listings`);
+
+  console.log('   🖼️  Enriching batch with media (photo URLs)...');
+  const mediaAttached = await enrichListingsWithMedia(listings, IDX_TOKEN);
+  console.log(`   🖼️  Media attached to ${mediaAttached}/${listings.length} listings`);
+
+  const preservedActive = await preserveExistingMedia(listings, supabaseClient);
+  if (preservedActive > 0) {
+    console.log(`   🛡️  Preserved existing media on ${preservedActive} listings (AMPRE empty)`);
+  }
+
+  console.log('   🔄 Processing batch through ETL pipeline...');
+  const syncResult = await processBatch(listings);
+  if (!syncResult.success) {
+    errors.push(...syncResult.supabase.errors, ...syncResult.typesense.errors);
+  }
+}
+
+/**
+ * One-time catch-up for the conditional deals Query A missed while it asked only for
+ * 'Active' (feedStatusFilter.ts). Walks every conditional listing in the feed, oldest
+ * change first, through the same per-page path as Query A. Idempotent; does not touch
+ * the 'active' cursor. `dryRun` only counts. See scripts/admin/backfillConditionalStatus.ts.
+ */
+export async function runConditionalBackfill(dryRun = false): Promise<ActiveSyncResult> {
+  const result: ActiveSyncResult = { records: 0, pages: 0, caughtUp: false, errors: [] };
+  let cursor = '1970-01-01T00:00:00Z';
+  for (;;) {
+    const listings = await fetchActivePage(`${CONDITIONAL_STATUS_FILTER} and ModificationTimestamp gt ${cursor}`);
+    if (listings.length === 0) break;
+    if (!dryRun) await persistActiveListings(listings, result.errors);
+    result.records += listings.length;
+    result.pages++;
+    const lastTs = listings[listings.length - 1]?.ModificationTimestamp;
+    console.log(`   📄 Conditional page ${result.pages}: +${listings.length} (cursor → ${lastTs})`);
+    if (!lastTs || listings.length < 100) break;
+    // Drain the boundary second before moving past it (same shape as runActiveSync).
+    for (let skip = 0; ; skip += 100) {
+      await sleep(PAGE_DELAY_MS);
+      const drain = await fetchActivePage(`${CONDITIONAL_STATUS_FILTER} and ModificationTimestamp eq ${lastTs}`, skip);
+      if (drain.length > 0 && !dryRun) await persistActiveListings(drain, result.errors);
+      result.records += drain.length;
+      if (drain.length < 100) break;
+    }
+    cursor = lastTs;
+    await sleep(PAGE_DELAY_MS);
+  }
+  result.caughtUp = true;
+  return result;
+}
+
 export interface ActiveSyncResult {
   records: number;
   pages: number;
@@ -988,30 +1045,8 @@ export async function runActiveSync(
   let cursor = await readActiveCursor(defaultIso);
   console.log(`   📖 Active cursor: ${cursor}`);
   await updateActiveCursor(cursor, 'running');
-  const supabaseClient = getServiceRoleClient();
   const result: ActiveSyncResult = { records: 0, pages: 0, caughtUp: false, errors: [] };
-
-  /** Persist one page — byte-identical to the prior inline Query-A per-page body. */
-  const persistActivePage = async (listings: any[]): Promise<void> => {
-    console.log('   📐 Enriching batch with room dimensions...');
-    const roomsAttached = await enrichActiveListingsWithRooms(listings);
-    console.log(`   📐 Rooms attached to ${roomsAttached}/${listings.length} listings`);
-
-    console.log('   🖼️  Enriching batch with media (photo URLs)...');
-    const mediaAttached = await enrichListingsWithMedia(listings, IDX_TOKEN);
-    console.log(`   🖼️  Media attached to ${mediaAttached}/${listings.length} listings`);
-
-    const preservedActive = await preserveExistingMedia(listings, supabaseClient);
-    if (preservedActive > 0) {
-      console.log(`   🛡️  Preserved existing media on ${preservedActive} listings (AMPRE empty)`);
-    }
-
-    console.log('   🔄 Processing batch through ETL pipeline...');
-    const syncResult = await processBatch(listings);
-    if (!syncResult.success) {
-      result.errors.push(...syncResult.supabase.errors, ...syncResult.typesense.errors);
-    }
-  };
+  const persistActivePage = (listings: any[]) => persistActiveListings(listings, result.errors);
 
   try {
     while (result.pages < maxPages) {
@@ -1668,7 +1703,7 @@ async function reconcileMissingSoldMedia(
  * Executes a Dual-Query delta sync.
  * 
  * Query A (Active Sync):
- *   $filter=StandardStatus eq 'Active' and ModificationTimestamp gt [lastSyncTimestamp]
+ *   $filter=ACTIVE_STATUS_FILTER and ModificationTimestamp gt [lastSyncTimestamp]
  *   Routes to: Typesense listings table (via sync.ts)
  * 
  * Query B (Sold Sync):

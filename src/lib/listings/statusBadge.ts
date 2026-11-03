@@ -2,9 +2,10 @@
  * Maps a TRREB `Status` (MlsStatus, per transformer.ts:980) to a small badge for
  * the active-browse card. Plain-active statuses return null (the For Sale/Lease chip
  * already conveys availability). Conditional-sale / conditional-lease / dead statuses
- * leak into the active `properties` collection because they are still
- * StandardStatus=Active in the IDX feed (verified: ~2,424 "Sold Conditional" live on
- * 2026-06-03), so we surface their real status instead of hiding them.
+ * stay in the active `properties` collection (verified: ~2,424 "Sold Conditional" live on
+ * 2026-06-03). Since ~June 2026 the feed sends them as StandardStatus 'Active Under
+ * Contract', which Query A now fetches too (scripts/worker/feedStatusFilter.ts), so we
+ * surface their real status instead of hiding them.
  *
  * IDX display only — no VOW data, no close price. Tone drives the chip colour.
  */
