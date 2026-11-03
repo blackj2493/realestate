@@ -8,12 +8,18 @@
  * why a saved home is the thing worth asking for). It never saves on render: the reader
  * taps, and the write is the same watchlist toggle the Save button above uses, so the home
  * enters the nightly digest like any other saved home.
+ *
+ * SINCE 2026-11 it also asks when a signed-in reader SHOWS interest in a home: a second visit
+ * to the same listing, or arrival from one of our emails (interestOffer.ts). The after-signup
+ * trigger converted 1 of 20; a repeat visit is a stronger signal. Each trigger is measured
+ * apart (`save_offer_*` with a `reason`), so the weaker one can be dropped on evidence.
  */
 
 import { useEffect, useState } from "react";
 import { Bookmark, Check, X } from "lucide-react";
 import { useWatchlistStore, type WatchItem } from "@/lib/watchlist/useWatchlist";
 import { takeSaveOffer } from "@/lib/watchlist/saveOffer";
+import { recordListingVisit, takeInterestOffer, type InterestReason } from "@/lib/watchlist/interestOffer";
 import { track } from "@/lib/analytics/posthog";
 
 export default function SaveAfterSignupPrompt({ item }: { item: WatchItem }) {
@@ -21,22 +27,40 @@ export default function SaveAfterSignupPrompt({ item }: { item: WatchItem }) {
   const loaded = useWatchlistStore((s) => s.loaded);
   const watched = useWatchlistStore((s) => !!s.items[item.listing_key]);
   const toggle = useWatchlistStore((s) => s.toggle);
+  const signedIn = useWatchlistStore((s) => s.signedIn);
 
-  const [offered, setOffered] = useState(false);
+  // Why we are asking: right after signup from this listing, or shown interest.
+  const [offered, setOffered] = useState<null | "signup" | InterestReason>(null);
+  // Interest is only judged once the watchlist knows who is reading (signed in, not saved).
+  const [interestChecked, setInterestChecked] = useState(false);
   const [state, setState] = useState<"ask" | "saved" | "closed">("ask");
 
   useEffect(() => {
     // sessionStorage is client-only, so the offer can only be read after hydration.
-    if (takeSaveOffer(item.listing_key)) setOffered(true);
+    // Every view counts toward "repeat visit", whatever else happens on this one.
+    recordListingVisit(item.listing_key);
+    if (takeSaveOffer(item.listing_key)) setOffered("signup");
     void init();
   }, [init, item.listing_key]);
 
+  // Shown-interest offer: only for a signed-in reader who has not saved this home. Claimed
+  // once (takeInterestOffer marks it), so it never repeats for this home on this browser.
+  useEffect(() => {
+    if (interestChecked || offered || !loaded) return;
+    setInterestChecked(true);
+    if (!signedIn || watched) return;
+    const reason = takeInterestOffer(item.listing_key, window.location.search);
+    if (reason) setOffered(reason);
+  }, [interestChecked, offered, loaded, signedIn, watched, item.listing_key]);
+
   // Already saved (another tab, or the Save button above) — nothing to ask.
-  const visible = offered && loaded && state !== "closed" && (state === "saved" || !watched);
+  const visible = !!offered && loaded && state !== "closed" && (state === "saved" || !watched);
 
   useEffect(() => {
-    if (visible && state === "ask") track("signup_save_offer_shown", { listingKey: item.listing_key });
-  }, [visible, state, item.listing_key]);
+    if (!visible || state !== "ask") return;
+    if (offered === "signup") track("signup_save_offer_shown", { listingKey: item.listing_key });
+    else if (offered) track("save_offer_shown", { listingKey: item.listing_key, reason: offered });
+  }, [visible, state, offered, item.listing_key]);
 
   if (!visible) return null;
 
@@ -57,13 +81,15 @@ export default function SaveAfterSignupPrompt({ item }: { item: WatchItem }) {
 
   const save = async () => {
     setState("saved");
-    track("signup_save_offer_accepted", { listingKey: item.listing_key });
+    if (offered === "signup") track("signup_save_offer_accepted", { listingKey: item.listing_key });
+    else if (offered) track("save_offer_accepted", { listingKey: item.listing_key, reason: offered });
     await toggle(item);
   };
 
   const dismiss = () => {
     setState("closed");
-    track("signup_save_offer_dismissed", { listingKey: item.listing_key });
+    if (offered === "signup") track("signup_save_offer_dismissed", { listingKey: item.listing_key });
+    else if (offered) track("save_offer_dismissed", { listingKey: item.listing_key, reason: offered });
   };
 
   return (
@@ -73,8 +99,10 @@ export default function SaveAfterSignupPrompt({ item }: { item: WatchItem }) {
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-[13px] leading-relaxed text-foreground">
-          <span className="font-semibold">Save this home?</span> We&rsquo;ll email you if the
-          price drops, it sells or it comes back on the market.
+          <span className="font-semibold">
+            {offered === "repeat_view" ? "You’ve looked at this home before. Save it?" : "Save this home?"}
+          </span>{" "}
+          We&rsquo;ll email you if the price drops, it sells or it comes back on the market.
         </p>
         <button
           type="button"
