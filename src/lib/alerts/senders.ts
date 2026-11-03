@@ -36,7 +36,7 @@ export const SENDERS = {
     phone: "647-466-2109",
     /** RECO: a registrant's own outreach names the registrant and the brokerage. */
     name: "Tanmay Rao",
-    credential: "Sales Representative, eXp Realty, Brokerage",
+    credential: "REALTOR®, eXp Realty, Brokerage | PureProperty.ca",
   },
   /**
    * Weekly Data Drop — the editorial/marketing stream (WS2).

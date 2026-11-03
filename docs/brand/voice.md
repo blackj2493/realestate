@@ -100,8 +100,8 @@ relationship forms (welcome, lead follow-up). Hold the voice — flex the warmth
   phased** because the founder is currently registered with another brokerage and
   PureProperty is not yet a registered brokerage:
   - **Phase 1 (now, pre-brokerage) — UPDATED 2026-11-03 (owner decision):** sign as
-    the registrant, not the site: **`— Tanmay Rao`** + `Sales Representative, eXp
-    Realty, Brokerage · 647-466-2109` (`SENDERS.leadFollowUp`). The lead reply is
+    the registrant, not the site: **`— Tanmay Rao`** + `REALTOR®, eXp
+    Realty, Brokerage | PureProperty.ca · 647-466-2109` (`SENDERS.leadFollowUp`). The lead reply is
     Tanmay's own outreach as an eXp registrant, so RECO wants the registered name and the
     brokerage name on it — the old first-name-only sign-off hid both. PureProperty is
     still never presented as a brokerage. **A viewing request gets a booking reply**
