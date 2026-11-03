@@ -22,7 +22,9 @@ export default function CtaLadder({ listingKey, isLease = false }: { listingKey:
 
   // "2nd opinion on price" is a buyer's question (is it fairly priced vs comparable
   // SALES?) — not what a prospective tenant needs, so it drops on lease listings.
-  const lowerRungs: LeadIntent[] = isLease ? ["question"] : ["question", "price_opinion"];
+  // On sale listings it sits right under the primary rung: through Oct 2026 it produced
+  // 9 of 9 sale-side leads and the only closed deal; "Book a viewing" produced 1.
+  const lowerRungs: LeadIntent[] = isLease ? ["question"] : ["price_opinion", "question"];
 
   return (
     <div className="space-y-2">

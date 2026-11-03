@@ -79,6 +79,38 @@ describe('POST /api/viewing-requests', () => {
     expect(row.message).toBe('[Price second-opinion] is 899k fair?');
   });
 
+  it('price check stores the buyer qualifiers after the intent tag, and emails them', async () => {
+    await POST(makeReq({
+      listingKey: 'W12632618',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      intent: 'price_opinion',
+      timeline: 'Within 3 months',
+      hasAgent: 'No',
+      message: 'is 899k fair?',
+    }) as never);
+    const msg = insertSpy.mock.calls[0][0].message as string;
+    // Reporting matches the "[Price" prefix — the intent tag must stay first.
+    expect(msg).toBe('[Price second-opinion] [Timeline: Within 3 months] [Has agent: No] is 899k fair?');
+    const ownerMail = sendSpy.mock.calls[0][0] as { text: string };
+    expect(ownerMail.text).toContain('Buying timeline: Within 3 months');
+    expect(ownerMail.text).toContain('Working with an agent: No');
+  });
+
+  it('drops qualifier values outside the allowlist, and ignores them on other intents', async () => {
+    await POST(makeReq({
+      listingKey: 'W12632618', name: 'Jane Doe', email: 'jane@example.com',
+      intent: 'price_opinion', timeline: '<script>', hasAgent: 'maybe',
+    }) as never);
+    expect(insertSpy.mock.calls[0][0].message).toBe('[Price second-opinion]');
+
+    await POST(makeReq({
+      listingKey: 'W12632618', name: 'Jane Doe', email: 'jane@example.com',
+      intent: 'question', timeline: 'Within 3 months', message: 'tenanted?',
+    }) as never);
+    expect(insertSpy.mock.calls[1][0].message).toBe('[Question] tenanted?');
+  });
+
   it('viewing intent (default) leaves the message untagged', async () => {
     await POST(makeReq({
       listingKey: 'W12632618',

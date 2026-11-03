@@ -4,7 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import { CalendarDays, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/browser";
-import { LEAD_INTENTS, isLeadIntent, seedMessageFor, type LeadIntent } from "./leadIntents";
+import {
+  LEAD_INTENTS,
+  TIMELINE_OPTIONS,
+  AGENT_OPTIONS,
+  isLeadIntent,
+  seedMessageFor,
+  type LeadIntent,
+} from "./leadIntents";
 
 // Same strict email shape used by the API route (audit LOW-18).
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -32,6 +39,8 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
   const [phone, setPhone] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
   const [message, setMessage] = useState("");
+  const [timeline, setTimeline] = useState("");
+  const [hasAgent, setHasAgent] = useState("");
 
   // A sticky "Contact" CTA elsewhere on the surface (the mobile action bar) opens
   // and reveals this form via a window event, keyed by listing so multiple mounted
@@ -137,6 +146,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
           phone: phone.trim(),
           preferredTime: preferredTime.trim(),
           message: message.trim(),
+          ...(LEAD_INTENTS[intent].qualify ? { timeline, hasAgent } : {}),
         }),
       });
       const data = (await res.json()) as { success: boolean; error?: string };
@@ -242,7 +252,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
       {/* Phone */}
       <div>
         <label htmlFor="sv-phone" className="block text-xs font-medium text-muted-foreground mb-1">
-          Phone
+          {def.phoneLabel}
         </label>
         <input
           id="sv-phone"
@@ -281,6 +291,50 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
         </div>
       )}
 
+      {/* Buyer qualifiers — price checks only. Optional: a blank answer never blocks a lead. */}
+      {def.qualify && (
+        <>
+          <div>
+            <label htmlFor="sv-timeline" className="block text-xs font-medium text-muted-foreground mb-1">
+              When are you planning to buy?
+            </label>
+            <select
+              id="sv-timeline"
+              disabled={isSubmitting}
+              value={timeline}
+              onChange={(e) => setTimeline(e.target.value)}
+              className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+            >
+              <option value="">Select…</option>
+              {TIMELINE_OPTIONS.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sv-agent" className="block text-xs font-medium text-muted-foreground mb-1">
+              Are you working with an agent?
+            </label>
+            <select
+              id="sv-agent"
+              disabled={isSubmitting}
+              value={hasAgent}
+              onChange={(e) => setHasAgent(e.target.value)}
+              className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-sm text-foreground focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+            >
+              <option value="">Select…</option>
+              {AGENT_OPTIONS.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
+
       {/* Message */}
       <div>
         <label htmlFor="sv-message" className="block text-xs font-medium text-muted-foreground mb-1">
@@ -312,7 +366,7 @@ export default function ScheduleViewingForm({ listingKey, address, price, render
       </button>
 
       <p className="text-center text-xs text-muted-foreground">
-        We&apos;ll only use this to arrange your viewing. No spam.{" "}
+        We&apos;ll only use this to reply to your request. No spam.{" "}
         <a href="/privacy" className="underline hover:text-muted-foreground">
           Privacy policy
         </a>
