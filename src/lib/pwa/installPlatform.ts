@@ -34,6 +34,27 @@ export function detectInstallPlatform(input: DetectInput): InstallPlatform {
   return "unsupported";
 }
 
+// ── Menu row ────────────────────────────────────────────────────────────────
+
+/** What the drawer's "Install app" row does: Chrome's dialog, or a how-to sheet. */
+export type MenuInstallMode = "native" | "ios-steps" | "android-steps";
+
+/**
+ * The drawer's "Install app" row shows in EVERY iPhone/iPad and Android browser tab
+ * (owner, 2026-11-03), hidden only when already running from the home screen. Chrome
+ * does not always offer its install event: it holds it back for months after a
+ * dismissal, when the app is already installed, and on other Android browsers. Without
+ * the event the row opens the how-to sheet (⋮ menu → Add to Home screen) instead of
+ * hiding. An earlier install does not hide it either: the icon may have been removed.
+ */
+export function menuInstallMode(input: DetectInput): MenuInstallMode | null {
+  if (input.standalone) return null;
+  if (input.hasNativePrompt) return "native";
+  if (isIos(input.userAgent, input.maxTouchPoints)) return "ios-steps";
+  if (/Android/i.test(input.userAgent)) return "android-steps";
+  return null;
+}
+
 // ── Nudge policy ────────────────────────────────────────────────────────────
 
 /** Second visit at the earliest — a first-time visitor has nothing to come back to yet. */

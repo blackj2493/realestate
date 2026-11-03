@@ -34,7 +34,7 @@ export default function InstallNudge() {
   const visits = useInstallPrompt((s) => s.visits);
   const dismissedAt = useInstallPrompt((s) => s.dismissedAt);
   const promptInstall = useInstallPrompt((s) => s.promptInstall);
-  const openIosSheet = useInstallPrompt((s) => s.openIosSheet);
+  const openStepsSheet = useInstallPrompt((s) => s.openStepsSheet);
   const snooze = useInstallPrompt((s) => s.snooze);
 
   const discoveryHydrated = useDiscovery((s) => s.hydrated);
@@ -77,7 +77,7 @@ export default function InstallNudge() {
   const install = () => {
     setVisible(false);
     if (platform === "ios") {
-      openIosSheet("nudge");
+      openStepsSheet("ios", "nudge");
       return;
     }
     void promptInstall("nudge");
