@@ -6,10 +6,10 @@ import { track } from "@/lib/analytics/posthog";
 /**
  * Bump when the listing page's section order changes, so a PostHog breakdown by
  * `layoutVersion` compares one order with the next.
- * 2026-11-03: phones read overview → numbers → history → sold comps → details/area →
- * similar for sale → market grids → neighbourhood.
+ * 2026-11-04: phones read overview → numbers → sold comps → details/area → similar for
+ * sale → history → market grids → neighbourhood.
  */
-export const LISTING_LAYOUT_VERSION = "2026-11-03";
+export const LISTING_LAYOUT_VERSION = "2026-11-04";
 
 /**
  * Fires `listing_section_reached` once per section per page view, when any part of an

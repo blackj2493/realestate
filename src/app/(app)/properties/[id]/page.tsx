@@ -657,18 +657,18 @@ export default async function PropertyPage({
 
   // Mobile section jumper — matches the zoned mobile scroll order (the Numbers
   // panel sits second); ids are shared with the desktop layout's anchors.
-  // 2026-11-03 (owner call): fit, then the price evidence, then the next step. History
-  // and sold comps follow the numbers; the for-sale row comes after the area, as the
-  // next step once the reader is done with this home; the neighbourhood is last.
+  // 2026-11-03 (owner call): sold comps follow the numbers; the for-sale row comes after
+  // the area; the neighbourhood is last. 2026-11-04 (owner call): the history sits sixth,
+  // after the for-sale row and before the market grids.
   const navSections = [
     { id: "overview", label: "Overview" },
     { id: "numbers", label: "Numbers" },
-    { id: "history", label: "History" },
     { id: "comps", label: "Comps" },
     { id: "details", label: "Details" },
     ...(rooms.length > 0 ? [{ id: "rooms", label: "Rooms" }] : []),
     { id: "area", label: "Area" },
     { id: "similar", label: "Similar" },
+    { id: "history", label: "History" },
   ];
 
   // Shared by the three comps placements (mobile top, desktop top, market zone);
@@ -974,10 +974,10 @@ export default async function PropertyPage({
 
         <DetailMobileNav sections={navSections} />
 
-        {/* PHONE ORDER (owner call 2026-11-03). Below lg this wrapper is a flex column and
-            the grid and the market section are `display: contents`, so each part takes an
-            `order`: 1 overview, 2 numbers, 3 history, 4 sold comps, 5 the home + the area,
-            6 similar for sale, 7 market grids, 8 neighbourhood. Desktop (lg) keeps the
+        {/* PHONE ORDER (owner calls 2026-11-03/04). Below lg this wrapper is a flex column
+            and the grid and the market section are `display: contents`, so each part takes
+            an `order`: 1 overview, 2 numbers, 3 sold comps, 4 the home + the area, 5 similar
+            for sale, 6 history, 7 market grids, 8 neighbourhood. Desktop (lg) keeps the
             grid and the source order. `data-reach` tags feed SectionReachTracker. */}
         <SectionReachTracker listingId={id} />
         <div className="flex flex-col gap-6 lg:block">
@@ -1650,7 +1650,7 @@ export default async function PropertyPage({
 
           {/* ── LEFT / row 2: THE HOME detail. Renders THIRD on mobile — after the
                Intelligence panel, so the moat sits one screen from the price. ── */}
-          <div data-reach="details" className="order-5 lg:order-none lg:col-start-1 lg:row-start-2">
+          <div data-reach="details" className="order-4 lg:order-none lg:col-start-1 lg:row-start-2">
             <div className="lg:hidden"><ZoneLabel>The Home</ZoneLabel></div>
 
             {/* Remarks (the listing's own description) */}
@@ -1727,7 +1727,7 @@ export default async function PropertyPage({
         {/* MOBILE ONLY: similar for-sale homes after the area — the next step once the
             reader is done with this home (owner call 2026-11-03; it sat right after the
             numbers from 2026-10-27, where it led readers away before the price evidence). */}
-        <div id="similar" data-reach="similar" className="order-6 scroll-mt-28 lg:hidden">
+        <div id="similar" data-reach="similar" className="order-5 scroll-mt-28 lg:hidden">
           <SimilarProperties {...similarProps} part="forSale" placement="mobile_mid" />
         </div>
 
@@ -1737,7 +1737,7 @@ export default async function PropertyPage({
         </div>
 
         {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — rents + history + comps.
-             On phones its parts join the page order above (history 3, sold comps 4,
+             On phones its parts join the page order above (sold comps 3, history 6,
              label + grids 7, neighbourhood 8). ── */}
         <section id="market" className="contents scroll-mt-28 lg:mt-6 lg:block">
           <div className="order-7 lg:hidden"><ZoneLabel>The Market</ZoneLabel></div>
@@ -1765,11 +1765,11 @@ export default async function PropertyPage({
              higher up (mobile: after the numbers; desktop: below the first band).
              Commercial subjects use exact-subtype + area/price matching; commercial
              leases comp against For-Lease inventory (commercial-gap Phase 1). ── */}
-        <div id="comps" data-reach="comps" className="order-4 scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px] lg:order-none">
+        <div id="comps" data-reach="comps" className="order-3 scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px] lg:order-none">
           <SimilarProperties {...similarProps} part="sold" placement="market" />
         </div>
 
-        <section id="history" data-reach="history" className="order-3 scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px] lg:order-none">
+        <section id="history" data-reach="history" className="order-6 scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px] lg:order-none">
           {/* Mobile: OPEN by default again (2026-10-29 — closed-by-default hid too much;
               the comps now sit above it anyway), folded away by a tap. Pure CSS (a peer
               checkbox), so it stays server-rendered — no client boundary, no
