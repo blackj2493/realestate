@@ -165,9 +165,13 @@ export type AnalyticsEvents = {
     sellerAddress: boolean;
   };
   /** An address-page offer card was opened (the form shown): selling plan or home report. */
-  'address_offer_opened': { intent: 'selling_plan' | 'home_report' };
+  'address_offer_opened': { intent: 'selling_plan' | 'home_report' | 'new_vs_resale' };
   /** An address-page offer request was accepted by the server — a lead. */
-  'address_offer_requested': { intent: 'selling_plan' | 'home_report'; hasPhone: boolean };
+  'address_offer_requested': { intent: 'selling_plan' | 'home_report' | 'new_vs_resale'; hasPhone: boolean };
+  /** /new-homes-hst: the HST relief calculator got a price (fires once per page view). */
+  'hst_calc_used': { band: 'under_1m' | '1m_1_5m' | '1_5m_1_85m' | 'over_1_85m' };
+  /** /new-homes-hst: a city link was followed. */
+  'hst_city_link': { city: string; target: 'new_homes' | 'price_cuts' };
 
   // First saved home (src/components/watchlist). A reader who saved a home on signup day
   // came back on a later day at 81% vs 33-34% without one (2026-10-04, 422 signups).
