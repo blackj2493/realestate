@@ -42,7 +42,7 @@ export type LeadLane =
   | "commercial-lease";
 
 /** The CTA-ladder intents from api/viewing-requests. Mirrors INTENT_LABELS there. */
-export type LeadIntent = "viewing" | "question" | "price_opinion" | "selling_plan" | "home_report";
+export type LeadIntent = "viewing" | "question" | "price_opinion" | "selling_plan" | "home_report" | "new_vs_resale";
 
 export interface LeadFollowUpInput {
   name: string;
@@ -168,6 +168,10 @@ const INTENT_COPY: Record<LeadIntent, { subject: (where: string) => string; open
     subject: (where) => `Your report on ${where}`,
     opener: "Got your request for the full report on",
   },
+  new_vs_resale: {
+    subject: () => "Your new vs resale comparison",
+    opener: "Got your request to compare new and resale homes for",
+  },
 };
 
 /** What the home report covers — the same four points the address-page card promises. */
@@ -176,6 +180,14 @@ const HOME_REPORT_FIGURES = [
   "what changed between sales, such as renovations and additions",
   "what it is likely worth today, compared with recent sales on the street",
   "what to check before you buy: flood zones, rail lines, permits and the school catchment",
+];
+
+/** What the new vs resale comparison covers — the same points the /new-homes-hst card promises. */
+const NEW_VS_RESALE_FIGURES = [
+  "whether the new home qualifies for the HST relief, and how much it is",
+  "what similar new and nearly-new homes nearby actually sold for",
+  "how much room there is to negotiate on each",
+  "the questions to ask the builder before you sign",
 ];
 
 /** What a homeowner's selling plan covers — the same four points the address-page card promises. */
@@ -231,6 +243,10 @@ export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
   } else if (intent === "home_report") {
     preheader = "Your report on this home is on the way.";
     figures = HOME_REPORT_FIGURES;
+    paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
+  } else if (intent === "new_vs_resale") {
+    preheader = "Your new vs resale comparison is on the way.";
+    figures = NEW_VS_RESALE_FIGURES;
     paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
   } else if (intent === "selling_plan") {
     preheader = "Your selling plan is on the way.";

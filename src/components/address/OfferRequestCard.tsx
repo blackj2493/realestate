@@ -21,7 +21,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type Status = "idle" | "open" | "sending" | "sent" | "error";
 
-export type OfferIntent = "selling_plan" | "home_report";
+export type OfferIntent = "selling_plan" | "home_report" | "new_vs_resale";
 
 export interface OfferCopy {
   title: string;
@@ -37,18 +37,22 @@ export default function OfferRequestCard({
   address,
   intent,
   copy,
+  askAddress,
 }: {
   address: string;
   intent: OfferIntent;
   copy: OfferCopy;
+  /** No fixed home (e.g. /new-homes-hst): the form asks the reader what they are comparing. */
+  askAddress?: { label: string; placeholder: string };
 }) {
   const [status, setStatus] = useState<Status>("idle");
+  const [where, setWhere] = useState(address);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const id = intent.replace("_", "-");
+  const id = intent.replace(/_/g, "-");
 
   // A signed-in member is not a stranger: prefill what we know, never overwrite typing.
   useEffect(() => {
@@ -73,6 +77,7 @@ export default function OfferRequestCard({
     e.preventDefault();
     if (!name.trim()) return setError("Name is required.");
     if (!EMAIL_RE.test(email.trim())) return setError("Enter a valid email address.");
+    if (!where.trim()) return setError(askAddress ? `${askAddress.label} is required.` : "Address is required.");
     setError("");
     setStatus("sending");
     try {
@@ -81,7 +86,7 @@ export default function OfferRequestCard({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           intent,
-          address,
+          address: where.trim(),
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim(),
@@ -116,7 +121,7 @@ export default function OfferRequestCard({
 
       {status === "sent" ? (
         <p className="mt-4 rounded-md border border-emerald-600/40 bg-emerald-600/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
-          {copy.sentText(address, email)}
+          {copy.sentText(where, email)}
         </p>
       ) : status === "idle" ? (
         <button
@@ -145,6 +150,14 @@ export default function OfferRequestCard({
               <input id={`${id}-email`} type="email" className={input} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" disabled={status === "sending"} />
             </div>
           </div>
+          {askAddress && (
+            <div>
+              <label htmlFor={`${id}-where`} className="mb-1 block text-xs font-medium text-muted-foreground">
+                {askAddress.label}
+              </label>
+              <input id={`${id}-where`} className={input} value={where} onChange={(e) => setWhere(e.target.value)} placeholder={askAddress.placeholder} maxLength={300} disabled={status === "sending"} />
+            </div>
+          )}
           <div>
             <label htmlFor={`${id}-phone`} className="mb-1 block text-xs font-medium text-muted-foreground">
               Phone (optional)
