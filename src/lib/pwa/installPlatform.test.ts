@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   detectInstallPlatform,
+  menuInstallMode,
   isIos,
   parseInstallState,
   shouldShowInstallNudge,
@@ -106,5 +107,34 @@ describe("parseInstallState", () => {
   it("rejects a negative or non-finite visit count", () => {
     expect(parseInstallState('{"visits":-1}').visits).toBe(0);
     expect(parseInstallState('{"visits":null}').visits).toBe(0);
+  });
+});
+
+describe("menuInstallMode", () => {
+  const at = (userAgent: string, o: { standalone?: boolean; hasNativePrompt?: boolean; maxTouchPoints?: number } = {}) =>
+    menuInstallMode({
+      userAgent,
+      maxTouchPoints: o.maxTouchPoints ?? 5,
+      standalone: o.standalone ?? false,
+      hasNativePrompt: o.hasNativePrompt ?? false,
+    });
+
+  it("uses Chrome's dialog when Chrome offers it", () => {
+    expect(at(ANDROID, { hasNativePrompt: true })).toBe("native");
+  });
+
+  it("shows the steps on Android when Chrome does not offer its dialog", () => {
+    expect(at(ANDROID)).toBe("android-steps");
+    expect(at(FIREFOX_ANDROID)).toBe("android-steps");
+  });
+
+  it("shows the steps on iPhone", () => {
+    expect(at(IPHONE)).toBe("ios-steps");
+  });
+
+  it("hides when running from the home screen, and on desktop without a prompt", () => {
+    expect(at(ANDROID, { standalone: true, hasNativePrompt: true })).toBeNull();
+    expect(at(IPHONE, { standalone: true })).toBeNull();
+    expect(at(WINDOWS_CHROME, { maxTouchPoints: 0 })).toBeNull();
   });
 });

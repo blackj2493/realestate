@@ -21,6 +21,7 @@ export type LoginGate =
   /** A sold / off-market address page. */
   | { gate: "address"; listingKey: string | null; city: string | null }
   | { gate: "analytics" }
+  | { gate: "dashboard" }
   | { gate: "home_value" }
   | { gate: "reno" }
   | { gate: "compare" }
@@ -60,6 +61,7 @@ export function loginGateFromNext(next: string | null | undefined): LoginGate {
   }
 
   if (first === "analytics") return { gate: "analytics" };
+  if (first === "dashboard") return { gate: "dashboard" };
   if (first === "hidden-equity" || first === "avm") return { gate: "home_value" };
   if (first === "whats-my-home-hiding") return { gate: "reno" };
 
@@ -98,6 +100,11 @@ export function loginCopy(gate: LoginGate, place: string | null): LoginCopy {
       return {
         heading: "Open Market Trends",
         subheading: "Create a free account to see sold-price trends, days on market and over-asking rates by area.",
+      };
+    case "dashboard":
+      return {
+        heading: "Set up your dashboard",
+        subheading: "Create a free account to follow your areas and see what listed, dropped and sold overnight, with the homes you saved.",
       };
     case "home_value":
       return {

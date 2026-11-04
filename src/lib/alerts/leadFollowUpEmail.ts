@@ -3,8 +3,15 @@
  * question / price-opinion request (api/viewing-requests). Tier-0 speed-to-lead: the top
  * of the brokerage funnel.
  *
- * Mode B "plain note" from the human identity (SENDERS.leadFollowUp = Tanmay). Phase-1
- * framing — delivers data/insight, makes NO representation claim (voice.md §3/§10).
+ * Mode B "plain note" from the human identity (SENDERS.leadFollowUp = Tanmay), signed
+ * with the registrant's full name, brokerage and direct line (voice.md §3, updated
+ * 2026-11-03).
+ *
+ * VIEWING REQUESTS ASK FOR A TIME, NOT FOR PATIENCE. October 2026: a renter replied to
+ * the old "figures are on the way" note within 11 minutes asking to view the unit in an
+ * hour. The note gave her no phone number and promised rent history she did not ask
+ * for. A viewing request is a request to book, so that lane now asks for two times and
+ * gives the number to text. The figure lists below apply to questions and price checks.
  *
  * FOUR LANES. The first version promised one fixed set of figures: days on market "for
  * sale", price history, and monthly carrying cost. Those are the right figures for a
@@ -35,7 +42,7 @@ export type LeadLane =
   | "commercial-lease";
 
 /** The CTA-ladder intents from api/viewing-requests. Mirrors INTENT_LABELS there. */
-export type LeadIntent = "viewing" | "question" | "price_opinion";
+export type LeadIntent = "viewing" | "question" | "price_opinion" | "selling_plan" | "home_report" | "new_vs_resale";
 
 export interface LeadFollowUpInput {
   name: string;
@@ -153,7 +160,58 @@ const INTENT_COPY: Record<LeadIntent, { subject: (where: string) => string; open
     subject: (where) => `Your price check on ${where}`,
     opener: "Got your request for a price check on",
   },
+  selling_plan: {
+    subject: (where) => `Your selling plan — ${where}`,
+    opener: "Got your request for a selling plan for",
+  },
+  home_report: {
+    subject: (where) => `Your report on ${where}`,
+    opener: "Got your request for the full report on",
+  },
+  new_vs_resale: {
+    subject: () => "Your new vs resale comparison",
+    opener: "Got your request to compare new and resale homes for",
+  },
 };
+
+/** What the home report covers — the same four points the address-page card promises. */
+const HOME_REPORT_FIGURES = [
+  "every time it was listed, sold or leased, with each price change",
+  "what changed between sales, such as renovations and additions",
+  "what it is likely worth today, compared with recent sales on the street",
+  "what to check before you buy: flood zones, rail lines, permits and the school catchment",
+];
+
+/** What the new vs resale comparison covers — the same points the /new-homes-hst card promises. */
+const NEW_VS_RESALE_FIGURES = [
+  "whether the new home qualifies for the HST relief, and how much it is",
+  "what similar new and nearly-new homes nearby actually sold for",
+  "how much room there is to negotiate on each",
+  "the questions to ask the builder before you sign",
+];
+
+/** What a homeowner's selling plan covers — the same four points the address-page card promises. */
+const SELLING_PLAN_FIGURES = [
+  "the price to list at, and what similar homes on and near your street actually sold for",
+  "how long homes like yours really take to sell, counting the ones that came down and went back up",
+  "which upgrades are worth doing before you list, and which are not",
+  "when to list, and which homes you would be competing with today",
+];
+
+/**
+ * The one thing a viewing lead should send back, per lane. A landlord decides on a
+ * tenant fast, so the tenant lanes ask for what the landlord asks first.
+ */
+const VIEWING_ASK: Record<LeadLane, string | null> = {
+  "residential-sale": null,
+  "residential-lease":
+    "So the landlord can say yes quickly, it helps to send your move-in date and how many people will live there.",
+  "commercial-sale": "It helps to know what you plan to run there, so I can check the zoning first.",
+  "commercial-lease":
+    "It helps to know what you plan to run there and when you need it, so I can check with the landlord first.",
+};
+
+const P = `font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 14px;`;
 
 export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
   subject: string;
@@ -165,32 +223,69 @@ export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
   const lane = input.lane ?? "residential-sale";
   const intent = input.intent ?? "viewing";
   const unsub = marketingUnsubscribeUrl(input.email, SITE);
+  const { phone, name, credential } = SENDERS.leadFollowUp;
 
   const { subject: subjectOf, opener } = INTENT_COPY[intent];
   const subject = subjectOf(where);
-  const preheader = LANE_PREHEADER[lane];
-  const figures = LANE_FIGURES[lane];
+
+  // Each paragraph is plain text; html and text are built from the same list so the two
+  // parts can never say different things.
+  let preheader: string;
+  let paras: string[];
+  let figures: string[] = [];
+  if (intent === "viewing") {
+    preheader = `Reply with a time, or text me at ${phone}.`;
+    paras = [
+      `${opener} ${where}. I can set up a showing.`,
+      `Reply with two times that work for you, or call or text me at ${phone} — a text is the fastest way to book.`,
+      ...(VIEWING_ASK[lane] ? [VIEWING_ASK[lane] as string] : []),
+    ];
+  } else if (intent === "home_report") {
+    preheader = "Your report on this home is on the way.";
+    figures = HOME_REPORT_FIGURES;
+    paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
+  } else if (intent === "new_vs_resale") {
+    preheader = "Your new vs resale comparison is on the way.";
+    figures = NEW_VS_RESALE_FIGURES;
+    paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
+  } else if (intent === "selling_plan") {
+    preheader = "Your selling plan is on the way.";
+    figures = SELLING_PLAN_FIGURES;
+    paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
+  } else {
+    preheader = LANE_PREHEADER[lane];
+    figures = LANE_FIGURES[lane];
+    paras = [
+      `${opener} ${where}. I'll come back to you personally, and soon, with the figures that matter on this one:`,
+    ];
+  }
+  const closing =
+    intent === "viewing"
+      ? []
+      : [`Is there anything specific you want me to check first? If a call is easier, call or text me at ${phone}.`];
 
   const items = figures.map((f) => `<li style="margin:0 0 8px;">${esc(f)}</li>`).join("");
+  const htmlPara = (s: string, i: number) =>
+    i === 0 && s.includes(where)
+      ? `<p style="${P}">${esc(s).replace(esc(where), `<b>${esc(where)}</b>`)}</p>`
+      : `<p style="${P}">${esc(s)}</p>`;
 
   const body = `
-    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 14px;">Hi ${esc(fn)},</p>
-    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 14px;">${esc(opener)} <b>${esc(where)}</b>. I'll come back to you personally, and soon, with the figures that matter on this one:</p>
-    <ul style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 18px;padding-left:20px;">${items}</ul>
-    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0 0 22px;">Is there anything specific you want me to check first?</p>
-    <p style="font-size:15px;line-height:1.65;color:#0f172a;margin:0;">— Tanmay, PureProperty</p>
+    <p style="${P}">Hi ${esc(fn)},</p>
+    ${paras.map(htmlPara).join("\n    ")}
+    ${items ? `<ul style="${P}margin:0 0 18px;padding-left:20px;">${items}</ul>` : ""}
+    ${closing.map((s) => `<p style="${P}">${esc(s)}</p>`).join("")}
+    <p style="${P}margin:22px 0 0;">— ${esc(name)}<br><span style="color:#475569;font-size:13px;">${esc(credential)} · ${esc(phone)}</span></p>
     <p style="color:#94a3b8;font-size:11px;margin-top:30px;line-height:1.6;">You asked us about this property on PureProperty.ca. <a href="${unsub}" style="color:#94a3b8;">Not interested — stop these</a>.</p>`;
 
   const text = [
     `Hi ${fn},`,
     "",
-    `${opener} ${where}. I'll come back to you personally, and soon, with the figures that matter on this one:`,
-    "",
-    ...figures.map((f) => `- ${f}`),
-    "",
-    "Is there anything specific you want me to check first?",
-    "",
-    "— Tanmay, PureProperty",
+    ...paras.flatMap((p) => [p, ""]),
+    ...(figures.length ? [...figures.map((f) => `- ${f}`), ""] : []),
+    ...closing.flatMap((p) => [p, ""]),
+    `— ${name}`,
+    `${credential} · ${phone}`,
     "",
     `Not interested — stop these: ${unsub}`,
   ].join("\n");

@@ -32,6 +32,7 @@ describe("loginGateFromNext", () => {
   it("names the other gated surfaces", () => {
     expect(loginGateFromNext("/properties/compare?ids=A,B")).toEqual({ gate: "compare" });
     expect(loginGateFromNext("/analytics?region=Oakville")).toEqual({ gate: "analytics" });
+    expect(loginGateFromNext("/dashboard")).toEqual({ gate: "dashboard" });
     expect(loginGateFromNext("/hidden-equity")).toEqual({ gate: "home_value" });
     expect(loginGateFromNext("/avm")).toEqual({ gate: "home_value" });
     expect(loginGateFromNext("/whats-my-home-hiding?community=Leslieville")).toEqual({
@@ -44,7 +45,6 @@ describe("loginGateFromNext", () => {
     expect(loginGateFromNext("")).toEqual({ gate: "none" });
     expect(loginGateFromNext("//evil.example/properties/X12639568")).toEqual({ gate: "none" });
     expect(loginGateFromNext("https://evil.example")).toEqual({ gate: "none" });
-    expect(loginGateFromNext("/dashboard")).toEqual({ gate: "none" });
     expect(loginGateFromNext("/properties")).toEqual({ gate: "none" });
   });
 });
@@ -75,6 +75,7 @@ describe("loginCopy", () => {
       { gate: "listing", listingKey: "X1234567" },
       { gate: "address", listingKey: null, city: null },
       { gate: "analytics" },
+      { gate: "dashboard" },
       { gate: "home_value" },
       { gate: "reno" },
       { gate: "compare" },

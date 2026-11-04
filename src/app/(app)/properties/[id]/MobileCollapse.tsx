@@ -1,9 +1,11 @@
 import { ChevronDown } from "lucide-react";
 
 /**
- * A section that is CLOSED on phones and always open on desktop (lg+), so the
- * long reference cards (data sheet, room map, schools) stop pushing the comps
- * carousels down the page. Pure CSS (a peer checkbox, same as Property History):
+ * A section a phone reader can fold away; always open on desktop (lg+). It starts
+ * OPEN on phones too: closed-by-default (#646) hid the data sheet, schools and
+ * neighbourhood behind four bare headers, and the owner judged the page "minimized
+ * too much". The header stays, so a reader can still fold a long card once read.
+ * Pure CSS (a peer checkbox, same as Property History):
  * server-rendered, no client boundary, and the content stays in the HTML for
  * crawlers. Jumps into a closed section open it first: DetailMobileNav,
  * TheReadCard and Spotlight call expandCollapsedAncestors, which checks
@@ -25,7 +27,7 @@ export default function MobileCollapse({
 }) {
   return (
     <div id={id} className={`scroll-mt-28 ${className ?? ""}`}>
-      <input type="checkbox" id={`${id}-toggle`} className="peer sr-only" />
+      <input type="checkbox" id={`${id}-toggle`} defaultChecked className="peer sr-only" />
       <label
         htmlFor={`${id}-toggle`}
         className="mb-3 flex min-h-[52px] cursor-pointer select-none items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-2 peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500 peer-checked:[&_svg]:rotate-180 lg:hidden dark:bg-card/40"

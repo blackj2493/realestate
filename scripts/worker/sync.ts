@@ -490,7 +490,7 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
 
   // Step 8: Delete stale docs from the search index. A doc upserted while the
   // listing was Active otherwise freezes in `properties` forever ("New" at the
-  // old list price) because Query A only fetches StandardStatus eq 'Active' and
+  // old list price) because Query A only fetches live inventory (feedStatusFilter.ts) and
   // sold batches skip the Typesense write. Entire sold (Query B) batch + any
   // terminal-status docs filtered out of an active batch are deleted here.
   const staleIds = collectStaleSearchDocIds(typesenseDocuments, options);

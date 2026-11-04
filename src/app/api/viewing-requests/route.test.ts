@@ -79,6 +79,76 @@ describe('POST /api/viewing-requests', () => {
     expect(row.message).toBe('[Price second-opinion] is 899k fair?');
   });
 
+  it('price check stores the buyer qualifiers after the intent tag, and emails them', async () => {
+    await POST(makeReq({
+      listingKey: 'W12632618',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      intent: 'price_opinion',
+      timeline: 'Within 3 months',
+      hasAgent: 'No',
+      message: 'is 899k fair?',
+    }) as never);
+    const msg = insertSpy.mock.calls[0][0].message as string;
+    // Reporting matches the "[Price" prefix — the intent tag must stay first.
+    expect(msg).toBe('[Price second-opinion] [Timeline: Within 3 months] [Has agent: No] is 899k fair?');
+    const ownerMail = sendSpy.mock.calls[0][0] as { text: string };
+    expect(ownerMail.text).toContain('Buying timeline: Within 3 months');
+    expect(ownerMail.text).toContain('Working with an agent: No');
+  });
+
+  it('drops qualifier values outside the allowlist, and ignores them on other intents', async () => {
+    await POST(makeReq({
+      listingKey: 'W12632618', name: 'Jane Doe', email: 'jane@example.com',
+      intent: 'price_opinion', timeline: '<script>', hasAgent: 'maybe',
+    }) as never);
+    expect(insertSpy.mock.calls[0][0].message).toBe('[Price second-opinion]');
+
+    await POST(makeReq({
+      listingKey: 'W12632618', name: 'Jane Doe', email: 'jane@example.com',
+      intent: 'question', timeline: 'Within 3 months', message: 'tenanted?',
+    }) as never);
+    expect(insertSpy.mock.calls[1][0].message).toBe('[Question] tenanted?');
+  });
+
+  it('selling plan: no listing key needed, the address identifies the home', async () => {
+    const res = await POST(makeReq({
+      intent: 'selling_plan',
+      address: '12 Main St, Mississauga',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      message: 'new roof 2023',
+    }) as never);
+    expect(res.status).toBe(200);
+    const row = insertSpy.mock.calls[0][0];
+    expect(row.listing_key).toBe('');
+    expect(row.address).toBe('12 Main St, Mississauga');
+    expect(row.message).toBe('[Selling plan] new roof 2023');
+    expect((sendSpy.mock.calls[0][0] as { subject: string }).subject).toBe('Selling plan — 12 Main St, Mississauga');
+  });
+
+  it('home report: address-identified like the selling plan', async () => {
+    const res = await POST(makeReq({
+      intent: 'home_report',
+      address: '7 Elm Ave, Toronto',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+    }) as never);
+    expect(res.status).toBe(200);
+    const row = insertSpy.mock.calls[0][0];
+    expect(row.listing_key).toBe('');
+    expect(row.message).toBe('[Home report]');
+    expect((sendSpy.mock.calls[0][0] as { subject: string }).subject).toBe('Home report — 7 Elm Ave, Toronto');
+  });
+
+  it('selling plan without an address is rejected; other intents still need a listing key', async () => {
+    const a = await POST(makeReq({ intent: 'selling_plan', name: 'Jane', email: 'jane@example.com' }) as never);
+    expect(a.status).toBe(400);
+    const b = await POST(makeReq({ intent: 'price_opinion', address: '12 Main St', name: 'Jane', email: 'jane@example.com' }) as never);
+    expect(b.status).toBe(400);
+    expect(insertSpy).not.toHaveBeenCalled();
+  });
+
   it('viewing intent (default) leaves the message untagged', async () => {
     await POST(makeReq({
       listingKey: 'W12632618',

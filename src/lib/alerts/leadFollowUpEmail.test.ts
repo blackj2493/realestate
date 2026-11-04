@@ -67,7 +67,7 @@ describe("classifyLeadLane", () => {
 describe("lane copy applicability", () => {
   it("never tells a tenant what the place costs to own", () => {
     for (const lane of ["residential-lease", "commercial-lease"] as LeadLane[]) {
-      const { text } = render(lane);
+      const { text } = render(lane, "question");
       expect(text).not.toMatch(/costs to own/i);
       expect(text).not.toMatch(/mortgage/i);
       expect(text).not.toMatch(/asking-price change/i);
@@ -75,21 +75,21 @@ describe("lane copy applicability", () => {
   });
 
   it("gives a residential tenant rent figures, not sale figures", () => {
-    const { text } = render("residential-lease");
+    const { text } = render("residential-lease", "question");
     expect(text).toMatch(/asking-rent change/i);
     expect(text).toMatch(/what the rent covers/i);
     expect(text).toMatch(/actually rented for/i);
   });
 
   it("gives a residential buyer the carrying cost and the price history", () => {
-    const { text } = render("residential-sale");
+    const { text } = render("residential-sale", "question");
     expect(text).toMatch(/costs to own each month/i);
     expect(text).toMatch(/asking-price change/i);
   });
 
   it("explains TMI on both commercial lanes instead of assuming it is known", () => {
     for (const lane of ["commercial-sale", "commercial-lease"] as LeadLane[]) {
-      const { text } = render(lane);
+      const { text } = render(lane, "question");
       expect(text).toMatch(/TMI/);
       // The term must be defined in the same breath — never left bare.
       expect(text).toMatch(/TMI[^\n]*taxes, maintenance and insurance/i);
@@ -97,14 +97,14 @@ describe("lane copy applicability", () => {
   });
 
   it("leads a commercial tenant with the quoting basis, which is the real trap", () => {
-    const { text } = render("commercial-lease");
+    const { text } = render("commercial-lease", "question");
     expect(text).toMatch(/per square foot per year/i);
     expect(text).toMatch(/zoning/i);
   });
 
   it("never promises residential dwelling figures on a commercial listing", () => {
     for (const lane of ["commercial-sale", "commercial-lease"] as LeadLane[]) {
-      const { text } = render(lane);
+      const { text } = render(lane, "question");
       expect(text).not.toMatch(/condo fee/i);
       expect(text).not.toMatch(/locker/i);
     }
@@ -179,5 +179,71 @@ describe("address handling", () => {
     });
     expect(html).toContain("&quot;Main&quot;");
     expect(html).toContain("&lt;b&gt;St&lt;/b&gt;");
+  });
+});
+
+describe("viewing requests ask for a time (Oct 2026: a renter wanted to view within the hour)", () => {
+  it("gives the direct line and asks for two times, on every lane", () => {
+    for (const lane of ALL_LANES) {
+      const { text, html } = render(lane, "viewing");
+      expect(text).toMatch(/647-466-2109/);
+      expect(html).toMatch(/647-466-2109/);
+      expect(text).toMatch(/two times/i);
+    }
+  });
+
+  it("does not promise a report the lead did not ask for", () => {
+    for (const lane of ALL_LANES) {
+      const { text } = render(lane, "viewing");
+      expect(text).not.toMatch(/figures that matter/i);
+      expect(text).not.toMatch(/^- /m);
+    }
+  });
+
+  it("asks a tenant for what the landlord asks first", () => {
+    expect(render("residential-lease", "viewing").text).toMatch(/move-in date/i);
+    expect(render("commercial-lease", "viewing").text).toMatch(/what you plan to run there/i);
+    expect(render("residential-sale", "viewing").text).not.toMatch(/landlord/i);
+  });
+});
+
+describe("signature (RECO: registrant name + brokerage)", () => {
+  it("names the registrant and the brokerage on every intent", () => {
+    for (const intent of ["viewing", "question", "price_opinion"] as const) {
+      const { text, html } = render("residential-sale", intent);
+      expect(text).toMatch(/— Tanmay Rao/);
+      expect(text).toMatch(/eXp Realty, Brokerage/);
+      expect(html).toMatch(/eXp Realty, Brokerage/);
+    }
+  });
+
+  it("gives the phone on question and price-check replies too", () => {
+    expect(render("residential-sale", "price_opinion").text).toMatch(/call or text me at 647-466-2109/);
+  });
+});
+
+describe("selling plan (address-page seller offer)", () => {
+  it("promises the four parts of the plan, not buyer figures", () => {
+    const { subject, text } = renderLeadFollowUpEmail({ ...base, listingKey: "", intent: "selling_plan" });
+    expect(subject).toBe("Your selling plan — 12 Main St, Toronto");
+    expect(text).toMatch(/price to list at/);
+    expect(text).toMatch(/really take to sell/);
+    expect(text).toMatch(/upgrades are worth doing/);
+    expect(text).toMatch(/when to list/i);
+    expect(text).not.toMatch(/costs to own/i);
+  });
+});
+
+describe("home report (address-page report offer)", () => {
+  it("promises more than the history, and never names REALTOR or MLS", () => {
+    const { subject, text, html } = renderLeadFollowUpEmail({ ...base, listingKey: "", intent: "home_report" });
+    expect(subject).toBe("Your report on 12 Main St, Toronto");
+    expect(text).toMatch(/listed, sold or leased/);
+    expect(text).toMatch(/what changed between sales/);
+    expect(text).toMatch(/likely worth today/);
+    expect(text).toMatch(/what to check before you buy/);
+    // The signature carries the registrant line by design; the BODY must not pitch MLS.
+    expect(text.split("— Tanmay")[0]).not.toMatch(/MLS/);
+    expect(html).toBeTruthy();
   });
 });

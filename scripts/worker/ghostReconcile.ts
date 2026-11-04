@@ -3,7 +3,8 @@
  *
  * WHY THIS EXISTS
  * ───────────────
- * Query A only ever fetches `StandardStatus eq 'Active'`, so when a listing leaves
+ * Query A only ever fetches `StandardStatus eq 'Active'` (plus conditional deals —
+ * feedStatusFilter.ts; this snapshot still reads 'Active' only), so when a listing leaves
  * Active its For-Sale doc freezes at the last Active state. Three nets normally
  * catch the departure — Query B (sold), Query C (de-listed), and the twice-weekly
  * vault reconciler — but each has a blind spot: B/C are ModificationTimestamp

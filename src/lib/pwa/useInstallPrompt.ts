@@ -3,8 +3,8 @@
  *
  * Holds Chrome's deferred `beforeinstallprompt` event (captured at module load, before
  * React mounts, so it is never missed), the durable per-device record (localStorage
- * `pp_pwa_install`, same convention as pp_discovery / pp_dashboard_config), and the
- * open state of the iOS how-to sheet.
+ * `pp_pwa_install`, same convention as pp_discovery / pp_dashboard_config), and which
+ * how-to sheet (iOS or Android) is open.
  *
  * SSR-safe: the store starts empty on the server and is hydrated by <PwaRoot/> on
  * mount, mirroring useDiscovery. Every durable mutation writes straight back.
@@ -17,11 +17,13 @@ import { create } from "zustand";
 import { track } from "@/lib/analytics/posthog";
 import {
   detectInstallPlatform,
+  menuInstallMode,
   parseInstallState,
   EMPTY_INSTALL_STATE,
   STORE_KEY,
   type InstallPlatform,
   type InstallState,
+  type MenuInstallMode,
 } from "./installPlatform";
 
 /** Chrome's non-standard install event — not in lib.dom. */
@@ -32,6 +34,9 @@ export interface BeforeInstallPromptEvent extends Event {
 
 /** Where an install action was started from (analytics). */
 export type InstallSource = "nudge" | "menu";
+
+/** Which how-to sheet: iOS (Share → Add to Home Screen) or Android (⋮ → Add to Home screen). */
+export type StepsSheet = "ios" | "android";
 
 const VISIT_FLAG = "pp_pwa_visit";
 
@@ -70,7 +75,7 @@ interface InstallPromptState extends InstallState {
   /** The held Chrome event, usable exactly once. */
   deferred: BeforeInstallPromptEvent | null;
   standalone: boolean;
-  iosSheetOpen: boolean;
+  stepsSheet: StepsSheet | null;
   /**
    * Where a native install stands, for the confirmation toast. Chrome's dialog closes the
    * moment the user taps "Install", but on Android the home-screen icon (a WebAPK) can take
@@ -83,8 +88,8 @@ interface InstallPromptState extends InstallState {
   promptInstall: (source: InstallSource) => Promise<"accepted" | "dismissed" | "unavailable">;
   /** "Not now" — keeps the nudge away for NUDGE_SNOOZE_MS. */
   snooze: () => void;
-  openIosSheet: (source: InstallSource) => void;
-  closeIosSheet: () => void;
+  openStepsSheet: (sheet: StepsSheet, source: InstallSource) => void;
+  closeStepsSheet: () => void;
 }
 
 export const useInstallPrompt = create<InstallPromptState>((set, get) => {
@@ -98,7 +103,7 @@ export const useInstallPrompt = create<InstallPromptState>((set, get) => {
     hydrated: false,
     deferred: null,
     standalone: false,
-    iosSheetOpen: false,
+    stepsSheet: null,
     installStage: "idle",
 
     hydrate: () => {
@@ -151,14 +156,14 @@ export const useInstallPrompt = create<InstallPromptState>((set, get) => {
       persist();
     },
 
-    openIosSheet: (source) => {
-      track("pwa_install_prompted", { platform: "ios", source });
+    openStepsSheet: (sheet, source) => {
+      track("pwa_install_prompted", { platform: sheet === "ios" ? "ios" : "android-steps", source });
       // Showing the steps counts as the ask; the nudge stays away for the snooze window.
-      set({ iosSheetOpen: true, dismissedAt: Date.now() });
+      set({ stepsSheet: sheet, dismissedAt: Date.now() });
       persist();
     },
 
-    closeIosSheet: () => set({ iosSheetOpen: false }),
+    closeStepsSheet: () => set({ stepsSheet: null }),
   };
 });
 
@@ -189,4 +194,20 @@ export function useInstallPlatform(): InstallPlatform {
     if (standalone || installedAt !== null) return "installed";
     return currentPlatform(hasNativePrompt);
   }, [hydrated, standalone, installedAt, hasNativePrompt]);
+}
+
+/** What the drawer's "Install app" row does here, or null to hide it (menuInstallMode). */
+export function useMenuInstallMode(): MenuInstallMode | null {
+  const hydrated = useInstallPrompt((s) => s.hydrated);
+  const hasNativePrompt = useInstallPrompt((s) => s.deferred !== null);
+  const standalone = useInstallPrompt((s) => s.standalone);
+  return useMemo(() => {
+    if (!hydrated || typeof navigator === "undefined") return null;
+    return menuInstallMode({
+      userAgent: navigator.userAgent,
+      maxTouchPoints: navigator.maxTouchPoints ?? 0,
+      standalone,
+      hasNativePrompt,
+    });
+  }, [hydrated, standalone, hasNativePrompt]);
 }

@@ -13,6 +13,7 @@ import { FindingShell } from "@/components/data/FindingShell";
 import { FINDINGS, LIVE_FINDINGS, findingBySlug } from "@/lib/data/findings";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import OntarioOverAskingConvergence from "../_content/ontario-over-asking-convergence";
+import OntarioPowerOfSaleDiscount from "../_content/ontario-power-of-sale-discount";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -20,6 +21,7 @@ export const dynamicParams = false;
 
 const CONTENT: Record<string, () => React.ReactElement> = {
   "ontario-over-asking-convergence": OntarioOverAskingConvergence,
+  "ontario-power-of-sale-discount": OntarioPowerOfSaleDiscount,
 };
 
 export function generateStaticParams() {

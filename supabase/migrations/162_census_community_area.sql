@@ -1,4 +1,4 @@
--- 161: Census 2021 facts per TRREB community, for the neighbourhood hub pages
+-- 162: Census 2021 facts per TRREB community, for the neighbourhood hub pages
 -- (/property/{prov}/{city}/{neighbourhood}).
 --
 -- WHY. The hub page lists homes for sale and little else, so it is thin for search. The
@@ -36,5 +36,5 @@ COMMENT ON TABLE public.census_community_area IS
   'Census 2021 area facts per TRREB community (City + CityRegion), pooled from the DAs where the community holds most listing points. Facts about places only. See src/lib/census/communities.ts.';
 
 INSERT INTO schema_migrations (filename, applied_via)
-VALUES ('161_census_community_area.sql', 'sql-editor')
+VALUES ('162_census_community_area.sql', 'sql-editor')
 ON CONFLICT (filename) DO NOTHING;

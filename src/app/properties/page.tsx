@@ -84,6 +84,9 @@ const SUBTYPE_TO_DASHBOARD_KEY: ReadonlyMap<string, string> = new Map(
 let seededCityValue: string | null = null;
 let seededCenterKey: string | null = null;
 let seededSignalValue: string | null = null;
+let seededAgeValue: string | null = null;
+// ?age= accepts only the registry's Property Age values (TRREB ApproximateAge buckets).
+const AGE_PARAM_VALUES = new Set(["New", "0-5", "6-15", "16-30", "31-50", "51-99", "100+"]);
 
 /** Valid description-signal ids in a `?signal=a,b` param; unknown ids are dropped. */
 function signalParamIds(raw: string | null): string[] {
@@ -345,6 +348,19 @@ function CommandCenterContent() {
     const ids = signalParamIds(raw);
     if (ids.length) setUniversalFilter(DESC_SIGNALS_KEY, ids);
   }, [searchParams, setUniversalFilter]);
+
+  // Property-age deep link (?age=New,0-5) — e.g. /new-homes-hst "new and nearly-new homes
+  // in {city}" opens the map with the Property Age filter already set. Seeds once per
+  // distinct value (module scope, like the signal seed) so clearing it is not undone.
+  useEffect(() => {
+    const raw = searchParams.get("age");
+    if (!raw || seededAgeValue === raw) return;
+    seededAgeValue = raw;
+    const ids = raw.split(",").filter((v) => AGE_PARAM_VALUES.has(v));
+    if (!ids.length) return;
+    setUniversalFilter("age", ids);
+    addFilter("age");
+  }, [searchParams, setUniversalFilter, addFilter]);
 
   const persona = PERSONA_CONFIG[activePersona];
 

@@ -2,7 +2,7 @@ import { FACTS, fmtFact, type AreaFacts, type FactKey } from "@/lib/census/areaF
 
 /**
  * "The area" on a neighbourhood hub — Census 2021 facts for the community next to its city
- * (census_community_area, migration 161). A server component: the text is in the HTML for
+ * (census_community_area, migration 162). A server component: the text is in the HTML for
  * search engines. Facts about PLACES only, never facts about who lives there by a protected
  * ground (Ontario Human Rights Code; TRESA). See src/lib/census/characteristics.ts.
  */

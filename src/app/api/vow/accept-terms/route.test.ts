@@ -195,3 +195,41 @@ describe("POST /api/vow/accept-terms — signup attribution", () => {
     expect((await POST(post({ ...ATTESTED, region: "Ottawa", touches }))).status).toBe(200);
   });
 });
+
+describe("POST /api/vow/accept-terms — what brings you here (signup_intent)", () => {
+  async function withProfilesSpy() {
+    const { getServiceRoleClient } = await import("@/lib/supabase/client");
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ update });
+    vi.mocked(getServiceRoleClient).mockReturnValue({ from } as never);
+    return { from, update, eq };
+  }
+
+  it("stores a seller's goal and address on the profile", async () => {
+    const { from, update, eq } = await withProfilesSpy();
+    const res = await POST(post({ ...ATTESTED, region: "Ottawa", intent: { goal: "selling", address: "12 Main St, Ottawa" } }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({ ok: true, intent: "selling" });
+    expect(from).toHaveBeenCalledWith("profiles");
+    expect(update.mock.calls[0][0].signup_intent).toMatchObject({ goal: "selling", address: "12 Main St, Ottawa" });
+    expect(eq).toHaveBeenCalledWith("id", "u1");
+  });
+
+  it("drops an unknown goal and still accepts the Terms", async () => {
+    const { update } = await withProfilesSpy();
+    const res = await POST(post({ ...ATTESTED, region: "Ottawa", intent: { goal: "flipping" } }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({ ok: true, intent: null });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("never fails the acceptance when the intent write fails", async () => {
+    const { getServiceRoleClient } = await import("@/lib/supabase/client");
+    vi.mocked(getServiceRoleClient).mockReturnValue({
+      from: () => { throw new Error("db down"); },
+    } as never);
+    const res = await POST(post({ ...ATTESTED, region: "Ottawa", intent: { goal: "buying" } }));
+    expect(res.status).toBe(200);
+  });
+});

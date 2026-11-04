@@ -89,16 +89,26 @@ export type AnalyticsEvents = {
   'read_evidence_clicked': { listingId: string; target: string };
 
   // Comparable-listings carousels on the listing page. `placement` says where the row
-  // sat (the for-sale row moved up on mobile 2026-10-27), so before/after is comparable.
+  // sat (the for-sale row moved up on mobile 2026-10-27, `mobile_top`; back down after
+  // the area 2026-11-03, `mobile_mid`), so before/after is comparable.
   'similar_listing_clicked': {
     listingId: string;
     kind: 'for_sale' | 'sold';
     position: number;
-    placement: 'mobile_top' | 'desktop_top' | 'market' | 'bottom';
+    placement: 'mobile_top' | 'mobile_mid' | 'desktop_top' | 'market' | 'bottom';
+  };
+
+  // Listing page — how far readers get. One event per section per page view, when the
+  // section first enters the viewport (SectionReachTracker). `layoutVersion` changes
+  // with the section order, so one order compares with the next.
+  'listing_section_reached': {
+    listingId: string;
+    section: string;
+    layout: 'mobile' | 'desktop';
+    layoutVersion: string;
   };
 
   // The area (Census 2021) card — which lens a reader picks.
-  'area_lens_switched': { listingId: string; lens: 'investor' | 'family' | 'owner' };
 
   // Things to Know — the "worth asking" question sheet copied to the clipboard.
   'diligence_questions_copied': { listingId: string; count: number };
@@ -135,7 +145,7 @@ export type AnalyticsEvents = {
   /** The Terms screen rendered. Four required fields sit between here and completion. */
   'auth_terms_viewed': { firstRun: boolean };
   /** Submitted Terms with something missing — says WHICH gate turned them back. */
-  'auth_terms_blocked': { reason: 'missing_confirmation' | 'missing_market' };
+  'auth_terms_blocked': { reason: 'missing_confirmation' | 'missing_goal' | 'missing_market' };
   /**
    * Terms accepted and a market chosen. The account is now real and reachable.
    *
@@ -144,7 +154,24 @@ export type AnalyticsEvents = {
    * saved areas are in that state, and the readers sitting there unsubscribe at 27.8%.
    * Crossed against `market`, it also names which markets are handing someone a firehose.
    */
-  'auth_signup_completed': { market: string; narrowed: boolean; homeTypes: number; minBeds: number };
+  'auth_signup_completed': {
+    market: string;
+    narrowed: boolean;
+    homeTypes: number;
+    minBeds: number;
+    /** "What brings you here?" (2026-11): buying / selling / investing / renting / researching. */
+    goal: string;
+    /** A seller named their home, so they land on its /address page. */
+    sellerAddress: boolean;
+  };
+  /** An address-page offer card was opened (the form shown): selling plan or home report. */
+  'address_offer_opened': { intent: 'selling_plan' | 'home_report' | 'new_vs_resale' };
+  /** An address-page offer request was accepted by the server — a lead. */
+  'address_offer_requested': { intent: 'selling_plan' | 'home_report' | 'new_vs_resale'; hasPhone: boolean };
+  /** /new-homes-hst: the HST relief calculator got a price (fires once per page view). */
+  'hst_calc_used': { band: 'under_1m' | '1m_1_5m' | '1_5m_1_85m' | 'over_1_85m' };
+  /** /new-homes-hst: a city link was followed. */
+  'hst_city_link': { city: string; target: 'new_homes' | 'price_cuts' };
 
   // First saved home (src/components/watchlist). A reader who saved a home on signup day
   // came back on a later day at 81% vs 33-34% without one (2026-10-04, 422 signups).
@@ -153,6 +180,15 @@ export type AnalyticsEvents = {
   'signup_save_offer_shown': { listingKey: string };
   'signup_save_offer_accepted': { listingKey: string };
   'signup_save_offer_dismissed': { listingKey: string };
+  /** One-tap save offered because the reader showed interest (2026-11): a repeat visit to the
+   *  same listing, or arrival from one of our emails. Measured apart from the signup offer. */
+  /** Third visit to the same sale listing → free price second-opinion offered (2026-11). */
+  'opinion_offer_shown': { listingKey: string };
+  'opinion_offer_clicked': { listingKey: string };
+  'opinion_offer_dismissed': { listingKey: string };
+  'save_offer_shown': { listingKey: string; reason: 'repeat_view' | 'from_email' };
+  'save_offer_accepted': { listingKey: string; reason: 'repeat_view' | 'from_email' };
+  'save_offer_dismissed': { listingKey: string; reason: 'repeat_view' | 'from_email' };
   'save_hint_shown': Record<string, never>;
   'save_hint_converted': Record<string, never>;
   'save_hint_dismissed': Record<string, never>;

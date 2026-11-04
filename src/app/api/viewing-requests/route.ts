@@ -3,6 +3,7 @@ import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
 import { sendLeadFollowUp, fetchLeadLane, type LeadIntent } from "@/lib/alerts/leadFollowUpEmail";
 import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
+import { TIMELINE_OPTIONS, AGENT_OPTIONS } from "@/components/Property/leadIntents";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,17 @@ const INTENT_LABELS: Record<string, string> = {
   viewing: "Viewing request",
   question: "Question",
   price_opinion: "Price second-opinion",
+  // Address pages (seller path, 2026-11): a homeowner asks for a selling plan for THEIR
+  // home. There is no listing, so this is the one intent that may omit listingKey.
+  selling_plan: "Selling plan",
+  // Address pages (2026-11): anyone weighing a home asks for the full written report on it.
+  home_report: "Home report",
+  // /new-homes-hst (2026-11): a buyer weighing a new build against a resale home asks for a
+  // written comparison. "address" holds the homes or the area they are comparing.
+  new_vs_resale: "New vs resale check",
 };
+// Intents whose home is identified by its ADDRESS (address pages), so listingKey is optional.
+const ADDRESS_INTENTS = new Set(["selling_plan", "home_report", "new_vs_resale"]);
 
 function bad(error: string) {
   return NextResponse.json({ success: false, error }, { status: 400 });
@@ -47,11 +58,29 @@ export async function POST(req: NextRequest) {
     const intent =
       typeof body?.intent === "string" && body.intent in INTENT_LABELS ? body.intent : "viewing";
     const leadLabel = INTENT_LABELS[intent];
+    // Buyer qualifiers (price checks). Allowlisted, so an unknown value is dropped rather
+    // than stored; both are optional and never block the lead.
+    const pick = <T extends readonly string[]>(v: unknown, allowed: T) =>
+      typeof v === "string" && (allowed as readonly string[]).includes(v) ? v : "";
+    const timeline = intent === "price_opinion" ? pick(body?.timeline, TIMELINE_OPTIONS) : "";
+    const hasAgent = intent === "price_opinion" ? pick(body?.hasAgent, AGENT_OPTIONS) : "";
+    const qualifiers = [timeline && `[Timeline: ${timeline}]`, hasAgent && `[Has agent: ${hasAgent}]`]
+      .filter(Boolean)
+      .join(" ");
     // Non-viewing intents tag the message so the lead type survives without a schema change.
+    // The intent tag stays FIRST: lead reporting matches on the "[Price" prefix.
     const taggedMessage =
-      intent === "viewing" ? message || null : `[${leadLabel}]${message ? ` ${message}` : ""}`;
+      intent === "viewing"
+        ? message || null
+        : [`[${leadLabel}]`, qualifiers, message].filter(Boolean).join(" ");
 
-    if (!LISTING_KEY_RE.test(listingKey)) return bad("Invalid listing key");
+    if (ADDRESS_INTENTS.has(intent)) {
+      // The home is identified by its address; a listing key, if one is sent, must still be valid.
+      if (!address) return bad("Address is required");
+      if (listingKey && !LISTING_KEY_RE.test(listingKey)) return bad("Invalid listing key");
+    } else if (!LISTING_KEY_RE.test(listingKey)) {
+      return bad("Invalid listing key");
+    }
     if (!name || name.length > MAX.name) return bad("Name is required");
     if (!EMAIL_RE.test(email) || email.length > MAX.email) return bad("Valid email is required");
     if (phone.length > MAX.phone || preferredTime.length > MAX.preferredTime) return bad("Field too long");
@@ -86,6 +115,8 @@ export async function POST(req: NextRequest) {
         `Email: ${email}`,
         phone && `Phone: ${phone}`,
         preferredTime && `Preferred time: ${preferredTime}`,
+        timeline && `Buying timeline: ${timeline}`,
+        hasAgent && `Working with an agent: ${hasAgent}`,
         message && `Message: ${message}`,
       ].filter(Boolean).join("\n"),
     });
@@ -98,7 +129,7 @@ export async function POST(req: NextRequest) {
       // not carry the property, and a commercial lease is quoted per square foot per
       // year with TMI on top. fetchLeadLane never throws and falls back to the
       // residential sale lane, so a classification miss still sends the old copy.
-      const lane = await fetchLeadLane(supabase, listingKey);
+      const lane = listingKey ? await fetchLeadLane(supabase, listingKey) : "residential-sale";
       await sendLeadFollowUp({
         name,
         address,

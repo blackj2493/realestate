@@ -1,5 +1,5 @@
 /**
- * loadCommunities — Census 2021 facts per TRREB community (migration 161), for the
+ * loadCommunities — Census 2021 facts per TRREB community (migration 162), for the
  * neighbourhood hub pages.
  *
  *   1. Reads the profile extract (the same profile_on.ndjson as loadCensus.ts).

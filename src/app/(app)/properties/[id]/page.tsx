@@ -13,7 +13,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock, Gauge, Tag, Hammer, Wallet, Lightbulb, MapPinned } from "lucide-react";
+import { Bed, Bath, Square, Car, Layers, FileText, Building2, ChevronDown, Clock, Lock, Gauge, Tag, Hammer, Wallet, Lightbulb } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { gateVowDerived } from "@/lib/property/getListingDetail";
 import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
@@ -72,6 +72,7 @@ import {
 import SocialProofBar from "@/components/Property/SocialProofBar";
 import SimilarProperties from "@/components/Property/SimilarProperties";
 import MobileCollapse from "./MobileCollapse";
+import SectionReachTracker from "@/components/Property/SectionReachTracker";
 import ListingAlertCapture from "@/components/Property/ListingAlertCapture";
 import IntelligencePanel, { type IntelligenceTile } from "@/components/Property/IntelligencePanel";
 import { shouldRender as valueAddWillRender, buildView as buildValueAddView } from "@/components/Property/forceAppreciationView";
@@ -89,12 +90,13 @@ import ListingActions from "./ListingActions";
 import { Suspense } from "react";
 import NearbySchools from "./NearbySchools";
 import AreaCard from "@/components/Property/AreaCard";
-import { areaSummary } from "@/lib/census/areaFacts";
+import { areaSummary } from "@/lib/census/plainFacts";
 import NearbyAmenities from "./NearbyAmenities";
 import TypicalRents from "./TypicalRents";
 import PropertyNotFound from "./PropertyNotFound";
 import DetailMobileNav from "./DetailMobileNav";
 import ClampText from "./ClampText";
+import { conditionalNotice } from "@/lib/listings/statusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +201,7 @@ interface RawListing {
   AssociationFee?: number;
   PublicRemarks?: string;
   StandardStatus?: string;
+  MlsStatus?: string;
   DaysOnMarket?: number;
   OriginalEntryTimestamp?: string;
   TransactionType?: string;
@@ -285,8 +288,11 @@ export async function generateMetadata({
   const description = cleanDescription(p.PublicRemarks) || fallbackDescription;
   // Frozen-Active payloads (Terminated/Expired/Suspended) must noindex too — trust
   // the resolved status, not the stale payload field.
+  // A conditional deal is StandardStatus 'Active Under Contract' (feedStatusFilter.ts):
+  // still live IDX inventory, so it stays indexable like any active listing.
   const isActive =
-    detail.status.kind === "active" && (p.StandardStatus ?? "Active") === "Active";
+    detail.status.kind === "active" &&
+    ["Active", "Active Under Contract"].includes(p.StandardStatus ?? "Active");
   // Metadata is built from the UNGATED detail (it has no viewer, and is shared by every
   // request), so a sold listing's lead photo would be republished in the og:image tag to
   // any scraper — around the gate the page itself now applies. Photos on a closed record
@@ -590,10 +596,8 @@ export default async function PropertyPage({
   const areaCard = census ? (
     <AreaCard
       census={census}
-      listingId={id}
       rentMonthly={isLease ? price || null : (view.wholeHomeMonthlyRent ?? view.compMonthlyRent)}
       rentLocked={!isLease && !isAuthed}
-      initialLens={lens === "smart" ? "owner" : "investor"}
     />
   ) : null;
   const jsonLd = buildJsonLd(id, detail);
@@ -653,16 +657,17 @@ export default async function PropertyPage({
 
   // Mobile section jumper — matches the zoned mobile scroll order (the Numbers
   // panel sits second); ids are shared with the desktop layout's anchors.
-  // 2026-10-27: the for-sale comps moved up to right after the numbers, and the sold
-  // comps above the (now closed) history, to keep the carousels near the top.
+  // 2026-11-03 (owner call): sold comps follow the numbers; the for-sale row comes after
+  // the area; the neighbourhood is last. 2026-11-04 (owner call): the history sits sixth,
+  // after the for-sale row and before the market grids.
   const navSections = [
     { id: "overview", label: "Overview" },
     { id: "numbers", label: "Numbers" },
-    { id: "similar", label: "Similar" },
+    { id: "comps", label: "Comps" },
     { id: "details", label: "Details" },
     ...(rooms.length > 0 ? [{ id: "rooms", label: "Rooms" }] : []),
     { id: "area", label: "Area" },
-    { id: "comps", label: "Comps" },
+    { id: "similar", label: "Similar" },
     { id: "history", label: "History" },
   ];
 
@@ -969,11 +974,18 @@ export default async function PropertyPage({
 
         <DetailMobileNav sections={navSections} />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[7fr_3fr]">
+        {/* PHONE ORDER (owner calls 2026-11-03/04). Below lg this wrapper is a flex column
+            and the grid and the market section are `display: contents`, so each part takes
+            an `order`: 1 overview, 2 numbers, 3 sold comps, 4 the home + the area, 5 similar
+            for sale, 6 history, 7 market grids, 8 neighbourhood. Desktop (lg) keeps the
+            grid and the source order. `data-reach` tags feed SectionReachTracker. */}
+        <SectionReachTracker listingId={id} />
+        <div className="flex flex-col gap-6 lg:block">
+        <div className="contents lg:grid lg:grid-cols-[7fr_3fr] lg:gap-6">
           {/* ── LEFT: THE HOME zone — the property itself, before any analysis. ── */}
-          <div id="home" className="scroll-mt-28 lg:col-start-1 lg:row-start-1">
+          <div id="home" className="order-1 scroll-mt-28 lg:order-none lg:col-start-1 lg:row-start-1">
             {/* Header */}
-            <div id="overview" className="mb-6 scroll-mt-28">
+            <div id="overview" data-reach="overview" className="mb-6 scroll-mt-28">
               {badges.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
                   {badges.map((b, i) => (
@@ -1155,6 +1167,14 @@ export default async function PropertyPage({
                   <span className="text-cyan-700 dark:text-cyan-400">Full analysis ↓</span>
                 </a>
               )}
+              {/* A conditional deal is still "active" in the IDX feed, so the page would
+                  read as a plain for-sale home. The search card shows the same status as
+                  a "Sold Cond." chip (statusBadge.ts). IDX field, so not gated. */}
+              {isActiveListing && conditionalNotice(p.MlsStatus) && (
+                <p className="mt-1 max-w-prose rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-800 dark:text-amber-200">
+                  {conditionalNotice(p.MlsStatus)}
+                </p>
+              )}
               {status.kind === "delisted" && (
                 <p className="mt-1 text-sm text-amber-700 dark:text-amber-300/80">
                   {status.mlsStatus
@@ -1312,7 +1332,7 @@ export default async function PropertyPage({
           {/* ── RIGHT rail: THE NUMBERS zone — one Intelligence panel instead of six
                stacked analysis cards. Desktop col 2, sticky; renders SECOND on mobile,
                after the home itself. ── */}
-          <div id="numbers" className="scroll-mt-28 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+          <div id="numbers" data-reach="numbers" className="order-2 scroll-mt-28 lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-2">
             <div className="sticky top-6 space-y-4">
               <div className="lg:hidden"><ZoneLabel>The Numbers</ZoneLabel></div>
               {/* Legacy deep-link anchor (The Read evidence fallback, old inbound links). */}
@@ -1489,22 +1509,6 @@ export default async function PropertyPage({
                           </div>
                         ),
                       },
-                      // The area — Census 2021 facts around the home. Public, not VOW-gated.
-                      census && censusLine
-                        ? {
-                            key: "area",
-                            label: "The area",
-                            icon: <MapPinned className="h-[18px] w-[18px] text-cyan-700 dark:text-cyan-400" />,
-                            sheetTitle: "The area",
-                            value: (
-                              <span className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
-                                {censusLine}
-                              </span>
-                            ),
-                            sub: `Census 2021 · vs ${census.cityName}`,
-                            detail: areaCard,
-                          }
-                        : null,
                     ].filter(Boolean) as IntelligenceTile[]
                   }
                   footer={
@@ -1641,19 +1645,12 @@ export default async function PropertyPage({
 
               {/* Property History (timeline + campaign/sale tables) lives in the full-width band below the grid. */}
               <CondoFeeStabilityCard feeStability={detail.feeStability} />
-
-              {/* MOBILE ONLY: similar for-sale homes right after the numbers — the
-                  carousel keeps a phone reader browsing, so it sits ~2 screens down
-                  instead of ~7 (owner call 2026-10-27). Desktop's row is below the grid. */}
-              <div id="similar" className="scroll-mt-28 lg:hidden">
-                <SimilarProperties {...similarProps} part="forSale" placement="mobile_top" />
-              </div>
             </div>
           </div>
 
           {/* ── LEFT / row 2: THE HOME detail. Renders THIRD on mobile — after the
                Intelligence panel, so the moat sits one screen from the price. ── */}
-          <div className="lg:col-start-1 lg:row-start-2">
+          <div data-reach="details" className="order-4 lg:order-none lg:col-start-1 lg:row-start-2">
             <div className="lg:hidden"><ZoneLabel>The Home</ZoneLabel></div>
 
             {/* Remarks (the listing's own description) */}
@@ -1701,9 +1698,10 @@ export default async function PropertyPage({
               )}
             </MobileCollapse>
 
-            {/* THE AREA — schools and amenities as closed rows on phones (each card
-                is long), unchanged on desktop. Neighbourhood (Census 2021) is the last row. */}
-            <div id="area" className="scroll-mt-28">
+            {/* THE AREA — schools and amenities as foldable rows on phones (each card
+                is long), unchanged on desktop. On phones the neighbourhood (Census 2021)
+                renders at the end of the market zone instead (owner call 2026-11-03). */}
+            <div id="area" data-reach="area" className="scroll-mt-28">
               <div className="lg:hidden"><ZoneLabel>The Area</ZoneLabel></div>
 
               {/* Schools — "Schools near this home" is a dwelling lens; off for commercial. */}
@@ -1718,29 +1716,37 @@ export default async function PropertyPage({
                 <NearbyAmenities listingId={id} />
               </MobileCollapse>
 
-              {/* Neighbourhood — Census 2021 facts (tenure, commute, moves, rent check). */}
-              {areaCard && (
-                <MobileCollapse id="area-neighbourhood" title="Neighbourhood" sub={censusLine ?? "Census 2021"}>
-                  {areaCard}
-                </MobileCollapse>
-              )}
+              {/* Neighbourhood — Census 2021 facts as plain sentences, plus the rent check
+                  (owner call 2026-10-29 removed the Numbers-panel tile). Desktop only here;
+                  the phone copy is the last row of the market zone below. */}
+              {areaCard && <div data-reach="neighbourhood" className="hidden lg:block">{areaCard}</div>}
             </div>
           </div>
         </div>
 
+        {/* MOBILE ONLY: similar for-sale homes after the area — the next step once the
+            reader is done with this home (owner call 2026-11-03; it sat right after the
+            numbers from 2026-10-27, where it led readers away before the price evidence). */}
+        <div id="similar" data-reach="similar" className="order-5 scroll-mt-28 lg:hidden">
+          <SimilarProperties {...similarProps} part="forSale" placement="mobile_mid" />
+        </div>
+
         {/* DESKTOP ONLY: similar for-sale homes directly below the first band. */}
-        <div className="hidden lg:block">
+        <div data-reach="similar" className="hidden lg:block">
           <SimilarProperties {...similarProps} part="forSale" placement="desktop_top" />
         </div>
 
-        {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — rents + history + comps. ── */}
-        <section id="market" className="scroll-mt-28 lg:mt-6">
-          <div className="lg:hidden"><ZoneLabel>The Market</ZoneLabel></div>
+        {/* ── FULL-WIDTH: THE MARKET zone (label mobile-only) — rents + history + comps.
+             On phones its parts join the page order above (sold comps 3, history 6,
+             label + grids 7, neighbourhood 8). ── */}
+        <section id="market" className="contents scroll-mt-28 lg:mt-6 lg:block">
+          <div className="order-7 lg:hidden"><ZoneLabel>The Market</ZoneLabel></div>
 
           {/* Sell + rent grids LEAD the market zone (owner call 2026-07-24: prominent
               placement) — actual close medians (+ middle-50% ranges on sale prices)
               for consumers, asking for anon. Sale listings show prices first, rentals
               rents first. Streamed; self-hides on thin samples or missing coords. */}
+          <div data-reach="market" className="order-7 lg:order-none">
           {!isCommercial && (
             <Suspense fallback={null}>
               <TypicalRents listingId={id} salesFirst={!isLease} />
@@ -1752,22 +1758,23 @@ export default async function PropertyPage({
               mind — and because a body link with descriptive anchor text is the only
               internal signal that moved /data at all (see MarketDataLinks' header). */}
           <MarketDataLinks city={marketName} isLease={isLease} />
+          </div>
 
         {/* ── Recently Sold (or Leased) comps — moved ABOVE the history (2026-10-27) so
              the carousel is not the last thing on the page. The for-sale row renders
              higher up (mobile: after the numbers; desktop: below the first band).
              Commercial subjects use exact-subtype + area/price matching; commercial
              leases comp against For-Lease inventory (commercial-gap Phase 1). ── */}
-        <div id="comps" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px]">
+        <div id="comps" data-reach="comps" className="order-3 scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_420px] lg:order-none">
           <SimilarProperties {...similarProps} part="sold" placement="market" />
         </div>
 
-        <section id="history" className="scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px]">
-          {/* Mobile: CLOSED by default since 2026-10-27 (it sat between the reader and
-              the comps), opened by a tap or by any jump to #history. Pure CSS (a peer
+        <section id="history" data-reach="history" className="order-6 scroll-mt-28 [content-visibility:auto] [contain-intrinsic-size:0px_560px] lg:order-none">
+          {/* Mobile: OPEN by default again (2026-10-29 — closed-by-default hid too much;
+              the comps now sit above it anyway), folded away by a tap. Pure CSS (a peer
               checkbox), so it stays server-rendered — no client boundary, no
               hydration flash. Desktop (md+) always shows it and hides the toggle. */}
-          <input type="checkbox" id="history-toggle" className="peer sr-only" />
+          <input type="checkbox" id="history-toggle" defaultChecked className="peer sr-only" />
           <label
             htmlFor="history-toggle"
             className="flex min-h-[44px] cursor-pointer select-none items-center justify-between gap-2 border-t border-border py-3 peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500 peer-checked:[&_svg]:rotate-180 md:hidden"
@@ -1806,7 +1813,21 @@ export default async function PropertyPage({
           </div>
         </section>
 
+        {/* MOBILE ONLY: the neighbourhood (Census 2021), last on phones. Desktop's copy is
+            in the area column above. */}
+        {areaCard && (
+          <div data-reach="neighbourhood" className="order-8 lg:hidden">
+            <MobileCollapse id="area-neighbourhood" title="Neighbourhood" sub={censusLine ?? "Census 2021"}>
+              {areaCard}
+            </MobileCollapse>
+          </div>
+        )}
+
         </section>
+        </div>
+
+        {/* End of the page content, for SectionReachTracker. */}
+        <div data-reach="end" aria-hidden />
 
         {/* IDX consumer notice — unconditional on every listing page (§6.3(i)+(k)),
             independent of whether AVM figures rendered above. */}

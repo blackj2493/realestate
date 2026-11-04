@@ -2,7 +2,7 @@ import { getServiceRoleClient } from "@/lib/supabase/client";
 import type { AreaFacts } from "./areaFacts";
 
 /**
- * Census facts for a neighbourhood hub (migration 161), by its raw TRREB City values and
+ * Census facts for a neighbourhood hub (migration 162), by its raw TRREB City values and
  * CityRegion value(s). When a slug matches more than one row, the row with the most DAs
  * wins. null on no row or any failure: the section is optional, the listings are not.
  */
