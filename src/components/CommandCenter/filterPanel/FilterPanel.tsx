@@ -268,13 +268,16 @@ export default function FilterPanel({
             </>
           ) : (
             <>
+              {/* A real button, not a 10px label: owner report 2026-11-04 — the old
+                  "< FILTERS" text was too small to notice on a phone. */}
               <button
                 type="button"
                 onClick={() => setPage("main")}
-                className={cn(LABEL, "-ml-2 flex min-h-[44px] items-center gap-0.5 pl-1 pr-2 text-cyan-700 hover:text-cyan-600 dark:text-cyan-400")}
+                aria-label="Back to all filters"
+                className="flex min-h-[44px] shrink-0 items-center gap-1 border border-cyan-500/50 bg-cyan-500/10 pl-2 pr-3 text-sm font-semibold text-cyan-700 transition-colors hover:bg-cyan-500/20 dark:text-cyan-300"
               >
-                <ChevronLeft className="h-4 w-4" aria-hidden />
-                Filters
+                <ChevronLeft className="h-5 w-5" aria-hidden />
+                Back
               </button>
               <h2 className="flex-1 truncate text-center font-mono text-sm font-semibold uppercase tracking-wider text-foreground">
                 {PAGE_TITLE[page]}
