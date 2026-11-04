@@ -19,12 +19,12 @@ const CITIES = [
   ["ottawa", "Ottawa"],
 ] as const;
 
-/** Pick a city, then go to its new homes or its price cuts. */
+/** Pick a city, then open the map on its new and nearly-new homes (?age=New,0-5), or the price cuts. */
 export default function CityLinks() {
   const [city, setCity] = useState<string>("toronto");
   const name = CITIES.find(([s]) => s === city)?.[1] ?? "Toronto";
   const btn =
-    "inline-flex min-h-[44px] items-center justify-center rounded-md px-4 text-sm font-semibold transition-colors";
+    "inline-flex min-h-[44px] items-center justify-center rounded-md px-4 py-2 text-center text-sm font-semibold transition-colors";
 
   return (
     <section aria-labelledby="city-title" className="rounded-lg border border-border bg-card p-5">
@@ -48,7 +48,7 @@ export default function CityLinks() {
       </select>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <Link
-          href={`/lifestyle/${city}/new-construction`}
+          href={`/properties?${new URLSearchParams({ city: name, age: "New,0-5" }).toString()}`}
           onClick={() => track("hst_city_link", { city, target: "new_homes" })}
           className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
         >

@@ -52,7 +52,28 @@ function Stat({ value, label }: { value: string; label: string }) {
 const th = "px-3 py-2 text-left font-medium text-muted-foreground";
 const td = "px-3 py-2 text-foreground";
 
-export default function NewHomesHstPage() {
+/** Next steps: the request card and the city links. */
+function NextSteps() {
+  return (
+    <>
+      <CityLinks />
+      <NewVsResaleCard />
+    </>
+  );
+}
+
+/**
+ * A reader who arrives from the post (utm_source=reddit, or the post's campaign) has
+ * already read the numbers, so the next steps come right after the calculator. A fresh
+ * visitor reads the numbers first and finds the next steps at the end.
+ */
+export default async function NewHomesHstPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const fromPost = sp.utm_source === "reddit" || sp.utm_campaign === "hst-new-vs-resale";
   return (
     <main className="min-h-app bg-background text-foreground">
       <article className="mx-auto max-w-3xl space-y-8 px-4 py-8">
@@ -66,6 +87,8 @@ export default function NewHomesHstPage() {
         </header>
 
         <HstCalculator />
+
+        {fromPost && <NextSteps />}
 
         <section aria-labelledby="short-title">
           <h2 id="short-title" className="text-lg font-semibold">
@@ -146,9 +169,7 @@ export default function NewHomesHstPage() {
           </ul>
         </section>
 
-        <NewVsResaleCard />
-
-        <CityLinks />
+        {!fromPost && <NextSteps />}
 
         <footer className="space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
           <p>
