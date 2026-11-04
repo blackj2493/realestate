@@ -89,12 +89,23 @@ export type AnalyticsEvents = {
   'read_evidence_clicked': { listingId: string; target: string };
 
   // Comparable-listings carousels on the listing page. `placement` says where the row
-  // sat (the for-sale row moved up on mobile 2026-10-27), so before/after is comparable.
+  // sat (the for-sale row moved up on mobile 2026-10-27, `mobile_top`; back down after
+  // the area 2026-11-03, `mobile_mid`), so before/after is comparable.
   'similar_listing_clicked': {
     listingId: string;
     kind: 'for_sale' | 'sold';
     position: number;
-    placement: 'mobile_top' | 'desktop_top' | 'market' | 'bottom';
+    placement: 'mobile_top' | 'mobile_mid' | 'desktop_top' | 'market' | 'bottom';
+  };
+
+  // Listing page — how far readers get. One event per section per page view, when the
+  // section first enters the viewport (SectionReachTracker). `layoutVersion` changes
+  // with the section order, so one order compares with the next.
+  'listing_section_reached': {
+    listingId: string;
+    section: string;
+    layout: 'mobile' | 'desktop';
+    layoutVersion: string;
   };
 
   // The area (Census 2021) card — which lens a reader picks.

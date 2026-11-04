@@ -44,7 +44,7 @@ interface Props {
    */
   part?: "all" | "forSale" | "sold";
   /** Where this instance sits — reported with each card click. */
-  placement?: "mobile_top" | "desktop_top" | "market" | "bottom";
+  placement?: "mobile_top" | "mobile_mid" | "desktop_top" | "market" | "bottom";
 }
 
 // One request per subject even when the for-sale and sold rows mount separately
