@@ -34,14 +34,13 @@ mornings (13.6% against 10.0%). The old daily run drafted the same leaders of th
    whose `post_on:` date is tomorrow (UTC date of the run + 1). If one exists, it is the
    post. Its figures are pre-computed, aggregate and checked; it carries a
    `callback_url` and the target subreddit.
-2. **No insight file for tomorrow?** Fall back to `content-queue/data/latest.json`
-   (written each morning by the `content-data-snapshot` GitHub Action from the same
-   nightly precompute the public `/data` trackers render). Before you use an angle,
-   read the last four `content-queue/YYYY-MM-DD.md` files on this branch: **leave out
-   any angle with the same `kind` and `region` as one already drafted there**. If no
-   angle is left, do not pad: write a short file that says no fresh insight is queued
-   for tomorrow, and open the PR so the founder sees the gap.
-3. Draft the post, then write `content-queue/YYYY-MM-DD.md` (the run date) and open a PR.
+2. **No insight file for tomorrow? Stop.** Do not draft, do not write a file, do not
+   open a PR. End the run with one line: `No insight queued for <date>.`
+   The old fallback drafted from `content-queue/data/latest.json`: the leader of the same
+   15 markets on 4 fixed angles. Leaders rarely change, so the drafts repeated for weeks,
+   and 44 of them sat unmerged as PRs (2026-10-03 to 2026-11-02). The owner judged them not
+   postable. An empty slot is better than a repeat; the owner's daily brief shows the gap.
+3. Draft the post from the insight file, then write `content-queue/YYYY-MM-DD.md` (the run date) and open a PR.
 
 **Nothing posts automatically, ever.** The human in the loop is the product, not a
 formality — this repo's whole posture is draft-only.
@@ -53,7 +52,7 @@ their **next** question about **their own** home, street or area. A data post wi
 place to go next earns upvotes and no signups. Reddit sent 5 of the 19 tracked signups
 in the week to 2026-10-08 — every one of them through a link.
 
-- Use the insight file's `callback_url`. For a `latest.json` angle, use its `sourceUrl`.
+- Use the insight file's `callback_url`.
 - Write the callback as the answer to a question the post raises — "what does this
   look like on your street?" — not as an advert.
 - Always add UTM tags: `?utm_source=reddit&utm_medium=social&utm_campaign=<slug>`

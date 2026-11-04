@@ -20,5 +20,5 @@ caveats, the prior art, and a draft if one exists.
 the sold and lease data (read-only), checks them, and commits the file. The routine
 cannot query the database, so it uses only the figures written here.
 
-**No file for a post day?** The routine falls back to `../data/latest.json` and skips
-any angle it drafted in the last four runs.
+**No file for a post day?** The routine drafts nothing for that day (no fallback). Keep
+the queue at least two post days ahead.
