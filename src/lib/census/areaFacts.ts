@@ -38,6 +38,30 @@ export interface AreaStats {
   medianIncome: number | null;
 }
 
+export type FactKey = keyof Omit<AreaStats, "households">;
+export type FactUnit = "pct" | "min" | "money";
+
+/** Display label and unit per fact, shared by the listing card and the neighbourhood hub. */
+export const FACTS: Record<FactKey, { label: string; unit: FactUnit }> = {
+  rentPct: { label: "Households that rent", unit: "pct" },
+  ownPct: { label: "Households that own", unit: "pct" },
+  moved5Pct: { label: "Moved in the last 5 years", unit: "pct" },
+  aptPct: { label: "Homes that are apartments", unit: "pct" },
+  bed3PlusPct: { label: "Homes with 3+ bedrooms", unit: "pct" },
+  builtBefore1981Pct: { label: "Homes built before 1981", unit: "pct" },
+  transitWalkBikePct: { label: "Transit, walk or bike to work", unit: "pct" },
+  drivePct: { label: "Drive to work", unit: "pct" },
+  medianCommuteMin: { label: "Typical commute", unit: "min" },
+  tenantCostBurdenPct: { label: "Renters paying 30%+ of income on housing", unit: "pct" },
+  medianIncome: { label: "Typical household income", unit: "money" },
+};
+
+export function fmtFact(v: number, unit: FactUnit): string {
+  if (unit === "pct") return `${Math.round(v)}%`;
+  if (unit === "min") return `${Math.round(v)} min`;
+  return `$${Math.round(v / 1000)}k`;
+}
+
 export interface AreaFacts {
   v: 1;
   here: AreaStats;

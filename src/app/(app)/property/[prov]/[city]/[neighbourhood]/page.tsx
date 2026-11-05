@@ -28,6 +28,8 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 import { deslugCity } from "@/lib/listings/listingPath";
 import { regionsForHoodSlug, cityFilterClause, cityRegionFilterClause } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { getCommunityCensus } from "@/lib/census/getCommunityCensus";
+import NeighbourhoodCensus from "@/components/neighbourhood/NeighbourhoodCensus";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -44,7 +46,7 @@ const MIN_INDEXABLE = 3;
 const getHood = cache(async (citySlug: string, hoodSlug: string) => {
   const { cities, regions, name } = await regionsForHoodSlug(citySlug, hoodSlug);
   if (cities.length === 0 || regions.length === 0) {
-    return { listings: [] as ListingDocument[], totalFound: 0, name: "" };
+    return { listings: [] as ListingDocument[], totalFound: 0, name: "", cities, regions };
   }
   try {
     const res = await searchListings({
@@ -54,10 +56,10 @@ const getHood = cache(async (citySlug: string, hoodSlug: string) => {
       sortBy: "ListPrice",
       sortOrder: "desc",
     });
-    return { listings: res.listings, totalFound: res.totalFound, name };
+    return { listings: res.listings, totalFound: res.totalFound, name, cities, regions };
   } catch (err) {
     console.error(`[Neighbourhood] query failed for "${citySlug}/${hoodSlug}":`, err);
-    return { listings: [] as ListingDocument[], totalFound: 0, name };
+    return { listings: [] as ListingDocument[], totalFound: 0, name, cities, regions };
   }
 });
 
@@ -104,8 +106,9 @@ export default async function NeighbourhoodHubPage({
 }) {
   const { prov, city, neighbourhood } = await params;
   const cityName = deslugCity(city);
-  const { listings, totalFound, name } = await getHood(city, neighbourhood);
+  const { listings, totalFound, name, cities, regions } = await getHood(city, neighbourhood);
   const hoodName = name || deslugCity(neighbourhood);
+  const census = await getCommunityCensus(cities, regions);
   const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}/${neighbourhood}`;
   const cityHubPath = `/property/${prov.toLowerCase()}/${city}`;
   const provLabel = prov.toUpperCase();
@@ -162,6 +165,9 @@ export default async function NeighbourhoodHubPage({
             </Link>
           </div>
         )}
+
+        {/* Census facts sit BELOW the listings: the homes stay first on a phone. */}
+        {census && <NeighbourhoodCensus hoodName={hoodName} census={census} />}
 
         <div className="mt-8">
           <ListingComplianceNotice />
