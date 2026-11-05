@@ -47,6 +47,7 @@ function marketRow(over: Partial<MarketRow> = {}): MarketRow {
     medianCutAmt: 40_000,
     domBuckets: null,
     rentalRows: [],
+    underAskShare: null, askGapMedian: null, soldCount12m: null, pctOverAsking: null, sales90: null, monthly: [],
     ...over,
   };
 }

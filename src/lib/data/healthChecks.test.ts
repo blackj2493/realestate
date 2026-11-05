@@ -60,6 +60,7 @@ function healthy(region: string, over: Partial<MarketRow> = {}): MarketRow {
     medianCutAmt: 85_000,
     domBuckets: { d0_14: 1581, d15_30: 1513, d31_60: 613, d61_90: 2459, d90plus: 4532 },
     rentalRows: [{ beds: 2, typicalRent: 2630, medianPrice: 720_000, grossYieldPct: 4.38 }],
+    underAskShare: null, askGapMedian: null, soldCount12m: null, pctOverAsking: null, sales90: null, monthly: [],
     ...over,
   };
 }
