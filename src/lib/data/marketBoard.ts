@@ -67,7 +67,18 @@ interface Precompute {
   outcomes: AssembleArgs[4];
   cuts?: { cuts?: CutsLite | null } | null;
   rental?: { rental?: { rows?: RentalRow[] } | null } | null;
-  dynamics?: { dynamics?: { medianDom: number | null; p25Dom: number | null; p75Dom: number | null } | null } | null;
+  dynamics?: {
+    dynamics?: {
+      medianDom: number | null;
+      p25Dom: number | null;
+      p75Dom: number | null;
+      /** 12-month sold-side: share of sales that closed below the ORIGINAL asking price (0..1). */
+      underAskShare?: number | null;
+      /** 12-month sold-side: median % gap from the original asking price to the sale price. */
+      askGapMedian?: number | null;
+      soldCount?: number | null;
+    } | null;
+  } | null;
 }
 
 export interface MarketRow {
@@ -99,6 +110,15 @@ export interface MarketRow {
   domBuckets: { d0_14: number; d15_30: number; d31_60: number; d61_90: number; d90plus: number } | null;
   // rent-vs-buy
   rentalRows: RentalRow[];
+  // sold vs the ORIGINAL asking price, trailing 12 months (region_sold_dynamics)
+  underAskShare: number | null;
+  askGapMedian: number | null;
+  soldCount12m: number | null;
+  // sold vs the FINAL asking price, trailing 90 days (region_price_trend summary)
+  pctOverAsking: number | null;
+  sales90: number | null;
+  /** Monthly median sale price points (all months the precompute holds), for "last full month". */
+  monthly: { month: string; medianPrice: number; sales: number }[];
 }
 
 export interface MarketBoard {
@@ -158,6 +178,14 @@ async function computeBoard(): Promise<MarketBoard> {
       medianCutAmt: cuts?.medianCutAmt ?? null,
       domBuckets: domData?.buckets ?? null,
       rentalRows: pc.rental?.rental?.rows ?? [],
+      underAskShare: dyn?.underAskShare ?? null,
+      askGapMedian: dyn?.askGapMedian ?? null,
+      soldCount12m: dyn?.soldCount ?? null,
+      pctOverAsking: pc.trend?.summary?.pctOverAsking ?? null,
+      sales90: pc.trend?.summary?.sales90 ?? null,
+      monthly: (pc.trend?.points ?? [])
+        .filter((p) => p.medianPrice != null)
+        .map((p) => ({ month: p.month, medianPrice: p.medianPrice, sales: p.sales ?? 0 })),
     });
   }
   return { rows, dataAsOf: newest };
@@ -165,7 +193,7 @@ async function computeBoard(): Promise<MarketBoard> {
 
 /** Cached market board (1h). Aggregate statistics only — safe for public pages. */
 export function getMarketBoard(): Promise<MarketBoard> {
-  return unstable_cache(computeBoard, ["data-market-board", "v2"], { revalidate: 3600 })();
+  return unstable_cache(computeBoard, ["data-market-board", "v3"], { revalidate: 3600 })();
 }
 
 /**

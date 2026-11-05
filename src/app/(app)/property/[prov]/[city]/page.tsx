@@ -39,6 +39,9 @@ import {
   COMMERCIAL_ACTIVE_FILTER,
 } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { getMarketBoard } from "@/lib/data/marketBoard";
+import { buildCityFacts, boardRowFor } from "@/lib/data/cityFacts";
+import CityMarketFacts from "@/components/seo/CityMarketFacts";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
 export const dynamicParams = true;
@@ -71,6 +74,17 @@ const getCityHub = cache(async (slug: string) => {
   }
 });
 
+/** Citable market facts for the 15 board markets; null elsewhere or on any failure. */
+const getCityFacts = cache(async (cityName: string) => {
+  try {
+    const board = await getMarketBoard();
+    return buildCityFacts(cityName, boardRowFor(board.rows, cityName), board.dataAsOf);
+  } catch (err) {
+    console.error(`[CityHub] market facts failed for "${cityName}":`, err);
+    return null;
+  }
+});
+
 export async function generateMetadata({
   params,
 }: {
@@ -79,12 +93,14 @@ export async function generateMetadata({
   const { prov, city } = await params;
   const cityName = deslugCity(city);
   const { totalFound } = await getCityHub(city);
+  const facts = await getCityFacts(cityName);
   const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}`;
   const provLabel = prov.toUpperCase();
 
   const title = `Homes for Sale in ${cityName}, ${provLabel} | PureProperty`;
-  const description =
-    totalFound > 0
+  const description = facts?.summary
+    ? facts.summary
+    : totalFound > 0
       ? `Browse ${totalFound} active ${cityName} listings for sale. Compare prices, beds, baths, and brokerage details on PureProperty.`
       : `Active real estate listings for sale in ${cityName}, ${provLabel}.`;
 
@@ -120,6 +136,7 @@ export default async function CityHubPage({
   const { prov, city } = await params;
   const cityName = deslugCity(city);
   const { listings, totalFound, cities } = await getCityHub(city);
+  const facts = await getCityFacts(cityName);
   const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}`;
   const provLabel = prov.toUpperCase();
 
@@ -213,6 +230,7 @@ export default async function CityHubPage({
           )}
         </header>
 
+        {facts && <CityMarketFacts facts={facts} canonical={canonical} />}
         {listings.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {listings.map((doc) => (
@@ -259,6 +277,7 @@ export default async function CityHubPage({
         {totalFound > 0 && (
           <HubFaq
             faqs={[
+              ...(facts?.faqs ?? []),
               { q: `How many homes are for sale in ${cityName}?`, a: `There are currently ${totalFound.toLocaleString()} active homes for sale in ${cityName}, ${provLabel} on PureProperty, refreshed daily from the MLS®.` },
               { q: `How can I find investment properties in ${cityName}?`, a: `PureProperty ranks ${cityName} listings by estimated cap rate so cash-flow investors can find the highest-yield homes, and flags properties with multi-unit development potential.` },
               { q: `How do I find homes near top-rated schools in ${cityName}?`, a: `PureProperty's ${cityName} school view ranks homes by the rating of nearby schools, using the PureProperty School Score derived from EQAO (Government of Ontario) data.` },
