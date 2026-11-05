@@ -10,6 +10,15 @@ describe("marketSourceFromNext", () => {
     });
   });
 
+  it("reads ?follow= as the city, on any path", () => {
+    expect(marketSourceFromNext("/new-homes-hst?follow=Brampton")).toEqual({ kind: "city", city: "Brampton" });
+    expect(marketSourceFromNext("/new-homes-hst?utm_source=reddit&follow=Richmond%20Hill#x")).toEqual({
+      kind: "city",
+      city: "Richmond Hill",
+    });
+    expect(marketSourceFromNext("/new-homes-hst?follow=")).toBeNull();
+  });
+
   it("ignores query strings and hashes", () => {
     expect(marketSourceFromNext("/properties/X12639568?lens=cashflow")).toEqual({
       kind: "listing",
