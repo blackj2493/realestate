@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { track } from "@/lib/analytics/posthog";
+import CityAlert from "./CityAlert";
 
 // Map camera per city. A ?city= link alone filters the list but leaves the camera where it
 // was (the map reopens on the last camera), so the link also carries ?lat&lng&z to fly
@@ -29,8 +30,13 @@ function mapHref(c: (typeof CITIES)[number]): string {
 }
 
 /** Pick a city, then open the map on its new and nearly-new homes (?age=New,0-5), or the price cuts. */
-export default function CityLinks() {
-  const [city, setCity] = useState<string>("toronto");
+export default function CityLinks({ follow }: { follow?: string }) {
+  // ?follow={city} = back from sign-in after "Email me new listings in {city}".
+  const resumeCity = follow ? CITIES.find((x) => x.name.toLowerCase() === follow.trim().toLowerCase()) : undefined;
+  const [city, setCity] = useState<string>(resumeCity?.slug ?? "toronto");
+  useEffect(() => {
+    if (resumeCity) document.getElementById("city-title")?.scrollIntoView({ block: "start" });
+  }, [resumeCity]);
   const c = CITIES.find((x) => x.slug === city) ?? CITIES[0];
   const name = c.name;
   const btn =
@@ -72,6 +78,7 @@ export default function CityLinks() {
           Where sellers are cutting prices
         </Link>
       </div>
+      <CityAlert key={name} city={name} resume={resumeCity?.name === name} />
     </section>
   );
 }

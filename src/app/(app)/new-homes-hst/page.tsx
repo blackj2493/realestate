@@ -53,10 +53,10 @@ const th = "px-3 py-2 text-left font-medium text-muted-foreground";
 const td = "px-3 py-2 text-foreground";
 
 /** Next steps: the request card and the city links. */
-function NextSteps() {
+function NextSteps({ follow }: { follow?: string }) {
   return (
     <>
-      <CityLinks />
+      <CityLinks follow={follow} />
       <NewVsResaleCard />
     </>
   );
@@ -73,7 +73,9 @@ export default async function NewHomesHstPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const fromPost = sp.utm_source === "reddit" || sp.utm_campaign === "hst-new-vs-resale";
+  const follow = typeof sp.follow === "string" ? sp.follow : undefined;
+  // ?follow= = back from sign-in after "Email me new listings": keep the card near the top.
+  const fromPost = sp.utm_source === "reddit" || sp.utm_campaign === "hst-new-vs-resale" || !!sp.follow;
   return (
     <main className="min-h-app bg-background text-foreground">
       <article className="mx-auto max-w-3xl space-y-8 px-4 py-8">
@@ -88,7 +90,7 @@ export default async function NewHomesHstPage({
 
         <HstCalculator />
 
-        {fromPost && <NextSteps />}
+        {fromPost && <NextSteps follow={follow} />}
 
         <section aria-labelledby="short-title">
           <h2 id="short-title" className="text-lg font-semibold">
@@ -169,7 +171,7 @@ export default async function NewHomesHstPage({
           </ul>
         </section>
 
-        {!fromPost && <NextSteps />}
+        {!fromPost && <NextSteps follow={follow} />}
 
         <footer className="space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
           <p>

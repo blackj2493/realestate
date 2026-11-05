@@ -38,6 +38,15 @@ function pathOf(dest: string): string {
  */
 export function marketSourceFromNext(next: string | null | undefined): MarketSource | null {
   if (!next || !next.startsWith("/")) return null;
+
+  // ?follow={city} — an "Email me new listings in {city}" button (e.g. /new-homes-hst) sent
+  // the visitor to sign up for that city. It names the market outright, so it wins.
+  const q = next.indexOf("?");
+  if (q !== -1) {
+    const follow = new URLSearchParams(next.slice(q + 1).split("#")[0]).get("follow")?.trim();
+    if (follow && follow.length <= 80) return { kind: "city", city: follow };
+  }
+
   const segments = pathOf(next).split("/").filter(Boolean);
 
   // /properties/{key} — but NOT /properties (the terminal) or /properties/compare, which

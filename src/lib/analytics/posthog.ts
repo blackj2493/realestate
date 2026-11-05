@@ -172,6 +172,10 @@ export type AnalyticsEvents = {
   'hst_calc_used': { band: 'under_1m' | '1m_1_5m' | '1_5m_1_85m' | 'over_1_85m' };
   /** /new-homes-hst: a city link was followed. */
   'hst_city_link': { city: string; target: 'new_homes' | 'price_cuts' };
+  /** /new-homes-hst: "Email me new listings in {city}" was clicked (signed out = goes to sign-in). */
+  'hst_alert_click': { city: string; signedIn: boolean };
+  /** /new-homes-hst: the city (or a part of Toronto) was followed for email alerts. */
+  'hst_alert_followed': { city: string };
 
   // First saved home (src/components/watchlist). A reader who saved a home on signup day
   // came back on a later day at 81% vs 33-34% without one (2026-10-04, 422 signups).
