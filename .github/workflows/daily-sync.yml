@@ -395,6 +395,20 @@ jobs:
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
         run: npx tsx scripts/worker/revalidateListings.ts
 
+      # Tell Bing (IndexNow) which pages changed tonight: every listing synced in the last
+      # 25h, plus the city hubs and /data trackers whose numbers change nightly. ChatGPT
+      # search, Copilot and DuckDuckGo answer from the Bing index, and Bing otherwise finds
+      # changes only on its own sitemap crawl. One POST (~7k URLs). The key is public by
+      # design (public/{key}.txt). Additive — continue-on-error; see src/lib/seo/indexNow.ts.
+      - name: IndexNow Ping
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+        run: npx tsx scripts/worker/indexNow.ts
+
       # Retention pruning for the VOW consumer-access audit trail (migration 053 / §5.4).
       # Additive + continue-on-error: a prune failure must never affect the sync. Idempotent
       # (deletes rows older than the retention window; most days delete nothing).
