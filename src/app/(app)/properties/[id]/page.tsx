@@ -95,6 +95,9 @@ import NearbyAmenities from "./NearbyAmenities";
 import TypicalRents from "./TypicalRents";
 import PropertyNotFound from "./PropertyNotFound";
 import DetailMobileNav from "./DetailMobileNav";
+import ListingQuickFacts from "@/components/Property/ListingQuickFacts";
+import { buildQuickFacts } from "@/lib/property/quickFacts";
+import { getCommunityFacts } from "@/lib/data/communityFacts";
 import ClampText from "./ClampText";
 import { conditionalNotice } from "@/lib/listings/statusBadge";
 
@@ -623,6 +626,26 @@ export default async function PropertyPage({
   // city resolves to no hub, and MarketDataLinks then falls back to province-wide copy
   // rather than promising a comparison we cannot make.
   const marketName = p.City && cityHubResolves(p.City) ? deslugCity(cityHubSlug(p.City)) : null;
+  // "Quick facts about this home" (closed, page foot): for-sale dwellings only. Public
+  // listing fields + neighbourhood aggregates (migration 163); never a per-home estimate.
+  const quickFactsEligible = isActiveListing && !isLease && !isCommercial && price > 0;
+  const hoodRaw = typeof p.CityRegion === "string" ? p.CityRegion.trim() : "";
+  const quickFactsRow =
+    quickFactsEligible && p.City && hoodRaw ? await getCommunityFacts([p.City], [hoodRaw]) : null;
+  const quickFacts = quickFactsEligible
+    ? buildQuickFacts(
+        {
+          listPrice: price,
+          originalListPrice: typeof p.OriginalListPrice === "number" ? p.OriginalListPrice : Number(p.OriginalListPrice) || null,
+          daysOnMarket: typeof dom === "number" && Number.isFinite(dom) ? dom : null,
+          beds: bedsLabel(p),
+          subType: typeof p.PropertySubType === "string" ? p.PropertySubType : null,
+          hood: hoodRaw ? formatRegionParts(hoodRaw).name : null,
+          city: marketName ?? cityParts?.name ?? null,
+        },
+        quickFactsRow,
+      )
+    : null;
   // Live 5-yr-fixed seed (Bank-of-Canada refreshed nightly job; cached, fallback-safe).
   const mortgageRate = await getCurrentMortgageRate();
   // Which lens opens first: investor personas → the underwrite; the Homebuyer
@@ -1825,6 +1848,8 @@ export default async function PropertyPage({
 
         </section>
         </div>
+
+        {quickFacts && <ListingQuickFacts facts={quickFacts} className="mt-8" />}
 
         {/* End of the page content, for SectionReachTracker. */}
         <div data-reach="end" aria-hidden />
