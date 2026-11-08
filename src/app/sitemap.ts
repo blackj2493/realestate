@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
+import { HOME_VALUE_CITIES, homeValuePath } from "@/lib/homeValue/content";
 import {
   cityHubsWithInventory,
   neighbourhoodHubsForSitemap,
@@ -97,6 +98,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // /property = the crawlable city directory (top of the hub tree); /properties is the
     // client-only terminal Googlebot can't crawl.
     { url: `${SITE_URL}/property`, changeFrequency: "daily", priority: 0.9 },
+    // Seller pages: "how much is my house worth in {city}" (2026-11). Their facts change nightly.
+    { url: `${SITE_URL}${homeValuePath()}`, changeFrequency: "daily", priority: 0.9 },
+    ...HOME_VALUE_CITIES.map((c) => ({ url: `${SITE_URL}${homeValuePath(c.slug)}`, changeFrequency: "daily" as const, priority: 0.8 })),
+    // /new-homes-hst was in no sitemap at all (found 2026-11-08).
+    { url: `${SITE_URL}/new-homes-hst`, changeFrequency: "weekly", priority: 0.8 },
   ];
 
   // The /data trackers and findings MOVED OUT of this file to src/app/data/sitemap.ts

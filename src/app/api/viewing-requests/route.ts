@@ -29,9 +29,12 @@ const INTENT_LABELS: Record<string, string> = {
   // /new-homes-hst (2026-11): a buyer weighing a new build against a resale home asks for a
   // written comparison. "address" holds the homes or the area they are comparing.
   new_vs_resale: "New vs resale check",
+  // /home-value (2026-11): a homeowner asks what THEIR home is worth. "address" is the home;
+  // a person answers by email with a written opinion (no automated figure on the page).
+  home_value: "Home value opinion",
 };
 // Intents whose home is identified by its ADDRESS (address pages), so listingKey is optional.
-const ADDRESS_INTENTS = new Set(["selling_plan", "home_report", "new_vs_resale"]);
+const ADDRESS_INTENTS = new Set(["selling_plan", "home_report", "new_vs_resale", "home_value"]);
 
 function bad(error: string) {
   return NextResponse.json({ success: false, error }, { status: 400 });
