@@ -30,6 +30,8 @@ import { regionsForHoodSlug, cityFilterClause, cityRegionFilterClause } from "@/
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { getCommunityCensus } from "@/lib/census/getCommunityCensus";
 import NeighbourhoodCensus from "@/components/neighbourhood/NeighbourhoodCensus";
+import CityMarketFacts from "@/components/seo/CityMarketFacts";
+import { buildCommunityFacts, getCommunityFacts } from "@/lib/data/communityFacts";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -63,6 +65,15 @@ const getHood = cache(async (citySlug: string, hoodSlug: string) => {
   }
 });
 
+/**
+ * The citable market facts for this hub (migration 163), React-cache deduped across
+ * generateMetadata + the page. null when the precompute has no row or every fact is thin.
+ */
+const getHoodFacts = cache(async (citySlug: string, hoodSlug: string, hoodName: string, cityName: string) => {
+  const { cities, regions } = await getHood(citySlug, hoodSlug);
+  return buildCommunityFacts(hoodName, cityName, await getCommunityFacts(cities, regions));
+});
+
 export async function generateMetadata({
   params,
 }: {
@@ -72,12 +83,14 @@ export async function generateMetadata({
   const cityName = deslugCity(city);
   const { totalFound, name } = await getHood(city, neighbourhood);
   const hoodName = name || deslugCity(neighbourhood);
+  const facts = await getHoodFacts(city, neighbourhood, hoodName, cityName);
   const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}/${neighbourhood}`;
   const provLabel = prov.toUpperCase();
 
   const title = `Homes for Sale in ${hoodName}, ${cityName} | PureProperty`;
-  const description =
-    totalFound > 0
+  const description = facts?.summary
+    ? facts.summary
+    : totalFound > 0
       ? `Browse ${totalFound} active listings for sale in ${hoodName}, ${cityName}, ${provLabel}. Compare prices, beds, baths, and brokerage details on PureProperty.`
       : `Active real estate listings for sale in ${hoodName}, ${cityName}, ${provLabel}.`;
 
@@ -86,8 +99,10 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    // Thin neighbourhoods must not be indexed (Google doorway/thin-content policy).
-    robots: totalFound >= MIN_INDEXABLE ? undefined : { index: false, follow: true },
+    // Thin neighbourhoods must not be indexed (Google doorway/thin-content policy). A hub
+    // with market facts is not thin: it states the neighbourhood's own numbers, even with
+    // few homes for sale today.
+    robots: totalFound >= MIN_INDEXABLE || facts ? undefined : { index: false, follow: true },
     openGraph: {
       title,
       description,
@@ -108,7 +123,7 @@ export default async function NeighbourhoodHubPage({
   const cityName = deslugCity(city);
   const { listings, totalFound, name, cities, regions } = await getHood(city, neighbourhood);
   const hoodName = name || deslugCity(neighbourhood);
-  const census = await getCommunityCensus(cities, regions);
+  const [census, facts] = await Promise.all([getCommunityCensus(cities, regions), getHoodFacts(city, neighbourhood, hoodName, cityName)]);
   const canonical = `${SITE_URL}/property/${prov.toLowerCase()}/${city}/${neighbourhood}`;
   const cityHubPath = `/property/${prov.toLowerCase()}/${city}`;
   const provLabel = prov.toUpperCase();
@@ -166,7 +181,12 @@ export default async function NeighbourhoodHubPage({
           </div>
         )}
 
-        {/* Census facts sit BELOW the listings: the homes stay first on a phone. */}
+        {/* Market and census facts sit BELOW the listings: the homes stay first on a phone. */}
+        {facts && (
+          <div className="mt-8">
+            <CityMarketFacts facts={facts} canonical={canonical} />
+          </div>
+        )}
         {census && <NeighbourhoodCensus hoodName={hoodName} census={census} />}
 
         <div className="mt-8">
