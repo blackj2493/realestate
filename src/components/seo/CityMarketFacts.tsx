@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { SOURCE_LINE, type CityFacts } from "@/lib/data/cityFacts";
 
-export default function CityMarketFacts({ facts, canonical }: { facts: CityFacts; canonical: string }) {
+export default function CityMarketFacts({ facts, canonical, outlookHref }: { facts: CityFacts; canonical: string; outlookHref?: string }) {
   const title = `${facts.city} housing market facts`;
   const dataset = {
     "@context": "https://schema.org",
@@ -44,6 +44,13 @@ export default function CityMarketFacts({ facts, canonical }: { facts: CityFacts
           </li>
         ))}
       </ul>
+      {outlookHref && (
+        <p className="mt-3 text-sm">
+          <Link href={outlookHref} className="underline hover:text-foreground">
+            Prices and sales against a year earlier, and when homes sell in {facts.city} →
+          </Link>
+        </p>
+      )}
       <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
         {SOURCE_LINE} How each figure is measured:{" "}
         <Link href="/data/days-on-market" className="underline hover:text-foreground">days on market</Link>,{" "}

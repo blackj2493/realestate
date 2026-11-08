@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { LIVE_TRACKERS } from "@/lib/data/trackers";
+import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
 
 /**
@@ -45,6 +46,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Findings: dated analysis built on the trackers. lastModified is the piece's own
     // date rather than "now" — a finding is a snapshot, and claiming daily freshness on
     // static analysis is the kind of thing that gets a sitemap discounted.
+    // City housing-market pages ("{city} housing market 2027" — the most-searched housing query).
+    { url: `${SITE_URL}/data/housing-market`, changeFrequency: "daily", priority: 0.8 },
+    ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${outlookPath(c.slug)}`, changeFrequency: "daily" as const, priority: 0.8 })),
     { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },
     ...LIVE_FINDINGS.map((f) => ({
       url: `${SITE_URL}/data/findings/${f.slug}`,

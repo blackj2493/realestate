@@ -67,6 +67,12 @@ interface Precompute {
   outcomes: AssembleArgs[4];
   cuts?: { cuts?: CutsLite | null } | null;
   rental?: { rental?: { rows?: RentalRow[] } | null } | null;
+  /** region_seasonality (5 years): sales, price vs that year's median, sale-to-list, by calendar month. */
+  seasonality?: {
+    seasonality?: {
+      months?: { month: number; sales: number; priceIndexPct: number | null; soldToList: number | null }[];
+    } | null;
+  } | null;
   dynamics?: {
     dynamics?: {
       medianDom: number | null;
@@ -117,8 +123,11 @@ export interface MarketRow {
   // sold vs the FINAL asking price, trailing 90 days (region_price_trend summary)
   pctOverAsking: number | null;
   sales90: number | null;
-  /** Monthly median sale price points (all months the precompute holds), for "last full month". */
-  monthly: { month: string; medianPrice: number; sales: number }[];
+  /** Monthly points (all months the precompute holds, ~24): median sale price, sales, and the
+   *  average sale-to-FINAL-asking ratio (%), for "last full month" and the outlook trends. */
+  monthly: { month: string; medianPrice: number; sales: number; soldToList?: number | null }[];
+  /** 5-year pattern by calendar month (1-12), from region_seasonality. */
+  seasonality: { month: number; sales: number; priceIndexPct: number | null; soldToList: number | null }[];
 }
 
 export interface MarketBoard {
@@ -185,7 +194,13 @@ async function computeBoard(): Promise<MarketBoard> {
       sales90: pc.trend?.summary?.sales90 ?? null,
       monthly: (pc.trend?.points ?? [])
         .filter((p) => p.medianPrice != null)
-        .map((p) => ({ month: p.month, medianPrice: p.medianPrice, sales: p.sales ?? 0 })),
+        .map((p) => ({
+          month: p.month,
+          medianPrice: p.medianPrice,
+          sales: p.sales ?? 0,
+          soldToList: (p as { soldToList?: number | null }).soldToList ?? null,
+        })),
+      seasonality: pc.seasonality?.seasonality?.months ?? [],
     });
   }
   return { rows, dataAsOf: newest };
@@ -193,7 +208,7 @@ async function computeBoard(): Promise<MarketBoard> {
 
 /** Cached market board (1h). Aggregate statistics only — safe for public pages. */
 export function getMarketBoard(): Promise<MarketBoard> {
-  return unstable_cache(computeBoard, ["data-market-board", "v3"], { revalidate: 3600 })();
+  return unstable_cache(computeBoard, ["data-market-board", "v4"], { revalidate: 3600 })();
 }
 
 /**

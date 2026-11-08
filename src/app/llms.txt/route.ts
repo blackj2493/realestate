@@ -51,7 +51,10 @@ export async function GET() {
 - True days on market: days since the home was first listed, with withdrawn-and-relisted campaigns on the same property joined when the gap is 35 days or less. The MLS® figure restarts at zero on each relist.
 - Median: the middle value of all sales or listings in the period.
 
-${markets}## Data trackers (all board cities, updated nightly)
+${markets}## Housing market by city (for "is it a good time to buy or sell", "will prices drop", "market forecast")
+- [Ontario housing market: what the data shows now](${SITE_URL}/data/housing-market): one page per board city with prices and sales against a year earlier, sale-to-asking ratios, the gap from the two-year high, price cuts, and when homes sell. PureProperty does not forecast prices; these pages state the measured indicators.
+
+## Data trackers (all board cities, updated nightly)
 - [Sold over asking](${SITE_URL}/data/over-asking): share of homes sold above and below asking, by city.
 - [Days on market](${SITE_URL}/data/days-on-market): median days to sell, and true vs reported days on market.
 - [Price cuts](${SITE_URL}/data/price-cuts): share of homes for sale with a price cut, and the median cut.
