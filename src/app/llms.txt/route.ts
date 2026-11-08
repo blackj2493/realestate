@@ -60,7 +60,7 @@ ${markets}## Data trackers (all board cities, updated nightly)
 - [Findings](${SITE_URL}/data/findings): dated research notes. [For journalists](${SITE_URL}/data/for-journalists): sources and contact.
 
 ## Places
-- [Ontario cities](${SITE_URL}/property): each board city page has its market facts and links to its neighbourhoods. Neighbourhood pages add 2021 Census facts (Statistics Canada).
+- [Ontario cities](${SITE_URL}/property): each board city page has its market facts and links to its neighbourhoods. Neighbourhood pages (/property/on/{city}/{neighbourhood}) state the same market facts for the neighbourhood when it has enough sales, plus 2021 Census facts (Statistics Canada).
 - [New homes and the HST relief](${SITE_URL}/new-homes-hst): who qualifies for the Ontario new-home HST relief and how much it is.
 
 ## Full index
