@@ -14,6 +14,7 @@
  */
 import { REGION_TO_CITIES, citiesFromRegions } from "@/lib/dashboard/config";
 import { cityHubSlug } from "@/lib/listings/listingPath";
+import { HOME_VALUE_CITIES, homeValuePath } from "@/lib/homeValue/content";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 
 export const INDEXNOW_KEY = "6f0622a42624d95dc2c200c194920550";
@@ -36,7 +37,8 @@ export function nightlyPaths(): string[] {
     "/data/price-rankings",
   ];
   const outlook = ["/data/housing-market", ...OUTLOOK_CITIES.map((c) => outlookPath(c.slug))];
-  return [...new Set([...hubs, ...data, ...outlook])];
+  const homeValue = [homeValuePath(), ...HOME_VALUE_CITIES.map((c) => homeValuePath(c.slug))];
+  return [...new Set([...hubs, ...data, ...outlook, ...homeValue])];
 }
 
 /** The listing page path: the stored canonical, else the legacy key path (same fallback as the sitemap). */

@@ -42,7 +42,7 @@ export type LeadLane =
   | "commercial-lease";
 
 /** The CTA-ladder intents from api/viewing-requests. Mirrors INTENT_LABELS there. */
-export type LeadIntent = "viewing" | "question" | "price_opinion" | "selling_plan" | "home_report" | "new_vs_resale";
+export type LeadIntent = "viewing" | "question" | "price_opinion" | "selling_plan" | "home_report" | "new_vs_resale" | "home_value";
 
 export interface LeadFollowUpInput {
   name: string;
@@ -172,6 +172,10 @@ const INTENT_COPY: Record<LeadIntent, { subject: (where: string) => string; open
     subject: () => "Your new vs resale comparison",
     opener: "Got your request to compare new and resale homes for",
   },
+  home_value: {
+    subject: (where) => `Your price opinion — ${where}`,
+    opener: "Got your request for a price opinion on",
+  },
 };
 
 /** What the home report covers — the same four points the address-page card promises. */
@@ -188,6 +192,14 @@ const NEW_VS_RESALE_FIGURES = [
   "what similar new and nearly-new homes nearby actually sold for",
   "how much room there is to negotiate on each",
   "the questions to ask the builder before you sign",
+];
+
+/** What a home value opinion covers — the same four points the /home-value card promises. */
+const HOME_VALUE_FIGURES = [
+  "what your home is likely worth today, as a range, and why",
+  "what similar homes near you actually sold for",
+  "what your home last sold for, updated for the market since then",
+  "what could move the number up or down: condition, upgrades and timing",
 ];
 
 /** What a homeowner's selling plan covers — the same four points the address-page card promises. */
@@ -247,6 +259,10 @@ export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
   } else if (intent === "new_vs_resale") {
     preheader = "Your new vs resale comparison is on the way.";
     figures = NEW_VS_RESALE_FIGURES;
+    paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
+  } else if (intent === "home_value") {
+    preheader = "Your price opinion is on the way.";
+    figures = HOME_VALUE_FIGURES;
     paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
   } else if (intent === "selling_plan") {
     preheader = "Your selling plan is on the way.";

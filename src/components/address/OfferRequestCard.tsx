@@ -21,7 +21,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 type Status = "idle" | "open" | "sending" | "sent" | "error";
 
-export type OfferIntent = "selling_plan" | "home_report" | "new_vs_resale";
+export type OfferIntent = "selling_plan" | "home_report" | "new_vs_resale" | "home_value";
 
 export interface OfferCopy {
   title: string;
@@ -38,14 +38,17 @@ export default function OfferRequestCard({
   intent,
   copy,
   askAddress,
+  startOpen = false,
 }: {
   address: string;
   intent: OfferIntent;
   copy: OfferCopy;
   /** No fixed home (e.g. /new-homes-hst): the form asks the reader what they are comparing. */
   askAddress?: { label: string; placeholder: string };
+  /** A page whose whole purpose is this request (/home-value) shows the form at once. */
+  startOpen?: boolean;
 }) {
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<Status>(startOpen ? "open" : "idle");
   const [where, setWhere] = useState(address);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
