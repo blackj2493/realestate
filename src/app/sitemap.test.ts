@@ -24,7 +24,7 @@ import sitemap from './sitemap';
 //   • /data  → src/app/data/sitemap.ts     (also so its coverage row is readable)
 //   • listings → src/app/listings/sitemap.ts (sharded; the part that grows with the market)
 // Their behaviour is tested in those files. What is tested HERE is that they stay out.
-const STATIC_ROUTES = 3 + 1 + 15 + 1; // core + /home-value + its 15 cities + /new-homes-hst
+const STATIC_ROUTES = 3 + 1 + 15 + 1 + 1 + 15; // core + /home-value + its 15 cities + /new-homes-hst + /power-of-sale + its 15 cities
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -257,6 +257,18 @@ jobs:
           SUPABASE_FETCH_TIMEOUT_MS: '180000'
         run: npx tsx scripts/admin/refresh-community-facts.ts --apply
 
+      # Power-of-sale flags + stats (migration 164): re-flag the last 45 days of sales from
+      # PublicRemarks (~15-20s), then rebuild pos_market_stats from flat columns (~7s).
+      # Additive — continue-on-error; a miss leaves last night's stats, dated.
+      - name: Refresh Power-of-Sale Stats
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_FETCH_TIMEOUT_MS: '180000'
+        run: npx tsx scripts/admin/refresh-pos-market.ts --apply
+
       # Multi-cut price ledger (migration 069): diff each active listing's fresh
       # list_price against listing_price_state, append price_events on a change. Never
       # scheduled anywhere until 2026-07-22 — price_events had ZERO rows in prod (the

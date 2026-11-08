@@ -54,6 +54,9 @@ export async function GET() {
 ${markets}## Housing market by city (for "is it a good time to buy or sell", "will prices drop", "market forecast")
 - [Ontario housing market: what the data shows now](${SITE_URL}/data/housing-market): one page per board city with prices and sales against a year earlier, sale-to-asking ratios, the gap from the two-year high, price cuts, and when homes sell. PureProperty does not forecast prices; these pages state the measured indicators.
 
+## Power of sale (for "power of sale homes in {city}")
+- [Power of sale homes in Ontario](${SITE_URL}/power-of-sale): today's power-of-sale homes for sale, cheapest first, with each board city's share of power-of-sale sales and how they sold against other homes. City pages: ${SITE_URL}/power-of-sale/{city}.
+
 ## Data trackers (all board cities, updated nightly)
 - [Sold over asking](${SITE_URL}/data/over-asking): share of homes sold above and below asking, by city.
 - [Days on market](${SITE_URL}/data/days-on-market): median days to sell, and true vs reported days on market.

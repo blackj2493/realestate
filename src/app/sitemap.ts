@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
 import { HOME_VALUE_CITIES, homeValuePath } from "@/lib/homeValue/content";
 import {
   cityHubsWithInventory,
@@ -124,5 +125,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // the split was worth doing.
   const hubRoutes = await cityHubRoutes();
 
-  return [...staticRoutes, ...hubRoutes];
+  // Power-of-sale lists ("power of sale homes {city}", 2026-11): Ontario + the 15 board cities.
+  const posRoutes: MetadataRoute.Sitemap = [
+    { url: `${SITE_URL}/power-of-sale`, changeFrequency: "daily", priority: 0.8 },
+    ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}/power-of-sale/${c.slug}`, changeFrequency: "daily" as const, priority: 0.7 })),
+  ];
+
+  return [...staticRoutes, ...posRoutes, ...hubRoutes];
 }
