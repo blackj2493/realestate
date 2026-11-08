@@ -42,6 +42,7 @@ import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { buildCityFacts, boardRowFor } from "@/lib/data/cityFacts";
 import CityMarketFacts from "@/components/seo/CityMarketFacts";
+import { outlookCityBySlug, outlookPath } from "@/lib/data/outlookCities";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
 export const dynamicParams = true;
@@ -230,7 +231,13 @@ export default async function CityHubPage({
           )}
         </header>
 
-        {facts && <CityMarketFacts facts={facts} canonical={canonical} />}
+        {facts && (
+          <CityMarketFacts
+            facts={facts}
+            canonical={canonical}
+            outlookHref={outlookCityBySlug(city) ? outlookPath(city.toLowerCase()) : undefined}
+          />
+        )}
         {listings.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {listings.map((doc) => (
