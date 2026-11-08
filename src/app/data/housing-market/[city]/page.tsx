@@ -194,6 +194,14 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
               <h2 className="text-base font-semibold">More on {city}</h2>
               <ul className="mt-2 space-y-1 text-sm">
                 <li>
+                  {/* The public page is the front door; the full terminal (filters by home type,
+                      beds and price band, inventory, rental yield) is VOW-gated behind a free account. */}
+                  <Link href={`/analytics?region=${encodeURIComponent(city)}`} className="font-medium underline">
+                    See the full {city} market data
+                  </Link>{" "}
+                  (free account): filter by home type, bedrooms and price, and see inventory and rents
+                </li>
+                <li>
                   <Link href={`${hub}#market-facts`} className="underline">{city} market facts and homes for sale</Link>, with a page for each neighbourhood
                 </li>
                 <li>
