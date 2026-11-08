@@ -261,9 +261,11 @@ export function renderLeadFollowUpEmail(input: LeadFollowUpInput): {
     figures = NEW_VS_RESALE_FIGURES;
     paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
   } else if (intent === "home_value") {
-    preheader = "Your price opinion is on the way.";
+    preheader = "Your price opinion is on the way, today.";
     figures = HOME_VALUE_FIGURES;
-    paras = [`${opener} ${where}. I'll send it to you personally, soon. It will cover:`];
+    paras = [
+      `${opener} ${where}. I'll send it to you personally today (if you wrote after 6 pm, by noon tomorrow). It will cover:`,
+    ];
   } else if (intent === "selling_plan") {
     preheader = "Your selling plan is on the way.";
     figures = SELLING_PLAN_FIGURES;
