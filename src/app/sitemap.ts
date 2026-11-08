@@ -129,6 +129,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/power-of-sale`, changeFrequency: "daily", priority: 0.8 },
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}/power-of-sale/${c.slug}`, changeFrequency: "daily" as const, priority: 0.7 })),
+    // "why is my house not selling" (2026-11): Ontario + the 15 board cities.
+    { url: `${SITE_URL}/house-not-selling`, changeFrequency: "weekly", priority: 0.8 },
+    ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}/house-not-selling/${c.slug}`, changeFrequency: "weekly" as const, priority: 0.7 })),
   ];
 
   return [...staticRoutes, ...posRoutes, ...hubRoutes];
