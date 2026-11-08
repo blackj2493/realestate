@@ -14,6 +14,7 @@
  */
 import { REGION_TO_CITIES, citiesFromRegions } from "@/lib/dashboard/config";
 import { cityHubSlug } from "@/lib/listings/listingPath";
+import { HOME_VALUE_CITIES, homeValuePath } from "@/lib/homeValue/content";
 
 export const INDEXNOW_KEY = "6f0622a42624d95dc2c200c194920550";
 export const INDEXNOW_ENDPOINT = "https://api.indexnow.org/indexnow";
@@ -34,7 +35,8 @@ export function nightlyPaths(): string[] {
     "/data/market-temperature",
     "/data/price-rankings",
   ];
-  return [...new Set([...hubs, ...data])];
+  const homeValue = [homeValuePath(), ...HOME_VALUE_CITIES.map((c) => homeValuePath(c.slug))];
+  return [...new Set([...hubs, ...data, ...homeValue])];
 }
 
 /** The listing page path: the stored canonical, else the legacy key path (same fallback as the sitemap). */
