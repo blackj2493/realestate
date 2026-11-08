@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { LIVE_TRACKERS } from '@/lib/data/trackers';
 import { LIVE_FINDINGS } from '@/lib/data/findings';
+import { OUTLOOK_CITIES } from '@/lib/data/outlookCities';
 import sitemap from './sitemap';
 
 const SITE = 'https://www.pureproperty.ca';
@@ -15,7 +16,7 @@ describe('/data/sitemap.xml', () => {
     expect(urls).toContain(`${SITE}/data/findings`);
     for (const t of LIVE_TRACKERS) expect(urls).toContain(`${SITE}/data/${t.slug}`);
     for (const f of LIVE_FINDINGS) expect(urls).toContain(`${SITE}/data/findings/${f.slug}`);
-    expect(urls).toHaveLength(3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length);
+    expect(urls).toHaveLength(3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 1 + OUTLOOK_CITIES.length);
   });
 
   it('declares only /data URLs, so its coverage number means one thing', () => {
