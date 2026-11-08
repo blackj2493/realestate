@@ -17,6 +17,7 @@ import { boardRowFor, SOURCE_LINE } from "@/lib/data/cityFacts";
 import { buildOutlook } from "@/lib/data/marketOutlook";
 import { OUTLOOK_CITIES, outlookCityBySlug, outlookPath } from "@/lib/data/outlookCities";
 import HubFaq from "@/components/seo/HubFaq";
+import MonthlyMarketCharts from "@/components/data/MonthlyMarketCharts";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 
@@ -153,6 +154,8 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
                 )}
               </ul>
             </section>
+
+            <MonthlyMarketCharts city={city} points={outlook.series} />
 
             {outlook.table.length > 0 && (
               <section className="mt-8" aria-labelledby="monthly">

@@ -108,6 +108,8 @@ export interface MarketOutlook {
   faqs: { q: string; a: string }[];
   /** Last 12 full months, newest first, for the table. */
   table: OutlookRow[];
+  /** Every full month the precompute holds (~24), oldest first, for the charts. */
+  series: OutlookRow[];
   marketType: "seller's market" | "balanced market" | "buyer's market" | null;
   updatedLabel: string;
   updatedIso: string;
@@ -250,6 +252,7 @@ export function buildOutlook(city: string, row: MarketRow | null, dataAsOf: stri
     seasonText,
     faqs: faqs.filter((f) => f.a.trim().length > 0),
     table,
+    series: full.map((p) => ({ month: p.month, label: monthLabel(p.month), medianPrice: p.medianPrice, sales: p.sales, soldToList: p.soldToList ?? null })),
     marketType,
     updatedLabel,
     updatedIso: new Date(dataAsOf).toISOString(),

@@ -9,6 +9,7 @@
  */
 import Link from "next/link";
 import HomeValueRequestCard from "./HomeValueRequestCard";
+import { HowItWorks, SampleOpinion } from "./HomeValueExtras";
 import CityMarketFacts from "@/components/seo/CityMarketFacts";
 import HubFaq from "@/components/seo/HubFaq";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
@@ -53,6 +54,8 @@ export default function HomeValueView({
           No automated guess, and no calls unless you ask.
         </p>
 
+        <HowItWorks />
+
         <div className="mt-6">
           <HomeValueRequestCard city={city} />
           <p className="mt-2 text-xs text-muted-foreground">
@@ -60,6 +63,8 @@ export default function HomeValueView({
             <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">Operated under licence</Link>.
           </p>
         </div>
+
+        <SampleOpinion />
 
         {facts && (
           <div className="mt-10">

@@ -8,6 +8,7 @@
  * page; a person sends the opinion by email.
  */
 import OfferRequestCard, { type OfferCopy } from "@/components/address/OfferRequestCard";
+import { REPLY_PROMISE } from "./HomeValueExtras";
 
 export const HOME_VALUE_COPY: OfferCopy = {
   title: "Get a free price opinion for your home",
@@ -18,7 +19,7 @@ export const HOME_VALUE_COPY: OfferCopy = {
     "what your home last sold for, updated for the market since then",
     "what could move the number up or down: condition, upgrades and timing",
   ],
-  footnote: "Free. No obligation. No calls unless you ask for one.",
+  footnote: `Free. No obligation. No calls unless you ask for one. ${REPLY_PROMISE}`,
   openLabel: "Get my price opinion",
   sentText: (address, email) => `Request sent. Your price opinion for ${address} is on its way to ${email}.`,
   messagePlaceholder: "e.g. 3-bedroom semi, finished basement, new kitchen in 2022",
