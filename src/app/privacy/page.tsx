@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 // TODO(legal): have this document reviewed by counsel for accuracy against actual
 // data practices and PIPEDA (see the final section) before relying on it.
-const EFFECTIVE_DATE = "November 4, 2026";
+const EFFECTIVE_DATE = "November 9, 2026";
 const CONTACT_EMAIL = "support@pureproperty.ca";
 
 const TITLE = "PureProperty.ca Privacy Policy";
@@ -38,6 +38,7 @@ const SECTIONS: LegalSection[] = [
       `Why you joined. When you accept the Terms, we ask what brings you here (buying, selling, investing, renting, or just researching). If you are selling, you may also give your home's address. We use these answers to show you the pages and emails that fit your reason for joining, and we store them with your account.`,
       `Requests you send us. When you ask for a viewing, a second opinion on a price, or a selling plan for your home, we collect the name, email address, optional phone number, address and message you give us, and we use them only to answer your request.`,
       `Usage, device, and technical information. As you use the Service, we automatically collect product-usage analytics (such as the features you interact with and the searches you run), your IP address, and device and browser characteristics. We also use cookies and browser local and session storage to operate the Service, as described in the Cookies section below.`,
+      `The PureProperty app in AI assistants. When you use PureProperty inside ChatGPT or another AI assistant (see /assistant-app), the assistant sends us only the place you asked about, such as a city or neighbourhood name. We do not receive your conversation, your assistant account or your contact details through the app. We keep a server log of each request (the tool used, the place and the response time) to run and improve the app, and links from the app carry tags so that we can count visits from it. The assistant provider handles your conversation under its own privacy policy.`,
       `VOW access records. When you are signed in and view sold or off-market listing data ("VOW" data), we keep a minimal record that your account accessed that listing at that time. We are required by the real estate board that licenses this data to maintain such an access record and to make it available to the board on request. These records contain only your account identifier, the listing accessed, and the time — no listing prices or other content — and are kept for a limited retention period and then deleted.`,
       `We collect only the personal information that is reasonably necessary for the purposes described in this Policy, and we limit our collection accordingly.`,
     ],
