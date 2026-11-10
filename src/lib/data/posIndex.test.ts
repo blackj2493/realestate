@@ -25,7 +25,7 @@ function rows(): PosMonthRow[] {
 describe("availableEditions", () => {
   it("lists full months with enough Ontario sales, not the current month", () => {
     const e = availableEditions(rows(), "2026-11-10T12:00:00Z");
-    expect(e[0]).toBe("2024-09");
+    expect(e[0]).toBe("2024-11"); // Sep and Oct 2024 have no 3-month window
     expect(e[e.length - 1]).toBe("2026-10");
     expect(e).not.toContain("2026-11");
   });
@@ -58,5 +58,16 @@ describe("buildPosIndex", () => {
 
   it("has no edition without the 3 months of data", () => {
     expect(buildPosIndex(rows(), "2024-09")).toBeNull();
+  });
+});
+
+describe("coverage", () => {
+  it("drops months with sales but no power-of-sale flags at the start", () => {
+    const r = rows().map((x) => (x.month === "2024-09-01" ? { ...x, pos_sales: 0 } : x));
+    const e = availableEditions(r, "2026-11-10T12:00:00Z");
+    expect(e[0]).toBe("2024-12");
+    const d = buildPosIndex(r, "2026-10")!;
+    expect(d.series[0].edition).toBe("2024-10");
+    expect(buildPosIndex(r, "2024-11")).toBeNull(); // its 3 months would include the unflagged September
   });
 });

@@ -78,8 +78,8 @@ export default function PosIndexView({ d, editions, isLatest }: { d: PosIndexEdi
             <h2 id="trend" className="text-lg font-semibold">Power-of-sale share of Ontario sales, by month</h2>
             <ul className="mt-4 space-y-1.5 text-sm" aria-label="Power-of-sale share of Ontario home sales by month">
               {d.series.map((p) => (
-                <li key={p.edition} className="grid grid-cols-[6.5rem_minmax(0,1fr)_7.5rem] items-center gap-2">
-                  <span className="text-muted-foreground">{p.label}</span>
+                <li key={p.edition} className="grid grid-cols-[4.75rem_minmax(0,1fr)_6.75rem] items-center gap-2">
+                  <span className="whitespace-nowrap text-muted-foreground" title={p.label}>{p.label.slice(0, 3)} {p.edition.slice(0, 4)}</span>
                   <span className="h-3 rounded-r-sm bg-orange-700/85 dark:bg-orange-500/85" style={{ width: `${Math.max(2, (p.sharePct / max) * 100)}%` }} aria-hidden="true" />
                   <span className="text-right tabular-nums">
                     {p.sharePct.toFixed(2)}% <span className="text-muted-foreground">({p.pos})</span>

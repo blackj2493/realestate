@@ -72,13 +72,29 @@ export async function getPosMonthly(): Promise<PosMonthRow[]> {
   }
 }
 
+/**
+ * Drop the months before the power-of-sale flags start. pos_sales was backfilled 25 months
+ * while pos_monthly_stats counts sales a month further back, so the oldest month(s) have
+ * sales but no flags: a false 0%. Coverage starts at the first Ontario month with a flag.
+ */
+export function trimToCoverage(rows: PosMonthRow[]): PosMonthRow[] {
+  const start = rows
+    .filter((r) => r.region === "ontario" && r.pos_sales > 0)
+    .map((r) => ym(r.month))
+    .sort()[0];
+  return start ? rows.filter((r) => ym(r.month) >= start) : [];
+}
+
 /** Editions ("YYYY-MM"), oldest first: full months before `todayIso`'s Toronto month with enough Ontario sales. */
-export function availableEditions(rows: PosMonthRow[], todayIso: string): string[] {
+export function availableEditions(all: PosMonthRow[], todayIso: string): string[] {
+  const rows = trimToCoverage(all);
   const current = new Date(todayIso).toLocaleDateString("en-CA", { timeZone: "America/Toronto" }).slice(0, 7);
   return rows
     .filter((r) => r.region === "ontario" && ym(r.month) < current && r.sales >= MIN_EDITION_SALES)
     .map((r) => ym(r.month))
-    .sort();
+    .sort()
+    // Only months whose edition can be built (its 3-month headline needs 2 earlier months).
+    .filter((e) => buildPosIndex(rows, e) != null);
 }
 
 interface Sum { sales: number; pos: number }
@@ -110,7 +126,8 @@ export interface PosIndexEdition {
   faqs: { q: string; a: string }[];
 }
 
-export function buildPosIndex(rows: PosMonthRow[], edition: string): PosIndexEdition | null {
+export function buildPosIndex(all: PosMonthRow[], edition: string): PosIndexEdition | null {
+  const rows = trimToCoverage(all);
   const label = editionLabel(edition);
   const month = sum(rows, "ontario", edition, edition);
   const q3 = sum(rows, "ontario", addMonths(edition, -2), edition);
