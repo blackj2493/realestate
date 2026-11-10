@@ -45,6 +45,13 @@ describe("buildSellingTime", () => {
     expect(s.rankText).toContain("number 3 of 5");
     expect(s.title).toBe("How Long Does It Take to Sell a House in Markham? (November 2026)");
     expect(s.faqs.map((f) => f.q)).toContain("What is the best month to sell a house in Markham?");
+    expect(s.stats.sold).toEqual({ median: 22, p25: 10, p75: 45, count: 1200 });
+    expect(s.stats.active).toEqual({ trueDom: 61, boardDom: 38, count: 400 });
+    expect(s.stats.stale90Pct).toBe(20);
+    expect(s.stats.buckets?.map((b) => b.count)).toEqual([100, 80, 90, 50, 80]);
+    expect(s.stats.rank?.position).toBe(3);
+    expect(s.stats.rank?.cities[0]).toEqual({ city: "Oshawa", days: 15 });
+    expect(s.stats.peakRatio).toBe(3);
   });
 
   it("drops figures whose sample is too small", () => {
@@ -52,6 +59,7 @@ describe("buildSellingTime", () => {
     const s = buildSellingTime("Ajax", thin, [thin], AS_OF)!;
     expect(s.facts.map((f) => f.id)).toEqual(["busiest_month"]);
     expect(s.rankText).toBeNull();
+    expect(s.stats).toMatchObject({ sold: null, active: null, buckets: null, stale90Pct: null, rank: null });
   });
 
   it("has no month chart when a month of the 24 is missing", () => {

@@ -38,6 +38,15 @@ export interface SellingTime {
   /** Fastest-to-slowest rank of this city among the covered cities (sold-side median). */
   rankText: string | null;
   faqs: { q: string; a: string }[];
+  /** The same figures as numbers, for the page's stat cards and charts (null = sample too small). */
+  stats: {
+    sold: { median: number; p25: number | null; p75: number | null; count: number } | null;
+    active: { trueDom: number; boardDom: number | null; count: number } | null;
+    buckets: { label: string; count: number }[] | null;
+    stale90Pct: number | null;
+    rank: { position: number; of: number; cities: { city: string; days: number }[] } | null;
+    peakRatio: number | null;
+  };
   updatedLabel: string;
   updatedIso: string;
 }
@@ -92,12 +101,14 @@ export function buildSellingTime(city: string, row: MarketRow | null, allRows: M
 
   // 4. Rank among covered cities by sold-side median (lower = faster).
   let rankText: string | null = null;
+  let rank: SellingTime["stats"]["rank"] = null;
   if (row.soldMedianDom != null && (row.soldCount12m ?? 0) >= MIN_SOLD_12M) {
     const ranked = allRows
       .filter((r) => r.soldMedianDom != null && (r.soldCount12m ?? 0) >= MIN_SOLD_12M)
       .sort((a, b) => (a.soldMedianDom as number) - (b.soldMedianDom as number));
     const i = ranked.findIndex((r) => r.region.toLowerCase() === row.region.toLowerCase());
     if (i >= 0 && ranked.length >= 5) {
+      rank = { position: i + 1, of: ranked.length, cities: ranked.map((r) => ({ city: r.region, days: r.soldMedianDom as number })) };
       const fastest = ranked[0];
       const slowest = ranked[ranked.length - 1];
       rankText =
@@ -113,9 +124,11 @@ export function buildSellingTime(city: string, row: MarketRow | null, allRows: M
   const season = salesByCalendarMonth(row.monthly, dataAsOf, MIN_SEASON_SALES);
   const months: SellingTime["months"] = season ? season.months : null;
   let seasonText: string | null = null;
+  let peakRatio: number | null = null;
   if (season) {
     const s5 = seasonSentence(city, season);
     seasonText = s5.text;
+    peakRatio = Math.round(s5.ratio * 10) / 10;
     facts.push({ id: "busiest_month", text: seasonText, measure: { name: "Sales in the busiest calendar month as a multiple of the quietest, last 2 years", value: Math.round(s5.ratio * 10) / 10, unitText: "ratio" } });
   }
 
@@ -149,6 +162,25 @@ export function buildSellingTime(city: string, row: MarketRow | null, allRows: M
     seasonText,
     rankText,
     faqs,
+    stats: {
+      sold: facts.some((f) => f.id === "sold_dom")
+        ? { median: row.soldMedianDom as number, p25: row.soldP25Dom, p75: row.soldP75Dom, count: row.soldCount12m ?? 0 }
+        : null,
+      active: facts.some((f) => f.id === "true_dom") ? { trueDom: row.trueDom as number, boardDom: row.medianNaiveDom, count: row.activeCount ?? 0 } : null,
+      buckets:
+        s90 && s90.total >= MIN_ACTIVE && row.domBuckets
+          ? [
+              { label: "0–14 days", count: row.domBuckets.d0_14 },
+              { label: "15–30 days", count: row.domBuckets.d15_30 },
+              { label: "31–60 days", count: row.domBuckets.d31_60 },
+              { label: "61–90 days", count: row.domBuckets.d61_90 },
+              { label: "Over 90 days", count: row.domBuckets.d90plus },
+            ]
+          : null,
+      stale90Pct: s90 && s90.total >= MIN_ACTIVE ? Math.round(s90.share * 100) : null,
+      rank,
+      peakRatio,
+    },
     updatedLabel,
     updatedIso,
   };
