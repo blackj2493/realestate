@@ -13,12 +13,13 @@
  * no LLM). Every figure is dropped when its sample is thin.
  */
 import type { MarketRow } from "./marketBoard";
+import { salesByCalendarMonth, seasonSentence } from "./seasonality";
 
 
 const MIN_3M_SALES = 90; // ~30 a month, the city-facts monthly floor
 const MIN_12M_SALES = 50;
 const MIN_ACTIVE = 30;
-const MIN_SEASON_SALES = 30; // per calendar month, pooled over 5 years
+const MIN_SEASON_SALES = 30; // per calendar month, pooled over the 2-year window
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-CA")}`;
 const pct1 = (n: number) => `${(Math.round(n * 10) / 10).toFixed(1)}%`;
@@ -199,21 +200,13 @@ export function buildOutlook(city: string, row: MarketRow | null, dataAsOf: stri
 
   if (!facts.length) return null;
 
-  // Sales by month of the year (5 years). PRICE by month is deliberately NOT used: the
-  // precompute normalises each sale by its own year's median, so in a falling year the
-  // early months read "high" (Oshawa showed January as its best month in 2026). Sales
-  // counts carry no such bias, and "when do the most buyers act" is the honest half of
-  // "when is the best time to sell".
-  let seasonText: string | null = null;
-  const season = row.seasonality.filter((m) => m.sales >= MIN_SEASON_SALES);
-  if (season.length === 12) {
-    const busy = [...season].sort((a, b) => b.sales - a.sales).slice(0, 3).map((m) => MONTHS[m.month - 1]);
-    const quiet = season.reduce((a, b) => (b.sales < a.sales ? b : a));
-    const ratio = season.reduce((a, b) => (b.sales > a.sales ? b : a)).sales / quiet.sales;
-    seasonText =
-      `Over the last 5 years, the most homes in ${city} sold in ${busy[0]}, ${busy[1]} and ${busy[2]}, ` +
-      `and the fewest in ${MONTHS[quiet.month - 1]}: the busiest month had ${ratio.toFixed(1)} times as many sales as the quietest.`;
-  }
+  // Sales by calendar month over the last 24 full months (src/lib/data/seasonality.ts).
+  // PRICE by month is deliberately NOT used: the precompute normalises each sale by its own
+  // year's median, so in a falling year the early months read "high" (Oshawa showed January
+  // as its best month in 2026). Sales counts carry no such bias, and "when do the most buyers
+  // act" is the honest half of "when is the best time to sell".
+  const season = salesByCalendarMonth(row.monthly, dataAsOf, MIN_SEASON_SALES);
+  const seasonText: string | null = season ? seasonSentence(city, season).text : null;
 
   const year = outlookYear(dataAsOf);
   const join = (...xs: (string | null)[]) => xs.filter(Boolean).join(" ");

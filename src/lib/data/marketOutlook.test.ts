@@ -58,8 +58,10 @@ describe("buildOutlook", () => {
     expect(t).toBe("The 3-month median sale price in Toronto is 20.0% below its highest level since November 2024, which was $1,000,000 from April to June 2025.");
   });
 
-  it("uses sales, not prices, for the month-of-year pattern", () => {
-    const o = buildOutlook("Toronto", row(), AS_OF)!;
+  it("uses sales, not prices, for the month-of-year pattern, over the last 24 full months", () => {
+    const shaped = monthly.map((p) => ({ ...p, sales: p.month.endsWith("-10") ? 900 : p.month.endsWith("-01") ? 200 : p.sales }));
+    const o = buildOutlook("Toronto", row({ monthly: shaped }), AS_OF)!;
+    expect(o.seasonText).toContain("Over the last 2 years (November 2024 to October 2026)");
     expect(o.seasonText).toContain("the most homes in Toronto sold in October");
     expect(o.seasonText).toContain("the fewest in January");
     expect(o.seasonText).not.toMatch(/above that year/);

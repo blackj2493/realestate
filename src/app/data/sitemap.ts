@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { LIVE_TRACKERS } from "@/lib/data/trackers";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
+import { daysOnMarketPath } from "@/lib/seo/cityTopics";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
 
 /**
@@ -54,6 +55,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // City housing-market pages ("{city} housing market 2027" — the most-searched housing query).
     { url: `${SITE_URL}/data/housing-market`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${outlookPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 })),
+    // "How long does it take to sell a house in {city}" + best month (2026-11-10).
+    ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${daysOnMarketPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.7 })),
     { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },
     ...LIVE_FINDINGS.map((f) => ({
       url: `${SITE_URL}/data/findings/${f.slug}`,
