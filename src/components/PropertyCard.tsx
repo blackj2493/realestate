@@ -142,6 +142,16 @@ export function PropertyCard({
               <div className="text-lg font-bold text-primary">
                 {formatPrice(property.price)}
               </div>
+              {priceReduced && (
+                <p className="flex flex-wrap items-center gap-x-1.5 text-xs">
+                  <span className="text-muted-foreground line-through">
+                    {formatPrice(property.previousPrice ?? 0)}
+                  </span>
+                  <span className="inline-flex items-center gap-0.5 font-medium text-red-600 dark:text-red-400">
+                    <TrendingDown className="h-3 w-3" />-{formatPrice(priceDiff)}
+                  </span>
+                </p>
+              )}
               <p className="text-sm font-medium line-clamp-1">{property.address}</p>
               <p className="text-xs text-muted-foreground">
                 {property.city} • {getPropertyTypeLabel(property.propertyType)}
