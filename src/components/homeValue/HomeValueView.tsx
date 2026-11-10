@@ -8,6 +8,8 @@
  * 2026-11-08: no brokerage name in the page text).
  */
 import Link from "next/link";
+import { Home } from "lucide-react";
+import { StatCard } from "@/components/dataPage/parts";
 import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import HomeValueRequestCard from "./HomeValueRequestCard";
 import { HowItWorks, SampleOpinion } from "./HomeValueExtras";
@@ -31,11 +33,24 @@ export default function HomeValueView({
   const place = city ?? "Ontario";
   const faqs = homeValueFaqs(place, facts);
   const others = HOME_VALUE_CITIES.filter((c) => c.slug !== slug);
+  // Three market figures for the stat cards (the full sentences are in CityMarketFacts below).
+  const m = (id: string) => facts?.facts.find((f) => f.id === id)?.measure ?? null;
+  const price = m("price");
+  const days = m("days_to_sell");
+  const under = m("under_first_ask");
+  const s2l = m("final_ask");
+  const cards = [
+    price && { label: "Median sale price", value: `$${Math.round(price.value).toLocaleString("en-CA")}`, sub: `${price.name}.` },
+    days && { label: "Days to sell", value: `${days.value} days`, sub: "Median for homes sold in the last 12 months." },
+    under
+      ? { label: "Sold below first ask", value: `${Math.round(under.value)}%`, sub: "Of the homes sold in the last 12 months." }
+      : s2l && { label: "Sale to asking price", value: `${s2l.value.toFixed(1)}%`, sub: "Average share of the final asking price, last 90 days." },
+  ].filter((c): c is { label: string; value: string; sub: string } => !!c);
 
   return (
     <main className="min-h-app bg-background text-foreground">
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        <nav className="mb-4 text-sm text-muted-foreground">
+      <div className="mx-auto max-w-5xl px-4 py-8">
+        <nav className="mb-5 text-sm text-muted-foreground">
           <Link href="/" className="hover:text-foreground">Home</Link>
           <span className="mx-2">/</span>
           {city ? (
@@ -49,22 +64,42 @@ export default function HomeValueView({
           )}
         </nav>
 
-        <h1 className="text-2xl font-bold sm:text-3xl">How much is my house worth in {place}?</h1>
-        <p className="mt-3 text-base leading-relaxed">
-          Get a free written price opinion for your home, based on real sales {city ? `in ${city}` : "near you"} and checked by a person.
-          No automated guess, and no calls unless you ask.
-        </p>
+        <header className="grid gap-6 rounded-2xl border border-border bg-card/60 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start">
+          <div>
+            <p className="terminal-font flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
+              <Home className="h-3.5 w-3.5" aria-hidden="true" />
+              Free price opinion · {place}
+            </p>
+            <h1 className="mt-3 text-2xl font-bold leading-tight sm:text-3xl">How much is my house worth in {place}?</h1>
+            <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+              Get a free written price opinion for your home, based on real sales {city ? `in ${city}` : "near you"} and checked by a person.
+              No automated guess, and no calls unless you ask.
+            </p>
+            <HowItWorks />
+          </div>
+          <div>
+            <HomeValueRequestCard city={city} />
+            <p className="mt-2 text-xs text-muted-foreground">
+              A licensed REALTOR® checks every price opinion.{" "}
+              <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">Operated under licence</Link>.
+            </p>
+          </div>
+        </header>
 
-        <HowItWorks />
+        {cards.length > 0 && facts && (
+          <section className="mt-4" aria-label={`${place} market now`}>
+            <div className={`grid gap-3 ${cards.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+              {cards.map((c) => (
+                <StatCard key={c.label} label={c.label} value={c.value} sub={c.sub} />
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {place} market, MLS® data updated <time dateTime={facts.updatedIso}>{facts.updatedLabel}</time>. A city figure is not the price of your home.
+            </p>
+          </section>
+        )}
 
-        <div className="mt-6">
-          <HomeValueRequestCard city={city} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            A licensed REALTOR® checks every price opinion.{" "}
-            <Link href="/operated-by" className="underline underline-offset-2 hover:text-foreground">Operated under licence</Link>.
-          </p>
-        </div>
-
+        <div className="mx-auto max-w-3xl">
         <SampleOpinion />
 
         {facts && (
@@ -94,17 +129,22 @@ export default function HomeValueView({
 
         <section className="mt-8">
           <h2 className="text-sm font-semibold text-muted-foreground">{city ? "Other cities" : "By city"}</h2>
-          <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+          <div className="mt-2 flex flex-wrap gap-2">
             {others.map((c) => (
-              <Link key={c.slug} href={homeValuePath(c.slug)} className="underline hover:text-foreground">
+              <Link
+                key={c.slug}
+                href={homeValuePath(c.slug)}
+                className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+              >
                 {c.city}
               </Link>
             ))}
-          </p>
+          </div>
         </section>
 
         <div className="mt-8">
           <ListingComplianceNotice />
+        </div>
         </div>
       </div>
     </main>

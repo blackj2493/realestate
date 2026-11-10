@@ -112,6 +112,17 @@ export interface MarketOutlook {
   /** Every full month the precompute holds (~24), oldest first, for the charts. */
   series: OutlookRow[];
   marketType: "seller's market" | "balanced market" | "buyer's market" | null;
+  /** The same figures as numbers, for the page's stat cards (null = not stated). */
+  stats: {
+    span: string | null;
+    price: { now: number; before: number } | null;
+    sales: { now: number; before: number } | null;
+    s2l: { now: number; before: number } | null;
+    fromHighPct: number | null;
+    underAskPct: number | null;
+    cutPct: number | null;
+    medianCutPct: number | null;
+  };
   updatedLabel: string;
   updatedIso: string;
 }
@@ -156,6 +167,7 @@ export function buildOutlook(city: string, row: MarketRow | null, dataAsOf: stri
 
   // 4. Distance from the two-year high of the 3-month price.
   let peakText: string | null = null;
+  let fromHighPct: number | null = null;
   if (comparable && now && full.length >= 12) {
     let peak: Window | null = null;
     for (let i = 2; i < full.length; i++) {
@@ -164,6 +176,7 @@ export function buildOutlook(city: string, row: MarketRow | null, dataAsOf: stri
     }
     if (peak) {
       const gap = (now.price / peak.price - 1) * 100;
+      fromHighPct = Math.round(gap * 10) / 10;
       const from = monthLabel(full[0].month);
       peakText =
         peak.last === now.last || gap > -0.05
@@ -247,6 +260,16 @@ export function buildOutlook(city: string, row: MarketRow | null, dataAsOf: stri
     table,
     series: full.map((p) => ({ month: p.month, label: monthLabel(p.month), medianPrice: p.medianPrice, sales: p.sales, soldToList: p.soldToList ?? null })),
     marketType,
+    stats: {
+      span: comparable && now ? spanLabel(now.first, now.last) : null,
+      price: comparable && now && before ? { now: now.price, before: before.price } : null,
+      sales: comparable && now && before ? { now: now.sales, before: before.sales } : null,
+      s2l: s2lText && now?.soldToList != null && before?.soldToList != null ? { now: now.soldToList, before: before.soldToList } : null,
+      fromHighPct,
+      underAskPct: underText && row.underAskShare != null ? Math.round(row.underAskShare * 100) : null,
+      cutPct: cutText && row.cutShare != null ? Math.round(row.cutShare * 100) : null,
+      medianCutPct: cutText && row.medianCutPct != null ? row.medianCutPct : null,
+    },
     updatedLabel,
     updatedIso: new Date(dataAsOf).toISOString(),
   };

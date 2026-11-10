@@ -6,12 +6,12 @@
  *
  * TWO CHARTS, NOT ONE: price and sales have different scales, and a dual-axis chart lets
  * the reader compare two arbitrary scales as if they were one. One series each, so no
- * legend: the title names it. Colour: emerald-600 (#059669), validated against the light
+ * legend: the title names it. Colour: teal-600 (#0d9488), validated against the light
  * (#e9edf4) and dark (#020617) page surfaces (dataviz validate_palette.js, both PASS).
  * Text stays in text tokens. Hover/focus a month for its exact values; the same numbers
  * are in the page's month table and its sentences, so nothing is chart-only.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface MonthPoint {
   month: string; // YYYY-MM
@@ -20,11 +20,8 @@ export interface MonthPoint {
   sales: number;
 }
 
-const W = 720;
-const H = 190;
 const PAD = { top: 16, right: 16, bottom: 26, left: 56 };
-const IW = W - PAD.left - PAD.right;
-const IH = H - PAD.top - PAD.bottom;
+const COLOUR = "#0d9488"; // teal-600, the data-page colour (validated on both surfaces)
 
 const short = (ym: string) => {
   const m = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(ym.slice(5, 7)) - 1];
@@ -54,13 +51,18 @@ function Chart({
   kind,
   hover,
   setHover,
+  W,
 }: {
+  W: number;
   title: string;
   points: MonthPoint[];
   kind: "price" | "sales";
   hover: number | null;
   setHover: (i: number | null) => void;
 }) {
+  const H = W < 480 ? 170 : 190;
+  const IW = W - PAD.left - PAD.right;
+  const IH = H - PAD.top - PAD.bottom;
   const vals = points.map((p) => (kind === "price" ? p.medianPrice : p.sales));
   const max = Math.max(...vals);
   const min = Math.min(...vals);
@@ -111,20 +113,20 @@ function Chart({
             const bx = x(i) - barW / 2;
             // Rounded data end (top), square baseline.
             const d = `M${bx},${y(0)} V${top + r} Q${bx},${top} ${bx + r},${top} H${bx + barW - r} Q${bx + barW},${top} ${bx + barW},${top + r} V${y(0)} Z`;
-            return <path key={p.month} d={d} fill="#059669" opacity={hover === null || hover === i ? 1 : 0.45} />;
+            return <path key={p.month} d={d} fill={COLOUR} opacity={hover === null || hover === i ? 1 : 0.45} />;
           })
         ) : (
           <>
             <polyline
               points={points.map((p, i) => `${x(i)},${y(p.medianPrice)}`).join(" ")}
               fill="none"
-              stroke="#059669"
+              stroke={COLOUR}
               strokeWidth={2}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
             {/* Direct label on the latest point only */}
-            <circle cx={x(last)} cy={y(vals[last])} r={4} fill="#059669" className="stroke-background" strokeWidth={2} />
+            <circle cx={x(last)} cy={y(vals[last])} r={4} fill={COLOUR} className="stroke-background" strokeWidth={2} />
           </>
         )}
 
@@ -132,7 +134,7 @@ function Chart({
         {hover !== null && (
           <g pointerEvents="none">
             <line x1={x(hover)} x2={x(hover)} y1={PAD.top} y2={PAD.top + IH} className="stroke-muted-foreground" strokeWidth={1} strokeDasharray="3 3" />
-            {kind === "price" && <circle cx={x(hover)} cy={y(vals[hover])} r={5} fill="#059669" className="stroke-background" strokeWidth={2} />}
+            {kind === "price" && <circle cx={x(hover)} cy={y(vals[hover])} r={5} fill={COLOUR} className="stroke-background" strokeWidth={2} />}
           </g>
         )}
 
@@ -160,19 +162,29 @@ function Chart({
 
 export default function MonthlyMarketCharts({ city, points }: { city: string; points: MonthPoint[] }) {
   const [hover, setHover] = useState<number | null>(null);
+  // Draw at the real pixel width, so the 11px labels stay 11px on a phone.
+  const wrap = useRef<HTMLDivElement>(null);
+  const [W, setW] = useState(720);
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   if (points.length < 6) return null;
   const p = hover !== null ? points[hover] : points[points.length - 1];
   return (
-    <section className="mt-8" aria-labelledby="charts">
+    <section className="mt-8 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="charts">
       <h2 id="charts" className="text-lg font-semibold">The last {points.length} months in {city}</h2>
       {/* Readout: the hovered month, else the latest. Text tokens, not the series colour. */}
       <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
         <span className="font-medium text-foreground">{p.label}</span>: median sale price ${p.medianPrice.toLocaleString("en-CA")},{" "}
         {p.sales.toLocaleString("en-CA")} sales
       </p>
-      <div className="mt-3 grid gap-6">
-        <Chart title="Median sale price, all home types" points={points} kind="price" hover={hover} setHover={setHover} />
-        <Chart title="Number of sales" points={points} kind="sales" hover={hover} setHover={setHover} />
+      <div ref={wrap} className="mt-3 grid gap-6">
+        <Chart W={W} title="Median sale price, all home types" points={points} kind="price" hover={hover} setHover={setHover} />
+        <Chart W={W} title="Number of sales" points={points} kind="sales" hover={hover} setHover={setHover} />
       </div>
     </section>
   );

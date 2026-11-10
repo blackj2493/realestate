@@ -36,6 +36,13 @@ describe("buildPosFacts", () => {
     expect(t.share).toBe("In the last 12 months, 66 of 4,330 home sales in Brampton (1.52%) were power-of-sale sales, up from 36 (0.95%) in the 12 months before.");
     expect(t.price).toBe("In the last 12 months, power-of-sale homes in Brampton sold for a median of 96.2% of their final asking price, compared with 97.1% for other homes.");
     expect(t.dom).toBe("They took a median of 30 days to sell in Brampton, compared with 22 days for other homes.");
+    expect(f.stats.activeNow).toBe(41);
+    expect(f.stats.sharePct).toBeCloseTo(1.524, 2);
+    expect(f.stats.prevSharePct).toBeCloseTo(0.953, 2);
+    expect(f.stats.ontarioSharePct).toBeCloseTo(0.405, 2);
+    expect(f.stats.where).toBe("in Brampton");
+    expect(f.stats.s2l).toEqual({ pos: 96.2, other: 97.1 });
+    expect(f.stats.dom).toEqual({ pos: 30, other: 22 });
   });
 
   it("uses Ontario for the comparison and skips the change when a city's sample is small", () => {
@@ -44,6 +51,8 @@ describe("buildPosFacts", () => {
     expect(t.share).toBe("In the last 12 months, 9 of 2,705 home sales in Markham (0.33%) were power-of-sale sales.");
     expect(t.price).toContain("power-of-sale homes across Ontario sold for a median of 95.3%");
     expect(t.dom).toContain("38 days to sell across Ontario");
+    expect(f.stats.prevSharePct).toBeNull();
+    expect(f.stats.where).toBe("across Ontario");
   });
 
   it("reads numeric strings and handles no homes for sale", () => {

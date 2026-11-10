@@ -63,6 +63,18 @@ export interface PosFacts {
   /** 12-month share (%) and count, for the index list. */
   share: number | null;
   posSales: number | null;
+  /** The same figures as numbers, for the page's stat cards (null = not stated). */
+  stats: {
+    activeNow: number | null;
+    sharePct: number | null;
+    prevSharePct: number | null;
+    sales: number | null;
+    ontarioSharePct: number | null;
+    /** "in Brampton" or "across Ontario": where the price and time comparison comes from. */
+    where: string;
+    s2l: { pos: number; other: number } | null;
+    dom: { pos: number; other: number } | null;
+  };
   updatedLabel: string | null;
   updatedIso: string | null;
 }
@@ -93,6 +105,7 @@ export function buildPosFacts(place: string, region: string, rows: PosStatRow[],
   }
 
   let share: number | null = null;
+  let prevSharePct: number | null = null;
   const sales = num(cur?.sales) ?? 0;
   const pos = num(cur?.pos_sales) ?? 0;
   if (cur && sales > 0) {
@@ -100,6 +113,7 @@ export function buildPosFacts(place: string, region: string, rows: PosStatRow[],
     const pSales = num(prev?.sales) ?? 0;
     const pPos = num(prev?.pos_sales) ?? 0;
     let changeText = "";
+    if (prev && pSales > 0 && pos >= MIN_POS_FOR_CHANGE && pPos >= MIN_POS_FOR_CHANGE) prevSharePct = (pPos / pSales) * 100;
     if (prev && pSales > 0 && pos >= MIN_POS_FOR_CHANGE && pPos >= MIN_POS_FOR_CHANGE) {
       const prevShare = (pPos / pSales) * 100;
       const dir = share > prevShare ? "up" : share < prevShare ? "down" : "the same as";
@@ -168,6 +182,16 @@ export function buildPosFacts(place: string, region: string, rows: PosStatRow[],
     summary,
     share,
     posSales: cur ? pos : null,
+    stats: {
+      activeNow,
+      sharePct: share,
+      prevSharePct,
+      sales: cur ? sales : null,
+      ontarioSharePct: ont && (num(ont.sales) ?? 0) > 0 ? ((num(ont.pos_sales) ?? 0) / (num(ont.sales) as number)) * 100 : null,
+      where,
+      s2l: cmp && posS2l != null && othS2l != null ? { pos: posS2l, other: othS2l } : null,
+      dom: cmp && posDom != null && othDom != null ? { pos: posDom, other: othDom } : null,
+    },
     updatedLabel: at ? new Date(at).toLocaleDateString("en-CA", { month: "long", day: "numeric", year: "numeric", timeZone: "America/Toronto" }) : null,
     updatedIso: at ? new Date(at).toISOString() : null,
   };
