@@ -67,7 +67,8 @@ interface Precompute {
   outcomes: AssembleArgs[4];
   cuts?: { cuts?: CutsLite | null } | null;
   rental?: { rental?: { rows?: RentalRow[] } | null } | null;
-  /** region_seasonality (5 years): sales, price vs that year's median, sale-to-list, by calendar month. */
+  /** region_seasonality ("5 years", but raw_vow_sold holds ~2, so edge months count 3x —
+   *  do not use for month ranking; see src/lib/data/seasonality.ts). */
   seasonality?: {
     seasonality?: {
       months?: { month: number; sales: number; priceIndexPct: number | null; soldToList: number | null }[];

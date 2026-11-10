@@ -40,7 +40,8 @@ export function nightlyPaths(): string[] {
   const homeValue = [homeValuePath(), ...HOME_VALUE_CITIES.map((c) => homeValuePath(c.slug))];
   const pos = ["/power-of-sale", ...OUTLOOK_CITIES.map((c) => `/power-of-sale/${c.slug}`)];
   const notSelling = ["/house-not-selling", ...OUTLOOK_CITIES.map((c) => `/house-not-selling/${c.slug}`)];
-  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling])];
+  const dom = OUTLOOK_CITIES.map((c) => `/data/days-on-market/${c.slug}`);
+  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling, ...dom])];
 }
 
 /** The listing page path: the stored canonical, else the legacy key path (same fallback as the sitemap). */

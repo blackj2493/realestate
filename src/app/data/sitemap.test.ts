@@ -16,7 +16,7 @@ describe('/data/sitemap.xml', () => {
     expect(urls).toContain(`${SITE}/data/findings`);
     for (const t of LIVE_TRACKERS) expect(urls).toContain(`${SITE}/data/${t.slug}`);
     for (const f of LIVE_FINDINGS) expect(urls).toContain(`${SITE}/data/findings/${f.slug}`);
-    expect(urls).toHaveLength(3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 1 + OUTLOOK_CITIES.length);
+    expect(urls).toHaveLength(3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 1 + OUTLOOK_CITIES.length * 2);
   });
 
   it('declares only /data URLs, so its coverage number means one thing', () => {

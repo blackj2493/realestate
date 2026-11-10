@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
+import { daysOnMarketPath } from "@/lib/seo/cityTopics";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
@@ -112,6 +115,18 @@ export default async function DaysOnMarketPage() {
           Days-on-market data is refreshing — please check back shortly.
         </p>
       )}
+      <section className="mt-8" aria-labelledby="dom-cities">
+        <h2 id="dom-cities" className="text-sm font-semibold text-muted-foreground">
+          How long homes take to sell, and the busiest months, by city
+        </h2>
+        <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+          {OUTLOOK_CITIES.map((c) => (
+            <Link key={c.slug} href={daysOnMarketPath(c.slug)} className="underline hover:text-foreground">
+              {c.city}
+            </Link>
+          ))}
+        </p>
+      </section>
     </TrackerShell>
   );
 }
