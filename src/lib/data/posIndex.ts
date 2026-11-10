@@ -119,8 +119,15 @@ export interface PosIndexEdition {
   title: string;
   headline: string;
   facts: PosIndexFact[];
-  /** Ontario monthly share, oldest first, up to and including the edition month. */
-  series: { edition: string; label: string; sales: number; pos: number; sharePct: number }[];
+  /** Ontario monthly share, oldest first, up to and including the edition month; avg3Pct =
+   *  the 3 months ending that month (pooled counts), null for the first two. */
+  series: { edition: string; label: string; sales: number; pos: number; sharePct: number; avg3Pct: number | null }[];
+  /** The numbers behind the headline, for the stat cards. */
+  hero: { from: string; sharePct: number; pos: number; sales: number; prevSharePct: number | null };
+  month: { sharePct: number; pos: number; sales: number; prevSharePct: number | null };
+  s2l: { pos: number; other: number } | null;
+  /** Ontario share over the cities' 12 months, the reference line in the city chart. */
+  ontario12Pct: number | null;
   cities: { city: string; slug: string; sales: number; pos: number; sharePct: number; prevSharePct: number | null }[];
   cityWindow: string;
   faqs: { q: string; a: string }[];
@@ -180,7 +187,16 @@ export function buildPosIndex(all: PosMonthRow[], edition: string): PosIndexEdit
   const series = rows
     .filter((r) => r.region === "ontario" && ym(r.month) <= edition && r.sales >= MIN_EDITION_SALES)
     .map((r) => ({ edition: ym(r.month), label: editionLabel(ym(r.month)), sales: r.sales, pos: r.pos_sales, sharePct: r.sales > 0 ? (r.pos_sales / r.sales) * 100 : 0 }))
-    .sort((a, b) => a.edition.localeCompare(b.edition));
+    .sort((a, b) => a.edition.localeCompare(b.edition))
+    .map((p, i, arr) => {
+      if (i < 2) return { ...p, avg3Pct: null };
+      const w = arr.slice(i - 2, i + 1);
+      // Pooled counts, and only when the 3 months are consecutive.
+      const consecutive = w[2].edition === addMonths(w[0].edition, 2);
+      const s3 = w.reduce((a, x) => a + x.sales, 0);
+      return { ...p, avg3Pct: consecutive && s3 > 0 ? (w.reduce((a, x) => a + x.pos, 0) / s3) * 100 : null };
+    });
+  const ont12 = sum(rows, "ontario", c12From, edition);
 
   const faqs = [
     { q: "Are power of sales going up in Ontario?", a: headline },
@@ -204,5 +220,9 @@ export function buildPosIndex(all: PosMonthRow[], edition: string): PosIndexEdit
     cities,
     cityWindow,
     faqs,
+    hero: { from: q3From, sharePct: share(q3), pos: q3.pos, sales: q3.sales, prevSharePct: q3Prev && q3Prev.pos > 0 ? share(q3Prev) : null },
+    month: { sharePct: share(month), pos: month.pos, sales: month.sales, prevSharePct: monthPrev && monthPrev.pos > 0 ? share(monthPrev) : null },
+    s2l: mrow && mrow.pos_sales >= 30 && mrow.pos_s2l != null && mrow.other_s2l != null ? { pos: mrow.pos_s2l, other: mrow.other_s2l } : null,
+    ontario12Pct: ont12 ? share(ont12) : null,
   };
 }
