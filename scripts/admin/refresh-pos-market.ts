@@ -5,6 +5,7 @@
  *      Nightly: the last 45 days (late-reported closes land behind the watermark).
  *      --backfill-months=N: month by month, N months back (one-time; ~12s a month).
  *   2. refresh_pos_market_stats(): rebuild the per-region stats from flat columns.
+ *   3. refresh_pos_monthly_stats(): per-region counts by calendar month (the monthly index, 166).
  *
  * Usage:
  *   npx tsx scripts/admin/refresh-pos-market.ts                       # dry run: row counts
@@ -58,6 +59,13 @@ async function main(): Promise<void> {
   if (error) throw new Error(`refresh_pos_market_stats: ${error.message}`);
   console.log(`[pos] stats: ${data} rows (${Date.now() - t} ms); ${flagged} sales flagged this run`);
   if (typeof data === "number" && data < 20) throw new Error(`only ${data} stats rows — check raw_vow_sold`);
+
+  // 3. Per-month counts for the monthly Power of Sale Index (migration 166).
+  const tm = Date.now();
+  const monthly = await sb.rpc("refresh_pos_monthly_stats");
+  if (monthly.error) throw new Error(`refresh_pos_monthly_stats: ${monthly.error.message}`);
+  console.log(`[pos] monthly: ${monthly.data} rows (${Date.now() - tm} ms)`);
+  if (typeof monthly.data === "number" && monthly.data < 24) throw new Error(`only ${monthly.data} monthly rows — check raw_vow_sold`);
 }
 
 main().catch((e) => {

@@ -116,6 +116,11 @@ export default function PowerOfSaleView({
                 Our research: how much less power-of-sale homes sell for than similar homes →
               </Link>
             </p>
+            <p className="mt-2 text-sm">
+              <Link href="/data/power-of-sale-index" className="underline hover:text-foreground">
+                The monthly Ontario Power of Sale Index →
+              </Link>
+            </p>
           </section>
 
           {cityShares && cityShares.length > 0 && (
