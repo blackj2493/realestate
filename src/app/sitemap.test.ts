@@ -24,7 +24,7 @@ import sitemap from './sitemap';
 //   • /data  → src/app/data/sitemap.ts     (also so its coverage row is readable)
 //   • listings → src/app/listings/sitemap.ts (sharded; the part that grows with the market)
 // Their behaviour is tested in those files. What is tested HERE is that they stay out.
-const STATIC_ROUTES = 3 + 1 + 15 + 1 + 1 + 15 + 1 + 15; // core + /home-value + its 15 cities + /new-homes-hst + /power-of-sale + its 15 cities + /house-not-selling + its 15 cities
+const STATIC_ROUTES = 3 + 1 + 15 + 1 + 3 + 1 + 15 + 1 + 15; // core + /home-value + its 15 cities + /new-homes-hst + /glossary, /assistant-app, /operated-by + /power-of-sale + its 15 cities + /house-not-selling + its 15 cities
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -80,5 +80,16 @@ describe('sitemap — hub routes', () => {
     expect(entries.some((e) => e.url.endsWith('/commercial/on/mississauga'))).toBe(true);
     // No RESIDENTIAL hub — a hub is /property/on/{city} with no key-bearing tail.
     expect(entries.some((e) => /\/property\/on\/[^/]+$/.test(e.url))).toBe(false);
+  });
+});
+
+describe("withLastmod", () => {
+  it("dates the data pages and leaves static-text pages undated", async () => {
+    const entries = await sitemap();
+    const byPath = (p: string) => entries.find((e) => e.url.endsWith(p));
+    expect(byPath("/power-of-sale/markham")?.lastModified).toBeInstanceOf(Date);
+    expect(byPath("/home-value")?.lastModified).toBeInstanceOf(Date);
+    expect(byPath("/glossary")?.lastModified).toBeUndefined();
+    expect(byPath("/new-homes-hst")?.lastModified).toBeUndefined();
   });
 });

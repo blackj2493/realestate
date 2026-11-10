@@ -8,6 +8,7 @@
  * 2026-11-08: no brokerage name in the page text).
  */
 import Link from "next/link";
+import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import HomeValueRequestCard from "./HomeValueRequestCard";
 import { HowItWorks, SampleOpinion } from "./HomeValueExtras";
 import CityMarketFacts from "@/components/seo/CityMarketFacts";
@@ -85,13 +86,7 @@ export default function HomeValueView({
           </ul>
         </section>
 
-        {city && slug && (
-          <p className="mt-6 text-sm">
-            <Link href={`/data/housing-market/${slug}`} className="underline hover:text-foreground">
-              {city} housing market: prices and sales against a year earlier →
-            </Link>
-          </p>
-        )}
+        {slug && <CityTopicLinks citySlug={slug} current="home-value" className="mt-6" />}
 
         <div className="mt-10">
           <HubFaq faqs={faqs} heading={`Home value in ${place}: common questions`} />

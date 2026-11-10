@@ -19,6 +19,7 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import { cache } from "react";
 import { Building2 } from "lucide-react";
 import { searchListings, type ListingDocument } from "@/lib/typesense/client";
@@ -188,6 +189,7 @@ export default async function NeighbourhoodHubPage({
           </div>
         )}
         {census && <NeighbourhoodCensus hoodName={hoodName} census={census} />}
+        <CityTopicLinks citySlug={city} />
 
         <div className="mt-8">
           <ListingComplianceNotice />

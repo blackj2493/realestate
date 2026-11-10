@@ -103,6 +103,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...HOME_VALUE_CITIES.map((c) => ({ url: `${SITE_URL}${homeValuePath(c.slug)}`, changeFrequency: "daily" as const, priority: 0.8 })),
     // /new-homes-hst was in no sitemap at all (found 2026-11-08).
     { url: `${SITE_URL}/new-homes-hst`, changeFrequency: "weekly", priority: 0.8 },
+    // In no sitemap until 2026-11-09. Static text, so no lastmod (see withLastmod).
+    { url: `${SITE_URL}/glossary`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/assistant-app`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/operated-by`, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   // The /data trackers and findings MOVED OUT of this file to src/app/data/sitemap.ts
@@ -134,5 +138,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}/house-not-selling/${c.slug}`, changeFrequency: "weekly" as const, priority: 0.7 })),
   ];
 
-  return [...staticRoutes, ...posRoutes, ...hubRoutes];
+  return withLastmod([...staticRoutes, ...posRoutes, ...hubRoutes], new Date());
+}
+
+/** Pages whose text does not change with the nightly data, so a lastmod would be false. */
+const STATIC_PATHS = new Set(["/new-homes-hst", "/glossary", "/assistant-app", "/operated-by"]);
+
+/**
+ * lastmod = the build/revalidate time for every data-driven URL. Their figures and listings
+ * are rebuilt from the nightly sync, so "changed today" is true (this file revalidates daily).
+ * Bing documents lastmod as a freshness signal for its AI answers, and none of these URLs had
+ * one before 2026-11-09. Static-text pages get none: a lastmod that moves without a change
+ * teaches the crawler to ignore it.
+ */
+export function withLastmod(routes: MetadataRoute.Sitemap, now: Date): MetadataRoute.Sitemap {
+  return routes.map((r) => {
+    const path = r.url.replace(SITE_URL, "") || "/";
+    return STATIC_PATHS.has(path) || r.lastModified ? r : { ...r, lastModified: now };
+  });
 }

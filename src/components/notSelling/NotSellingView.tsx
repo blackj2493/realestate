@@ -8,6 +8,7 @@
  * Both pairs pass dataviz validate_palette.js on #ffffff and #020617. Text stays in text tokens.
  */
 import Link from "next/link";
+import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import { Camera, Scale, Wrench } from "lucide-react";
 import HubFaq from "@/components/seo/HubFaq";
 import type { NotSellingFacts } from "@/lib/data/notSelling";
@@ -241,6 +242,8 @@ export default function NotSellingView({
             )}
           </p>
         </section>
+
+        {slug && <CityTopicLinks citySlug={slug} current="not-selling" className="mt-6" />}
 
         {city && (
           <section className="mt-6">
