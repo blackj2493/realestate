@@ -86,6 +86,18 @@ const ORG_AND_SITE_JSONLD = {
       name: "PureProperty",
       url: SITE_URL,
       logo: `${SITE_URL}/logo.svg`,
+      description: "Ontario housing-market facts from MLS® sales: city and neighbourhood prices, sales, homes that did not sell, and power-of-sale trends.",
+      areaServed: { "@type": "AdministrativeArea", name: "Ontario, Canada" },
+      // The brand's own profiles, so engines tie mentions of "PureProperty" on these
+      // networks to this site (one entity, not several).
+      sameAs: [
+        "https://www.reddit.com/user/PurepropertyCA",
+        "https://x.com/PureProperty_CA",
+        "https://www.youtube.com/@Pureproperty_ca",
+        "https://www.instagram.com/pureproperty_ca",
+        "https://www.tiktok.com/@pureproperty.ca",
+        "https://www.facebook.com/pureproperty.ca",
+      ],
     },
     {
       "@type": "WebSite",

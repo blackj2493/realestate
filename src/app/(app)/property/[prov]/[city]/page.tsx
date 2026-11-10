@@ -43,6 +43,7 @@ import { getMarketBoard } from "@/lib/data/marketBoard";
 import { buildCityFacts, boardRowFor } from "@/lib/data/cityFacts";
 import CityMarketFacts from "@/components/seo/CityMarketFacts";
 import { outlookCityBySlug, outlookPath } from "@/lib/data/outlookCities";
+import CityTopicLinks from "@/components/seo/CityTopicLinks";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
 export const dynamicParams = true;
@@ -238,6 +239,7 @@ export default async function CityHubPage({
             outlookHref={outlookCityBySlug(city) ? outlookPath(city.toLowerCase()) : undefined}
           />
         )}
+        <CityTopicLinks citySlug={city} showCityHub={false} className="mb-8" />
         {listings.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {listings.map((doc) => (

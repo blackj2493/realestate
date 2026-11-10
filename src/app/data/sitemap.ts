@@ -33,13 +33,18 @@ import { LIVE_FINDINGS } from "@/lib/data/findings";
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // Trackers and city market pages are rebuilt from the nightly sync, so "now" is a true
+  // lastmod for them (added 2026-11-09; Bing reads lastmod as a freshness signal for AI
+  // answers). Findings keep their own date and the press desk keeps none — see below.
+  const now = new Date();
   return [
-    { url: `${SITE_URL}/data`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/data`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     // The press desk. Rarely changes, but it is the page every outreach email points at,
     // so it must be indexable and discoverable rather than a hidden landing page.
     { url: `${SITE_URL}/data/for-journalists`, changeFrequency: "monthly", priority: 0.6 },
     ...LIVE_TRACKERS.map((t) => ({
       url: `${SITE_URL}/data/${t.slug}`,
+      lastModified: now,
       changeFrequency: "daily" as const,
       priority: 0.7,
     })),
@@ -47,8 +52,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // date rather than "now" — a finding is a snapshot, and claiming daily freshness on
     // static analysis is the kind of thing that gets a sitemap discounted.
     // City housing-market pages ("{city} housing market 2027" — the most-searched housing query).
-    { url: `${SITE_URL}/data/housing-market`, changeFrequency: "daily", priority: 0.8 },
-    ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${outlookPath(c.slug)}`, changeFrequency: "daily" as const, priority: 0.8 })),
+    { url: `${SITE_URL}/data/housing-market`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
+    ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${outlookPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 })),
     { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },
     ...LIVE_FINDINGS.map((f) => ({
       url: `${SITE_URL}/data/findings/${f.slug}`,

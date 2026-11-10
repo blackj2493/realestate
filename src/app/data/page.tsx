@@ -4,6 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { TRACKERS } from "@/lib/data/trackers";
+import { TOPIC_HUBS } from "@/lib/seo/cityTopics";
+import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
 import { getCompetitionBoard } from "@/lib/data/competitionBoard";
 import { getRentBoard } from "@/lib/data/rentBoard";
@@ -246,6 +248,28 @@ export default async function DataHubPage() {
             );
           })}
         </div>
+
+        <section className="mt-10" aria-labelledby="city-guides">
+          <h2 id="city-guides" className="text-lg font-bold text-foreground">
+            By city
+          </h2>
+          <ul className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+            {TOPIC_HUBS.map((h) => (
+              <li key={h.href}>
+                <Link href={h.href} className="font-medium underline hover:text-foreground">
+                  {h.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            {OUTLOOK_CITIES.map((c) => (
+              <Link key={c.slug} href={outlookPath(c.slug)} className="underline hover:text-foreground">
+                {c.city}
+              </Link>
+            ))}
+          </p>
+        </section>
 
         {LIVE_FINDINGS.length > 0 && (
           <section className="mt-10" aria-labelledby="findings">

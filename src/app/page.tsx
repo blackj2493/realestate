@@ -8,6 +8,13 @@ import HeroBackground from "@/components/hero/HeroBackground";
 import ListingCompare from "@/components/hero/ListingCompare";
 import { createClient } from "@/lib/supabase/browser";
 
+const HOME_TOPIC_LINKS = [
+  { href: "/data/housing-market", label: "Market by city" },
+  { href: "/power-of-sale", label: "Power of sale" },
+  { href: "/house-not-selling", label: "Not selling?" },
+  { href: "/home-value", label: "Home value" },
+];
+
 export default function HomePage() {
   const router = useRouter();
   // Returning SIGNED-IN users are routed straight to Mission Control. Anonymous
@@ -108,6 +115,15 @@ export default function HomePage() {
           >
             Free market data &rarr;
           </Link>
+
+          {/* The four city question pages, one short crawlable row (same reason as above). */}
+          <nav aria-label="City guides" className="terminal-font mt-2 flex max-w-full flex-wrap justify-center gap-x-3 gap-y-1 text-[10px] uppercase tracking-[0.18em] text-slate-400 [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
+            {HOME_TOPIC_LINKS.map((l) => (
+              <Link key={l.href} href={l.href} className="underline-offset-4 transition-colors hover:text-emerald-300 hover:underline">
+                {l.label}
+              </Link>
+            ))}
+          </nav>
 
           <p className="terminal-font mt-5 text-[11px] uppercase tracking-[0.22em] text-slate-400 [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">
             VOW compliance required · Built for serious investors, not browsers

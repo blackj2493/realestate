@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LIVE_TRACKERS } from "@/lib/data/trackers";
+import { TOPIC_HUBS } from "@/lib/seo/cityTopics";
 import FooterSection from "./FooterSection";
 
 /**
@@ -76,6 +77,13 @@ export default function SiteFooter() {
           </FooterSection>
 
           <FooterSection title="Explore">
+            {TOPIC_HUBS.map((h) => (
+              <li key={h.href}>
+                <Link href={h.href} className={linkCls}>
+                  {h.label}
+                </Link>
+              </li>
+            ))}
             <li>
               <Link href="/properties" className={linkCls}>
                 Map search

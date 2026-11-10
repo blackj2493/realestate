@@ -13,6 +13,7 @@ import HubFaq from "@/components/seo/HubFaq";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import type { PosFacts } from "@/lib/data/powerOfSale";
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
+import CityTopicLinks from "@/components/seo/CityTopicLinks";
 
 export const powerOfSalePath = (slug?: string) => (slug ? `/power-of-sale/${slug}` : "/power-of-sale");
 
@@ -138,6 +139,8 @@ export default function PowerOfSaleView({
           <div className="mt-10">
             <HubFaq faqs={facts.faqs} heading={`Power of sale in ${place}: common questions`} />
           </div>
+
+          {slug && <CityTopicLinks citySlug={slug} current="power-of-sale" />}
 
           {city && (
             <section className="mt-8">
