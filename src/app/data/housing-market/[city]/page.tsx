@@ -17,6 +17,9 @@ import { boardRowFor, SOURCE_LINE } from "@/lib/data/cityFacts";
 import { buildOutlook } from "@/lib/data/marketOutlook";
 import { OUTLOOK_CITIES, outlookCityBySlug, outlookPath } from "@/lib/data/outlookCities";
 import HubFaq from "@/components/seo/HubFaq";
+import { BarChart3, LineChart } from "lucide-react";
+import { Change, CiteBox, HeaderCard, LinkCard, PriceOpinionCard, StatCard } from "@/components/dataPage/parts";
+import { daysOnMarketPath } from "@/lib/seo/cityTopics";
 import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import MonthlyMarketCharts from "@/components/data/MonthlyMarketCharts";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
@@ -66,7 +69,13 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   };
 }
 
-const Dot = () => <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" />;
+function Dot() {
+  return <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600 dark:bg-teal-400" />;
+}
+
+const usd = (n: number) => `$${Math.round(n).toLocaleString("en-CA")}`;
+const num = (n: number) => Math.round(n).toLocaleString("en-CA");
+const pct1 = (n: number) => `${n.toFixed(1)}%`;
 
 export default async function HousingMarketCityPage({ params }: { params: Promise<{ city: string }> }) {
   const { city: slug } = await params;
@@ -76,6 +85,8 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
   const canonical = `${SITE_URL}${outlookPath(slug)}`;
   const hub = `/property/on/${slug}`;
   const others = OUTLOOK_CITIES.filter((c) => c.slug !== slug);
+  const st = outlook?.stats;
+  const citation = outlook ? `PureProperty, "${outlook.title}", updated ${outlook.updatedLabel}, ${canonical.replace(/^https?:\/\/(www\.)?/, "")}` : "";
 
   const breadcrumb = {
     "@context": "https://schema.org",
@@ -107,8 +118,8 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
     <main className="min-h-app bg-background text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
       {dataset && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(dataset) }} />}
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        <nav className="mb-4 text-sm text-muted-foreground">
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <nav className="mb-5 text-sm text-muted-foreground">
           <Link href="/data" className="hover:text-foreground">Data</Link>
           <span className="mx-2">/</span>
           <Link href="/data/housing-market" className="hover:text-foreground">Housing market</Link>
@@ -116,26 +127,61 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
           <span className="text-foreground">{city}</span>
         </nav>
 
-        <h1 className="text-2xl font-bold sm:text-3xl">{outlook?.title ?? `${city} Housing Market`}</h1>
-        {outlook && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            Updated <time dateTime={outlook.updatedIso}>{outlook.updatedLabel}</time> · MLS® sales and listings, refreshed nightly
-          </p>
-        )}
-
-        {!outlook ? (
-          <p className="mt-6 text-muted-foreground">
-            The figures for {city} are not available right now. See{" "}
-            <Link href={hub} className="underline">homes for sale in {city}</Link>.
-          </p>
+        {!outlook || !st ? (
+          <>
+            <h1 className="text-2xl font-bold sm:text-3xl">{city} Housing Market</h1>
+            <p className="mt-6 text-muted-foreground">
+              The figures for {city} are not available right now. See{" "}
+              <Link href={hub} className="underline">homes for sale in {city}</Link>.
+            </p>
+          </>
         ) : (
           <>
-            <p className="mt-5 text-base leading-relaxed">{outlook.summary}</p>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              PureProperty does not forecast prices. This page shows the measures that forecasts are built from, for {city}, as they stand now.
-            </p>
+            <HeaderCard
+              Icon={LineChart}
+              eyebrow={`Housing market · ${city}${outlook.marketType ? ` · ${outlook.marketType}` : ""}`}
+              title={outlook.title}
+              lede={
+                <>
+                  <p>{outlook.summary}</p>
+                  <p className="mt-2 text-sm">
+                    Updated <time dateTime={outlook.updatedIso}>{outlook.updatedLabel}</time> · MLS® sales and listings, refreshed nightly. PureProperty does not forecast prices: this page shows the measures that forecasts are built from.
+                  </p>
+                </>
+              }
+              hero={st.price ? usd(st.price.now) : null}
+              heroSub={st.span ? `median sale price, ${st.span}` : undefined}
+              heroExtra={st.price ? <Change now={st.price.now} before={st.price.before} fmt={usd} /> : null}
+            />
 
-            <section className="mt-8" aria-labelledby="shows">
+            <section className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Key figures">
+              {st.sales && (
+                <StatCard label="Homes sold" value={num(st.sales.now)} sub={st.span ? `${st.span}, all home types.` : "Last 3 months."}>
+                  <Change now={st.sales.now} before={st.sales.before} fmt={num} />
+                </StatCard>
+              )}
+              {st.s2l && (
+                <StatCard label="Sale to asking price" value={pct1(st.s2l.now)} sub="Average share of the final asking price, last 3 months.">
+                  <Change now={st.s2l.now} before={st.s2l.before} fmt={pct1} mode="pts" />
+                </StatCard>
+              )}
+              {st.underAskPct != null && (
+                <StatCard label="Sold below first ask" value={`${st.underAskPct}%`} sub="Of the homes sold in the last 12 months." />
+              )}
+              {st.cutPct != null ? (
+                <StatCard
+                  label="Price cuts"
+                  value={`${st.cutPct}%`}
+                  sub={`Of the homes for sale now have cut their price${st.medianCutPct != null ? `; median cut ${pct1(st.medianCutPct)}` : ""}.`}
+                />
+              ) : (
+                st.fromHighPct != null && (
+                  <StatCard label="From the 2-year high" value={st.fromHighPct >= 0 ? "At the high" : pct1(st.fromHighPct)} sub="3-month median sale price against its highest level." />
+                )
+              )}
+            </section>
+
+            <section className="mt-8 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="shows">
               <h2 id="shows" className="text-lg font-semibold">What the data shows</h2>
               <ul className="mt-3 space-y-2 text-sm leading-relaxed">
                 {outlook.facts.map((f) => (
@@ -159,7 +205,7 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
             <MonthlyMarketCharts city={city} points={outlook.series} />
 
             {outlook.table.length > 0 && (
-              <section className="mt-8" aria-labelledby="monthly">
+              <section className="mt-8 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="monthly">
                 <h2 id="monthly" className="text-lg font-semibold">Month by month, last 12 months</h2>
                 <div className="mt-3 overflow-x-auto">
                   <table className="w-full min-w-[420px] text-sm">
@@ -188,58 +234,65 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
             )}
 
             {outlook.seasonText && (
-              <section className="mt-8" aria-labelledby="season">
+              <section className="mt-8 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="season">
                 <h2 id="season" className="text-lg font-semibold">When homes sell in {city}</h2>
-                <p className="mt-3 text-sm leading-relaxed">{outlook.seasonText}</p>
+                <p className="mt-2 text-sm leading-relaxed">{outlook.seasonText}</p>
+                <p className="mt-2 text-sm">
+                  <Link href={daysOnMarketPath(slug)} className="underline hover:text-foreground">
+                    Sales by month and how long homes take to sell in {city} →
+                  </Link>
+                </p>
               </section>
             )}
 
-            <section className="mt-8 rounded-lg border border-border bg-card/40 p-5">
-              <h2 className="text-base font-semibold">More on {city}</h2>
-              <ul className="mt-2 space-y-1 text-sm">
-                <li>
-                  {/* The public page is the front door; the full terminal (filters by home type,
-                      beds and price band, inventory, rental yield) is VOW-gated behind a free account. */}
-                  <Link href={`/analytics?region=${encodeURIComponent(city)}`} className="font-medium underline">
-                    See the full {city} market data
-                  </Link>{" "}
-                  (free account): filter by home type, bedrooms and price, and see inventory and rents
-                </li>
-                <li>
-                  <Link href={`${hub}#market-facts`} className="underline">{city} market facts and homes for sale</Link>, with a page for each neighbourhood
-                </li>
-                <li>
-                  <Link href="/data/over-asking" className="underline">Sold over asking</Link> ·{" "}
-                  <Link href="/data/price-cuts" className="underline">Price cuts</Link> ·{" "}
-                  <Link href="/data/days-on-market" className="underline">Days on market</Link>
-                </li>
-              </ul>
+            <section className="mt-8 grid gap-3 sm:grid-cols-2">
+              {/* The public page is the front door; the full terminal (filters by home type, beds and
+                  price band, inventory, rental yield) is VOW-gated behind a free account. */}
+              <LinkCard
+                href={`/analytics?region=${encodeURIComponent(city)}`}
+                Icon={BarChart3}
+                title={`The full ${city} market data`}
+                text="Free account: filter by home type, bedrooms and price, and see inventory and rents."
+              />
+              <PriceOpinionCard citySlug={slug} />
             </section>
-
-            <div className="mt-8">
-              <HubFaq faqs={outlook.faqs} heading={`${city} housing market: common questions`} />
-            </div>
-
-            <p className="mt-6 text-xs leading-relaxed text-muted-foreground">{SOURCE_LINE}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Cite as: PureProperty, &ldquo;{outlook.title}&rdquo;, updated {outlook.updatedLabel}, {canonical.replace(/^https?:\/\/(www\.)?/, "")}
+            <p className="mt-3 text-sm text-muted-foreground">
+              <Link href={`${hub}#market-facts`} className="underline hover:text-foreground">{city} market facts and homes for sale</Link>, with a page for each neighbourhood ·{" "}
+              <Link href="/data/over-asking" className="underline hover:text-foreground">Sold over asking</Link> ·{" "}
+              <Link href="/data/price-cuts" className="underline hover:text-foreground">Price cuts</Link>
             </p>
+
+            <div className="mx-auto max-w-3xl">
+              <div className="mt-10">
+                <HubFaq faqs={outlook.faqs} heading={`${city} housing market: common questions`} />
+              </div>
+              <CiteBox citation={citation} />
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{SOURCE_LINE}</p>
+            </div>
           </>
         )}
 
-        <CityTopicLinks citySlug={slug} current="market" showCityHub={false} />
+        <div className="mx-auto max-w-3xl">
+          <CityTopicLinks citySlug={slug} current="market" showCityHub={false} />
 
-        <section className="mt-8">
-          <h2 className="text-sm font-semibold text-muted-foreground">Other cities</h2>
-          <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-            {others.map((c) => (
-              <Link key={c.slug} href={outlookPath(c.slug)} className="underline hover:text-foreground">{c.city}</Link>
-            ))}
-          </p>
-        </section>
+          <section className="mt-8">
+            <h2 className="text-sm font-semibold text-muted-foreground">Other cities</h2>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {others.map((c) => (
+                <Link
+                  key={c.slug}
+                  href={outlookPath(c.slug)}
+                  className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+                >
+                  {c.city}
+                </Link>
+              ))}
+            </div>
+          </section>
 
-        <div className="mt-8">
-          <ListingComplianceNotice />
+          <div className="mt-8">
+            <ListingComplianceNotice />
+          </div>
         </div>
       </div>
     </main>

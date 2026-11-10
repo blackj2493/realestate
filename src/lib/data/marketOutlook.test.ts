@@ -51,6 +51,11 @@ describe("buildOutlook", () => {
     );
     expect(t.sales_change).toBe("1,800 homes sold in Toronto from August to October 2026, 20% more than in the same months of 2025 (1,500).");
     expect(t.final_ask).toBe("From August to October 2026, homes in Toronto sold for an average of 98.5% of their final asking price, compared with 99.0% a year earlier.");
+    expect(o.stats.span).toBe("August to October 2026");
+    expect(o.stats.price).toEqual({ now: 800000, before: 850000 });
+    expect(o.stats.sales).toEqual({ now: 1800, before: 1500 });
+    expect(o.stats.s2l?.now).toBeCloseTo(98.5);
+    expect(o.stats.fromHighPct).toBe(-20);
   });
 
   it("measures the gap from the two-year high of the 3-month price", () => {
@@ -81,6 +86,8 @@ describe("buildOutlook", () => {
     expect(buildOutlook("Toronto", thin, AS_OF)).toBeNull();
     const noTrend = buildOutlook("Toronto", row({ monthly: [] }), AS_OF)!;
     expect(noTrend.facts.map((f) => f.id)).toEqual(["under_first_ask", "price_cuts"]);
+    expect(noTrend.stats).toMatchObject({ span: null, price: null, sales: null, s2l: null, fromHighPct: null });
+    expect(noTrend.stats.underAskPct).not.toBeNull();
   });
 
   it("asks about next year from September on", () => {

@@ -5,8 +5,50 @@
  */
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { Home, Quote, Search } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Home, Quote, Search } from "lucide-react";
 import CopyCitation from "./CopyCitation";
+
+/**
+ * "Up 20% from 1,500 a year earlier" with an arrow. Neutral text colour: the direction is
+ * in the arrow and the words, never in red/green (up is not always good).
+ * mode "rel" = relative change in %; "pts" = difference in percentage points.
+ */
+export function Change({
+  now,
+  before,
+  fmt,
+  unit = "a year earlier",
+  mode = "rel",
+}: {
+  now: number;
+  before: number | null;
+  fmt: (n: number) => string;
+  unit?: string;
+  mode?: "rel" | "pts";
+}) {
+  if (before == null || (mode === "rel" && before <= 0)) return null;
+  const diff = mode === "rel" ? ((now - before) / before) * 100 : now - before;
+  // Under 10%, one decimal, so the figure matches the page sentence ("2.7% lower").
+  const shown = mode === "rel" ? `${Math.abs(diff) < 10 ? Math.abs(diff).toFixed(1) : Math.abs(Math.round(diff))}%` : `${Math.abs(diff).toFixed(1)} points`;
+  const same = Math.abs(diff) < 0.05;
+  const Icon = diff >= 0 ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+      {!same && <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />}
+      <span>
+        {same ? (
+          <span className="font-semibold text-foreground">Same as</span>
+        ) : (
+          <span className="font-semibold text-foreground">
+            {diff > 0 ? "Up" : "Down"} {shown}
+          </span>
+        )}{" "}
+        {same ? "" : "from "}
+        {fmt(before)} {unit}
+      </span>
+    </span>
+  );
+}
 
 export function StatCard({ label, value, sub, children }: { label: string; value: string; sub: string; children?: React.ReactNode }) {
   return (
@@ -27,7 +69,10 @@ export function HeaderCard({
   hero,
   heroSub,
   heroExtra,
+  tone = "teal",
 }: {
+  /** Eyebrow colour: teal (data pages) or orange (power of sale, homes not selling). */
+  tone?: "teal" | "orange";
   Icon: LucideIcon;
   eyebrow: string;
   title: string;
@@ -39,7 +84,11 @@ export function HeaderCard({
   return (
     <header className="overflow-hidden rounded-2xl border border-border bg-card/60">
       <div className="border-b border-border px-5 py-3 sm:px-7">
-        <p className="terminal-font flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-400">
+        <p
+          className={`terminal-font flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] ${
+            tone === "orange" ? "text-orange-700 dark:text-orange-400" : "text-teal-700 dark:text-teal-400"
+          }`}
+        >
           <Icon className="h-3.5 w-3.5" aria-hidden="true" />
           {eyebrow}
         </p>
@@ -71,14 +120,24 @@ export function RequestCards({ city, citySlug }: { city: string; citySlug: strin
         title={`Homes for sale in ${city}`}
         text="Every listing with its true days on market, price cuts and sold history."
       />
-      <Link href={`/home-value/${citySlug}`} className="flex items-start gap-3 rounded-2xl border border-emerald-600/40 bg-emerald-600/5 p-5 transition-colors hover:border-emerald-600/70">
-        <Home className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
-        <span>
-          <span className="block font-semibold">Selling? Get a free price opinion</span>
-          <span className="mt-1 block text-sm text-muted-foreground">A licensed Ontario REALTOR® reads the recent sales near your home and writes one for you.</span>
-        </span>
-      </Link>
+      <PriceOpinionCard citySlug={citySlug} />
     </section>
+  );
+}
+
+/** The free price opinion request card (the page's lead path). citySlug null = the Ontario page. */
+export function PriceOpinionCard({ citySlug }: { citySlug: string | null }) {
+  return (
+    <Link
+      href={citySlug ? `/home-value/${citySlug}` : "/home-value"}
+      className="flex items-start gap-3 rounded-2xl border border-emerald-600/40 bg-emerald-600/5 p-5 transition-colors hover:border-emerald-600/70"
+    >
+      <Home className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
+      <span>
+        <span className="block font-semibold">Selling? Get a free price opinion</span>
+        <span className="mt-1 block text-sm text-muted-foreground">A licensed Ontario REALTOR® reads the recent sales near your home and writes one for you.</span>
+      </span>
+    </Link>
   );
 }
 

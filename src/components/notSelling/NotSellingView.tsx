@@ -9,12 +9,16 @@
  */
 import Link from "next/link";
 import CityTopicLinks from "@/components/seo/CityTopicLinks";
-import { Camera, Scale, Wrench } from "lucide-react";
+import { Camera, CircleSlash, Scale, Wrench } from "lucide-react";
+import { CiteBox, HeaderCard, StatCard } from "@/components/dataPage/parts";
+import { SOURCE_LINE } from "@/lib/data/cityFacts";
 import HubFaq from "@/components/seo/HubFaq";
 import type { NotSellingFacts } from "@/lib/data/notSelling";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { homeValuePath, HOME_VALUE_CITIES } from "@/lib/homeValue/content";
 import NotSellingRequestCard from "./NotSellingRequestCard";
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
 export const notSellingPath = (slug?: string) => (slug ? `/house-not-selling/${slug}` : "/house-not-selling");
 
@@ -109,11 +113,15 @@ export default function NotSellingView({
   const others = OUTLOOK_CITIES.filter((c) => c.slug !== slug);
   const ch = facts.chart;
   const hasHomeValue = slug != null && HOME_VALUE_CITIES.some((c) => c.slug === slug);
+  const title = `Why Is My House Not Selling in ${place}?`;
+  const canonical = `${SITE_URL}${notSellingPath(slug ?? undefined)}`;
+  const citation = `PureProperty, "${title}"${facts.updatedLabel ? `, updated ${facts.updatedLabel}` : ""}, ${canonical.replace(/^https?:\/\/(www\.)?/, "")}`;
+  const fmtGap = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(0)}%`;
 
   return (
     <main className="min-h-app bg-background text-foreground">
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        <nav className="mb-4 text-sm text-muted-foreground">
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <nav className="mb-5 text-sm text-muted-foreground">
           <Link href="/" className="hover:text-foreground">Home</Link>
           <span className="mx-2">/</span>
           {city ? (
@@ -127,15 +135,53 @@ export default function NotSellingView({
           )}
         </nav>
 
-        <h1 className="text-2xl font-bold sm:text-3xl">Why Is My House Not Selling in {place}?</h1>
-        {facts.updatedLabel && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            MLS® sales and listings, last 12 months · Updated <time dateTime={facts.updatedIso ?? undefined}>{facts.updatedLabel}</time>
-          </p>
+        <HeaderCard
+          tone="orange"
+          Icon={CircleSlash}
+          eyebrow={`Homes not selling · ${place}`}
+          title={title}
+          lede={
+            <>
+              <p>{facts.facts.find((f) => f.id === "share")?.text ?? facts.summary}</p>
+              {facts.updatedLabel && (
+                <p className="mt-2 text-sm">
+                  MLS® sales and listings, last 12 months · Updated <time dateTime={facts.updatedIso ?? undefined}>{facts.updatedLabel}</time>
+                </p>
+              )}
+            </>
+          }
+          hero={facts.unsoldShare != null ? `${Math.round(facts.unsoldShare)}%` : null}
+          heroSub="of the homes that came off the market did not sell"
+        />
+
+        {(ch || facts.unsold != null) && (
+          <section className="mt-4 grid gap-3 sm:grid-cols-3" aria-label="Key figures">
+            {facts.unsold != null && facts.sold != null && (
+              <StatCard
+                label="Did not sell"
+                value={facts.unsold.toLocaleString("en-CA")}
+                sub={`Homes that came off the market unsold in 12 months, against ${facts.sold.toLocaleString("en-CA")} that sold.`}
+              />
+            )}
+            {ch && (
+              <StatCard
+                label="Asking above similar homes"
+                value={fmtGap(ch.unsoldGap)}
+                sub={`Median for the homes that did not sell, against ${fmtGap(ch.soldGap)} for the homes that sold${ch.basis !== place ? ` (${ch.basis})` : ""}.`}
+              />
+            )}
+            {ch && ch.unsoldOver10 != null && ch.soldOver10 != null && (
+              <StatCard
+                label="Asked 10%+ above"
+                value={`${ch.unsoldOver10.toFixed(0)}%`}
+                sub={`Of the homes that did not sell, against ${ch.soldOver10.toFixed(0)}% of the homes that sold.`}
+              />
+            )}
+          </section>
         )}
 
         {facts.sold != null && facts.unsold != null && facts.sold + facts.unsold > 0 && (
-          <section className="mt-6 rounded-xl border border-border bg-card p-5" aria-labelledby="split">
+          <section className="mt-8 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="split">
             <h2 id="split" className="text-base font-semibold">
               Homes that came off the market in {place}, last 12 months
             </h2>
@@ -147,7 +193,7 @@ export default function NotSellingView({
         )}
 
         {ch && (
-          <section className="mt-4 rounded-xl border border-border bg-card p-5" aria-labelledby="gap">
+          <section className="mt-4 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="gap">
             <h2 id="gap" className="text-base font-semibold">The asking price is the clearest difference</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Asking price compared with the median sale price of similar homes (same neighbourhood, home type and bedrooms)
@@ -163,7 +209,7 @@ export default function NotSellingView({
         )}
 
         {facts.facts.length > 0 && (
-          <section className="mt-8" aria-labelledby="facts">
+          <section className="mt-8 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="facts">
             <h2 id="facts" className="text-lg font-semibold">What the numbers show</h2>
             <ul className="mt-3 space-y-2 text-sm leading-relaxed">
               {facts.facts.map((f) => (
@@ -203,7 +249,7 @@ export default function NotSellingView({
         </div>
 
         {cityRows && cityRows.length > 0 && (
-          <section className="mt-10" aria-labelledby="cities">
+          <section className="mt-10 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="cities">
             <h2 id="cities" className="text-lg font-semibold">By city: share of homes that did not sell</h2>
             <ul className="mt-3 divide-y divide-border text-sm">
               {cityRows.map((c) => (
@@ -225,9 +271,17 @@ export default function NotSellingView({
           </section>
         )}
 
+        <div className="mx-auto max-w-3xl">
         <div className="mt-10">
           <HubFaq faqs={facts.faqs} heading={`House not selling in ${place}: common questions`} />
         </div>
+
+        {facts.updatedLabel && (
+          <>
+            <CiteBox citation={citation} />
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{SOURCE_LINE}</p>
+          </>
+        )}
 
         <section className="mt-8 text-sm">
           <h2 className="text-sm font-semibold text-muted-foreground">More for sellers</h2>
@@ -248,15 +302,20 @@ export default function NotSellingView({
         {city && (
           <section className="mt-6">
             <h2 className="text-sm font-semibold text-muted-foreground">Other cities</h2>
-            <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+            <div className="mt-2 flex flex-wrap gap-2">
               {others.map((c) => (
-                <Link key={c.slug} href={notSellingPath(c.slug)} className="underline hover:text-foreground">
+                <Link
+                  key={c.slug}
+                  href={notSellingPath(c.slug)}
+                  className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+                >
                   {c.city}
                 </Link>
               ))}
-            </p>
+            </div>
           </section>
         )}
+        </div>
       </div>
     </main>
   );

@@ -17,7 +17,7 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <ol className="mt-6 grid gap-3 sm:grid-cols-3" aria-label="How it works">
+    <ol className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-1" aria-label="How it works">
       {STEPS.map((s) => (
         <li key={s.n} className="rounded-lg border border-border bg-card/40 p-4">
           <div className="flex items-center gap-2">
