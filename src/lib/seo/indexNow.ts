@@ -35,6 +35,7 @@ export function nightlyPaths(): string[] {
     "/data/rent-vs-buy",
     "/data/market-temperature",
     "/data/price-rankings",
+    "/data/power-of-sale-index",
   ];
   const outlook = ["/data/housing-market", ...OUTLOOK_CITIES.map((c) => outlookPath(c.slug))];
   const homeValue = [homeValuePath(), ...HOME_VALUE_CITIES.map((c) => homeValuePath(c.slug))];

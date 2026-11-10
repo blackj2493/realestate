@@ -63,6 +63,11 @@ export default function SiteFooter() {
 
           <FooterSection title="For Media">
             <li>
+              <Link href="/data/power-of-sale-index" className={linkCls}>
+                Ontario Power of Sale Index
+              </Link>
+            </li>
+            <li>
               <Link href="/data/for-journalists" className={linkCls}>
                 For journalists
               </Link>
