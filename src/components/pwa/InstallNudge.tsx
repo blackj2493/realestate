@@ -10,6 +10,8 @@ import { useDiscovery } from "@/lib/discovery/useDiscovery";
 import { surfaceForPath, TOUR_SURFACES } from "@/lib/discovery/featureRegistry";
 import { shouldShowInstallNudge } from "@/lib/pwa/installPlatform";
 import { useInstallPrompt, useInstallPlatform } from "@/lib/pwa/useInstallPrompt";
+import { useIsAuthed } from "@/hooks/useIsAuthed";
+import { mayShowCard, slotTakenBy, usePromptGate } from "@/lib/discovery/promptGate";
 
 /**
  * App surfaces where the nudge may appear. Not the hero (the brand's first impression),
@@ -44,8 +46,22 @@ export default function InstallNudge() {
     (s) => TOUR_SURFACES.includes(surface) && s.toursDone[surface] === undefined && s.nudgesDone[surface] === undefined
   );
 
+  // Shared card rules (promptGate): signed-in only, never on the first page view,
+  // and never after the tour card has used this page view's slot.
+  const signedIn = useIsAuthed();
+  const gateHydrated = usePromptGate((s) => s.hydrated);
+  const pageViews = usePromptGate((s) => s.pageViews);
+  const slotTaken = usePromptGate((s) => slotTakenBy(s, pathname, "install"));
+  const claimSlot = usePromptGate((s) => s.claimSlot);
+
   const eligible =
-    hydrated && discoveryHydrated && !overlayUp && !tourPending && NUDGE_SURFACES.has(surface);
+    hydrated &&
+    discoveryHydrated &&
+    gateHydrated &&
+    mayShowCard({ card: "install", pageViews, signedIn, surface, slotTaken }) &&
+    !overlayUp &&
+    !tourPending &&
+    NUDGE_SURFACES.has(surface);
 
   // Same pattern as DiscoveryRoot's nudge: a short delay lets the page paint first.
   const [visible, setVisible] = React.useState(false);
@@ -53,9 +69,12 @@ export default function InstallNudge() {
     setVisible(false);
     if (!eligible) return;
     if (!shouldShowInstallNudge({ platform, isMobile, visits, dismissedAt, now: Date.now() })) return;
-    const id = window.setTimeout(() => setVisible(true), 2500);
+    const id = window.setTimeout(() => {
+      setVisible(true);
+      claimSlot(pathname, "install");
+    }, 2500);
     return () => window.clearTimeout(id);
-  }, [eligible, platform, isMobile, visits, dismissedAt, surface]);
+  }, [eligible, platform, isMobile, visits, dismissedAt, surface, pathname, claimSlot]);
 
   // Never a camper: 20s and it hides itself, and that counts as "Not now".
   React.useEffect(() => {

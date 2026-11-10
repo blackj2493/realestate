@@ -27,6 +27,8 @@ import {
   TOUR_SURFACES,
 } from "@/lib/discovery/featureRegistry";
 import { getConfig } from "@/lib/dashboard/config";
+import { useIsAuthed } from "@/hooks/useIsAuthed";
+import { mayShowCard, mayShowNewBadge, slotTakenBy, usePromptGate } from "@/lib/discovery/promptGate";
 import type { PersonaType } from "@/lib/personas/personaConfig";
 import FeatureGuide from "@/components/discovery/FeatureGuide";
 import Spotlight from "@/components/discovery/Spotlight";
@@ -50,11 +52,24 @@ export default function DiscoveryRoot() {
   const pathname = usePathname() || "/";
   const surface = surfaceForPath(pathname);
   const isMobile = useIsMobile();
+  const signedIn = useIsAuthed();
+
+  // Shared card rules (promptGate): no card on the first page view, one per view.
+  const countView = usePromptGate((s) => s.countView);
+  const claimSlot = usePromptGate((s) => s.claimSlot);
+  const gateHydrated = usePromptGate((s) => s.hydrated);
+  const pageViews = usePromptGate((s) => s.pageViews);
+  const slotTaken = usePromptGate((s) => slotTakenBy(s, pathname, "tour"));
 
   // Hydrate once on mount.
   React.useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  // Count each page view (client navigations included).
+  React.useEffect(() => {
+    countView(pathname);
+  }, [countView, pathname]);
 
   // Global `?` opens the guide (ignored while typing or when an overlay is up).
   React.useEffect(() => {
@@ -75,6 +90,8 @@ export default function DiscoveryRoot() {
   const [nudge, setNudge] = React.useState(false);
   const eligible =
     hydrated &&
+    gateHydrated &&
+    mayShowCard({ card: "tour", pageViews, signedIn, surface, slotTaken }) &&
     // The terminal's mobile bottom strip (List/Map toggle, Tools launcher, and the
     // map's property-card popup) is too dense for this bottom-left nudge to sit over
     // without blocking taps — skip the first-run nudge there on phones. The Guide
@@ -88,9 +105,12 @@ export default function DiscoveryRoot() {
   React.useEffect(() => {
     setNudge(false);
     if (!eligible) return;
-    const id = window.setTimeout(() => setNudge(true), 1200);
+    const id = window.setTimeout(() => {
+      setNudge(true);
+      claimSlot(pathname, "tour");
+    }, 1200);
     return () => window.clearTimeout(id);
-  }, [eligible, surface]);
+  }, [eligible, surface, pathname, claimSlot]);
 
   // The nudge must never camp over the page: the first scroll on phones (where it
   // overlaps the listing page's sticky action bar) or 15s anywhere auto-hides it,
@@ -110,9 +130,12 @@ export default function DiscoveryRoot() {
     };
   }, [nudge, isMobile, surface, dismissNudge]);
 
-  const unseenNew = hydrated
-    ? newFeatures().filter((f) => seen[f.id] === undefined).length
-    : 0;
+  // Signed-in only: a new visitor never saw the old features, so a "what's new"
+  // count means nothing to them. The guide's What's-new tab stays available.
+  const unseenNew =
+    hydrated && mayShowNewBadge(signedIn)
+      ? newFeatures().filter((f) => seen[f.id] === undefined).length
+      : 0;
 
   const startTour = () => {
     const persona: PersonaType = getConfig().persona;
