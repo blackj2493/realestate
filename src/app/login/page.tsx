@@ -43,15 +43,17 @@ export default async function LoginPage({
 }) {
   const { next, email } = await searchParams;
   // Open-redirect guard: only honor relative, single-slash paths (e.g. "/properties/X").
+  // No default: a bare /login must reach /welcome WITHOUT a destination, which is the
+  // signal that routes a brand-new account to the map (isFirstRunEntry). Defaulting to
+  // "/dashboard" here made every bare sign-in look like a sign-up from the dashboard.
   const safeNext =
-    next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+    next && next.startsWith("/") && !next.startsWith("//") ? next : null;
   // Pre-fill from the apply funnel: only honor a plausibly-shaped address and cap length.
   const initialEmail =
     email && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.length <= 254
       ? email
       : "";
-  // Name what the visitor came for. `next` is the raw param here, not safeNext — the
-  // "/dashboard" default would otherwise read as a destination.
+  // Name what the visitor came for (from the raw param).
   const gate = loginGateFromNext(next);
   const copy = loginCopy(gate, await placeFor(gate));
 

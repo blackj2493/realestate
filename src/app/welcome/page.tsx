@@ -76,7 +76,7 @@ export default async function WelcomePage({
   if (await hasAcceptedTerms(user.id)) redirect(safeNext);
 
   // Not accepted + nothing worth honouring = first-ever session: open the terminal rather
-  // than `next`. See isFirstRunEntry for why /dashboard counts as "nothing". Everyone is
+  // than `next` (a bare sign-in, no destination; see isFirstRunEntry). Everyone is
   // asked for a market either way — this only picks the landing page.
   const firstRun = isFirstRunEntry(explicitNext);
   // Only a destination can name a place, so a first-run entry has nothing to infer from

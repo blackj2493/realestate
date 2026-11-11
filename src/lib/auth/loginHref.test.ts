@@ -53,7 +53,9 @@ describe("the round trip a gated listing CTA actually takes", () => {
     const href = loginHref(null);
     expect(href).toBe("/login");
 
-    // The login page turns a missing next into /dashboard, which is first-run.
-    expect(isFirstRunEntry("/dashboard")).toBe(true);
+    // The login page passes a missing next on as null, so sign-in goes to a bare /welcome,
+    // which reads as first-run (no destination).
+    expect(postSignInPath(null)).toBe("/welcome");
+    expect(isFirstRunEntry(null)).toBe(true);
   });
 });

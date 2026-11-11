@@ -6,16 +6,11 @@ describe("isFirstRunEntry", () => {
     expect(isFirstRunEntry(null)).toBe(true);
   });
 
-  it("treats /dashboard as no destination — a new account has no dashboard yet", () => {
-    // Regression: clicking "Dashboard" while logged out bounces through
-    // /login?next=/dashboard, which used to suppress the market picker and land the
-    // brand-new user on an empty dashboard — the exact reported bug.
-    expect(isFirstRunEntry("/dashboard")).toBe(true);
-  });
-
-  it("ignores query strings and hashes when matching the dashboard", () => {
-    expect(isFirstRunEntry("/dashboard?tab=watchlist")).toBe(true);
-    expect(isFirstRunEntry("/dashboard#alerts")).toBe(true);
+  it("honours /dashboard — a visitor who signed up from the dashboard goes back to it", () => {
+    // The signed-out dashboard shows the live market and links to /login?next=/dashboard.
+    // The Terms form saves the chosen area, so the dashboard is not empty on return.
+    expect(isFirstRunEntry("/dashboard")).toBe(false);
+    expect(isFirstRunEntry("/dashboard?tab=watchlist")).toBe(false);
   });
 
   it("honours a genuinely contextual destination", () => {
@@ -30,7 +25,4 @@ describe("isFirstRunEntry", () => {
     expect(isFirstRunEntry("/analytics")).toBe(false);
   });
 
-  it("does not match paths that merely start with /dashboard", () => {
-    expect(isFirstRunEntry("/dashboard-settings")).toBe(false);
-  });
 });
