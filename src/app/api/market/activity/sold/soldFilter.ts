@@ -2,6 +2,7 @@
  *  route.ts so node-env tests don't load next/server. */
 
 import { aboveGradeBedsClause, exactAboveGradeBedsClause } from "@/lib/filters/filterRegistry";
+import { soldHomesOnlyClause } from "@/lib/dashboard/propertyTypes";
 
 const DAY_MS = 86_400_000;
 
@@ -105,6 +106,9 @@ export function buildSoldFilter(
     const ors = variants.map((v) => `PropertySubType:=\`${v.replace(/`/g, "")}\``);
     clauses.push(`(${ors.join(" || ")})`);
   }
+  // Homes only, as on the active side (homesOnlyClause), so New and Sold count the same thing.
+  const homesOnly = soldHomesOnlyClause(p.typeKeys);
+  if (homesOnly) clauses.push(homesOnly);
   // Beds: above-grade with a total fallback — identical semantics to the For Sale
   // filter. "3 bd" means 3 ABOVE grade, so a 1+4 basement-heavy home no longer
   // surfaces under it. Min ("3+") vs Exact ("exactly 3") follows the bar's toggle.

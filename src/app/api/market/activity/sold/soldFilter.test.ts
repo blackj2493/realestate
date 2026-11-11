@@ -115,3 +115,15 @@ describe("buildSoldFilter — basement tier bands", () => {
     expect(f).not.toContain("BasementTier:<=5");
   });
 });
+
+describe("buildSoldFilter homes only", () => {
+  it("drops commercial and non-home sub-types when no type is picked", () => {
+    const f = buildSoldFilter({ ...base, typeKeys: [] });
+    expect(f).toContain("`Sale Of Business`");
+    expect(f).toContain("`Parking Space`");
+  });
+  it("adds no exclusion once a type is picked", () => {
+    const f = buildSoldFilter({ ...base, typeKeys: ["vacant"] }, () => ["Vacant Land", "Land"]);
+    expect(f).not.toContain("PropertySubType:!=");
+  });
+});

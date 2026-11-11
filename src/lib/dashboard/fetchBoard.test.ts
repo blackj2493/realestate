@@ -45,3 +45,25 @@ describe("fetchBoard price-drop sanity", () => {
     expect(rows).toBe(listings);
   });
 });
+
+describe("fetchBoard ranks homes only", () => {
+  beforeEach(() => searchListings.mockResolvedValue({ listings: [] }));
+
+  it("drops commercial and non-home sub-types on every board when no type is picked", async () => {
+    for (const board of Object.values(BOARDS)) {
+      searchListings.mockClear();
+      await fetchBoard(board, area, DEFAULT_ACTIVITY_LENS, 5);
+      const filter: string = searchListings.mock.calls[0][0].rawFilterBy;
+      expect(filter).toContain("PropertyType:!=Commercial");
+      expect(filter).toContain("PropertySubType:!=[`Parking Space`,`Locker`,`Timeshare`]");
+    }
+  });
+
+  it("keeps commercial-class Land when the user picked Vacant Land", async () => {
+    searchListings.mockClear();
+    await fetchBoard(BOARDS.price_drop, area, { ...DEFAULT_ACTIVITY_LENS, propertyTypes: ["vacant"] }, 5);
+    const filter: string = searchListings.mock.calls[0][0].rawFilterBy;
+    expect(filter).not.toContain("PropertyType:!=Commercial");
+    expect(filter).toContain("PropertySubType:=`Land`");
+  });
+});
