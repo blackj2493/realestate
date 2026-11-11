@@ -81,6 +81,9 @@ export default function DashboardClient({ signedOut = false }: { signedOut?: boo
   // The previous-visit cutoff for the action feed. Captured + re-stamped once on
   // entry so "since last visit" compares against the PRIOR session, not now.
   const [sinceVisit, setSinceVisit] = useState<number | null>(null);
+  // No visit on record (this device or the server): the feed shows the last 7 days, so
+  // "Since your last visit" would be false on the first one.
+  const [firstVisit, setFirstVisit] = useState(false);
 
   // Exactly one section on the dashboard may open itself on a first visit
   // (RegionDrilldown.autoOpenFirstRun). Bubbles lead the band and claim it when the user
@@ -127,6 +130,7 @@ export default function DashboardClient({ signedOut = false }: { signedOut?: boo
     setName(getProfile()?.fullName);
     const previous = stampVisit();
     setSinceVisit(previous ?? Date.now() - SEVEN_DAYS_MS);
+    setFirstVisit(previous === null);
     setPickerOpen(cfg.regions.length === 0); // first run → open the live setup card
     setReady(true);
 
@@ -140,6 +144,7 @@ export default function DashboardClient({ signedOut = false }: { signedOut?: boo
         const serverPrev = merged.lastVisitAt;
         if (serverPrev !== null && (previous === null || serverPrev > previous)) {
           setSinceVisit(serverPrev);
+          setFirstVisit(false);
         }
         merged.lastVisitAt = Date.now(); // re-stamp this visit on the merged copy
         setConfig(merged);
@@ -287,7 +292,7 @@ export default function DashboardClient({ signedOut = false }: { signedOut?: boo
           lens={config.marketActivity}
           persona={config.persona}
           sinceMs={sinceVisit}
-          title={signedOut ? `New in ${SIGNED_OUT_CITY}` : undefined}
+          title={signedOut ? `New in ${SIGNED_OUT_CITY}` : firstVisit ? "New in the last 7 days" : undefined}
         />
 
         <WatchlistSection />

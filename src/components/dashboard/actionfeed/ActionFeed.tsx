@@ -28,7 +28,8 @@ export default function ActionFeed({
   lens: MarketActivityLens;
   persona: PersonaType;
   sinceMs: number | null;
-  /** A first-time (signed-out) visitor has no last visit, so the page passes its own. */
+  /** A signed-out visitor, or a signed-in one on a first visit, has no last visit, so the
+   *  page passes its own title. */
   title?: string;
 }) {
   const { items, loading } = useActionFeed({ regions, lens, persona, sinceMs });
