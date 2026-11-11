@@ -24,6 +24,20 @@ export function isPlausibleCut(drop: number | null | undefined, price: number | 
   return share >= MIN_CUT_SHARE && share <= MAX_CUT_SHARE;
 }
 
+/**
+ * The cut to SHOW for one listing: the drop, or 0 when it is too large to be true.
+ *
+ * Only the upper bound applies here. A 1% cut is small but real, so it still shows; a
+ * cut over 25% of the original ask is a typo or a relist artifact (the $68M "cut" on a
+ * $649,990 condo), and every surface that prints a cut must hide it the same way.
+ */
+export function shownCut(drop: number | null | undefined, price: number | null | undefined): number {
+  const d = drop ?? 0;
+  const p = price ?? 0;
+  if (!(d > 0) || !(p > 0)) return 0;
+  return d / (p + d) <= MAX_CUT_SHARE ? d : 0;
+}
+
 export function plausibleCuts<T extends CutInput>(docs: T[]): T[] {
   return docs.filter((d) => isPlausibleCut(d.TotalPriceDrop, d.ListPrice));
 }

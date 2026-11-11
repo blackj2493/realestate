@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPlausibleCut, plausibleCuts } from "./plausibleCuts";
+import { isPlausibleCut, plausibleCuts, shownCut } from "./plausibleCuts";
 
 describe("plausibleCuts", () => {
   it("drops a cut built on a typo in the original price", () => {
@@ -31,5 +31,20 @@ describe("isPlausibleCut", () => {
     expect(isPlausibleCut(0, 500_000)).toBe(false);
     expect(isPlausibleCut(undefined, 500_000)).toBe(false);
     expect(isPlausibleCut(50_000, null)).toBe(false);
+  });
+});
+
+describe("shownCut", () => {
+  it("shows small and normal cuts as they are", () => {
+    expect(shownCut(5_000, 995_000)).toBe(5_000);
+    expect(shownCut(120_000, 1_180_000)).toBe(120_000);
+  });
+  it("hides a typo or relist-artifact cut", () => {
+    expect(shownCut(68_349_010, 649_990)).toBe(0);
+    expect(shownCut(500_000, 500_000)).toBe(0);
+  });
+  it("returns 0 for missing values", () => {
+    expect(shownCut(null, 500_000)).toBe(0);
+    expect(shownCut(10_000, 0)).toBe(0);
   });
 });
