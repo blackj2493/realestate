@@ -78,7 +78,6 @@ export default function EstimatedSaleCard({
               </li>
             </ul>
             <UnlockCta
-              label="See what it should sell for — free"
               note={`Our estimate of the likely closing price${
                 city ? ` for this ${propertySubType ?? "home"} in ${city}` : ""
               } — not an MLS or TRREB figure.`}

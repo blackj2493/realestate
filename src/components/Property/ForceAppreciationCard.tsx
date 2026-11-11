@@ -74,7 +74,6 @@ export default function ForceAppreciationCard({
             ))}
           </div>
           <UnlockCta
-            label="See the renovation upside — free"
             note="Which renovations pay back here — added value, cost and ROI, from our Value-Add engine."
           />
         </CardContent>

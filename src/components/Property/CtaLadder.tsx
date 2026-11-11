@@ -2,15 +2,17 @@
 
 import { CalendarDays, HelpCircle, Scale, ArrowRight } from "lucide-react";
 import { LEAD_INTENTS, type LeadIntent } from "./leadIntents";
+import { track } from "@/lib/analytics/posthog";
 
 /**
  * CTA ladder — graduated rungs of commitment for the listing page. Each rung opens the
  * shared ScheduleViewingForm (via the `pp:open-viewing` event) with a different intent,
- * so all paths feed one lead pipeline. The primary rung (book a viewing) is emphasized;
- * the lower-friction rungs sit below as ghost buttons.
+ * so all paths feed one lead pipeline. The primary rung is emphasized (price opinion on a
+ * sale listing, book a viewing on a lease); the other rungs sit below as ghost buttons.
  */
 export default function CtaLadder({ listingKey, isLease = false }: { listingKey: string; isLease?: boolean }) {
   function open(intent: LeadIntent) {
+    track("listing_cta_clicked", { listingKey, intent, placement: "rail" });
     window.dispatchEvent(new CustomEvent("pp:open-viewing", { detail: { listingKey, intent } }));
   }
 
@@ -20,22 +22,24 @@ export default function CtaLadder({ listingKey, isLease = false }: { listingKey:
     price_opinion: Scale,
   };
 
-  // "2nd opinion on price" is a buyer's question (is it fairly priced vs comparable
-  // SALES?) — not what a prospective tenant needs, so it drops on lease listings.
-  // On sale listings it sits right under the primary rung: through Oct 2026 it produced
-  // 9 of 9 sale-side leads and the only closed deal; "Book a viewing" produced 1.
-  const lowerRungs: LeadIntent[] = isLease ? ["question"] : ["price_opinion", "question"];
+  // Sale listing: the price second-opinion is the primary rung. Through Oct 2026 it produced
+  // 9 of 9 sale-side leads and the only closed deal; "Book a viewing" produced 1 (2026-11).
+  // Lease listing: a tenant does not need an opinion on a sale price, so "Book a viewing"
+  // stays primary and the price rung drops.
+  const primary: LeadIntent = isLease ? "viewing" : "price_opinion";
+  const lowerRungs: LeadIntent[] = isLease ? ["question"] : ["viewing", "question"];
+  const PrimaryIcon = ICONS[primary];
 
   return (
     <div className="space-y-2">
       {/* Primary rung */}
       <button
         type="button"
-        onClick={() => open("viewing")}
+        onClick={() => open(primary)}
         className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 active:scale-95 [touch-action:manipulation]"
       >
-        <CalendarDays className="h-4 w-4" />
-        {LEAD_INTENTS.viewing.rungLabel}
+        <PrimaryIcon className="h-4 w-4" />
+        {primary === "price_opinion" ? "Get a free second opinion on the price" : LEAD_INTENTS[primary].rungLabel}
         <ArrowRight className="h-4 w-4" />
       </button>
 

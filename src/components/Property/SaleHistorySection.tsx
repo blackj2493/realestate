@@ -90,7 +90,6 @@ export default function SaleHistorySection({
           </table>
         </div>
         <UnlockCta
-          label="Sign in to view sold prices — free"
           note={`${saleHistory.saleCount} prior sale${
             saleHistory.saleCount > 1 ? "s" : ""
           } on record · Sold data via TRREB VOW, for personal, non-commercial use.`}
