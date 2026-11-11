@@ -14,6 +14,6 @@ describe("cap_rate board uses the real field", () => {
 describe("carry board skips placeholder prices", () => {
   it("filters out asks under MIN_REAL_SALE_PRICE", () => {
     expect(BOARDS.carry.rawFilterBy).toContain(`ListPrice:>=${MIN_REAL_SALE_PRICE}`);
-    expect(MIN_REAL_SALE_PRICE).toBe(10000);
+    expect(MIN_REAL_SALE_PRICE).toBe(100000);
   });
 });
