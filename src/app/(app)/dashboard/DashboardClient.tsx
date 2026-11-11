@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Building2 } from "lucide-react";
 import {
   getConfig,
@@ -36,6 +37,7 @@ import MarketPicker from "@/components/dashboard/MarketPicker";
 import TrackedMarketsBar from "@/components/dashboard/TrackedMarketsBar";
 import AlertFilterPrompt from "@/components/dashboard/AlertFilterPrompt";
 import PasskeyPrompt from "@/components/auth/PasskeyPrompt";
+import SignedOutBar, { DASHBOARD_SIGN_UP_HREF } from "@/components/dashboard/SignedOutBar";
 import { formatRegionLabel } from "@/lib/regions/formatRegionLabel";
 import { regionArea, defaultAlertScopeForRegion } from "@/lib/dashboard/area";
 import { useBubblesStore } from "@/lib/bubbles/useBubbles";
@@ -43,7 +45,21 @@ import type { PersonaType } from "@/lib/personas/personaConfig";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-export default function DashboardClient() {
+/** The market a signed-out visitor sees. Held in memory only: it is never saved, so a
+ *  later sign-up starts with the visitor's own areas, not ours. */
+export const SIGNED_OUT_CITY = "Toronto";
+
+/** Boards whose values are VOW data (True DOM). Locked without a verified sign-in. */
+const SIGNED_OUT_LOCKED_BOARDS: ReadonlySet<BoardId> = new Set<BoardId>(["high_dom"]);
+
+/**
+ * `signedOut`: the same dashboard, in the same order, for a visitor with no session.
+ * Toronto is the market. Personal parts (areas, alerts, saved config) send the visitor
+ * to sign-up; VOW parts lock (the APIs also strip VOW values for anonymous callers).
+ */
+export default function DashboardClient({ signedOut = false }: { signedOut?: boolean }) {
+  const router = useRouter();
+  const goSignUp = () => router.push(DASHBOARD_SIGN_UP_HREF);
   const [ready, setReady] = useState(false);
   const [config, setConfig] = useState<DashboardConfig>({
     regions: [],
@@ -99,6 +115,13 @@ export default function DashboardClient() {
   // copy (dashboard_prefs, migration 096) so the config follows the ACCOUNT, not
   // the browser. Server wins on load AND on a conflicting write (see adoptServer).
   useEffect(() => {
+    if (signedOut) {
+      // In memory only: no localStorage write, no server sync, no visit stamp.
+      setConfig(normalizeConfig({ regions: [SIGNED_OUT_CITY] }));
+      setSinceVisit(Date.now() - SEVEN_DAYS_MS);
+      setReady(true);
+      return;
+    }
     const cfg = getConfig();
     setConfig(cfg);
     setName(getProfile()?.fullName);
@@ -136,6 +159,7 @@ export default function DashboardClient() {
 
   const update = (c: DashboardConfig) => {
     setConfig(c);
+    if (signedOut) return; // lens/persona changes apply to this view only
     saveConfig(c);
     push(c);
   };
@@ -143,6 +167,7 @@ export default function DashboardClient() {
   // Auto-apply: add/remove a single region live so its dashboard sections appear/disappear
   // instantly. Functional updates keep rapid clicks from racing on a stale `config`.
   const addRegion = (area: string) => {
+    if (signedOut) return goSignUp();
     let added = false;
     setConfig((prev) => {
       if (!area || prev.regions.includes(area)) return prev;
@@ -160,6 +185,7 @@ export default function DashboardClient() {
     if (added) void ensureAreaAlert(area);
   };
   const removeRegion = (area: string) => {
+    if (signedOut) return goSignUp();
     setConfig((prev) => {
       const next = { ...prev, regions: prev.regions.filter((r) => r !== area) };
       saveConfig(next);
@@ -246,7 +272,7 @@ export default function DashboardClient() {
         onPersonaChange={updatePersona}
         // Toggle the one workspace card open/closed — but never let it close while the
         // workspace is empty, which would leave a blank dashboard behind it.
-        onToggleConfig={() => setPickerOpen((v) => !v || !hasRegions)}
+        onToggleConfig={() => (signedOut ? goSignUp() : setPickerOpen((v) => !v || !hasRegions))}
       />
 
       {/* Safe-area insets via max() so they only ever ADD to the existing
@@ -254,13 +280,14 @@ export default function DashboardClient() {
           px-4 py-6). Keeps the bottom compliance line clear of the home
           indicator without changing desktop spacing. */}
       <main className="mx-auto max-w-[1600px] space-y-8 pt-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        <PasskeyPrompt />
+        {signedOut ? <SignedOutBar city={SIGNED_OUT_CITY} /> : <PasskeyPrompt />}
 
         <ActionFeed
           regions={config.regions}
           lens={config.marketActivity}
           persona={config.persona}
           sinceMs={sinceVisit}
+          title={signedOut ? `New in ${SIGNED_OUT_CITY}` : undefined}
         />
 
         <WatchlistSection />
@@ -284,7 +311,7 @@ export default function DashboardClient() {
           <TrackedMarketsBar
             regions={config.regions}
             onRemove={removeRegion}
-            onEdit={() => setPickerOpen(true)}
+            onEdit={() => (signedOut ? goSignUp() : setPickerOpen(true))}
           />
         )}
 
@@ -294,7 +321,7 @@ export default function DashboardClient() {
 
         {/* Sits under the filters because it is ABOUT them: the areas you already saved
             still email everything, and these filters are what would narrow them. */}
-        {hasRegions && (
+        {hasRegions && !signedOut && (
           <AlertFilterPrompt
             regions={config.regions}
             lens={config.marketActivity}
@@ -330,7 +357,9 @@ export default function DashboardClient() {
           />
         )}
 
-        {hasRegions && (
+        {/* Signed out, every tile is built from VOW sold medians, so it would show only
+            dashes. The scorecard above already carries the lock for this data. */}
+        {hasRegions && !signedOut && (
           <RegionComparisonTiles
             regions={config.regions}
             persona={config.persona}
@@ -395,6 +424,7 @@ export default function DashboardClient() {
                         board={b}
                         area={area}
                         lens={config.marketActivity}
+                        locked={signedOut && SIGNED_OUT_LOCKED_BOARDS.has(b.id)}
                       />
                     ))}
                   </div>
@@ -424,7 +454,7 @@ export default function DashboardClient() {
           </section>
         )}
 
-        {hasRegions && <RecentlyViewed />}
+        {hasRegions && !signedOut && <RecentlyViewed />}
 
         {/* TRREB §6.3(i)/(k) — reliability + bona-fide-consumer notice. */}
         <p className="border-t border-border pt-6 text-center text-[11px] leading-relaxed text-muted-foreground">

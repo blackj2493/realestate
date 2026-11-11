@@ -21,10 +21,11 @@ import { markSignInStarted } from "@/lib/analytics/authFunnel";
  * primary identity and stays passkey-ready (Face ID / fingerprint) for later.
  */
 export default function MagicLinkForm({
-  next = "/dashboard",
+  next = null,
   initialEmail = "",
 }: {
-  next?: string;
+  /** Where to land after sign-in. null = no destination (a signup: /welcome decides). */
+  next?: string | null;
   initialEmail?: string;
 }) {
   const [step, setStep] = useState<"email" | "code">("email");

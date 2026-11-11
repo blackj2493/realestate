@@ -5,9 +5,8 @@
  * This is the second half of the contract postSignInPath/isFirstRunEntry already
  * describe. Those two are careful to distinguish "the user had a specific destination"
  * from "the user just signed in" — but that distinction only survives if the LINK
- * supplies the destination in the first place. A bare `/login` is not neutral: the login
- * page defaults `next` to /dashboard, isFirstRunEntry reads /dashboard as "no
- * destination", and a brand-new account is routed into the map terminal. So a locked
+ * supplies the destination in the first place. A bare `/login` is not neutral: it carries
+ * no destination, and a brand-new account is routed into the map terminal. So a locked
  * card on a listing page that links to a bare `/login` silently sends the one visitor
  * with the clearest intent we ever get — someone who wants THIS home's sold price — to a
  * province-wide map instead of back to the home they asked about.

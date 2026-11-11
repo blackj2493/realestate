@@ -8,16 +8,22 @@ import { scopeKey } from "@/lib/dashboard/lensKey";
 import { areaKey, type Area } from "@/lib/dashboard/area";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 
+import VowGateOverlay from "@/components/auth/VowGateOverlay";
+
 import PlaylistRow from "./PlaylistRow";
 
 export default function PlaylistBoard({
   board,
   area,
   lens,
+  locked = false,
 }: {
   board: BoardDef;
   area: Area;
   lens: MarketActivityLens;
+  /** VOW-gated board (True DOM) for a visitor without a verified sign-in: nothing is
+   *  fetched, so the values never reach the browser. */
+  locked?: boolean;
 }) {
   const [rows, setRows] = useState<ListingDocument[] | null>(null);
   const [error, setError] = useState(false);
@@ -27,6 +33,7 @@ export default function PlaylistBoard({
   const view = resolveBoardView(board, lens.transactionType);
 
   useEffect(() => {
+    if (locked) return;
     let alive = true;
     setRows(null);
     setError(false);
@@ -41,7 +48,7 @@ export default function PlaylistBoard({
     };
     // `area`/`lens` captured via `key`/`scope`; `board` is a stable module def.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [board, key, scope]);
+  }, [board, key, scope, locked]);
 
   return (
     <div className="border border-border bg-card/40">
@@ -54,7 +61,17 @@ export default function PlaylistBoard({
         </span>
       </div>
 
-      {rows === null && !error && (
+      {locked && (
+        <div className="relative min-h-[208px]">
+          <div className="space-y-px p-2 blur-sm select-none" aria-hidden="true">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-12 bg-muted/40" />
+            ))}
+          </div>
+          <VowGateOverlay message="Sign in to see how long homes have really been listed" />
+        </div>
+      )}
+      {!locked && rows === null && !error && (
         <div className="space-y-px p-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-12 animate-pulse bg-muted/40" />

@@ -19,9 +19,10 @@ import { markSignInStarted } from "@/lib/analytics/authFunnel";
  * the user on `next` (the email-code form handles that itself via verifyOtp).
  */
 export default function SocialAuthButtons({
-  next = "/dashboard",
+  next = null,
 }: {
-  next?: string;
+  /** Where to land after sign-in. null = no destination (a signup: /welcome decides). */
+  next?: string | null;
 }) {
   const [busy, setBusy] = useState<null | "google" | "passkey">(null);
   const [error, setError] = useState("");
@@ -35,7 +36,7 @@ export default function SocialAuthButtons({
     );
   }, []);
 
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
 
   const signInWithGoogle = async () => {
     setBusy("google");
@@ -45,9 +46,10 @@ export default function SocialAuthButtons({
     // auth_signed_in on the fresh document. See lib/analytics/authFunnel.
     track("auth_signin_started", { method: "google" });
     markSignInStarted("google");
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-      safeNext
-    )}`;
+    // Omit `next` when there is none: /auth/callback passes a missing `next` on as null.
+    const redirectTo = `${window.location.origin}/auth/callback${
+      safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""
+    }`;
     const { error: err } = await createClient().auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
