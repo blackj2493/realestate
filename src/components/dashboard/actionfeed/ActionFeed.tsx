@@ -22,11 +22,14 @@ export default function ActionFeed({
   lens,
   persona,
   sinceMs,
+  title = "Since your last visit",
 }: {
   regions: string[];
   lens: MarketActivityLens;
   persona: PersonaType;
   sinceMs: number | null;
+  /** A first-time (signed-out) visitor has no last visit, so the page passes its own. */
+  title?: string;
 }) {
   const { items, loading } = useActionFeed({ regions, lens, persona, sinceMs });
   const [expanded, setExpanded] = useState(false);
@@ -39,7 +42,7 @@ export default function ActionFeed({
 
   return (
     <section data-tour="dashboard-action-feed" className="space-y-2">
-      <ModuleHead title="Since your last visit" icon={<Activity className="h-4 w-4" />} />
+      <ModuleHead title={title} icon={<Activity className="h-4 w-4" />} />
 
       <Panel>
         {visible.map((item) => (

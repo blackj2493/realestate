@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import type { ListingDocument } from "@/lib/typesense/client";
 import type { MarketActivityLens } from "@/lib/dashboard/config";
 import { fetchNewCount, fetchNewListings } from "@/lib/dashboard/queries";
@@ -92,10 +93,14 @@ function CountHeader({
   title,
   accent,
   count,
+  locked = false,
 }: {
   title: string;
   accent: string;
   count: number | null;
+  /** VOW-locked: show a lock, not a number. A short window often counts 0 sales
+   *  (late reporting), and "0" beside a lock reads as a fact about the market. */
+  locked?: boolean;
 }) {
   return (
     <div className="flex items-baseline justify-between border-b border-border px-3 py-2">
@@ -103,7 +108,13 @@ function CountHeader({
         {title}
       </h3>
       <span className={`terminal-font text-xl font-bold ${accent}`}>
-        {count == null ? "···" : count.toLocaleString()}
+        {locked ? (
+          <Lock className="h-4 w-4 text-muted-foreground" aria-label="Locked" />
+        ) : count == null ? (
+          "···"
+        ) : (
+          count.toLocaleString()
+        )}
       </span>
     </div>
   );
@@ -235,7 +246,7 @@ export default function MarketActivityPanel({
 
       {/* Sold (VOW) — gated: anon sees the count + blurred "Login Required" rows */}
       <div className="flex flex-col border border-border bg-card/40">
-        <CountHeader title={isLease ? "Leased" : "Sold"} accent="text-emerald-700 dark:text-emerald-400" count={soldCount} />
+        <CountHeader title={isLease ? "Leased" : "Sold"} accent="text-emerald-700 dark:text-emerald-400" count={soldCount} locked={soldLocked} />
         <div>
           {soldLocked ? (
             <div className="relative min-h-[208px]">
