@@ -15,6 +15,7 @@ import { resolveBoardView, type BoardDef } from './boards';
 import type { BasementFilter, MarketActivityLens } from './config';
 import { typesensePropertyTypeClause } from './propertyTypes';
 import { areaFilter, type Area } from './area';
+import { isPlausibleCut } from '@/lib/listings/plausibleCuts';
 import { aboveGradeBedsClause, exactAboveGradeBedsClause } from '@/lib/filters/filterRegistry';
 
 /**
@@ -40,15 +41,24 @@ export async function fetchBoard(
   // In "For Rent" mode a board swaps to its rental-native metric (sort + filter);
   // buildScopeFilter already AND-joins TransactionType:=`For Lease`.
   const view = resolveBoardView(board, lens.transactionType);
+  // A sort by the largest drop surfaces typos first (a $649,990 condo "cut" by $68M).
+  // Fetch extra rows and keep only cuts of 2-25%; Typesense cannot filter on a ratio.
+  const cutBoard = board.id === 'price_drop';
   const res = await searchListings({
     query: '*',
     rawFilterBy: combine(buildScopeFilter(area, lens), view.rawFilterBy),
     sortBy: view.sortBy,
     sortOrder: view.sortOrder,
-    perPage,
+    perPage: cutBoard ? PRICE_DROP_OVERFETCH : perPage,
   });
-  return res.listings;
+  if (!cutBoard) return res.listings;
+  return res.listings
+    .filter((l) => isPlausibleCut(l[view.metricField] as number | undefined, l.ListPrice))
+    .slice(0, perPage);
 }
+
+/** Rows fetched for the price-drop board before the 2-25% filter. Under the 100 cap. */
+export const PRICE_DROP_OVERFETCH = 60;
 
 export interface RegionStats {
   activeCount: number;

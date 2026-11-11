@@ -109,6 +109,9 @@ const days = (v: number | undefined | null) =>
 const score6 = (v: number | undefined | null) =>
   v == null || !Number.isFinite(v) ? '—' : `${v}/6`;
 
+/** Below this a sale ask is a placeholder, not a price (seen: $1 listings on the carry board). */
+export const MIN_REAL_SALE_PRICE = 10000;
+
 export const BOARDS: Record<BoardId, BoardDef> = {
   cap_rate: {
     id: 'cap_rate',
@@ -187,7 +190,8 @@ export const BOARDS: Record<BoardId, BoardDef> = {
     formatMetric: money,
     sortBy: 'CapitalBurnRateMonthly',
     sortOrder: 'asc',
-    rawFilterBy: 'CapitalBurnRateMonthly:>0',
+    // ListPrice floor: placeholder asks ($1, $100) have a near-zero burn and sorted first.
+    rawFilterBy: `CapitalBurnRateMonthly:>0 && ListPrice:>=${MIN_REAL_SALE_PRICE}`,
     objectives: ['Analyze rental yield / cap rates'],
     // Sale-only: capital burn is a purchase carrying-cost; meaningless for a rental.
     scopes: ['sale'],
