@@ -128,3 +128,45 @@ export function typesensePropertyTypeClause(keys: string[]): string | undefined 
   const ors = variants.map((v) => `PropertySubType:=\`${v.replace(/`/g, '')}\``);
   return `(${ors.join(' || ')})`;
 }
+
+/**
+ * Sub-types with no home on them. No option offers them, so they reach the dashboard only
+ * when no type is picked: a $125k parking space led "Lowest Capital Burn" that way.
+ */
+export const NON_HOME_SUBTYPES = ['Parking Space', 'Locker', 'Timeshare'] as const;
+
+/**
+ * Commercial sub-types, for the sold collection, which has no PropertyType field. "Farm"
+ * and "Store W Apt/Office" are left out: the feed files most of them as residential.
+ */
+export const COMMERCIAL_SUBTYPES = [
+  'Sale Of Business',
+  'Commercial Retail',
+  'Industrial',
+  'Investment',
+  'Office',
+  'Land',
+] as const;
+
+const notIn = (field: string, values: readonly string[]) =>
+  `${field}:!=[${values.map((v) => `\`${v}\``).join(',')}]`;
+
+/**
+ * The dashboard shows HOMES. With no type picked, the active index let commercial in —
+ * 12% of sale and 27% of lease listings — so "New" counted storefronts that "Sold" (a
+ * residential feed) never does, and "Sale Of Business" filled the top 8 rows of "Lowest
+ * Capital Burn" in Toronto. Same exclusion the city hubs use (PropertyType:!=Commercial).
+ *
+ * Only for an empty pick: a picked type is a positive sub-type list that already excludes
+ * all of these, and the "Vacant Land" option needs the commercial-class "Land" sub-type.
+ */
+export function homesOnlyClause(keys: readonly string[]): string | undefined {
+  if (keys.length > 0) return undefined;
+  return `PropertyType:!=Commercial && ${notIn('PropertySubType', NON_HOME_SUBTYPES)}`;
+}
+
+/** The sold-collection twin of homesOnlyClause (that collection has no PropertyType). */
+export function soldHomesOnlyClause(keys: readonly string[]): string | undefined {
+  if (keys.length > 0) return undefined;
+  return notIn('PropertySubType', [...COMMERCIAL_SUBTYPES, ...NON_HOME_SUBTYPES]);
+}

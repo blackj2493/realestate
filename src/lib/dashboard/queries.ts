@@ -11,9 +11,9 @@
  */
 
 import { searchListings, type ListingDocument } from '@/lib/typesense/client';
-import { boardHomeClause, resolveBoardView, type BoardDef } from './boards';
+import { resolveBoardView, type BoardDef } from './boards';
 import type { BasementFilter, MarketActivityLens } from './config';
-import { typesensePropertyTypeClause } from './propertyTypes';
+import { homesOnlyClause, typesensePropertyTypeClause } from './propertyTypes';
 import { areaFilter, type Area } from './area';
 import { isPlausibleCut } from '@/lib/listings/plausibleCuts';
 import { aboveGradeBedsClause, exactAboveGradeBedsClause } from '@/lib/filters/filterRegistry';
@@ -46,11 +46,7 @@ export async function fetchBoard(
   const cutBoard = board.id === 'price_drop';
   const res = await searchListings({
     query: '*',
-    rawFilterBy: combine(
-      buildScopeFilter(area, lens),
-      boardHomeClause(lens.propertyTypes),
-      view.rawFilterBy
-    ),
+    rawFilterBy: combine(buildScopeFilter(area, lens), view.rawFilterBy),
     sortBy: view.sortBy,
     sortOrder: view.sortOrder,
     perPage: cutBoard ? PRICE_DROP_OVERFETCH : perPage,
@@ -210,6 +206,7 @@ export function buildLensClauses(lens: MarketActivityLens): string {
   return combine(
     transactionClause(lens),
     typesensePropertyTypeClause(lens.propertyTypes),
+    homesOnlyClause(lens.propertyTypes),
     // Beds: above-grade with a total fallback — identical semantics to the For Sale
     // filter (filterRegistry) and the sold lens (soldFilter). "4 beds" means 4 ABOVE
     // grade, so a "2+2" basement home no longer surfaces under it, keeping the active

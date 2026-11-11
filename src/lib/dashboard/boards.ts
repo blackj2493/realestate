@@ -112,25 +112,6 @@ const score6 = (v: number | undefined | null) =>
 /** Below this a sale ask is a placeholder ($1) or a parking space / locker ($10k-$22k), not a home. */
 export const MIN_REAL_SALE_PRICE = 100000;
 
-/**
- * Sub-types with no home on them. The lens never offers them, so they only reach a board
- * by accident: a $125k parking space led "Lowest Capital Burn" once commercial was gone.
- */
-export const NON_HOME_SUBTYPES = ['Parking Space', 'Locker', 'Timeshare'] as const;
-
-/**
- * Every board ranks HOMES — cap rate, suite, carry, cuts and DOM all assume a dwelling.
- * Without this the default (no type picked) lens let 8,007 commercial listings in, and
- * "Sale Of Business" filled the top 8 rows of "Lowest Capital Burn" in Toronto.
- *
- * Commercial is dropped only when no type is picked: the "Vacant Land" option includes
- * the commercial-class "Land" sub-type, and a user who picked it must still see it.
- */
-export function boardHomeClause(propertyTypes: readonly string[]): string {
-  const subtypes = `PropertySubType:!=[${NON_HOME_SUBTYPES.map((t) => `\`${t}\``).join(',')}]`;
-  return propertyTypes.length === 0 ? `PropertyType:!=Commercial && ${subtypes}` : subtypes;
-}
-
 export const BOARDS: Record<BoardId, BoardDef> = {
   cap_rate: {
     id: 'cap_rate',
