@@ -11,7 +11,7 @@
  */
 
 import { searchListings, type ListingDocument } from '@/lib/typesense/client';
-import { resolveBoardView, type BoardDef } from './boards';
+import { boardHomeClause, resolveBoardView, type BoardDef } from './boards';
 import type { BasementFilter, MarketActivityLens } from './config';
 import { typesensePropertyTypeClause } from './propertyTypes';
 import { areaFilter, type Area } from './area';
@@ -46,7 +46,11 @@ export async function fetchBoard(
   const cutBoard = board.id === 'price_drop';
   const res = await searchListings({
     query: '*',
-    rawFilterBy: combine(buildScopeFilter(area, lens), view.rawFilterBy),
+    rawFilterBy: combine(
+      buildScopeFilter(area, lens),
+      boardHomeClause(lens.propertyTypes),
+      view.rawFilterBy
+    ),
     sortBy: view.sortBy,
     sortOrder: view.sortOrder,
     perPage: cutBoard ? PRICE_DROP_OVERFETCH : perPage,
