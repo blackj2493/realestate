@@ -27,6 +27,7 @@ import {
   rentSpreadTooWide, readRentDispersion,
 } from "@/lib/metrics/rentTier";
 import type { CohortRanker } from "./cohortPercentiles";
+import { shownCut } from "@/lib/listings/plausibleCuts";
 
 interface LedgerRowProps {
   property: ListingDocument;
@@ -219,13 +220,15 @@ function ColumnValue({ doc, col, isAuthed, ranker }: { doc: ListingDocument; col
         </span>
       );
     }
-    case "priceDrop":
+    case "priceDrop": {
+      const cut = shownCut(doc.TotalPriceDrop, doc.ListPrice);
       return (
-        <span className={cn("text-[13px]", doc.TotalPriceDrop ? "font-bold text-rose-700 dark:text-rose-400" : "text-muted-foreground")}>
-          {doc.TotalPriceDrop ? `-$${doc.TotalPriceDrop.toLocaleString()}` : "—"}
-          {doc.TotalPriceDrop ? <PctTag p={ranker?.("priceDrop", doc.TotalPriceDrop)} /> : null}
+        <span className={cn("text-[13px]", cut > 0 ? "font-bold text-rose-700 dark:text-rose-400" : "text-muted-foreground")}>
+          {cut > 0 ? `-$${cut.toLocaleString()}` : "—"}
+          {cut > 0 ? <PctTag p={ranker?.("priceDrop", cut)} /> : null}
         </span>
       );
+    }
     case "suite":
       return (
         <span className="text-blue-700 dark:text-blue-300">

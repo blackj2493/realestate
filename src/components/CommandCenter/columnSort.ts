@@ -14,6 +14,7 @@ import { capRateOrNull, grossYieldOrNull } from "@/lib/metrics/sanityBand";
 import { monthlyCashflow } from "@/lib/metrics/liveCashflow";
 import type { SharedDealInputs } from "@/lib/finance/dealInputs";
 import { getAlphaFlag } from "@/lib/personas/getAlphaFlag";
+import { shownCut } from "@/lib/listings/plausibleCuts";
 
 export type SortDir = "asc" | "desc";
 
@@ -101,7 +102,7 @@ export function columnHasValue(doc: ListingDocument, type: ColumnType, isAuthed:
     case "yield":
       return grossYieldOrNull(doc.gross_yield_est) != null;
     case "priceDrop":
-      return Boolean(doc.TotalPriceDrop);
+      return shownCut(doc.TotalPriceDrop, doc.ListPrice) > 0;
     case "suite":
       return doc.SuiteStatus === "EXISTING_SUITE" || doc.SuiteStatus === "POTENTIAL_CANDIDATE";
     case "lotDims":
@@ -194,8 +195,10 @@ export function columnSortValue(
       return financing ? monthlyCashflow({ listPrice: doc.ListPrice, capRatePct: doc.cap_rate_est }, financing) : null;
     case "carryCost":
       return carryFor(doc);
-    case "priceDrop":
-      return doc.TotalPriceDrop ?? null;
+    case "priceDrop": {
+      const cut = shownCut(doc.TotalPriceDrop, doc.ListPrice);
+      return cut > 0 ? cut : null;
+    }
     case "suite":
       return doc.SuiteStatus === "EXISTING_SUITE" ? 2 : doc.SuiteStatus === "POTENTIAL_CANDIDATE" ? 1 : 0;
     case "lotDims":

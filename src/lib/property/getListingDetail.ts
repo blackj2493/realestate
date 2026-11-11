@@ -59,6 +59,7 @@ import {
   type SoldAccuracy,
 } from "@/lib/property/listingStatus";
 import type { DiligenceFlag } from "@/lib/property/diligence";
+import { shownCut } from "@/lib/listings/plausibleCuts";
 
 // react.cache is a Server-Components API: present under the Next runtime, undefined
 // when a plain-node script (tsx) imports this module (e.g. scripts/demos/make-fixture.ts).
@@ -946,7 +947,8 @@ export const getListingDetail = cache(
       typeof payload["total_price_drop"] === "number" && payload["total_price_drop"] > 0
         ? (payload["total_price_drop"] as number)
         : 0;
-    const totalPriceDrop = ledgerDrop > 0 ? ledgerDrop : payloadDrop;
+    // A typo'd original ask (a $68M "cut" on a $649,990 condo) must not reach the chart.
+    const totalPriceDrop = shownCut(ledgerDrop > 0 ? ledgerDrop : payloadDrop, listPrice);
     const trueDom =
       campaignHistory.trueDom ??
       (typeof payload["true_dom"] === "number"

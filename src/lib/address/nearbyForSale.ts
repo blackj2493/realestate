@@ -20,6 +20,7 @@ import { getTypesenseClient } from "@/lib/typesense/client";
 import { bedSplit, bedKey, bedKeyOrder, BED_ABOVE_CAP, type BedCountsRaw } from "@/lib/listings/bedSplit";
 import { isPartialUnitRental, IN_HOME_UNIT_LABEL } from "@/lib/listings/inHomeUnit";
 import { MONTHLY_RENT_BAND } from "@/lib/metrics/sanityBand";
+import { shownCut } from "@/lib/listings/plausibleCuts";
 
 /** Sub-types with no dwelling to rent — excluded from the lease queries. A land lease
  *  is quoted per year or as a price, which is how $238,000/mo reached a rent tile. */
@@ -520,7 +521,7 @@ function toListing(d: Record<string, unknown>, dist: number | undefined): Nearby
     lng: loc ? loc[1] : null,
     entryMs,
     dom,
-    dropAmount: typeof d.TotalPriceDrop === "number" && d.TotalPriceDrop > 0 ? d.TotalPriceDrop : 0,
+    dropAmount: shownCut(typeof d.TotalPriceDrop === "number" ? d.TotalPriceDrop : 0, d.ListPrice as number),
   };
 }
 

@@ -18,6 +18,7 @@ import {
   type MapColorConfig,
 } from "./personaConfig";
 import { capRateOrNull } from "@/lib/metrics/sanityBand";
+import { shownCut } from "@/lib/listings/plausibleCuts";
 
 export interface MapMetricDef extends MapColorConfig {
   id: string;
@@ -80,7 +81,7 @@ export const MAP_METRICS: MapMetricDef[] = [
     id: "priceDrop",
     label: "Price Drop",
     field: "TotalPriceDrop",
-    metric: (d: ListingDocument) => d.TotalPriceDrop ?? 0,
+    metric: (d: ListingDocument) => shownCut(d.TotalPriceDrop, d.ListPrice),
     domain: [0, 100_000],
     range: DOM_RANGE,
     legendLow: "$0",
