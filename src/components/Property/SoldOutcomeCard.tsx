@@ -69,7 +69,6 @@ export default function SoldOutcomeCard({
               <Redact className="h-4 w-16" />
             </div>
             <UnlockCta
-              label="See the sold price — free"
               note="Deterministic estimate — not an MLS or TRREB figure."
             />
           </div>

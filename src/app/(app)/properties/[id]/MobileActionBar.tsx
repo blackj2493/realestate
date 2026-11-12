@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Scale } from "lucide-react";
+import { track } from "@/lib/analytics/posthog";
 import WatchButton from "@/components/watchlist/WatchButton";
 import type { WatchItem } from "@/lib/watchlist/useWatchlist";
 import { useDiscovery } from "@/lib/discovery/useDiscovery";
@@ -20,11 +21,16 @@ export default function MobileActionBar({
   item,
   listingKey,
   canContact,
+  isLease = false,
 }: {
   item: WatchItem;
   listingKey: string;
   canContact: boolean;
+  /** Sale listing → the contact button asks for the free price opinion (the button that
+   *  produced 9 of 9 sale-side leads through Oct 2026). Lease → "Book a viewing". */
+  isLease?: boolean;
 }) {
+  const intent = isLease ? "viewing" : "price_opinion";
   // #10 FAB overlap: this sticky bar and the discovery Guide FAB both pin to the bottom
   // (the FAB bottom-right), so on mobile they collide. Ref-count a chrome-block so the FAB
   // hides while the bar is visible. The bar is `lg:hidden` CSS but mounts on ALL viewports,
@@ -64,15 +70,16 @@ export default function MobileActionBar({
       {canContact && (
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            track("listing_cta_clicked", { listingKey, intent, placement: "mobile_bar" });
             window.dispatchEvent(
-              new CustomEvent("pp:open-viewing", { detail: { listingKey } })
-            )
-          }
+              new CustomEvent("pp:open-viewing", { detail: { listingKey, intent } })
+            );
+          }}
           className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
         >
-          <CalendarDays className="h-4 w-4" />
-          Book a viewing
+          {isLease ? <CalendarDays className="h-4 w-4" /> : <Scale className="h-4 w-4" />}
+          {isLease ? "Book a viewing" : "Free price opinion"}
         </button>
       )}
     </div>

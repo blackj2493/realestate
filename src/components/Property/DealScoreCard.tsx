@@ -309,7 +309,6 @@ export default function DealScoreCard({
         </div>
 
         <UnlockCta
-          label="Reveal this home's score — free"
           note="No card · about 20 seconds. PureProperty Deal Score is our deterministic metric, not an MLS/TRREB figure."
         />
       </div>

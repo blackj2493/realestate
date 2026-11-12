@@ -16,6 +16,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
 import { loginHref } from "@/lib/auth/loginHref";
+import { UNLOCK_LABEL } from "./unlockLabel";
 
 /**
  * A withheld value: signals "a real number lives here, revealed on sign-in" without
@@ -36,7 +37,7 @@ export function Redact({ className = "" }: { className?: string }) {
  * single "unlock" colour. Returns the visitor to exactly where they were after
  * sign-in (open-redirect-safe `next`).
  */
-export function UnlockCta({ label, note }: { label: string; note?: string }) {
+export function UnlockCta({ label = UNLOCK_LABEL, note }: { label?: string; note?: string }) {
   const href = loginHref(usePathname());
   return (
     <div className="mt-3">

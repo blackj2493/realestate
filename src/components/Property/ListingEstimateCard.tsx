@@ -62,7 +62,6 @@ export default function ListingEstimateCard({
               <Redact className="h-4 w-24" />
             </div>
             <UnlockCta
-              label="See this home's value — free"
               note={`What recent comparable sales${
                 cityRegion ? ` in ${cityRegion}` : city ? ` in ${city}` : ""
               } suggest it's worth — our estimate, not an MLS or TRREB figure.`}

@@ -110,7 +110,6 @@ export default function CampaignHistorySection({
           </table>
         </div>
         <UnlockCta
-          label="Sign in to view the full history — free"
           note={`Listed ${campaignCount}×${
             firstSeenDate ? ` since ${new Date(firstSeenDate).getFullYear()}` : ""
           } · Listing history via TRREB VOW, for personal, non-commercial use.`}

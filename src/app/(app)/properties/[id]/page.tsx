@@ -87,6 +87,8 @@ import MobileActionBar from "./MobileActionBar";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
+import PriceOpinionCard from "@/components/Property/PriceOpinionCard";
+import { UNLOCK_LABEL } from "@/components/Property/unlockLabel";
 import { Suspense } from "react";
 import NearbySchools from "./NearbySchools";
 import AreaCard from "@/components/Property/AreaCard";
@@ -1148,6 +1150,12 @@ export default async function PropertyPage({
                 )}
               </div>
 
+              {/* The main action of an active sale listing: a free price second-opinion,
+                  right under the asking price (2026-11). Lease → not shown. */}
+              {isActiveListing && !isLease && price > 0 && (
+                <PriceOpinionCard listingKey={id} priceText={formatPrice(price)} />
+              )}
+
               {/* One-tap save for a reader who signed up from this listing. Renders
                   nothing for anyone else; the mark is consumed once (saveOffer.ts). */}
               <SaveAfterSignupPrompt
@@ -1542,7 +1550,7 @@ export default async function PropertyPage({
                           Price estimate, Deal Score, sold prices &amp; full history. Free, ~20 seconds.
                         </p>
                         <SignInLink className="mt-2 inline-flex min-h-[38px] items-center rounded-lg border border-cyan-500 px-4 text-sm font-bold text-cyan-700 transition-colors hover:bg-cyan-500/10 dark:text-cyan-300">
-                          Unlock this home
+                          {UNLOCK_LABEL}
                         </SignInLink>
                       </div>
                     ) : undefined
@@ -1871,6 +1879,7 @@ export default async function PropertyPage({
         }}
         listingKey={id}
         canContact={isActiveListing}
+        isLease={isLease}
       />
     </main>
   );
