@@ -80,6 +80,7 @@ import {
 import { classifyAddressWatch } from '@/lib/alerts/addressWatch';
 import { renderAddressWatchEmail, type AddressWatchHit } from '@/lib/alerts/addressWatchEmail';
 import { qualifiesAsDrop } from '@/lib/alerts/dropPolicy';
+import { isLeaseTransaction } from '@/lib/search/searchRows';
 import { findRelists, type RelistTargetFull } from '@/lib/watchlist/relistLookup';
 import { addressesMatch, parseAddress } from '@/lib/watchlist/disposition';
 import { unsubscribeUrl, marketingUnsubscribeUrl, emailActionUrl } from '@/lib/alerts/unsubscribe';
@@ -192,6 +193,8 @@ interface Current {
   city?: string;
   thumb?: string;
   brokerage?: string;
+  /** Feed TransactionType is a sale (not a lease) → a drop row offers the price opinion. */
+  isSale?: boolean;
 }
 
 export function getTypesense(): Client {
@@ -219,6 +222,7 @@ async function fetchCurrent(ts: Client, key: string): Promise<Current | null> {
       city: (doc.City as string) || undefined,
       thumb: (doc.thumbnailUrl as string) || (doc.primaryImageUrl as string) || undefined,
       brokerage: (doc.ListOfficeName as string) || undefined,
+      isSale: typeof doc.TransactionType === 'string' && doc.TransactionType !== '' && !isLeaseTransaction(doc.TransactionType),
     };
   } catch {
     return null; // not in the active index (sold / off-market / removed)
@@ -416,7 +420,7 @@ export async function runListingAlertsPhase(
     });
     const drop =
       cur && cur.price != null && r.last_price != null && cur.price < r.last_price
-        ? { oldPrice: r.last_price, newPrice: cur.price }
+        ? { oldPrice: r.last_price, newPrice: cur.price, opinion: cur.isSale === true }
         : null;
 
     if (event || drop) {
@@ -1208,6 +1212,7 @@ async function main() {
           newPrice: cur.price,
           thumb: w.thumb || cur.thumb || null,
           brokerage: cur.brokerage ?? null,
+          opinion: cur.isSale === true,
         });
         dropsByUser.set(w.user_id, list);
         rowPatches.push({

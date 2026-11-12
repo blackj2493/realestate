@@ -13,6 +13,7 @@
 
 import type { StatusAlertKind } from "./transitions";
 import { shell, footer } from "./emailShell";
+import { opinionLinkHtml, opinionLinkText } from "./opinionLink";
 
 export interface ListingAlertChange {
   listing_key: string;
@@ -20,7 +21,7 @@ export interface ListingAlertChange {
   city: string | null;
   brokerage: string | null;
   /** Price drop (active listing) — old→new. */
-  drop?: { oldPrice: number; newPrice: number };
+  drop?: { oldPrice: number; newPrice: number; /** Sale listing → offer the free price opinion. */ opinion?: boolean };
   /** Status change (sold / off-market / back-on-market / …). */
   status?: { kind: StatusAlertKind; detail?: string };
 }
@@ -133,7 +134,7 @@ function rowHtml(c: ListingAlertChange): string {
          &nbsp;→&nbsp;
          <span style="color:#0f766e;font-weight:700;">${money(c.drop.newPrice)}</span>
          <span style="color:#dc2626;font-weight:600;">&nbsp;(−${money(c.drop.oldPrice - c.drop.newPrice)})</span>
-       </div>`
+       </div>${c.drop.opinion ? opinionLinkHtml(c.listing_key) : ""}`
     : c.status
       ? `<div style="margin-top:6px;font-size:13px;color:#475569;">${
           c.status.kind === "sold"
@@ -206,7 +207,7 @@ export function renderListingAlertEmail(
       : c.status
         ? statusLine(c.status)
         : "Update";
-    return `• ${head}${c.address || "A home you're watching"}${c.brokerage ? ` — ${c.brokerage}` : ""}\n  ${body}\n  ${listingUrl(c.listing_key)}`;
+    return `• ${head}${c.address || "A home you're watching"}${c.brokerage ? ` — ${c.brokerage}` : ""}\n  ${body}\n  ${listingUrl(c.listing_key)}${c.drop?.opinion ? `\n${opinionLinkText(c.listing_key)}` : ""}`;
   });
   const similarLines = similar.map(
     (s) =>

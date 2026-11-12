@@ -84,6 +84,7 @@ import WatchButton from "@/components/watchlist/WatchButton";
 import SaveAfterSignupPrompt from "@/components/watchlist/SaveAfterSignupPrompt";
 import ShareListingButton from "@/components/Property/ShareListingButton";
 import MobileActionBar from "./MobileActionBar";
+import AskOpener from "./AskOpener";
 import PropertyGallery from "./PropertyGallery";
 import RecordView from "./RecordView";
 import ListingActions from "./ListingActions";
@@ -1866,6 +1867,9 @@ export default async function PropertyPage({
             independent of whether AVM figures rendered above. */}
         <ListingComplianceNotice className="mt-8" />
       </div>
+
+      {/* `?ask=price_opinion` from an alert email → open that form on arrival. */}
+      {isActiveListing && <AskOpener listingKey={id} isLease={isLease} />}
 
       {/* Mobile sticky Save + Contact — the right rail (with these actions) stacks
           far below the fold on phones; this keeps the funnel reachable. */}

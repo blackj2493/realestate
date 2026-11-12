@@ -16,6 +16,7 @@ import { ANGLE_COPY, angleReason, angleSubjectPhrase, type AnglePick, type Reaso
 import type { PersonaType } from "@/lib/personas/personaConfig";
 import { shell, footer, button, MONO, esc } from "./emailShell";
 import { narrowAskSubject } from "@/lib/areas/narrowAsk";
+import { opinionLinkHtml, opinionLinkText } from "./opinionLink";
 
 export interface DropAlert {
   listing_key: string;
@@ -25,6 +26,8 @@ export interface DropAlert {
   newPrice: number;
   thumb: string | null;
   brokerage: string | null;
+  /** Sale listing (feed TransactionType) → the row offers the free price opinion. */
+  opinion?: boolean;
 }
 
 export interface StatusChangeAlert {
@@ -221,6 +224,7 @@ function dropRowsHtml(drops: DropAlert[]): string {
           <span style="color:#0f766e;font-weight:700;">${money(d.newPrice)}</span>
           <span style="color:#dc2626;font-weight:600;">&nbsp;(−${money(cut)})</span>
         </div>
+        ${d.opinion ? opinionLinkHtml(d.listing_key) : ""}
       </td></tr>`;
     })
     .join("");
@@ -660,7 +664,7 @@ export function renderAlertsDigest(
         dropsShown
           .map(
             (d) =>
-              `• ${d.address}${d.brokerage ? ` — ${d.brokerage}` : ""} — ${money(d.oldPrice)} -> ${money(d.newPrice)} (-${money(d.oldPrice - d.newPrice)})\n  ${listingUrl(d.listing_key)}`
+              `• ${d.address}${d.brokerage ? ` — ${d.brokerage}` : ""} — ${money(d.oldPrice)} -> ${money(d.newPrice)} (-${money(d.oldPrice - d.newPrice)})\n  ${listingUrl(d.listing_key)}${d.opinion ? `\n${opinionLinkText(d.listing_key)}` : ""}`
           )
           .join("\n") +
         (more > 0 ? `\n• +${more} more on your dashboard` : "")
