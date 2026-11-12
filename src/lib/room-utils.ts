@@ -158,11 +158,23 @@ export function formatArea(area: number, unit: 'sqm' | 'sqft'): string {
 }
 
 /**
- * Format dimensions for display
+ * A length in metres as feet and inches, rounded to the nearest inch: 3.5 → 11'6".
  */
-export function formatDimensions(length?: number, width?: number): string {
+export function formatFeetInches(meters: number): string {
+  const totalInches = Math.round(meters * 39.3701);
+  return `${Math.floor(totalInches / 12)}'${totalInches % 12}"`;
+}
+
+/**
+ * Format dimensions (listed in metres) for display. `sqft` shows feet and inches, so the
+ * room-size unit toggle switches the dimensions together with the areas.
+ */
+export function formatDimensions(length?: number, width?: number, unit: 'sqm' | 'sqft' = 'sqm'): string {
   if (length == null || width == null || isNaN(length) || isNaN(width)) {
     return 'N/A';
+  }
+  if (unit === 'sqft') {
+    return `${formatFeetInches(length)} × ${formatFeetInches(width)}`;
   }
   return `${length.toFixed(2)}m × ${width.toFixed(2)}m`;
 }

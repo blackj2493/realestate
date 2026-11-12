@@ -93,7 +93,9 @@ function normalize(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value.join(", ") : value;
 }
 
-function rawDims(r: RoomData): string {
+function rawDims(r: RoomData, unit: Unit): string {
+  // Imperial converts the numeric metres; metric keeps the listing's own text.
+  if (unit === "sqft" && r.RoomLength && r.RoomWidth) return formatDimensions(r.RoomLength, r.RoomWidth, unit);
   if (r.RoomDimensions) return String(r.RoomDimensions);
   if (r.RoomLength && r.RoomWidth) return `${r.RoomLength} × ${r.RoomWidth} m`;
   return "—";
@@ -344,7 +346,8 @@ export default function RoomMap({
                     // so labels genuinely disappear before they become unreadable.
                     const showName = t.w > 58 && t.h > 26;
                     const showArea = t.w > 58 && t.h > 44;
-                    const showDim = t.w > 90 && t.h > 62;
+                    // Feet-and-inches labels run a few characters longer than metres.
+                    const showDim = t.w > (unit === "sqft" ? 108 : 90) && t.h > 62;
                     return (
                       <g
                         key={t.room.id}
@@ -352,7 +355,8 @@ export default function RoomMap({
                         role="button"
                         aria-label={`${t.room.name}, ${t.floor}, ${formatDimensions(
                           t.room.length,
-                          t.room.width
+                          t.room.width,
+                          unit
                         )}, ${formatArea(t.room.areaMeters, unit)}`}
                         onMouseEnter={() => setActiveId(t.room.id)}
                         onMouseLeave={() => setActiveId((c) => (c === t.room.id ? null : c))}
@@ -365,7 +369,7 @@ export default function RoomMap({
                         {/* Single string child — React requires <title> children to
                             collapse to one text node, else SSR/CSR hydration mismatches. */}
                         <title>
-                          {`${t.room.name} · ${t.floor} · ${formatDimensions(t.room.length, t.room.width)} · ${formatArea(t.room.areaMeters, unit)}${t.room.isLikelyCombinedSpace ? " · likely combined space" : ""}`}
+                          {`${t.room.name} · ${t.floor} · ${formatDimensions(t.room.length, t.room.width, unit)} · ${formatArea(t.room.areaMeters, unit)}${t.room.isLikelyCombinedSpace ? " · likely combined space" : ""}`}
                         </title>
                         <rect
                           x={t.x}
@@ -431,7 +435,9 @@ export default function RoomMap({
                             className="fill-slate-600 dark:fill-slate-400"
                             pointerEvents="none"
                           >
-                            {t.room.length.toFixed(2)} × {t.room.width.toFixed(2)} m
+                            {unit === "sqft"
+                              ? formatDimensions(t.room.length, t.room.width, unit)
+                              : `${t.room.length.toFixed(2)} × ${t.room.width.toFixed(2)} m`}
                           </text>
                         )}
                       </g>
@@ -451,7 +457,7 @@ export default function RoomMap({
                 <span className="text-muted-foreground">{active.floor}</span>
                 <span className="text-muted-foreground">·</span>
                 <span className="font-mono text-foreground">
-                  {formatDimensions(active.room.length, active.room.width)}
+                  {formatDimensions(active.room.length, active.room.width, unit)}
                 </span>
                 <span className="text-muted-foreground">·</span>
                 <span className="font-mono text-emerald-700 dark:text-emerald-400">
@@ -485,7 +491,7 @@ export default function RoomMap({
                   <tr key={i} className="hover:bg-card/40">
                     <td className="px-3 py-2 text-foreground">{normalize(r.RoomType) || "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{normalize(r.RoomLevel) || "—"}</td>
-                    <td className="px-3 py-2 text-right font-mono text-foreground">{rawDims(r)}</td>
+                    <td className="px-3 py-2 text-right font-mono text-foreground">{rawDims(r, unit)}</td>
                     <td className="px-3 py-2 text-right font-mono text-muted-foreground">
                       {hasDims ? formatArea(r.RoomLength! * r.RoomWidth!, unit) : "—"}
                     </td>
