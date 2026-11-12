@@ -13,6 +13,7 @@ import type { SoldListingDocument } from '../../src/lib/typesense/soldListingsSc
 import { isAnyInternetDisplayOptedOut } from '../../src/lib/compliance/internetDisplay';
 import { parsePostalFromAddress } from './parsePostal';
 import { sanitizeOriginalListPrice } from '@/lib/listing/originalListPrice';
+import { indexSubtype } from '../../src/lib/listings/nonHomeFromAddress';
 
 function toInt(v: unknown): number {
   const n = Number(v);
@@ -176,7 +177,8 @@ export function toDelistedDocument(r: DelistedRecord): SoldListingDocument | nul
     City: r.city ?? '',
     CityRegion: r.city_region ?? '',
     UnparsedAddress: r.unparsed_address ?? '',
-    PropertySubType: r.property_sub_type ?? '',
+    // A parking spot / storage unit filed as a home → 'Parking Space' / 'Locker' (nonHomeFromAddress).
+    PropertySubType: indexSubtype(r.unparsed_address, r.property_sub_type),
     BedroomsTotal: bedsAbove,
     BedroomsAboveGrade: bedsAbove,
     BedroomsBelowGrade: 0,
