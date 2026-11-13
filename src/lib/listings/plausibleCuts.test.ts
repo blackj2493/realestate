@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPlausibleCut, plausibleCuts, shownCut } from "./plausibleCuts";
+import { indexCut, isPlausibleCut, plausibleCuts, shownCut } from "./plausibleCuts";
 
 describe("plausibleCuts", () => {
   it("drops a cut built on a typo in the original price", () => {
@@ -46,5 +46,19 @@ describe("shownCut", () => {
   it("returns 0 for missing values", () => {
     expect(shownCut(null, 500_000)).toBe(0);
     expect(shownCut(10_000, 0)).toBe(0);
+  });
+});
+
+describe("indexCut", () => {
+  it("stores a real cut as a whole number", () => {
+    expect(indexCut(50_000.4, 950_000)).toBe(50_000);
+  });
+  it("stores 0 for an impossible cut (the $226M cut on a $1,999,000 house)", () => {
+    expect(indexCut(226_000_000, 1_999_000)).toBe(0);
+  });
+  it("stores 0 for raw values that are not numbers", () => {
+    expect(indexCut(undefined, 900_000)).toBe(0);
+    expect(indexCut("abc", 900_000)).toBe(0);
+    expect(indexCut(10_000, null)).toBe(0);
   });
 });

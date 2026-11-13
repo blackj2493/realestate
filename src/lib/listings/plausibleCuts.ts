@@ -38,6 +38,18 @@ export function shownCut(drop: number | null | undefined, price: number | null |
   return d / (p + d) <= MAX_CUT_SHARE ? d : 0;
 }
 
+/**
+ * The cut to STORE in the search index (sync.ts, reindex-from-vault.ts): `shownCut` as a
+ * whole number, because TotalPriceDrop / LeaseTotalPriceDrop are int32 fields. Takes raw
+ * values from the feed or the vault, so anything that is not a positive number becomes 0.
+ */
+export function indexCut(drop: unknown, price: unknown): number {
+  const d = Number(drop);
+  const p = Number(price);
+  if (!Number.isFinite(d) || !Number.isFinite(p)) return 0;
+  return Math.round(shownCut(d, p));
+}
+
 export function plausibleCuts<T extends CutInput>(docs: T[]): T[] {
   return docs.filter((d) => isPlausibleCut(d.TotalPriceDrop, d.ListPrice));
 }

@@ -16,6 +16,7 @@
 import 'dotenv/config';
 
 import { getServiceRoleClient } from '@/lib/supabase/client';
+import { indexCut } from '@/lib/listings/plausibleCuts';
 import { isListingDisplayOptedOut } from '@/lib/compliance/internetDisplay';
 import { transformListing, TransformResult } from './transformer';
 import { isCatchmentIndexPrimed } from '@/lib/schools/catchmentIndex';
@@ -327,11 +328,15 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
       ...tsDoc,
       PropertyHash: metrics?.property_hash || '',
       TrueDom: metrics?.true_dom || 0,
-      TotalPriceDrop: metrics?.total_price_drop || 0,
+      // indexCut: a "cut" over 25% of the original ask is a typo or a relist artifact
+      // (the $226M "cut" on a $1,999,000 house). The index stores 0 for it, so every board,
+      // sort, count and email that reads the index agrees with what the pages show. The
+      // DB column keeps the raw value; region_price_cuts applies its own band to it.
+      TotalPriceDrop: indexCut(metrics?.total_price_drop, tsDoc.ListPrice),
       // Rental-native LEASE-track twins — power the "For Rent" boards (Freshest /
       // Longest-Listed Rentals, Biggest Rent Reductions). 0 for sale listings.
       LeaseTrueDom: metrics?.lease_true_dom || 0,
-      LeaseTotalPriceDrop: metrics?.lease_total_price_drop || 0,
+      LeaseTotalPriceDrop: indexCut(metrics?.lease_total_price_drop, tsDoc.ListPrice),
       // IsStale MUST track the stitched+naive-floored TrueDom (60d) computed above, NOT the
       // transformer's naive basicDOM>90 placeholder in ...tsDoc — otherwise the STALE badge /
       // watchlist "going stale" / IsStale:=true bubbles contradict the TrueDom on the same doc.

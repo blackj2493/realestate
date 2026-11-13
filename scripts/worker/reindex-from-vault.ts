@@ -25,6 +25,7 @@ import * as fs from 'fs';
 // Import cross-fetch
 import crossFetch from 'cross-fetch';
 import { isListingDisplayOptedOut } from '@/lib/compliance/internetDisplay';
+import { indexCut } from '@/lib/listings/plausibleCuts';
 
 // Patch global fetch with TLS disabled agent for Supabase client
 const agent = new https.Agent({ rejectUnauthorized: false });
@@ -260,13 +261,14 @@ async function processBatch(records: ListingRecord[]): Promise<TransformResult> 
       const doc: any = { ...typesensePayload };
       // transformListing sets PropertyHash/TrueDom/IsStale but NOT TotalPriceDrop
       // (a required int32). Prefer values already persisted in the vault for fidelity.
-      doc.TotalPriceDrop = (raw.total_price_drop ?? doc.TotalPriceDrop ?? 0);
+      // indexCut: same guard as sync.ts — an impossible cut (>25% of the ask) is stored as 0.
+      doc.TotalPriceDrop = indexCut(raw.total_price_drop ?? doc.TotalPriceDrop, doc.ListPrice);
       doc.PropertyHash = record.property_hash || doc.PropertyHash || '';
       doc.TrueDom = (raw.true_dom ?? doc.TrueDom ?? 0);
       // Rental-native LEASE-track twins (persisted into full_payload by sync.ts). Default
       // 0 for sale listings / rows synced before migration 107.
       doc.LeaseTrueDom = (raw.lease_true_dom ?? 0);
-      doc.LeaseTotalPriceDrop = (raw.lease_total_price_drop ?? 0);
+      doc.LeaseTotalPriceDrop = indexCut(raw.lease_total_price_drop, doc.ListPrice);
       // Prefer the vault's stored is_stale (60d, stitched — same source as TrueDom above);
       // fall back to deriving it from TrueDom so it can never be the transformer's naive
       // basicDOM>90 placeholder (BUG A: TrueDom and IsStale must agree on the same doc).
