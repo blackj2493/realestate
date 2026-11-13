@@ -192,7 +192,7 @@ export type AnalyticsEvents = {
   'opinion_offer_dismissed': { listingKey: string };
   // Listing-page lead buttons (2026-11): which button and where, so the price-first
   // layout can be read against the old "Book a viewing first" baseline.
-  'listing_cta_clicked': { listingKey: string; intent: 'viewing' | 'question' | 'price_opinion'; placement: 'price_card' | 'mobile_bar' | 'rail' };
+  'listing_cta_clicked': { listingKey: string; intent: 'viewing' | 'question' | 'price_opinion'; placement: 'price_card' | 'mobile_bar' | 'rail' | 'email_link' };
   'save_offer_shown': { listingKey: string; reason: 'repeat_view' | 'from_email' };
   'save_offer_accepted': { listingKey: string; reason: 'repeat_view' | 'from_email' };
   'save_offer_dismissed': { listingKey: string; reason: 'repeat_view' | 'from_email' };
