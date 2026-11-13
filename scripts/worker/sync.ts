@@ -18,6 +18,8 @@ import 'dotenv/config';
 import { getServiceRoleClient } from '@/lib/supabase/client';
 import { isListingDisplayOptedOut } from '@/lib/compliance/internetDisplay';
 import { transformListing, TransformResult } from './transformer';
+import { isCatchmentIndexPrimed } from '@/lib/schools/catchmentIndex';
+import { carryCatchments, parseCatchmentExport } from '@/lib/schools/catchmentCarryOver';
 import Typesense, { Client } from 'typesense';
 import {
   generatePropertyHash,
@@ -420,6 +422,28 @@ export async function processBatch(rawListings: any[], options?: { isSold?: bool
   else console.log('🔍 Writing to Typesense...');
   try {
     const client = getAdminClient();
+
+    // An un-primed writer (quick-sync, ghost reconcile, media repair) cannot compute
+    // SchoolCatchments, and a full upsert would DELETE the stored value. Read it back and
+    // carry it over first (see catchmentCarryOver.ts). Best-effort: on a failed read the
+    // write goes ahead as before, and the backfill script restores the field.
+    if (!isCatchmentIndexPrimed()) {
+      try {
+        const ids = searchableDocs.map((d) => String(d.id));
+        let filled = 0;
+        for (let i = 0; i < ids.length; i += 100) {
+          const chunk = ids.slice(i, i + 100);
+          const jsonl = await client.collections('properties').documents().export({
+            filter_by: `id:[${chunk.map((id) => `\`${id}\``).join(',')}]`,
+            include_fields: 'id,SchoolCatchments',
+          });
+          filled += carryCatchments(searchableDocs as Array<Record<string, unknown>>, parseCatchmentExport(String(jsonl)));
+        }
+        if (filled) console.log(`   🏫 SchoolCatchments carried over on ${filled} doc(s) (catchments not primed)`);
+      } catch (e) {
+        console.warn(`   ⚠️  SchoolCatchments carry-over failed (${(e as Error).message}) — the field may drop until the backfill`);
+      }
+    }
 
     // Use import endpoint with upsert action
     const importResponse = await client
