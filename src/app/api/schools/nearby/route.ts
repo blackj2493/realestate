@@ -8,10 +8,15 @@
  * school a user searched for always appears on a matched listing.
  *
  * Loaded server-side (the 1 MB dataset never ships to the client bundle).
+ *
+ * `&zoned=<school_id>|<program>,...` (the listing's SchoolCatchments tokens) also returns
+ * `zoned`: those schools joined to the schools file, with distance — the schools whose
+ * boundary contains the home, which is what the listing page leads with (2026-11).
  */
 import { NextRequest, NextResponse } from "next/server";
 import * as fs from "fs";
 import * as path from "path";
+import { orderZoned, parseZonedTokens, type ZonedSchool } from "@/lib/schools/zonedSchools";
 
 interface RawSchool {
   id: string;
@@ -85,7 +90,30 @@ export async function GET(req: NextRequest) {
 
     results.sort((a, b) => a.distanceKm - b.distanceKm);
 
-    return NextResponse.json({ results: results.slice(0, MAX_RESULTS), total: results.length });
+    // Zoned schools: the ids come from the listing's own index field. Unknown ids (a
+    // boundary whose school is not in the schools file) are dropped, not guessed.
+    const tokens = parseZonedTokens((req.nextUrl.searchParams.get("zoned") || "").split(",").slice(0, 40));
+    let zoned: ZonedSchool[] | undefined;
+    if (tokens.length) {
+      const byId = new Map(schools.map((s) => [s.id, s]));
+      zoned = orderZoned(
+        tokens.flatMap((t) => {
+          const s = byId.get(t.id);
+          if (!s) return [];
+          return [{
+            id: s.id,
+            name: s.name,
+            level: s.level,
+            system: s.system,
+            program: t.program,
+            score: s.score,
+            distanceKm: Math.round(haversineKm(lat, lng, s.lat, s.lng) * 100) / 100,
+          }];
+        })
+      );
+    }
+
+    return NextResponse.json({ results: results.slice(0, MAX_RESULTS), total: results.length, ...(zoned ? { zoned } : {}) });
   } catch (err) {
     console.error("[Schools nearby API]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
