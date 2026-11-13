@@ -32,6 +32,7 @@ import { parsePostalFromAddress } from './parsePostal';
 import { assignSchools } from '../../src/lib/schools/nearestSchools';
 import { selectPrimaryImage, primaryImageFromPhotos } from '../../src/lib/etl/selectPrimaryImage';
 import { deriveDealType } from '../../src/lib/sold/dealType';
+import { indexSubtype } from '../../src/lib/listings/nonHomeFromAddress';
 import { isOptedOutValue } from '../../src/lib/compliance/internetDisplay';
 import { purgeSupersededForCloses } from './purgeSupersededDelisted';
 
@@ -158,7 +159,8 @@ export function toSoldDocument(
     City: r.city ?? '',
     CityRegion: r.city_region ?? '',
     UnparsedAddress: r.unparsed_address ?? '',
-    PropertySubType: r.property_sub_type ?? '',
+    // A parking spot / storage unit filed as a home → 'Parking Space' / 'Locker' (nonHomeFromAddress).
+    PropertySubType: indexSubtype(r.unparsed_address, r.property_sub_type),
     BedroomsTotal: bedsAbove + bedsBelow,
     BedroomsAboveGrade: bedsAbove,
     BedroomsBelowGrade: bedsBelow,

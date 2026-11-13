@@ -16,6 +16,7 @@ import { loadPostalCodes, isDataLoaded } from '@/lib/postalCodes';
 import { calculateProForma, ProFormaMetrics } from '@/lib/typesense/ExtrapolatedCapRateEngine';
 import { calculateCanadianMonthlyMortgage } from '@/lib/finance/canadianMortgage';
 import { detectDistress } from '@/lib/listings/distressSignals';
+import { indexSubtype } from '@/lib/listings/nonHomeFromAddress';
 import { descriptionSearchFields } from '@/lib/listings/descriptionSignals';
 import { calculateMultiUnitPotential, MultiUnitStatus } from './services/multiUnitCalculator';
 import { calculateSurplusParking } from './services/parkingCalculator';
@@ -1067,7 +1068,9 @@ export async function transformListing(raw: any): Promise<TransformResult> {
       City: raw.City,
       StateOrProvince: raw.StateOrProvince,
     }),
-    property_sub_type: raw.PropertySubType || null,
+    // indexSubtype: a parking spot / storage unit filed as a home (address says so) is
+    // stored as 'Parking Space' / 'Locker'; full_payload keeps the feed's own value.
+    property_sub_type: indexSubtype(raw.UnparsedAddress, raw.PropertySubType, raw.PropertyType) || null,
     list_price: raw.ListPrice || 0,
     extrapolated_cap_rate: proForma.extrapolated_cap_rate,
     // Real IDX-derived cap rate (de-fake §6.2) — NULL when no rent estimate so the region
@@ -1167,7 +1170,8 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   typesensePayload.BedroomsAboveGrade = (raw.BedroomsAboveGrade !== undefined && raw.BedroomsAboveGrade !== null) ? parseInt(String(raw.BedroomsAboveGrade), 10) : 0;
   typesensePayload.BedroomsBelowGrade = (raw.BedroomsBelowGrade !== undefined && raw.BedroomsBelowGrade !== null) ? parseInt(String(raw.BedroomsBelowGrade), 10) : 0;
   typesensePayload.BathroomsTotalInteger = (raw.BathroomsTotalInteger !== undefined && raw.BathroomsTotalInteger !== null) ? parseFloat(String(raw.BathroomsTotalInteger)) : 0;
-  typesensePayload.PropertySubType = raw.PropertySubType || '';
+  // Same correction as property_sub_type above, so home filters drop these rows.
+  typesensePayload.PropertySubType = indexSubtype(raw.UnparsedAddress, raw.PropertySubType, raw.PropertyType);
   typesensePayload.PropertyType = raw.PropertyType || '';
   typesensePayload.TransactionType = raw.TransactionType || '';
   typesensePayload.TaxAnnualAmount = (raw.TaxAnnualAmount !== undefined && raw.TaxAnnualAmount !== null) ? parseFloat(String(raw.TaxAnnualAmount)) : 0;
