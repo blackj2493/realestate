@@ -1,6 +1,6 @@
 {
-  "generatedForDateUtc": "2026-11-14",
-  "dataAsOf": "2026-11-14T04:49:32.67+00:00",
+  "generatedForDateUtc": "2026-11-15",
+  "dataAsOf": "2026-11-15T03:57:38.442+00:00",
   "source": "region_metrics nightly precompute (computeMarketBoardUncached)",
   "compliancePosture": "Aggregate region-level statistics only; no individual sold prices; every figure n>=5. Cite figures verbatim.",
   "angles": [
@@ -9,17 +9,17 @@
       "region": "Oakville",
       "headline": "35% of active Oakville listings have cut their asking price",
       "figure": "35%",
-      "sampleN": 1083,
+      "sampleN": 1086,
       "sourceUrl": "https://www.pureproperty.ca/data/price-cuts",
       "whySurprising": "Highest price-cut share of the 15 markets tracked today.",
       "context": "typical reduction 7.8%"
     },
     {
       "kind": "days_on_market",
-      "region": "Richmond Hill",
-      "headline": "The typical active Richmond Hill listing has now sat 66 days",
-      "figure": "66 days",
-      "sampleN": 1073,
+      "region": "Oakville",
+      "headline": "The typical active Oakville listing has now sat 65 days",
+      "figure": "65 days",
+      "sampleN": 1086,
       "sourceUrl": "https://www.pureproperty.ca/data/days-on-market",
       "whySurprising": "Longest median true days-on-market of the markets tracked today."
     },
@@ -37,7 +37,7 @@
       "region": "Ottawa",
       "headline": "A 1-bed in Ottawa grosses about 7.0% rental yield",
       "figure": "7.0% gross yield",
-      "sampleN": 3918,
+      "sampleN": 3929,
       "sourceUrl": "https://www.pureproperty.ca/data/rent-vs-buy",
       "whySurprising": "Best gross rental yield of the markets tracked today (1-bed)."
     }
