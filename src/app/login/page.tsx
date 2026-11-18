@@ -1,62 +1,19 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Suspense } from "react";
 import Logo from "@/components/Logo";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import MagicLinkForm from "@/components/auth/MagicLinkForm";
-import SocialAuthButtons from "@/components/auth/SocialAuthButtons";
-import LoginViewTracker from "@/components/auth/LoginViewTracker";
-import { loginGateFromNext, loginCopy, streetLine, type LoginGate } from "@/lib/auth/loginGate";
-import { getListingDetailCached } from "@/lib/property/getListingDetailCached";
+import LoginBody, { LoginContent } from "./LoginBody";
 
 export const metadata = {
   title: "Sign in or create a free account · PureProperty.ca",
 };
 
 /**
- * The street line of the home the visitor was looking at, so the page can name it.
- * Best-effort: it is the same cached read the listing page just did (warm in the common
- * flow), and a miss only costs the address — the copy falls back to "this home".
+ * Static on purpose: nothing here reads the request, so the CDN serves it and a crawler
+ * hit costs no function run. Everything that depends on `?next=` / `?email=` lives in
+ * LoginBody, which reads the URL in the browser (see the note there).
  */
-async function placeFor(gate: LoginGate): Promise<string | null> {
-  const key =
-    gate.gate === "listing" ? gate.listingKey : gate.gate === "address" ? gate.listingKey : null;
-  if (!key) return null;
-  try {
-    const detail = await getListingDetailCached(key);
-    return streetLine(detail?.full_payload?.["UnparsedAddress"]);
-  } catch {
-    return null;
-  }
-}
-
-/** What a free account gives. Kept to three lines so the form stays above the fold. */
-const BENEFITS = [
-  "Sold prices and full sale history",
-  "Value estimates and sold comparables",
-  "Nightly alerts for the areas you follow",
-];
-
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ next?: string; email?: string }>;
-}) {
-  const { next, email } = await searchParams;
-  // Open-redirect guard: only honor relative, single-slash paths (e.g. "/properties/X").
-  // No default: a bare /login must reach /welcome WITHOUT a destination, which is the
-  // signal that routes a brand-new account to the map (isFirstRunEntry). Defaulting to
-  // "/dashboard" here made every bare sign-in look like a sign-up from the dashboard.
-  const safeNext =
-    next && next.startsWith("/") && !next.startsWith("//") ? next : null;
-  // Pre-fill from the apply funnel: only honor a plausibly-shaped address and cap length.
-  const initialEmail =
-    email && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.length <= 254
-      ? email
-      : "";
-  // Name what the visitor came for (from the raw param).
-  const gate = loginGateFromNext(next);
-  const copy = loginCopy(gate, await placeFor(gate));
-
+export default function LoginPage() {
   return (
     <div className="relative min-h-app overflow-hidden bg-background text-foreground">
       {/* CSS-only background (no Mapbox/deck.gl on the auth page): grid + emerald wash + scrim */}
@@ -100,68 +57,11 @@ export default async function LoginPage({
         </header>
 
         <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-10 md:px-10">
-          {/* Title — scale matches the apply page hero heading */}
-          <div className="text-center">
-            {/* Both the white fill and the heavy black glow assume a dark ground —
-                scoped to dark so light mode gets dark type and no smudge. */}
-            <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 md:text-5xl dark:text-white dark:[text-shadow:0_4px_24px_rgba(0,0,0,0.7)]">
-              {copy.heading}
-            </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-foreground dark:[text-shadow:0_2px_12px_rgba(0,0,0,0.85)]">
-              {copy.subheading}
-            </p>
-            <ul className="mx-auto mt-5 flex max-w-2xl flex-col items-center gap-1.5 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-5">
-              {BENEFITS.map((b) => (
-                <li key={b} className="flex items-center gap-1.5">
-                  <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                  {b}
-                </li>
-              ))}
-              <li className="flex items-center gap-1.5">
-                <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                Free — no credit card
-              </li>
-            </ul>
-          </div>
-          <LoginViewTracker gate={gate.gate} />
-
-          {/* Card — translucent + blur to match the apply page form card */}
-          <div className="mx-auto mt-10 w-full max-w-md rounded-xl border border-border bg-card p-6 backdrop-blur-md dark:bg-card/70 md:p-8">
-            <div className="mb-5">
-              <SocialAuthButtons next={safeNext} />
-            </div>
-            <MagicLinkForm next={safeNext} initialEmail={initialEmail} />
-
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              New or returning — same form. Your first sign-in creates the free account.{" "}
-              <Link href="/apply" className="text-cyan-700 dark:text-cyan-400 underline">
-                Learn more
-              </Link>
-              .
-            </p>
-
-            {/* VOW compliance notice */}
-            <div className="mt-6 rounded-md border border-border bg-background/60 p-4 text-[11px] leading-relaxed text-muted-foreground">
-              <p className="mb-1 font-medium uppercase tracking-wider text-muted-foreground">
-                VOW Access Notice
-              </p>
-              <p>
-                Access is restricted to consumers with a bona fide interest in the purchase,
-                sale, or lease of real estate, and may not be used for any commercial purpose.
-              </p>
-              <p className="mt-2">
-                See our{" "}
-                <Link href="/terms" className="text-cyan-700 dark:text-cyan-400 hover:underline">
-                  Terms of Use
-                </Link>{" "}
-                and{" "}
-                <Link href="/privacy" className="text-cyan-700 dark:text-cyan-400 hover:underline">
-                  Privacy Policy
-                </Link>
-                .
-              </p>
-            </div>
-          </div>
+          <Suspense
+            fallback={<LoginContent gate={{ gate: "none" }} place={null} safeNext={null} initialEmail="" />}
+          >
+            <LoginBody />
+          </Suspense>
         </main>
 
         <footer className="relative z-10 py-4 text-center text-[11px] text-muted-foreground">
