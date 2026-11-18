@@ -31,8 +31,10 @@ export default function SignInLink({
   next?: string;
 } & Omit<React.ComponentProps<typeof Link>, "href" | "className" | "children">) {
   const pathname = usePathname();
+  // nofollow: every listing carries one of these with its own `?next=`, so to a crawler
+  // each is a new URL to fetch. /login is disallowed in robots.txt as well.
   return (
-    <Link href={loginHref(next ?? pathname)} className={className} {...rest}>
+    <Link href={loginHref(next ?? pathname)} className={className} rel="nofollow" {...rest}>
       {children}
     </Link>
   );
