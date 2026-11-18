@@ -25,6 +25,7 @@ import type { AVMInput } from './types';
 import { deriveInteriorTier, deriveExteriorTier, deriveBasementTier } from './conditionScoring';
 import { normalizePropertySubType, fsaOf } from './normalizeType';
 import { resolveModelSqft } from './livingArea';
+import { nonHomeFromAddress } from '@/lib/listings/nonHomeFromAddress';
 
 /** Mirror of ingester.ts numOrNull: empty/missing/non-finite → null; else the number. */
 function numOrNull(v: unknown): number | null {
@@ -50,6 +51,20 @@ export function mapListingToAVMInput(
 
   // Sub-type is non-negotiable: every comp pool is filtered by it.
   if (!rawPropertySubType) return null;
+
+  // A parking spot or locker filed as a home (#703) is not a dwelling, whatever the feed
+  // says. The index and the flat listings column already carry the corrected subtype,
+  // but full_payload keeps the feed's, so without this the nightly recompute priced
+  // "… Parking Tandem" as a condo again and tripped the unpriceable-values canary.
+  if (
+    nonHomeFromAddress(
+      typeof payload.UnparsedAddress === 'string' ? payload.UnparsedAddress : null,
+      rawPropertySubType,
+      typeof payload.PropertyType === 'string' ? payload.PropertyType : null
+    )
+  ) {
+    return null;
+  }
 
   // CityRegion is NOT. It used to be — this returned null without it, on the reasoning
   // that "anchor + matrix lookups key on these". That silently zeroed whole
