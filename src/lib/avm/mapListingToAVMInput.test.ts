@@ -52,3 +52,28 @@ describe('mapListingToAVMInput geographic-key guard', () => {
     ).toBeNull();
   });
 });
+
+/**
+ * A parking spot filed as a home (#703): the index and listings.property_sub_type were
+ * corrected, but full_payload keeps the feed's "Condo Apartment", and the nightly
+ * recompute priced two of them again on 2026-11-18 (unpriceable-values canary).
+ */
+describe('mapListingToAVMInput non-home guard', () => {
+  const condo = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
+    CityRegion: 'Annex',
+    City: 'Toronto C08',
+    PropertySubType: 'Condo Apartment',
+    PropertyType: 'Residential Condo & Other',
+    ...over,
+  });
+
+  it('returns null for a parking spot or locker filed as a home', () => {
+    expect(mapListingToAVMInput(condo({ UnparsedAddress: '1 Gloucester Street 2 Parking Tandem, Toronto C08, ON' }))).toBeNull();
+    expect(mapListingToAVMInput(condo({ UnparsedAddress: '10 Bay Street Locker 12, Toronto C08, ON' }))).toBeNull();
+  });
+
+  it('still maps a home whose street name holds the word', () => {
+    expect(mapListingToAVMInput(condo({ UnparsedAddress: '5 Parking Drive 1203, Toronto C08, ON' }))).not.toBeNull();
+    expect(mapListingToAVMInput(condo({ UnparsedAddress: '20 Bay Street 1203, Toronto C08, ON' }))).not.toBeNull();
+  });
+});
