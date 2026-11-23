@@ -632,10 +632,15 @@ export const GEO_DATASETS: GeoDataset[] = [
         name: "City of Waterloo — Major Development Files",
         license: "City of Waterloo Open Data Licence",
         // "Major Development Files" is already scoped to OPA/ZBA/subdivision/condo, so no
-        // type filter is needed; keep the active pipeline (created in the last ~2 yrs).
+        // type filter is needed. 2026-11-23: the old MajorDevelopmentFiles service went
+        // private ("Token Required", 499). The city now publishes the same files as the
+        // public "Online Viewer Major Developments" layer, with the same OPA/ZBA/SUBDIVISION/
+        // CONDO columns (deriveWaterlooDevApp still works) but NO date column. The old
+        // CREATE_DATE was a bulk-load stamp (every row 2026-07-06), so its date filter kept
+        // everything anyway. Drop dead files by status instead.
         endpoint:
-          "https://services.arcgis.com/ZpeBVw5o1kjit7LT/arcgis/rest/services/MajorDevelopmentFiles/FeatureServer/0",
-        where: "CREATE_DATE >= DATE '2024-01-01'",
+          "https://services.arcgis.com/ZpeBVw5o1kjit7LT/arcgis/rest/services/Online_Viewer_Major_Developments/FeatureServer/0",
+        where: "APPSTATUS NOT IN ('Withdrawn','Inactive')",
       },
       {
         sourceKey: "toronto_dev_apps",
