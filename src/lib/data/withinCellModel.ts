@@ -31,6 +31,9 @@ export interface WithinCellFit {
   n: number;
   cells: number;
   coef: Record<string, Estimate | null>;
+  /** With `keepDraws`: the point estimate and every bootstrap draw (NaN for a dropped term), for ranges on combinations of terms. */
+  beta?: number[];
+  draws?: number[][];
 }
 
 function rng(seed: number) {
@@ -50,7 +53,7 @@ const pctile = (sorted: number[], q: number) => {
   return sorted[lo] + (sorted[Math.min(lo + 1, sorted.length - 1)] - sorted[lo]) * (i - lo);
 };
 
-export function fitWithinCell(rows: CellRow[], names: string[], opts: { minCell?: number; boot?: number; seed?: number } = {}): WithinCellFit | null {
+export function fitWithinCell(rows: CellRow[], names: string[], opts: { minCell?: number; boot?: number; seed?: number; keepDraws?: boolean } = {}): WithinCellFit | null {
   const minCell = opts.minCell ?? 5;
   const boot = opts.boot ?? 300;
   const k = names.length;
@@ -135,7 +138,7 @@ export function fitWithinCell(rows: CellRow[], names: string[], opts: { minCell?
     const hi = pctile(s, 0.975);
     coef[name] = { b: beta[j], lo, hi, significant: lo > 0 || hi < 0 };
   });
-  return { n: kept.length, cells: C, coef };
+  return { n: kept.length, cells: C, coef, ...(opts.keepDraws ? { beta, draws } : {}) };
 }
 
 /** A log coefficient as a percent gap: 0.06 → +6.2. */

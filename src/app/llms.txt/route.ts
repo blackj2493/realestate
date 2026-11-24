@@ -73,6 +73,9 @@ ${markets}## Housing market by city (for "is it a good time to buy or sell", "wi
 ## Sold prices (for "{city} sold prices" / "{city} house sold prices")
 - [Ontario sold home prices by city](${SITE_URL}/data/sold-prices): median sold price over the last 12 months for each board city, for all homes and by home type, with sale-to-asking; city pages add detached houses by bedrooms and every community with 25+ sales. Medians only; individual sold prices are shown to signed-in users under MLS® rules. City pages: ${SITE_URL}/data/sold-prices/{city}. Refreshed monthly.
 
+## Best time to sell (for "best time to sell a house in {city}")
+- [Best time to sell a house in Ontario](${SITE_URL}/data/best-time-to-sell): for each board city, by the month the deal was signed over the last 2 years: the price of similar homes in the same community against the average month (trend removed, 95% ranges), days on market, sale-to-asking and the share over asking; plus the weekday the home was listed. City pages: ${SITE_URL}/data/best-time-to-sell/{city}. Refreshed monthly.
+
 ## Basements (for "does a finished basement add value in {city}")
 - [Does a finished basement add value in Ontario?](${SITE_URL}/data/basement-value): what a finished basement, a basement apartment and a separate entrance added to the sale price of similar houses in each board city, measured on MLS® sales, plus median basement rents. City pages: ${SITE_URL}/data/basement-value/{city}. Refreshed monthly.
 

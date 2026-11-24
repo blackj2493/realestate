@@ -21,6 +21,7 @@ import { getPriceChangeData } from "@/lib/data/priceChange";
 import { getCondoData } from "@/lib/data/condoPrices";
 import { getSchoolData } from "@/lib/data/schoolPrices";
 import { getSoldData } from "@/lib/data/soldPrices";
+import { getBestTimeData } from "@/lib/data/bestTimeToSell";
 
 export const INDEXNOW_KEY = "6f0622a42624d95dc2c200c194920550";
 export const INDEXNOW_ENDPOINT = "https://api.indexnow.org/indexnow";
@@ -50,7 +51,7 @@ export function nightlyPaths(): string[] {
   const basement = ["/data/basement-value", ...getBasementData().cities.filter((c) => c.modelA).map((c) => `/data/basement-value/${c.slug}`)];
   const priceChange = ["/data/price-change", ...getPriceChangeData().cities.filter((c) => c.all).map((c) => `/data/price-change/${c.slug}`)];
   const condo = ["/data/condo-prices", ...getCondoData().cities.map((c) => `/data/condo-prices/${c.slug}`)];
-  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling, ...dom, ...basement, ...priceChange, ...condo, "/data/good-time-to-buy", ...OUTLOOK_CITIES.map((c) => `/data/good-time-to-buy/${c.slug}`), "/data/school-catchment-prices", ...getSchoolData().cities.map((c) => `/data/school-catchment-prices/${c.slug}`), "/data/sold-prices", ...getSoldData().cities.map((c) => `/data/sold-prices/${c.slug}`)])];
+  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling, ...dom, ...basement, ...priceChange, ...condo, "/data/good-time-to-buy", ...OUTLOOK_CITIES.map((c) => `/data/good-time-to-buy/${c.slug}`), "/data/school-catchment-prices", ...getSchoolData().cities.map((c) => `/data/school-catchment-prices/${c.slug}`), "/data/sold-prices", ...getSoldData().cities.map((c) => `/data/sold-prices/${c.slug}`), "/data/best-time-to-sell", ...getBestTimeData().cities.map((c) => `/data/best-time-to-sell/${c.slug}`)])];
 }
 
 /** The listing page path: the stored canonical, else the legacy key path (same fallback as the sitemap). */

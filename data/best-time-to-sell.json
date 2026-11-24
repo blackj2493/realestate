@@ -1,0 +1,3040 @@
+{
+ "generatedAt": "2026-11-24T18:30:27.468Z",
+ "from": "2024-11-01",
+ "to": "2026-11-01",
+ "cities": [
+  {
+   "city": "Toronto",
+   "slug": "toronto",
+   "sales": 35782,
+   "months": [
+    {
+     "month": 1,
+     "sales": 1924,
+     "saleToAsk": 97.3,
+     "overAskShare": 18,
+     "medianDom": 32,
+     "price": {
+      "pct": 0,
+      "lo": -0.6,
+      "hi": 0.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 2271,
+     "saleToAsk": 97.6,
+     "overAskShare": 24,
+     "medianDom": 19,
+     "price": {
+      "pct": 0.4,
+      "lo": -0.4,
+      "hi": 1,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 2903,
+     "saleToAsk": 97.4,
+     "overAskShare": 25,
+     "medianDom": 20,
+     "price": {
+      "pct": 0.9,
+      "lo": 0.4,
+      "hi": 1.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 4,
+     "sales": 3480,
+     "saleToAsk": 97.5,
+     "overAskShare": 24,
+     "medianDom": 19,
+     "price": {
+      "pct": 1.7,
+      "lo": 1.2,
+      "hi": 2.2,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 3617,
+     "saleToAsk": 97.5,
+     "overAskShare": 24,
+     "medianDom": 18,
+     "price": {
+      "pct": 1.2,
+      "lo": 0.7,
+      "hi": 1.7,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 3547,
+     "saleToAsk": 97.3,
+     "overAskShare": 22,
+     "medianDom": 20,
+     "price": {
+      "pct": 0.2,
+      "lo": -0.3,
+      "hi": 0.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 3495,
+     "saleToAsk": 97,
+     "overAskShare": 19,
+     "medianDom": 24,
+     "price": {
+      "pct": 0,
+      "lo": -0.6,
+      "hi": 0.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 2871,
+     "saleToAsk": 96.8,
+     "overAskShare": 16,
+     "medianDom": 27,
+     "price": {
+      "pct": -0.4,
+      "lo": -1,
+      "hi": 0.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 3323,
+     "saleToAsk": 97.2,
+     "overAskShare": 21,
+     "medianDom": 20,
+     "price": {
+      "pct": -0.3,
+      "lo": -0.8,
+      "hi": 0.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 3469,
+     "saleToAsk": 97,
+     "overAskShare": 18,
+     "medianDom": 22,
+     "price": {
+      "pct": -0.4,
+      "lo": -1,
+      "hi": 0.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 2953,
+     "saleToAsk": 97.4,
+     "overAskShare": 21,
+     "medianDom": 26,
+     "price": {
+      "pct": -1.2,
+      "lo": -1.9,
+      "hi": -0.6,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 1929,
+     "saleToAsk": 96.9,
+     "overAskShare": 18,
+     "medianDom": 30,
+     "price": {
+      "pct": -2.1,
+      "lo": -2.8,
+      "hi": -1.3,
+      "significant": true
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 0,
+     "sales": 914,
+     "overAskShare": 19,
+     "medianDom": 27
+    },
+    {
+     "day": 1,
+     "sales": 6488,
+     "overAskShare": 21,
+     "medianDom": 22
+    },
+    {
+     "day": 2,
+     "sales": 7493,
+     "overAskShare": 23,
+     "medianDom": 21
+    },
+    {
+     "day": 3,
+     "sales": 7108,
+     "overAskShare": 22,
+     "medianDom": 21
+    },
+    {
+     "day": 4,
+     "sales": 7225,
+     "overAskShare": 22,
+     "medianDom": 21
+    },
+    {
+     "day": 5,
+     "sales": 5077,
+     "overAskShare": 18,
+     "medianDom": 25
+    },
+    {
+     "day": 6,
+     "sales": 1477,
+     "overAskShare": 18,
+     "medianDom": 27
+    }
+   ]
+  },
+  {
+   "city": "Mississauga",
+   "slug": "mississauga",
+   "sales": 8001,
+   "months": [
+    {
+     "month": 1,
+     "sales": 443,
+     "saleToAsk": 97.2,
+     "overAskShare": 11,
+     "medianDom": 32,
+     "price": {
+      "pct": -0.8,
+      "lo": -2,
+      "hi": 0.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 482,
+     "saleToAsk": 96.9,
+     "overAskShare": 15,
+     "medianDom": 21,
+     "price": {
+      "pct": 1.9,
+      "lo": 0.7,
+      "hi": 3.3,
+      "significant": true
+     }
+    },
+    {
+     "month": 3,
+     "sales": 669,
+     "saleToAsk": 97.1,
+     "overAskShare": 16,
+     "medianDom": 21,
+     "price": {
+      "pct": 0.5,
+      "lo": -0.8,
+      "hi": 1.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 775,
+     "saleToAsk": 97.2,
+     "overAskShare": 15,
+     "medianDom": 20,
+     "price": {
+      "pct": 1.1,
+      "lo": 0.2,
+      "hi": 2.2,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 829,
+     "saleToAsk": 97,
+     "overAskShare": 15,
+     "medianDom": 20,
+     "price": {
+      "pct": 2,
+      "lo": 0.8,
+      "hi": 3,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 787,
+     "saleToAsk": 97.1,
+     "overAskShare": 18,
+     "medianDom": 22,
+     "price": {
+      "pct": 1.6,
+      "lo": 0.6,
+      "hi": 2.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 7,
+     "sales": 794,
+     "saleToAsk": 96.7,
+     "overAskShare": 14,
+     "medianDom": 27,
+     "price": {
+      "pct": -0.3,
+      "lo": -1.3,
+      "hi": 0.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 640,
+     "saleToAsk": 96.8,
+     "overAskShare": 14,
+     "medianDom": 28,
+     "price": {
+      "pct": 0.1,
+      "lo": -0.9,
+      "hi": 1.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 746,
+     "saleToAsk": 96.7,
+     "overAskShare": 16,
+     "medianDom": 25,
+     "price": {
+      "pct": -1.1,
+      "lo": -2,
+      "hi": -0.3,
+      "significant": true
+     }
+    },
+    {
+     "month": 10,
+     "sales": 802,
+     "saleToAsk": 96.5,
+     "overAskShare": 14,
+     "medianDom": 24,
+     "price": {
+      "pct": -1.1,
+      "lo": -1.9,
+      "hi": -0.1,
+      "significant": true
+     }
+    },
+    {
+     "month": 11,
+     "sales": 588,
+     "saleToAsk": 97.4,
+     "overAskShare": 15,
+     "medianDom": 24,
+     "price": {
+      "pct": -1.9,
+      "lo": -3.3,
+      "hi": -0.8,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 446,
+     "saleToAsk": 96.6,
+     "overAskShare": 14,
+     "medianDom": 33,
+     "price": {
+      "pct": -1.8,
+      "lo": -3.2,
+      "hi": -0.1,
+      "significant": true
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 0,
+     "sales": 235,
+     "overAskShare": 17,
+     "medianDom": 25
+    },
+    {
+     "day": 1,
+     "sales": 1172,
+     "overAskShare": 15,
+     "medianDom": 25
+    },
+    {
+     "day": 2,
+     "sales": 1445,
+     "overAskShare": 15,
+     "medianDom": 22
+    },
+    {
+     "day": 3,
+     "sales": 1539,
+     "overAskShare": 15,
+     "medianDom": 23
+    },
+    {
+     "day": 4,
+     "sales": 1746,
+     "overAskShare": 15,
+     "medianDom": 22
+    },
+    {
+     "day": 5,
+     "sales": 1459,
+     "overAskShare": 15,
+     "medianDom": 25
+    },
+    {
+     "day": 6,
+     "sales": 405,
+     "overAskShare": 11,
+     "medianDom": 27
+    }
+   ]
+  },
+  {
+   "city": "Brampton",
+   "slug": "brampton",
+   "sales": 6697,
+   "months": [
+    {
+     "month": 1,
+     "sales": 426,
+     "saleToAsk": 97.2,
+     "overAskShare": 17,
+     "medianDom": 26,
+     "price": {
+      "pct": 0,
+      "lo": -1,
+      "hi": 1.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 394,
+     "saleToAsk": 97.3,
+     "overAskShare": 16,
+     "medianDom": 21,
+     "price": {
+      "pct": -1.7,
+      "lo": -2.5,
+      "hi": -0.7,
+      "significant": true
+     }
+    },
+    {
+     "month": 3,
+     "sales": 470,
+     "saleToAsk": 97.6,
+     "overAskShare": 22,
+     "medianDom": 20,
+     "price": {
+      "pct": -0.5,
+      "lo": -1.4,
+      "hi": 0.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 592,
+     "saleToAsk": 97.3,
+     "overAskShare": 19,
+     "medianDom": 21,
+     "price": {
+      "pct": 1.2,
+      "lo": 0.3,
+      "hi": 1.9,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 642,
+     "saleToAsk": 97.5,
+     "overAskShare": 23,
+     "medianDom": 19,
+     "price": {
+      "pct": 1.6,
+      "lo": 0.8,
+      "hi": 2.4,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 681,
+     "saleToAsk": 97.4,
+     "overAskShare": 22,
+     "medianDom": 20,
+     "price": {
+      "pct": 1.1,
+      "lo": 0.3,
+      "hi": 1.8,
+      "significant": true
+     }
+    },
+    {
+     "month": 7,
+     "sales": 681,
+     "saleToAsk": 97.3,
+     "overAskShare": 23,
+     "medianDom": 22,
+     "price": {
+      "pct": 0.2,
+      "lo": -0.6,
+      "hi": 1.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 605,
+     "saleToAsk": 96.8,
+     "overAskShare": 15,
+     "medianDom": 24,
+     "price": {
+      "pct": -0.2,
+      "lo": -0.8,
+      "hi": 0.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 667,
+     "saleToAsk": 97.1,
+     "overAskShare": 17,
+     "medianDom": 22,
+     "price": {
+      "pct": -0.3,
+      "lo": -1,
+      "hi": 0.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 626,
+     "saleToAsk": 96.7,
+     "overAskShare": 15,
+     "medianDom": 23,
+     "price": {
+      "pct": -0.6,
+      "lo": -1.3,
+      "hi": 0.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 543,
+     "saleToAsk": 97.4,
+     "overAskShare": 19,
+     "medianDom": 22,
+     "price": {
+      "pct": -0.6,
+      "lo": -1.4,
+      "hi": 0.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 12,
+     "sales": 370,
+     "saleToAsk": 97.4,
+     "overAskShare": 23,
+     "medianDom": 24,
+     "price": {
+      "pct": -0.4,
+      "lo": -1.5,
+      "hi": 0.7,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 0,
+     "sales": 191,
+     "overAskShare": 18,
+     "medianDom": 22
+    },
+    {
+     "day": 1,
+     "sales": 867,
+     "overAskShare": 18,
+     "medianDom": 23
+    },
+    {
+     "day": 2,
+     "sales": 1112,
+     "overAskShare": 18,
+     "medianDom": 22
+    },
+    {
+     "day": 3,
+     "sales": 1280,
+     "overAskShare": 19,
+     "medianDom": 22
+    },
+    {
+     "day": 4,
+     "sales": 1482,
+     "overAskShare": 21,
+     "medianDom": 21
+    },
+    {
+     "day": 5,
+     "sales": 1338,
+     "overAskShare": 20,
+     "medianDom": 21
+    },
+    {
+     "day": 6,
+     "sales": 427,
+     "overAskShare": 20,
+     "medianDom": 23
+    }
+   ]
+  },
+  {
+   "city": "Markham",
+   "slug": "markham",
+   "sales": 4715,
+   "months": [
+    {
+     "month": 1,
+     "sales": 273,
+     "saleToAsk": 97.2,
+     "overAskShare": 26,
+     "medianDom": 28,
+     "price": {
+      "pct": -0.5,
+      "lo": -1.5,
+      "hi": 0.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 289,
+     "saleToAsk": 98,
+     "overAskShare": 29,
+     "medianDom": 20,
+     "price": {
+      "pct": 0.1,
+      "lo": -1.3,
+      "hi": 1.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 369,
+     "saleToAsk": 97.5,
+     "overAskShare": 33,
+     "medianDom": 18,
+     "price": {
+      "pct": 0.6,
+      "lo": -0.6,
+      "hi": 1.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 408,
+     "saleToAsk": 97.6,
+     "overAskShare": 31,
+     "medianDom": 17,
+     "price": {
+      "pct": 0.4,
+      "lo": -0.7,
+      "hi": 1.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 5,
+     "sales": 483,
+     "saleToAsk": 97.5,
+     "overAskShare": 28,
+     "medianDom": 19,
+     "price": {
+      "pct": 1.2,
+      "lo": 0.2,
+      "hi": 2.4,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 495,
+     "saleToAsk": 97.4,
+     "overAskShare": 30,
+     "medianDom": 20,
+     "price": {
+      "pct": 0.5,
+      "lo": -0.5,
+      "hi": 1.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 454,
+     "saleToAsk": 97.6,
+     "overAskShare": 29,
+     "medianDom": 23,
+     "price": {
+      "pct": -0.7,
+      "lo": -1.8,
+      "hi": 0.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 450,
+     "saleToAsk": 97.3,
+     "overAskShare": 26,
+     "medianDom": 25,
+     "price": {
+      "pct": 0.7,
+      "lo": -0.7,
+      "hi": 2.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 435,
+     "saleToAsk": 96.9,
+     "overAskShare": 26,
+     "medianDom": 25,
+     "price": {
+      "pct": -0.4,
+      "lo": -1.5,
+      "hi": 0.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 443,
+     "saleToAsk": 97.2,
+     "overAskShare": 30,
+     "medianDom": 22,
+     "price": {
+      "pct": -0.3,
+      "lo": -1.3,
+      "hi": 0.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 350,
+     "saleToAsk": 97.8,
+     "overAskShare": 27,
+     "medianDom": 23,
+     "price": {
+      "pct": -1.4,
+      "lo": -2.5,
+      "hi": -0.1,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 266,
+     "saleToAsk": 97.2,
+     "overAskShare": 22,
+     "medianDom": 28,
+     "price": {
+      "pct": -0.2,
+      "lo": -1.5,
+      "hi": 1.2,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 0,
+     "sales": 159,
+     "overAskShare": 30,
+     "medianDom": 24
+    },
+    {
+     "day": 1,
+     "sales": 712,
+     "overAskShare": 26,
+     "medianDom": 22
+    },
+    {
+     "day": 2,
+     "sales": 806,
+     "overAskShare": 29,
+     "medianDom": 20
+    },
+    {
+     "day": 3,
+     "sales": 811,
+     "overAskShare": 27,
+     "medianDom": 21
+    },
+    {
+     "day": 4,
+     "sales": 1060,
+     "overAskShare": 30,
+     "medianDom": 21
+    },
+    {
+     "day": 5,
+     "sales": 894,
+     "overAskShare": 29,
+     "medianDom": 21
+    },
+    {
+     "day": 6,
+     "sales": 273,
+     "overAskShare": 24,
+     "medianDom": 26
+    }
+   ]
+  },
+  {
+   "city": "Vaughan",
+   "slug": "vaughan",
+   "sales": 4774,
+   "months": [
+    {
+     "month": 1,
+     "sales": 261,
+     "saleToAsk": 96.9,
+     "overAskShare": 16,
+     "medianDom": 32,
+     "price": {
+      "pct": -2,
+      "lo": -3.5,
+      "hi": -0.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 2,
+     "sales": 307,
+     "saleToAsk": 97.3,
+     "overAskShare": 24,
+     "medianDom": 20,
+     "price": {
+      "pct": -0.1,
+      "lo": -1.5,
+      "hi": 1.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 382,
+     "saleToAsk": 97.1,
+     "overAskShare": 20,
+     "medianDom": 18,
+     "price": {
+      "pct": -0.1,
+      "lo": -1.2,
+      "hi": 1.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 418,
+     "saleToAsk": 97.3,
+     "overAskShare": 20,
+     "medianDom": 18,
+     "price": {
+      "pct": 1.7,
+      "lo": 0.7,
+      "hi": 2.8,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 481,
+     "saleToAsk": 97.1,
+     "overAskShare": 19,
+     "medianDom": 19,
+     "price": {
+      "pct": 1,
+      "lo": -0.1,
+      "hi": 2.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 6,
+     "sales": 495,
+     "saleToAsk": 96.7,
+     "overAskShare": 15,
+     "medianDom": 22,
+     "price": {
+      "pct": 1.6,
+      "lo": 0.8,
+      "hi": 2.6,
+      "significant": true
+     }
+    },
+    {
+     "month": 7,
+     "sales": 437,
+     "saleToAsk": 96.8,
+     "overAskShare": 19,
+     "medianDom": 26,
+     "price": {
+      "pct": 0.1,
+      "lo": -1.1,
+      "hi": 1.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 448,
+     "saleToAsk": 96.8,
+     "overAskShare": 15,
+     "medianDom": 22,
+     "price": {
+      "pct": 0.4,
+      "lo": -0.8,
+      "hi": 1.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 403,
+     "saleToAsk": 96.4,
+     "overAskShare": 16,
+     "medianDom": 27,
+     "price": {
+      "pct": -0.8,
+      "lo": -2.1,
+      "hi": 0.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 457,
+     "saleToAsk": 96.5,
+     "overAskShare": 15,
+     "medianDom": 25,
+     "price": {
+      "pct": 0.1,
+      "lo": -1.6,
+      "hi": 1.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 402,
+     "saleToAsk": 97.2,
+     "overAskShare": 18,
+     "medianDom": 26,
+     "price": {
+      "pct": -1.5,
+      "lo": -3,
+      "hi": 0.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 12,
+     "sales": 283,
+     "saleToAsk": 97.1,
+     "overAskShare": 19,
+     "medianDom": 29,
+     "price": {
+      "pct": -0.5,
+      "lo": -2.3,
+      "hi": 1.3,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 0,
+     "sales": 132,
+     "overAskShare": 13,
+     "medianDom": 25
+    },
+    {
+     "day": 1,
+     "sales": 828,
+     "overAskShare": 17,
+     "medianDom": 23
+    },
+    {
+     "day": 2,
+     "sales": 939,
+     "overAskShare": 19,
+     "medianDom": 21
+    },
+    {
+     "day": 3,
+     "sales": 873,
+     "overAskShare": 20,
+     "medianDom": 22
+    },
+    {
+     "day": 4,
+     "sales": 973,
+     "overAskShare": 18,
+     "medianDom": 23
+    },
+    {
+     "day": 5,
+     "sales": 811,
+     "overAskShare": 16,
+     "medianDom": 25
+    },
+    {
+     "day": 6,
+     "sales": 218,
+     "overAskShare": 17,
+     "medianDom": 22
+    }
+   ]
+  },
+  {
+   "city": "Richmond Hill",
+   "slug": "richmond-hill",
+   "sales": 3282,
+   "months": [
+    {
+     "month": 1,
+     "sales": 178,
+     "saleToAsk": 97.5,
+     "overAskShare": 22,
+     "medianDom": 34,
+     "price": {
+      "pct": 1.3,
+      "lo": -0.2,
+      "hi": 2.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 210,
+     "saleToAsk": 97.1,
+     "overAskShare": 21,
+     "medianDom": 21,
+     "price": {
+      "pct": -0.4,
+      "lo": -1.8,
+      "hi": 1,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 222,
+     "saleToAsk": 97.6,
+     "overAskShare": 30,
+     "medianDom": 19,
+     "price": {
+      "pct": 0.3,
+      "lo": -1.1,
+      "hi": 1.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 302,
+     "saleToAsk": 97.6,
+     "overAskShare": 27,
+     "medianDom": 21,
+     "price": {
+      "pct": 0.4,
+      "lo": -1.1,
+      "hi": 1.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 5,
+     "sales": 337,
+     "saleToAsk": 96.9,
+     "overAskShare": 25,
+     "medianDom": 22,
+     "price": {
+      "pct": -0.4,
+      "lo": -1.8,
+      "hi": 0.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 6,
+     "sales": 311,
+     "saleToAsk": 96.5,
+     "overAskShare": 25,
+     "medianDom": 22,
+     "price": {
+      "pct": 1.8,
+      "lo": 0.3,
+      "hi": 3.6,
+      "significant": true
+     }
+    },
+    {
+     "month": 7,
+     "sales": 313,
+     "saleToAsk": 97.2,
+     "overAskShare": 24,
+     "medianDom": 27,
+     "price": {
+      "pct": 1.1,
+      "lo": -0.3,
+      "hi": 2.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 305,
+     "saleToAsk": 96.7,
+     "overAskShare": 21,
+     "medianDom": 29,
+     "price": {
+      "pct": -0.3,
+      "lo": -1.7,
+      "hi": 0.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 308,
+     "saleToAsk": 96.9,
+     "overAskShare": 28,
+     "medianDom": 24,
+     "price": {
+      "pct": -0.1,
+      "lo": -1.3,
+      "hi": 1.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 311,
+     "saleToAsk": 96.7,
+     "overAskShare": 21,
+     "medianDom": 25,
+     "price": {
+      "pct": 0.2,
+      "lo": -1.4,
+      "hi": 1.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 274,
+     "saleToAsk": 97.4,
+     "overAskShare": 25,
+     "medianDom": 21,
+     "price": {
+      "pct": -2,
+      "lo": -3.9,
+      "hi": 0.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 12,
+     "sales": 211,
+     "saleToAsk": 97.2,
+     "overAskShare": 22,
+     "medianDom": 32,
+     "price": {
+      "pct": -1.7,
+      "lo": -3.4,
+      "hi": 0.1,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 509,
+     "overAskShare": 21,
+     "medianDom": 24
+    },
+    {
+     "day": 2,
+     "sales": 564,
+     "overAskShare": 21,
+     "medianDom": 23
+    },
+    {
+     "day": 3,
+     "sales": 596,
+     "overAskShare": 25,
+     "medianDom": 22
+    },
+    {
+     "day": 4,
+     "sales": 739,
+     "overAskShare": 27,
+     "medianDom": 22
+    },
+    {
+     "day": 5,
+     "sales": 611,
+     "overAskShare": 26,
+     "medianDom": 24
+    },
+    {
+     "day": 6,
+     "sales": 166,
+     "overAskShare": 25,
+     "medianDom": 27
+    }
+   ]
+  },
+  {
+   "city": "Oshawa",
+   "slug": "oshawa",
+   "sales": 3057,
+   "months": [
+    {
+     "month": 1,
+     "sales": 206,
+     "saleToAsk": 98.7,
+     "overAskShare": 33,
+     "medianDom": 19,
+     "price": {
+      "pct": 1.6,
+      "lo": -0.1,
+      "hi": 3.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 223,
+     "saleToAsk": 99,
+     "overAskShare": 38,
+     "medianDom": 15,
+     "price": {
+      "pct": 1.4,
+      "lo": 0,
+      "hi": 2.8,
+      "significant": true
+     }
+    },
+    {
+     "month": 3,
+     "sales": 252,
+     "saleToAsk": 99.5,
+     "overAskShare": 43,
+     "medianDom": 13,
+     "price": {
+      "pct": 1.4,
+      "lo": -0.6,
+      "hi": 3.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 272,
+     "saleToAsk": 98.8,
+     "overAskShare": 34,
+     "medianDom": 14,
+     "price": {
+      "pct": 1.7,
+      "lo": 0.3,
+      "hi": 3,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 291,
+     "saleToAsk": 98.5,
+     "overAskShare": 28,
+     "medianDom": 15,
+     "price": {
+      "pct": 0.3,
+      "lo": -1.2,
+      "hi": 1.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 6,
+     "sales": 280,
+     "saleToAsk": 98.5,
+     "overAskShare": 31,
+     "medianDom": 16,
+     "price": {
+      "pct": 0.2,
+      "lo": -1.3,
+      "hi": 1.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 321,
+     "saleToAsk": 98.5,
+     "overAskShare": 30,
+     "medianDom": 17,
+     "price": {
+      "pct": -0.6,
+      "lo": -2.1,
+      "hi": 0.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 264,
+     "saleToAsk": 97.8,
+     "overAskShare": 25,
+     "medianDom": 22,
+     "price": {
+      "pct": -2,
+      "lo": -3.4,
+      "hi": -0.2,
+      "significant": true
+     }
+    },
+    {
+     "month": 9,
+     "sales": 229,
+     "saleToAsk": 98.2,
+     "overAskShare": 22,
+     "medianDom": 22,
+     "price": {
+      "pct": -0.1,
+      "lo": -1.9,
+      "hi": 1.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 257,
+     "saleToAsk": 98.1,
+     "overAskShare": 21,
+     "medianDom": 20,
+     "price": {
+      "pct": -0.7,
+      "lo": -2.3,
+      "hi": 1,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 266,
+     "saleToAsk": 98.7,
+     "overAskShare": 27,
+     "medianDom": 20,
+     "price": {
+      "pct": -2.4,
+      "lo": -3.6,
+      "hi": -1.1,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 196,
+     "saleToAsk": 98,
+     "overAskShare": 23,
+     "medianDom": 24,
+     "price": {
+      "pct": -0.7,
+      "lo": -2.2,
+      "hi": 1.2,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 426,
+     "overAskShare": 28,
+     "medianDom": 20
+    },
+    {
+     "day": 2,
+     "sales": 519,
+     "overAskShare": 29,
+     "medianDom": 17
+    },
+    {
+     "day": 3,
+     "sales": 691,
+     "overAskShare": 32,
+     "medianDom": 15
+    },
+    {
+     "day": 4,
+     "sales": 739,
+     "overAskShare": 33,
+     "medianDom": 15
+    },
+    {
+     "day": 5,
+     "sales": 535,
+     "overAskShare": 24,
+     "medianDom": 20
+    },
+    {
+     "day": 6,
+     "sales": 113,
+     "overAskShare": 28,
+     "medianDom": 20
+    }
+   ]
+  },
+  {
+   "city": "Whitby",
+   "slug": "whitby",
+   "sales": 2544,
+   "months": [
+    {
+     "month": 1,
+     "sales": 138,
+     "saleToAsk": 97.9,
+     "overAskShare": 25,
+     "medianDom": 19,
+     "price": {
+      "pct": 0,
+      "lo": -2.4,
+      "hi": 2.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 162,
+     "saleToAsk": 98.8,
+     "overAskShare": 33,
+     "medianDom": 12,
+     "price": {
+      "pct": 1.6,
+      "lo": -0.4,
+      "hi": 3.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 202,
+     "saleToAsk": 98.9,
+     "overAskShare": 39,
+     "medianDom": 12,
+     "price": {
+      "pct": 0,
+      "lo": -1.5,
+      "hi": 1.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 249,
+     "saleToAsk": 99.1,
+     "overAskShare": 36,
+     "medianDom": 13,
+     "price": {
+      "pct": 1.9,
+      "lo": 0.3,
+      "hi": 3.9,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 263,
+     "saleToAsk": 98.4,
+     "overAskShare": 32,
+     "medianDom": 13,
+     "price": {
+      "pct": 1.9,
+      "lo": 0.5,
+      "hi": 3.4,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 299,
+     "saleToAsk": 98.5,
+     "overAskShare": 30,
+     "medianDom": 16,
+     "price": {
+      "pct": 0.7,
+      "lo": -0.4,
+      "hi": 2.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 292,
+     "saleToAsk": 97.8,
+     "overAskShare": 20,
+     "medianDom": 20,
+     "price": {
+      "pct": 0,
+      "lo": -1.5,
+      "hi": 1.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 212,
+     "saleToAsk": 98,
+     "overAskShare": 24,
+     "medianDom": 19,
+     "price": {
+      "pct": -0.5,
+      "lo": -2.1,
+      "hi": 1,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 194,
+     "saleToAsk": 98.1,
+     "overAskShare": 21,
+     "medianDom": 16,
+     "price": {
+      "pct": 0.4,
+      "lo": -1.2,
+      "hi": 2.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 210,
+     "saleToAsk": 97.8,
+     "overAskShare": 18,
+     "medianDom": 17,
+     "price": {
+      "pct": -2.5,
+      "lo": -4.1,
+      "hi": -1,
+      "significant": true
+     }
+    },
+    {
+     "month": 11,
+     "sales": 190,
+     "saleToAsk": 98.4,
+     "overAskShare": 27,
+     "medianDom": 17,
+     "price": {
+      "pct": -2,
+      "lo": -3.6,
+      "hi": -0.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 133,
+     "saleToAsk": 98.3,
+     "overAskShare": 26,
+     "medianDom": 17,
+     "price": {
+      "pct": -1.5,
+      "lo": -3.4,
+      "hi": 0.1,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 327,
+     "overAskShare": 27,
+     "medianDom": 17
+    },
+    {
+     "day": 2,
+     "sales": 465,
+     "overAskShare": 27,
+     "medianDom": 16
+    },
+    {
+     "day": 3,
+     "sales": 556,
+     "overAskShare": 29,
+     "medianDom": 14
+    },
+    {
+     "day": 4,
+     "sales": 680,
+     "overAskShare": 30,
+     "medianDom": 14
+    },
+    {
+     "day": 5,
+     "sales": 408,
+     "overAskShare": 24,
+     "medianDom": 16
+    }
+   ]
+  },
+  {
+   "city": "Ajax",
+   "slug": "ajax",
+   "sales": 1731,
+   "months": [
+    {
+     "month": 1,
+     "sales": 90,
+     "saleToAsk": 98.2,
+     "overAskShare": 31,
+     "medianDom": 18,
+     "price": {
+      "pct": -0.8,
+      "lo": -3,
+      "hi": 1.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 111,
+     "saleToAsk": 100,
+     "overAskShare": 50,
+     "medianDom": 12,
+     "price": {
+      "pct": 0.3,
+      "lo": -1.4,
+      "hi": 2,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 142,
+     "saleToAsk": 99.4,
+     "overAskShare": 42,
+     "medianDom": 13,
+     "price": {
+      "pct": 1.4,
+      "lo": -0.2,
+      "hi": 3.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 180,
+     "saleToAsk": 99.5,
+     "overAskShare": 41,
+     "medianDom": 14,
+     "price": {
+      "pct": -0.2,
+      "lo": -2,
+      "hi": 1.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 5,
+     "sales": 204,
+     "saleToAsk": 98.9,
+     "overAskShare": 40,
+     "medianDom": 13,
+     "price": {
+      "pct": 1.6,
+      "lo": 0.2,
+      "hi": 3.2,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 163,
+     "saleToAsk": 98.3,
+     "overAskShare": 32,
+     "medianDom": 15,
+     "price": {
+      "pct": 1.5,
+      "lo": -0.2,
+      "hi": 3.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 191,
+     "saleToAsk": 98,
+     "overAskShare": 28,
+     "medianDom": 18,
+     "price": {
+      "pct": 0.2,
+      "lo": -1.7,
+      "hi": 1.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 141,
+     "saleToAsk": 97.9,
+     "overAskShare": 25,
+     "medianDom": 19,
+     "price": {
+      "pct": -0.3,
+      "lo": -1.8,
+      "hi": 1.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 154,
+     "saleToAsk": 98,
+     "overAskShare": 24,
+     "medianDom": 20,
+     "price": {
+      "pct": 0,
+      "lo": -1.6,
+      "hi": 1.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 142,
+     "saleToAsk": 97.5,
+     "overAskShare": 22,
+     "medianDom": 20,
+     "price": {
+      "pct": -1,
+      "lo": -2.3,
+      "hi": 0.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 115,
+     "saleToAsk": 98.4,
+     "overAskShare": 30,
+     "medianDom": 21,
+     "price": {
+      "pct": -1.3,
+      "lo": -4,
+      "hi": 0.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 12,
+     "sales": 98,
+     "saleToAsk": 97.8,
+     "overAskShare": 20,
+     "medianDom": 27,
+     "price": {
+      "pct": -1.2,
+      "lo": -3.5,
+      "hi": 1.1,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 231,
+     "overAskShare": 35,
+     "medianDom": 17
+    },
+    {
+     "day": 2,
+     "sales": 301,
+     "overAskShare": 33,
+     "medianDom": 15
+    },
+    {
+     "day": 3,
+     "sales": 362,
+     "overAskShare": 32,
+     "medianDom": 15
+    },
+    {
+     "day": 4,
+     "sales": 430,
+     "overAskShare": 34,
+     "medianDom": 15
+    },
+    {
+     "day": 5,
+     "sales": 294,
+     "overAskShare": 31,
+     "medianDom": 17
+    }
+   ]
+  },
+  {
+   "city": "Pickering",
+   "slug": "pickering",
+   "sales": 2024,
+   "months": [
+    {
+     "month": 1,
+     "sales": 108,
+     "saleToAsk": 98,
+     "overAskShare": 20,
+     "medianDom": 22,
+     "price": {
+      "pct": 0.2,
+      "lo": -2.2,
+      "hi": 2.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 124,
+     "saleToAsk": 99.7,
+     "overAskShare": 40,
+     "medianDom": 13,
+     "price": {
+      "pct": 1.1,
+      "lo": -0.9,
+      "hi": 2.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 154,
+     "saleToAsk": 98.8,
+     "overAskShare": 34,
+     "medianDom": 14,
+     "price": {
+      "pct": -0.7,
+      "lo": -2.3,
+      "hi": 0.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 209,
+     "saleToAsk": 98.5,
+     "overAskShare": 28,
+     "medianDom": 15,
+     "price": {
+      "pct": 1.3,
+      "lo": -0.4,
+      "hi": 3,
+      "significant": false
+     }
+    },
+    {
+     "month": 5,
+     "sales": 202,
+     "saleToAsk": 98.7,
+     "overAskShare": 33,
+     "medianDom": 16,
+     "price": {
+      "pct": 3.7,
+      "lo": 1.6,
+      "hi": 5.7,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 229,
+     "saleToAsk": 98,
+     "overAskShare": 26,
+     "medianDom": 17,
+     "price": {
+      "pct": 1.3,
+      "lo": -0.4,
+      "hi": 3.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 214,
+     "saleToAsk": 98.2,
+     "overAskShare": 21,
+     "medianDom": 21,
+     "price": {
+      "pct": 1.2,
+      "lo": -0.7,
+      "hi": 3.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 170,
+     "saleToAsk": 97.2,
+     "overAskShare": 16,
+     "medianDom": 24,
+     "price": {
+      "pct": -2.3,
+      "lo": -3.8,
+      "hi": -0.4,
+      "significant": true
+     }
+    },
+    {
+     "month": 9,
+     "sales": 169,
+     "saleToAsk": 97.7,
+     "overAskShare": 21,
+     "medianDom": 22,
+     "price": {
+      "pct": -0.2,
+      "lo": -2.1,
+      "hi": 1.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 173,
+     "saleToAsk": 97.8,
+     "overAskShare": 21,
+     "medianDom": 23,
+     "price": {
+      "pct": -2.1,
+      "lo": -3.6,
+      "hi": -0.2,
+      "significant": true
+     }
+    },
+    {
+     "month": 11,
+     "sales": 163,
+     "saleToAsk": 98.5,
+     "overAskShare": 30,
+     "medianDom": 19,
+     "price": {
+      "pct": -0.7,
+      "lo": -2.7,
+      "hi": 1.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 12,
+     "sales": 109,
+     "saleToAsk": 97.9,
+     "overAskShare": 20,
+     "medianDom": 28,
+     "price": {
+      "pct": -2.6,
+      "lo": -4.6,
+      "hi": -0.3,
+      "significant": true
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 289,
+     "overAskShare": 24,
+     "medianDom": 17
+    },
+    {
+     "day": 2,
+     "sales": 384,
+     "overAskShare": 30,
+     "medianDom": 19
+    },
+    {
+     "day": 3,
+     "sales": 409,
+     "overAskShare": 29,
+     "medianDom": 19
+    },
+    {
+     "day": 4,
+     "sales": 455,
+     "overAskShare": 25,
+     "medianDom": 18
+    },
+    {
+     "day": 5,
+     "sales": 350,
+     "overAskShare": 23,
+     "medianDom": 19
+    }
+   ]
+  },
+  {
+   "city": "Oakville",
+   "slug": "oakville",
+   "sales": 4208,
+   "months": [
+    {
+     "month": 1,
+     "sales": 205,
+     "saleToAsk": 97.1,
+     "overAskShare": 10,
+     "medianDom": 25,
+     "price": {
+      "pct": -1,
+      "lo": -3.5,
+      "hi": 1.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 237,
+     "saleToAsk": 97.2,
+     "overAskShare": 13,
+     "medianDom": 19,
+     "price": {
+      "pct": 0.9,
+      "lo": -1.3,
+      "hi": 3,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 312,
+     "saleToAsk": 96.6,
+     "overAskShare": 13,
+     "medianDom": 24,
+     "price": {
+      "pct": 0.2,
+      "lo": -1.6,
+      "hi": 2,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 417,
+     "saleToAsk": 96.9,
+     "overAskShare": 13,
+     "medianDom": 21,
+     "price": {
+      "pct": 2.1,
+      "lo": 0.7,
+      "hi": 3.6,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 509,
+     "saleToAsk": 96.6,
+     "overAskShare": 13,
+     "medianDom": 20,
+     "price": {
+      "pct": 3.5,
+      "lo": 2,
+      "hi": 5.1,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 444,
+     "saleToAsk": 96.7,
+     "overAskShare": 14,
+     "medianDom": 21,
+     "price": {
+      "pct": 1.3,
+      "lo": -0.3,
+      "hi": 2.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 417,
+     "saleToAsk": 96.4,
+     "overAskShare": 10,
+     "medianDom": 27,
+     "price": {
+      "pct": -0.9,
+      "lo": -2,
+      "hi": 0.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 370,
+     "saleToAsk": 96.4,
+     "overAskShare": 11,
+     "medianDom": 29,
+     "price": {
+      "pct": -1.3,
+      "lo": -2.9,
+      "hi": 0.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 308,
+     "saleToAsk": 96.5,
+     "overAskShare": 9,
+     "medianDom": 22,
+     "price": {
+      "pct": -0.6,
+      "lo": -2.4,
+      "hi": 1.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 391,
+     "saleToAsk": 96,
+     "overAskShare": 9,
+     "medianDom": 26,
+     "price": {
+      "pct": -0.2,
+      "lo": -1.9,
+      "hi": 1.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 363,
+     "saleToAsk": 96.5,
+     "overAskShare": 10,
+     "medianDom": 28,
+     "price": {
+      "pct": -2.4,
+      "lo": -3.7,
+      "hi": -0.7,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 235,
+     "saleToAsk": 96.5,
+     "overAskShare": 9,
+     "medianDom": 34,
+     "price": {
+      "pct": -1.4,
+      "lo": -3.6,
+      "hi": 0.9,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 668,
+     "overAskShare": 10,
+     "medianDom": 24
+    },
+    {
+     "day": 2,
+     "sales": 723,
+     "overAskShare": 12,
+     "medianDom": 24
+    },
+    {
+     "day": 3,
+     "sales": 813,
+     "overAskShare": 12,
+     "medianDom": 23
+    },
+    {
+     "day": 4,
+     "sales": 961,
+     "overAskShare": 12,
+     "medianDom": 22
+    },
+    {
+     "day": 5,
+     "sales": 815,
+     "overAskShare": 11,
+     "medianDom": 24
+    },
+    {
+     "day": 6,
+     "sales": 153,
+     "overAskShare": 8,
+     "medianDom": 27
+    }
+   ]
+  },
+  {
+   "city": "Burlington",
+   "slug": "burlington",
+   "sales": 3957,
+   "months": [
+    {
+     "month": 1,
+     "sales": 208,
+     "saleToAsk": 97,
+     "overAskShare": 10,
+     "medianDom": 34,
+     "price": {
+      "pct": 0.5,
+      "lo": -1.8,
+      "hi": 3.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 210,
+     "saleToAsk": 97.7,
+     "overAskShare": 18,
+     "medianDom": 20,
+     "price": {
+      "pct": 0.6,
+      "lo": -1.8,
+      "hi": 3.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 321,
+     "saleToAsk": 97.5,
+     "overAskShare": 14,
+     "medianDom": 21,
+     "price": {
+      "pct": 1.8,
+      "lo": -0.3,
+      "hi": 3.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 398,
+     "saleToAsk": 97.5,
+     "overAskShare": 15,
+     "medianDom": 17,
+     "price": {
+      "pct": 1.7,
+      "lo": -0.5,
+      "hi": 3.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 5,
+     "sales": 468,
+     "saleToAsk": 97.9,
+     "overAskShare": 19,
+     "medianDom": 18,
+     "price": {
+      "pct": 2.5,
+      "lo": 1,
+      "hi": 4.3,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 423,
+     "saleToAsk": 97.6,
+     "overAskShare": 15,
+     "medianDom": 20,
+     "price": {
+      "pct": 2.6,
+      "lo": 1,
+      "hi": 4.1,
+      "significant": true
+     }
+    },
+    {
+     "month": 7,
+     "sales": 410,
+     "saleToAsk": 97.1,
+     "overAskShare": 9,
+     "medianDom": 26,
+     "price": {
+      "pct": 0.9,
+      "lo": -1,
+      "hi": 2.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 360,
+     "saleToAsk": 97,
+     "overAskShare": 12,
+     "medianDom": 27,
+     "price": {
+      "pct": 0,
+      "lo": -1.7,
+      "hi": 1.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 323,
+     "saleToAsk": 97.2,
+     "overAskShare": 11,
+     "medianDom": 21,
+     "price": {
+      "pct": -1,
+      "lo": -2.6,
+      "hi": 0.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 355,
+     "saleToAsk": 97,
+     "overAskShare": 14,
+     "medianDom": 22,
+     "price": {
+      "pct": -3.3,
+      "lo": -5.2,
+      "hi": -1.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 11,
+     "sales": 274,
+     "saleToAsk": 97.4,
+     "overAskShare": 15,
+     "medianDom": 29,
+     "price": {
+      "pct": -2.4,
+      "lo": -4.6,
+      "hi": -0.1,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 207,
+     "saleToAsk": 96.8,
+     "overAskShare": 11,
+     "medianDom": 32,
+     "price": {
+      "pct": -3.7,
+      "lo": -6.1,
+      "hi": -1.7,
+      "significant": true
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 529,
+     "overAskShare": 11,
+     "medianDom": 24
+    },
+    {
+     "day": 2,
+     "sales": 647,
+     "overAskShare": 13,
+     "medianDom": 22
+    },
+    {
+     "day": 3,
+     "sales": 755,
+     "overAskShare": 13,
+     "medianDom": 22
+    },
+    {
+     "day": 4,
+     "sales": 1001,
+     "overAskShare": 15,
+     "medianDom": 21
+    },
+    {
+     "day": 5,
+     "sales": 834,
+     "overAskShare": 16,
+     "medianDom": 20
+    },
+    {
+     "day": 6,
+     "sales": 130,
+     "overAskShare": 10,
+     "medianDom": 25
+    }
+   ]
+  },
+  {
+   "city": "Milton",
+   "slug": "milton",
+   "sales": 2422,
+   "months": [
+    {
+     "month": 1,
+     "sales": 133,
+     "saleToAsk": 98.2,
+     "overAskShare": 18,
+     "medianDom": 15,
+     "price": {
+      "pct": -0.1,
+      "lo": -1.7,
+      "hi": 1.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 132,
+     "saleToAsk": 98.2,
+     "overAskShare": 22,
+     "medianDom": 17,
+     "price": {
+      "pct": -0.6,
+      "lo": -2,
+      "hi": 0.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 168,
+     "saleToAsk": 98.4,
+     "overAskShare": 28,
+     "medianDom": 19,
+     "price": {
+      "pct": 0.5,
+      "lo": -1,
+      "hi": 1.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 233,
+     "saleToAsk": 98.2,
+     "overAskShare": 23,
+     "medianDom": 16,
+     "price": {
+      "pct": 1.3,
+      "lo": 0.2,
+      "hi": 2.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 247,
+     "saleToAsk": 97.9,
+     "overAskShare": 19,
+     "medianDom": 19,
+     "price": {
+      "pct": 0.6,
+      "lo": -0.3,
+      "hi": 1.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 6,
+     "sales": 232,
+     "saleToAsk": 97.6,
+     "overAskShare": 15,
+     "medianDom": 21,
+     "price": {
+      "pct": 0.7,
+      "lo": -0.7,
+      "hi": 2.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 271,
+     "saleToAsk": 97.7,
+     "overAskShare": 10,
+     "medianDom": 21,
+     "price": {
+      "pct": 0.8,
+      "lo": -0.3,
+      "hi": 1.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 220,
+     "saleToAsk": 97.5,
+     "overAskShare": 20,
+     "medianDom": 21,
+     "price": {
+      "pct": 0.3,
+      "lo": -1,
+      "hi": 1.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 209,
+     "saleToAsk": 97.5,
+     "overAskShare": 15,
+     "medianDom": 23,
+     "price": {
+      "pct": -0.3,
+      "lo": -1.6,
+      "hi": 1,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 234,
+     "saleToAsk": 97.5,
+     "overAskShare": 15,
+     "medianDom": 20,
+     "price": {
+      "pct": -1.6,
+      "lo": -3.4,
+      "hi": -0.2,
+      "significant": true
+     }
+    },
+    {
+     "month": 11,
+     "sales": 207,
+     "saleToAsk": 98.3,
+     "overAskShare": 19,
+     "medianDom": 22,
+     "price": {
+      "pct": -2.4,
+      "lo": -3.5,
+      "hi": -0.9,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 136,
+     "saleToAsk": 97.8,
+     "overAskShare": 21,
+     "medianDom": 25,
+     "price": {
+      "pct": 0.7,
+      "lo": -0.9,
+      "hi": 2.1,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 342,
+     "overAskShare": 17,
+     "medianDom": 21
+    },
+    {
+     "day": 2,
+     "sales": 400,
+     "overAskShare": 20,
+     "medianDom": 20
+    },
+    {
+     "day": 3,
+     "sales": 491,
+     "overAskShare": 18,
+     "medianDom": 20
+    },
+    {
+     "day": 4,
+     "sales": 559,
+     "overAskShare": 19,
+     "medianDom": 19
+    },
+    {
+     "day": 5,
+     "sales": 485,
+     "overAskShare": 18,
+     "medianDom": 20
+    },
+    {
+     "day": 6,
+     "sales": 103,
+     "overAskShare": 14,
+     "medianDom": 24
+    }
+   ]
+  },
+  {
+   "city": "Hamilton",
+   "slug": "hamilton",
+   "sales": 8039,
+   "months": [
+    {
+     "month": 1,
+     "sales": 526,
+     "saleToAsk": 97.1,
+     "overAskShare": 12,
+     "medianDom": 44,
+     "price": {
+      "pct": -1.1,
+      "lo": -2.6,
+      "hi": 0.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 513,
+     "saleToAsk": 97.4,
+     "overAskShare": 17,
+     "medianDom": 23,
+     "price": {
+      "pct": -2.1,
+      "lo": -3.5,
+      "hi": -0.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 3,
+     "sales": 663,
+     "saleToAsk": 97.6,
+     "overAskShare": 17,
+     "medianDom": 22,
+     "price": {
+      "pct": 0.4,
+      "lo": -1,
+      "hi": 1.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 798,
+     "saleToAsk": 97.6,
+     "overAskShare": 16,
+     "medianDom": 21,
+     "price": {
+      "pct": 2.4,
+      "lo": 0.9,
+      "hi": 4.2,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 864,
+     "saleToAsk": 97.8,
+     "overAskShare": 20,
+     "medianDom": 20,
+     "price": {
+      "pct": 1.5,
+      "lo": 0.3,
+      "hi": 2.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 746,
+     "saleToAsk": 97.2,
+     "overAskShare": 13,
+     "medianDom": 24,
+     "price": {
+      "pct": 2.3,
+      "lo": 0.7,
+      "hi": 3.7,
+      "significant": true
+     }
+    },
+    {
+     "month": 7,
+     "sales": 807,
+     "saleToAsk": 97,
+     "overAskShare": 12,
+     "medianDom": 28,
+     "price": {
+      "pct": -0.1,
+      "lo": -1.3,
+      "hi": 1.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 681,
+     "saleToAsk": 97.2,
+     "overAskShare": 13,
+     "medianDom": 29,
+     "price": {
+      "pct": 0.9,
+      "lo": -0.6,
+      "hi": 2.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 664,
+     "saleToAsk": 96.9,
+     "overAskShare": 10,
+     "medianDom": 26,
+     "price": {
+      "pct": 0.4,
+      "lo": -0.9,
+      "hi": 1.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 696,
+     "saleToAsk": 96.8,
+     "overAskShare": 10,
+     "medianDom": 26,
+     "price": {
+      "pct": 0.1,
+      "lo": -1.2,
+      "hi": 1.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 629,
+     "saleToAsk": 97.4,
+     "overAskShare": 13,
+     "medianDom": 29,
+     "price": {
+      "pct": -1.2,
+      "lo": -2.8,
+      "hi": 0.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 12,
+     "sales": 452,
+     "saleToAsk": 96.9,
+     "overAskShare": 10,
+     "medianDom": 37,
+     "price": {
+      "pct": -3.5,
+      "lo": -5.2,
+      "hi": -1.8,
+      "significant": true
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 1193,
+     "overAskShare": 11,
+     "medianDom": 28
+    },
+    {
+     "day": 2,
+     "sales": 1473,
+     "overAskShare": 14,
+     "medianDom": 28
+    },
+    {
+     "day": 3,
+     "sales": 1689,
+     "overAskShare": 14,
+     "medianDom": 26
+    },
+    {
+     "day": 4,
+     "sales": 1926,
+     "overAskShare": 15,
+     "medianDom": 25
+    },
+    {
+     "day": 5,
+     "sales": 1415,
+     "overAskShare": 14,
+     "medianDom": 25
+    },
+    {
+     "day": 6,
+     "sales": 252,
+     "overAskShare": 10,
+     "medianDom": 32
+    }
+   ]
+  },
+  {
+   "city": "Ottawa",
+   "slug": "ottawa",
+   "sales": 18541,
+   "months": [
+    {
+     "month": 1,
+     "sales": 878,
+     "saleToAsk": 98,
+     "overAskShare": 11,
+     "medianDom": 43,
+     "price": {
+      "pct": -1.4,
+      "lo": -2.5,
+      "hi": -0.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 2,
+     "sales": 1066,
+     "saleToAsk": 98.5,
+     "overAskShare": 18,
+     "medianDom": 20,
+     "price": {
+      "pct": -0.2,
+      "lo": -0.9,
+      "hi": 0.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 1556,
+     "saleToAsk": 98.7,
+     "overAskShare": 18,
+     "medianDom": 19,
+     "price": {
+      "pct": 1.5,
+      "lo": 0.8,
+      "hi": 2.4,
+      "significant": true
+     }
+    },
+    {
+     "month": 4,
+     "sales": 1927,
+     "saleToAsk": 98.6,
+     "overAskShare": 19,
+     "medianDom": 19,
+     "price": {
+      "pct": 1.7,
+      "lo": 1,
+      "hi": 2.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 2383,
+     "saleToAsk": 98.7,
+     "overAskShare": 21,
+     "medianDom": 17,
+     "price": {
+      "pct": 2,
+      "lo": 1.3,
+      "hi": 2.7,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 2144,
+     "saleToAsk": 98.4,
+     "overAskShare": 17,
+     "medianDom": 20,
+     "price": {
+      "pct": 1,
+      "lo": 0.4,
+      "hi": 1.8,
+      "significant": true
+     }
+    },
+    {
+     "month": 7,
+     "sales": 1841,
+     "saleToAsk": 98.2,
+     "overAskShare": 12,
+     "medianDom": 25,
+     "price": {
+      "pct": 0.2,
+      "lo": -0.4,
+      "hi": 0.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 1543,
+     "saleToAsk": 98.1,
+     "overAskShare": 12,
+     "medianDom": 27,
+     "price": {
+      "pct": -0.1,
+      "lo": -0.8,
+      "hi": 0.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 1529,
+     "saleToAsk": 98.1,
+     "overAskShare": 14,
+     "medianDom": 23,
+     "price": {
+      "pct": 0.5,
+      "lo": -0.3,
+      "hi": 1.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 1605,
+     "saleToAsk": 97.9,
+     "overAskShare": 10,
+     "medianDom": 24,
+     "price": {
+      "pct": -0.6,
+      "lo": -1.3,
+      "hi": 0.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 1273,
+     "saleToAsk": 98,
+     "overAskShare": 13,
+     "medianDom": 25,
+     "price": {
+      "pct": -1.9,
+      "lo": -3,
+      "hi": -0.9,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 796,
+     "saleToAsk": 97.7,
+     "overAskShare": 9,
+     "medianDom": 34,
+     "price": {
+      "pct": -2.6,
+      "lo": -3.7,
+      "hi": -1.5,
+      "significant": true
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 0,
+     "sales": 374,
+     "overAskShare": 11,
+     "medianDom": 28
+    },
+    {
+     "day": 1,
+     "sales": 2497,
+     "overAskShare": 12,
+     "medianDom": 25
+    },
+    {
+     "day": 2,
+     "sales": 3218,
+     "overAskShare": 14,
+     "medianDom": 22
+    },
+    {
+     "day": 3,
+     "sales": 3915,
+     "overAskShare": 17,
+     "medianDom": 21
+    },
+    {
+     "day": 4,
+     "sales": 4523,
+     "overAskShare": 18,
+     "medianDom": 21
+    },
+    {
+     "day": 5,
+     "sales": 3290,
+     "overAskShare": 14,
+     "medianDom": 21
+    },
+    {
+     "day": 6,
+     "sales": 724,
+     "overAskShare": 12,
+     "medianDom": 25
+    }
+   ]
+  }
+ ]
+}
