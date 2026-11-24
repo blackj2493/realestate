@@ -4,6 +4,7 @@ import { outlookPath } from "@/lib/data/outlookCities";
 import { homeValuePath } from "@/lib/homeValue/content";
 import { powerOfSalePath } from "@/components/powerOfSale/PowerOfSaleView";
 import { notSellingPath } from "@/components/notSelling/NotSellingView";
+import { basementValuePath } from "@/lib/data/basementValue";
 
 describe("cityTopics", () => {
   it("each topic path matches its family helper", () => {
@@ -15,6 +16,8 @@ describe("cityTopics", () => {
     expect(by["power-of-sale"].hub).toBe(powerOfSalePath());
     expect(by["not-selling"].hub).toBe(notSellingPath());
     expect(by["home-value"].hub).toBe(homeValuePath());
+    expect(by["basement-value"].path("markham")).toBe(basementValuePath("markham"));
+    expect(by["basement-value"].hub).toBe(basementValuePath());
   });
 
   it("hub list covers every topic hub", () => {

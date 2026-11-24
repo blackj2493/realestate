@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { LIVE_TRACKERS } from "@/lib/data/trackers";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { daysOnMarketPath } from "@/lib/seo/cityTopics";
+import { basementValuePath, getBasementData } from "@/lib/data/basementValue";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
 
 /**
@@ -57,6 +58,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${outlookPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 })),
     // "How long does it take to sell a house in {city}" + best month (2026-11-10).
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${daysOnMarketPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.7 })),
+    // "Does a finished basement add value in {city}?" (2026-11-24). Static, rebuilt monthly.
+    { url: `${SITE_URL}${basementValuePath()}`, lastModified: new Date(getBasementData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
+    ...getBasementData()
+      .cities.filter((c) => c.modelA)
+      .map((c) => ({ url: `${SITE_URL}${basementValuePath(c.slug)}`, lastModified: new Date(getBasementData().generatedAt), changeFrequency: "monthly" as const, priority: 0.7 })),
     // Monthly Ontario Power of Sale Index (2026-11-10). Editions are linked from the hub page.
     { url: `${SITE_URL}/data/power-of-sale-index`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },
