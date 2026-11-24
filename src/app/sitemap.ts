@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
 import { HOME_VALUE_CITIES, homeValuePath } from "@/lib/homeValue/content";
 import { PRICE_BANDS, priceBandFilter, priceBandPath } from "@/lib/listings/priceBands";
+import { posCityHubs } from "@/lib/data/powerOfSaleListings";
 import {
   cityHubsWithInventory,
   neighbourhoodHubsForSitemap,
@@ -144,6 +145,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/power-of-sale`, changeFrequency: "daily", priority: 0.8 },
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}/power-of-sale/${c.slug}`, changeFrequency: "daily" as const, priority: 0.7 })),
+    // Cities outside the 15 with power-of-sale homes for sale now (2026-11-25), same list the pages use.
+    ...(await posCityHubs())
+      .filter((h) => !OUTLOOK_CITIES.some((c) => c.slug === h.slug))
+      .map((h) => ({ url: `${SITE_URL}/power-of-sale/${h.slug}`, changeFrequency: "daily" as const, priority: 0.6 })),
     // "why is my house not selling" (2026-11): Ontario + the 15 board cities.
     { url: `${SITE_URL}/house-not-selling`, changeFrequency: "weekly", priority: 0.8 },
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}/house-not-selling/${c.slug}`, changeFrequency: "weekly" as const, priority: 0.7 })),
