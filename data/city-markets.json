@@ -1,0 +1,1787 @@
+{
+ "generatedAt": "2026-11-24T21:26:41.580Z",
+ "cities": [
+  {
+   "city": "London",
+   "slug": "london",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 578000,
+     "sales": 342,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 576500,
+     "sales": 228,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 580000,
+     "sales": 236,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 580000,
+     "sales": 277,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 595000,
+     "sales": 318,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 580000,
+     "sales": 367,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 613000,
+     "sales": 408,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 586350,
+     "sales": 404,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 610000,
+     "sales": 373,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 582250,
+     "sales": 312,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 592500,
+     "sales": 294,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 560000,
+     "sales": 309,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 549500,
+     "sales": 282,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 530000,
+     "sales": 209,
+     "soldToList": 96.2
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 549950,
+     "sales": 196,
+     "soldToList": 96.7
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 572500,
+     "sales": 246,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 560000,
+     "sales": 375,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 560000,
+     "sales": 404,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 572026,
+     "sales": 481,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 550000,
+     "sales": 406,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 548292,
+     "sales": 451,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 550000,
+     "sales": 341,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 537000,
+     "sales": 385,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 550000,
+     "sales": 387,
+     "soldToList": 96.5
+    }
+   ],
+   "sales90": 1074,
+   "soldToListPct": 96.7,
+   "pctOverAsking": 10.4,
+   "soldCount12m": 4181,
+   "underAskShare": 0.817,
+   "askGapMedian": -3.3,
+   "activeCount": 1892,
+   "cutCount": 618,
+   "medianCutPct": 8,
+   "medianCutAmt": 49950,
+   "monthsOfSupply": 4.8,
+   "temperature": "cold"
+  },
+  {
+   "city": "Kitchener",
+   "slug": "kitchener",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 710000,
+     "sales": 143,
+     "soldToList": 102.2
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 715000,
+     "sales": 86,
+     "soldToList": 100.7
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 734900,
+     "sales": 93,
+     "soldToList": 101.4
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 755000,
+     "sales": 105,
+     "soldToList": 103.5
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 730000,
+     "sales": 117,
+     "soldToList": 103.3
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 695000,
+     "sales": 159,
+     "soldToList": 103.6
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 701000,
+     "sales": 196,
+     "soldToList": 102.1
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 711000,
+     "sales": 209,
+     "soldToList": 100.9
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 713000,
+     "sales": 186,
+     "soldToList": 101.6
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 672500,
+     "sales": 144,
+     "soldToList": 101.2
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 660000,
+     "sales": 145,
+     "soldToList": 100.4
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 660000,
+     "sales": 155,
+     "soldToList": 101.3
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 682500,
+     "sales": 126,
+     "soldToList": 99.8
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 630000,
+     "sales": 85,
+     "soldToList": 100.4
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 680000,
+     "sales": 67,
+     "soldToList": 99.4
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 662250,
+     "sales": 94,
+     "soldToList": 99.1
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 665500,
+     "sales": 152,
+     "soldToList": 101.1
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 685000,
+     "sales": 161,
+     "soldToList": 103.1
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 680000,
+     "sales": 182,
+     "soldToList": 101.5
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 670000,
+     "sales": 173,
+     "soldToList": 101.6
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 664000,
+     "sales": 196,
+     "soldToList": 100.5
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 645000,
+     "sales": 155,
+     "soldToList": 100.5
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 635000,
+     "sales": 153,
+     "soldToList": 101.2
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 660000,
+     "sales": 157,
+     "soldToList": 100.3
+    }
+   ],
+   "sales90": 447,
+   "soldToListPct": 100.1,
+   "pctOverAsking": 36.8,
+   "soldCount12m": 1700,
+   "underAskShare": 0.57,
+   "askGapMedian": -1.3,
+   "activeCount": 612,
+   "cutCount": 184,
+   "medianCutPct": 7.9,
+   "medianCutAmt": 55050,
+   "monthsOfSupply": 3.6,
+   "temperature": "hot"
+  },
+  {
+   "city": "Barrie",
+   "slug": "barrie",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 695000,
+     "sales": 163,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 733750,
+     "sales": 114,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 735000,
+     "sales": 150,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 722800,
+     "sales": 126,
+     "soldToList": 98.8
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 712500,
+     "sales": 138,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 697500,
+     "sales": 143,
+     "soldToList": 98
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 699000,
+     "sales": 157,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 701000,
+     "sales": 160,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 675000,
+     "sales": 137,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 655000,
+     "sales": 135,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 675000,
+     "sales": 161,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 685000,
+     "sales": 140,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 657000,
+     "sales": 117,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 652500,
+     "sales": 90,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 669000,
+     "sales": 86,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 630000,
+     "sales": 98,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 657500,
+     "sales": 135,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 675000,
+     "sales": 169,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 640000,
+     "sales": 198,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 641750,
+     "sales": 166,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 654000,
+     "sales": 189,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 649900,
+     "sales": 165,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 635000,
+     "sales": 139,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 625000,
+     "sales": 151,
+     "soldToList": 97.1
+    }
+   ],
+   "sales90": 412,
+   "soldToListPct": 97.4,
+   "pctOverAsking": 8.5,
+   "soldCount12m": 1700,
+   "underAskShare": 0.867,
+   "askGapMedian": -3.3,
+   "activeCount": 917,
+   "cutCount": 368,
+   "medianCutPct": 7.1,
+   "medianCutAmt": 50000,
+   "monthsOfSupply": 5.6,
+   "temperature": "balanced"
+  },
+  {
+   "city": "Guelph",
+   "slug": "guelph",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 778250,
+     "sales": 182,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 770000,
+     "sales": 97,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 780000,
+     "sales": 91,
+     "soldToList": 98.7
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 778000,
+     "sales": 100,
+     "soldToList": 101.4
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 755046,
+     "sales": 106,
+     "soldToList": 99.2
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 780000,
+     "sales": 130,
+     "soldToList": 99.3
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 790000,
+     "sales": 143,
+     "soldToList": 98.8
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 770000,
+     "sales": 152,
+     "soldToList": 98.9
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 730000,
+     "sales": 116,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 730500,
+     "sales": 104,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 750000,
+     "sales": 107,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 754000,
+     "sales": 115,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 745500,
+     "sales": 104,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 714750,
+     "sales": 60,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 735000,
+     "sales": 62,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 700000,
+     "sales": 91,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 725000,
+     "sales": 111,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 738150,
+     "sales": 141,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 735000,
+     "sales": 151,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 757400,
+     "sales": 135,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 720000,
+     "sales": 149,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 723844,
+     "sales": 136,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 745000,
+     "sales": 137,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 715000,
+     "sales": 115,
+     "soldToList": 97.2
+    }
+   ],
+   "sales90": 367,
+   "soldToListPct": 97.3,
+   "pctOverAsking": 8.7,
+   "soldCount12m": 1398,
+   "underAskShare": 0.807,
+   "askGapMedian": -3,
+   "activeCount": 533,
+   "cutCount": 182,
+   "medianCutPct": 6.7,
+   "medianCutAmt": 50000,
+   "monthsOfSupply": 3.8,
+   "temperature": "balanced"
+  },
+  {
+   "city": "Kingston",
+   "slug": "kingston",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 590200,
+     "sales": 106,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 573500,
+     "sales": 71,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 595000,
+     "sales": 68,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 594000,
+     "sales": 87,
+     "soldToList": 99.1
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 600000,
+     "sales": 103,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 621995,
+     "sales": 135,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 600000,
+     "sales": 179,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 611250,
+     "sales": 176,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 599500,
+     "sales": 138,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 550500,
+     "sales": 96,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 575000,
+     "sales": 107,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 591000,
+     "sales": 103,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 569900,
+     "sales": 89,
+     "soldToList": 96.7
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 570500,
+     "sales": 74,
+     "soldToList": 96.5
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 550000,
+     "sales": 72,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 569000,
+     "sales": 77,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 550000,
+     "sales": 113,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 616500,
+     "sales": 172,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 610000,
+     "sales": 172,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 580000,
+     "sales": 163,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 599450,
+     "sales": 168,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 590000,
+     "sales": 122,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 573600,
+     "sales": 114,
+     "soldToList": 96.3
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 555000,
+     "sales": 113,
+     "soldToList": 96.6
+    }
+   ],
+   "sales90": 321,
+   "soldToListPct": 96.4,
+   "pctOverAsking": 8.4,
+   "soldCount12m": 1447,
+   "underAskShare": 0.844,
+   "askGapMedian": -3,
+   "activeCount": 594,
+   "cutCount": 200,
+   "medianCutPct": 7.6,
+   "medianCutAmt": 43000,
+   "monthsOfSupply": 4.4,
+   "temperature": "cold"
+  },
+  {
+   "city": "St. Catharines",
+   "slug": "st-catharines",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 591500,
+     "sales": 100,
+     "soldToList": 97
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 567000,
+     "sales": 67,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 590000,
+     "sales": 84,
+     "soldToList": 96
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 590000,
+     "sales": 89,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 588000,
+     "sales": 119,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 610000,
+     "sales": 121,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 601000,
+     "sales": 149,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 607000,
+     "sales": 119,
+     "soldToList": 97
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 570000,
+     "sales": 147,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 581500,
+     "sales": 120,
+     "soldToList": 97
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 560000,
+     "sales": 116,
+     "soldToList": 96.3
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 537000,
+     "sales": 100,
+     "soldToList": 96.1
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 515000,
+     "sales": 121,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 499375,
+     "sales": 74,
+     "soldToList": 94.3
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 500000,
+     "sales": 75,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 520000,
+     "sales": 90,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 549125,
+     "sales": 124,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 525000,
+     "sales": 151,
+     "soldToList": 96.7
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 570000,
+     "sales": 159,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 565000,
+     "sales": 141,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 520000,
+     "sales": 159,
+     "soldToList": 96.5
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 546750,
+     "sales": 122,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 545000,
+     "sales": 104,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 549950,
+     "sales": 122,
+     "soldToList": 95.4
+    }
+   ],
+   "sales90": 345,
+   "soldToListPct": 95.6,
+   "pctOverAsking": 6.4,
+   "soldCount12m": 1427,
+   "underAskShare": 0.87,
+   "askGapMedian": -3.9,
+   "activeCount": 627,
+   "cutCount": 194,
+   "medianCutPct": 7.9,
+   "medianCutAmt": 50000,
+   "monthsOfSupply": 4.9,
+   "temperature": "cold"
+  },
+  {
+   "city": "Cambridge",
+   "slug": "cambridge",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 745000,
+     "sales": 86,
+     "soldToList": 100.8
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 650000,
+     "sales": 63,
+     "soldToList": 99.6
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 695000,
+     "sales": 62,
+     "soldToList": 100.7
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 665000,
+     "sales": 59,
+     "soldToList": 102
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 727500,
+     "sales": 86,
+     "soldToList": 102
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 734000,
+     "sales": 114,
+     "soldToList": 101.7
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 754000,
+     "sales": 100,
+     "soldToList": 101.8
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 747500,
+     "sales": 106,
+     "soldToList": 100.7
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 694000,
+     "sales": 111,
+     "soldToList": 102
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 648000,
+     "sales": 91,
+     "soldToList": 102.4
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 695000,
+     "sales": 99,
+     "soldToList": 101.4
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 680000,
+     "sales": 109,
+     "soldToList": 101
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 675000,
+     "sales": 68,
+     "soldToList": 101.4
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 670000,
+     "sales": 43,
+     "soldToList": 99.9
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 671000,
+     "sales": 47,
+     "soldToList": 100.6
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 674250,
+     "sales": 52,
+     "soldToList": 98.9
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 675000,
+     "sales": 85,
+     "soldToList": 101.4
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 680000,
+     "sales": 129,
+     "soldToList": 100.9
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 662000,
+     "sales": 122,
+     "soldToList": 100.9
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 690000,
+     "sales": 119,
+     "soldToList": 99.9
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 645000,
+     "sales": 121,
+     "soldToList": 99.9
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 714024,
+     "sales": 82,
+     "soldToList": 99.3
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 654000,
+     "sales": 91,
+     "soldToList": 99.9
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 692500,
+     "sales": 100,
+     "soldToList": 98.8
+    }
+   ],
+   "sales90": 271,
+   "soldToListPct": 99.3,
+   "pctOverAsking": 25.2,
+   "soldCount12m": 1070,
+   "underAskShare": 0.617,
+   "askGapMedian": -1.5,
+   "activeCount": 343,
+   "cutCount": 95,
+   "medianCutPct": 8.2,
+   "medianCutAmt": 53983,
+   "monthsOfSupply": 3.5,
+   "temperature": "balanced"
+  },
+  {
+   "city": "Waterloo",
+   "slug": "waterloo",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 710500,
+     "sales": 50,
+     "soldToList": 99.8
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 615000,
+     "sales": 31,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 650000,
+     "sales": 41,
+     "soldToList": 102.2
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 649990,
+     "sales": 43,
+     "soldToList": 100.2
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 735001,
+     "sales": 53,
+     "soldToList": 100.9
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 795000,
+     "sales": 77,
+     "soldToList": 102.7
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 800000,
+     "sales": 93,
+     "soldToList": 103.1
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 720000,
+     "sales": 93,
+     "soldToList": 101
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 686000,
+     "sales": 94,
+     "soldToList": 99.6
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 700000,
+     "sales": 61,
+     "soldToList": 99.7
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 685000,
+     "sales": 62,
+     "soldToList": 99.7
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 705000,
+     "sales": 64,
+     "soldToList": 99.3
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 700000,
+     "sales": 67,
+     "soldToList": 99
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 687000,
+     "sales": 39,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 632500,
+     "sales": 48,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 732000,
+     "sales": 51,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 690000,
+     "sales": 77,
+     "soldToList": 100.6
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 728750,
+     "sales": 94,
+     "soldToList": 100.6
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 700125,
+     "sales": 90,
+     "soldToList": 100.9
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 695000,
+     "sales": 93,
+     "soldToList": 99.5
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 670500,
+     "sales": 111,
+     "soldToList": 99.3
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 672500,
+     "sales": 94,
+     "soldToList": 99.9
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 720000,
+     "sales": 66,
+     "soldToList": 100
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 647000,
+     "sales": 86,
+     "soldToList": 100.9
+    }
+   ],
+   "sales90": 207,
+   "soldToListPct": 100,
+   "pctOverAsking": 34.8,
+   "soldCount12m": 896,
+   "underAskShare": 0.595,
+   "askGapMedian": -1.6,
+   "activeCount": 318,
+   "cutCount": 73,
+   "medianCutPct": 9.2,
+   "medianCutAmt": 55000,
+   "monthsOfSupply": 3.5,
+   "temperature": "hot"
+  },
+  {
+   "city": "Peterborough",
+   "slug": "peterborough",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 550000,
+     "sales": 63,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 577500,
+     "sales": 50,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 575000,
+     "sales": 57,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 583250,
+     "sales": 52,
+     "soldToList": 99.3
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 616000,
+     "sales": 74,
+     "soldToList": 99.3
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 612500,
+     "sales": 86,
+     "soldToList": 99
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 610000,
+     "sales": 99,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 574000,
+     "sales": 110,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 569950,
+     "sales": 92,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 564000,
+     "sales": 89,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 580000,
+     "sales": 77,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 520000,
+     "sales": 77,
+     "soldToList": 96.1
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 522000,
+     "sales": 75,
+     "soldToList": 96.1
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 535000,
+     "sales": 43,
+     "soldToList": 95.6
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 556000,
+     "sales": 51,
+     "soldToList": 96.5
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 505000,
+     "sales": 46,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 542000,
+     "sales": 68,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 550000,
+     "sales": 109,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 559000,
+     "sales": 108,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 570000,
+     "sales": 106,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 575000,
+     "sales": 101,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 560000,
+     "sales": 63,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 550000,
+     "sales": 76,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 555000,
+     "sales": 97,
+     "soldToList": 96.9
+    }
+   ],
+   "sales90": 235,
+   "soldToListPct": 96.7,
+   "pctOverAsking": 10.2,
+   "soldCount12m": 939,
+   "underAskShare": 0.846,
+   "askGapMedian": -3.3,
+   "activeCount": 343,
+   "cutCount": 142,
+   "medianCutPct": 8.1,
+   "medianCutAmt": 50050,
+   "monthsOfSupply": 4.3,
+   "temperature": "cold"
+  },
+  {
+   "city": "Niagara Falls",
+   "slug": "niagara-falls",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 617000,
+     "sales": 65,
+     "soldToList": 96.7
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 635000,
+     "sales": 63,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 572250,
+     "sales": 52,
+     "soldToList": 96.2
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 602500,
+     "sales": 54,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 609900,
+     "sales": 61,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 597900,
+     "sales": 82,
+     "soldToList": 96.1
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 610000,
+     "sales": 79,
+     "soldToList": 95.6
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 604950,
+     "sales": 82,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 592500,
+     "sales": 96,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 577500,
+     "sales": 90,
+     "soldToList": 96
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 580000,
+     "sales": 64,
+     "soldToList": 96.2
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 592500,
+     "sales": 82,
+     "soldToList": 94.9
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 560000,
+     "sales": 66,
+     "soldToList": 95.2
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 507000,
+     "sales": 52,
+     "soldToList": 94.6
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 575000,
+     "sales": 54,
+     "soldToList": 96.2
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 540000,
+     "sales": 49,
+     "soldToList": 95.8
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 524000,
+     "sales": 64,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 530000,
+     "sales": 101,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 560000,
+     "sales": 83,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 612000,
+     "sales": 93,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 565000,
+     "sales": 109,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 561000,
+     "sales": 115,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 560000,
+     "sales": 97,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 570000,
+     "sales": 105,
+     "soldToList": 95.7
+    }
+   ],
+   "sales90": 275,
+   "soldToListPct": 95.7,
+   "pctOverAsking": 4.7,
+   "soldCount12m": 1000,
+   "underAskShare": 0.878,
+   "askGapMedian": -4.5,
+   "activeCount": 600,
+   "cutCount": 174,
+   "medianCutPct": 7.5,
+   "medianCutAmt": 50000,
+   "monthsOfSupply": 5.6,
+   "temperature": "cold"
+  },
+  {
+   "city": "Brantford",
+   "slug": "brantford",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 642500,
+     "sales": 60,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 631000,
+     "sales": 54,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 630000,
+     "sales": 41,
+     "soldToList": 98.8
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 683950,
+     "sales": 50,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 630000,
+     "sales": 54,
+     "soldToList": 99.5
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 634500,
+     "sales": 62,
+     "soldToList": 99.1
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 628000,
+     "sales": 75,
+     "soldToList": 99.1
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 650000,
+     "sales": 64,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 600000,
+     "sales": 69,
+     "soldToList": 99
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 590000,
+     "sales": 55,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 619750,
+     "sales": 66,
+     "soldToList": 100.4
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 577000,
+     "sales": 80,
+     "soldToList": 99
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 615000,
+     "sales": 47,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 570000,
+     "sales": 39,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 618000,
+     "sales": 41,
+     "soldToList": 96.3
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 590000,
+     "sales": 42,
+     "soldToList": 98.2
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 556000,
+     "sales": 68,
+     "soldToList": 98.8
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 593000,
+     "sales": 71,
+     "soldToList": 98
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 610000,
+     "sales": 85,
+     "soldToList": 98.2
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 629500,
+     "sales": 70,
+     "soldToList": 98.6
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 582000,
+     "sales": 81,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 585000,
+     "sales": 72,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 540000,
+     "sales": 75,
+     "soldToList": 96.3
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 556000,
+     "sales": 80,
+     "soldToList": 96.7
+    }
+   ],
+   "sales90": 212,
+   "soldToListPct": 96.5,
+   "pctOverAsking": 9.4,
+   "soldCount12m": 769,
+   "underAskShare": 0.813,
+   "askGapMedian": -3.2,
+   "activeCount": 308,
+   "cutCount": 89,
+   "medianCutPct": 8,
+   "medianCutAmt": 50000,
+   "monthsOfSupply": 4.1,
+   "temperature": "cold"
+  }
+ ]
+}

@@ -52,7 +52,7 @@ export async function GET() {
 - Median: the middle value of all sales or listings in the period.
 
 ${markets}## Housing market by city (for "is it a good time to buy or sell", "will prices drop", "market forecast")
-- [Ontario housing market: what the data shows now](${SITE_URL}/data/housing-market): one page per board city with prices and sales against a year earlier, sale-to-asking ratios, the gap from the two-year high, price cuts, and when homes sell. PureProperty does not forecast prices; these pages state the measured indicators.
+- [Ontario housing market: what the data shows now](${SITE_URL}/data/housing-market): one page per covered city (the 15 board cities plus London, Kitchener, Barrie, Guelph, Kingston, St. Catharines, Cambridge, Waterloo, Peterborough, Niagara Falls and Brantford) with prices and sales against a year earlier, sale-to-asking ratios, the gap from the two-year high, price cuts, and when homes sell. PureProperty does not forecast prices; these pages state the measured indicators.
 
 ## Power of sale (for "power of sale homes in {city}")
 - [Power of sale homes in Ontario](${SITE_URL}/power-of-sale): today's power-of-sale homes for sale, cheapest first, with each board city's share of power-of-sale sales and how they sold against other homes. City pages: ${SITE_URL}/power-of-sale/{city}.

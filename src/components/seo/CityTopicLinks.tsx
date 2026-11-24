@@ -11,6 +11,7 @@ import { condoAreaBySlug } from "@/lib/data/condoPrices";
 import { schoolCityBySlug } from "@/lib/data/schoolPrices";
 import { soldCityBySlug } from "@/lib/data/soldPrices";
 import { bestTimeCityBySlug } from "@/lib/data/bestTimeToSell";
+import { cityMarketBySlug } from "@/lib/data/cityMarkets";
 
 export default function CityTopicLinks({
   citySlug,
@@ -30,7 +31,7 @@ export default function CityTopicLinks({
   // The extra study cities have no live board pages (market, days on market, ...).
   // The basement study publishes a city only when it has enough sales in each group, so its
   // link follows the data file rather than the city list (a dropped city would 404).
-  const links = CITY_TOPICS.filter((t) => t.id !== current && (c.board || !BOARD_ONLY_TOPICS.has(t.id)) && (t.id !== "basement-value" || basementCityBySlug(c.slug)?.modelA) && (t.id !== "price-change" || priceChangeAreaBySlug(c.slug)?.all) && (t.id !== "condo-prices" || condoAreaBySlug(c.slug)) && (t.id !== "school-catchment-prices" || schoolCityBySlug(c.slug)) && (t.id !== "sold-prices" || soldCityBySlug(c.slug)) && (t.id !== "best-time-to-sell" || bestTimeCityBySlug(c.slug))).map((t) => ({ href: t.path(c.slug), label: t.label(c.city) }));
+  const links = CITY_TOPICS.filter((t) => t.id !== current && (c.board || !BOARD_ONLY_TOPICS.has(t.id)) && (t.id !== "market" || c.board || cityMarketBySlug(c.slug)) && (t.id !== "basement-value" || basementCityBySlug(c.slug)?.modelA) && (t.id !== "price-change" || priceChangeAreaBySlug(c.slug)?.all) && (t.id !== "condo-prices" || condoAreaBySlug(c.slug)) && (t.id !== "school-catchment-prices" || schoolCityBySlug(c.slug)) && (t.id !== "sold-prices" || soldCityBySlug(c.slug)) && (t.id !== "best-time-to-sell" || bestTimeCityBySlug(c.slug))).map((t) => ({ href: t.path(c.slug), label: t.label(c.city) }));
   if (showCityHub) links.push({ href: `/property/on/${c.slug}`, label: `Homes for sale and neighbourhoods in ${c.city}` });
   const headingId = `more-${c.slug}`;
   return (

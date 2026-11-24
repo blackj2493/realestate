@@ -16,6 +16,7 @@ import { REGION_TO_CITIES, citiesFromRegions } from "@/lib/dashboard/config";
 import { cityHubSlug } from "@/lib/listings/listingPath";
 import { HOME_VALUE_CITIES, homeValuePath } from "@/lib/homeValue/content";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
+import { getCityMarkets } from "@/lib/data/cityMarkets";
 import { getBasementData } from "@/lib/data/basementValue";
 import { getPriceChangeData } from "@/lib/data/priceChange";
 import { getCondoData } from "@/lib/data/condoPrices";
@@ -43,7 +44,7 @@ export function nightlyPaths(): string[] {
     "/data/price-rankings",
     "/data/power-of-sale-index",
   ];
-  const outlook = ["/data/housing-market", ...OUTLOOK_CITIES.map((c) => outlookPath(c.slug))];
+  const outlook = ["/data/housing-market", ...OUTLOOK_CITIES.map((c) => outlookPath(c.slug)), ...getCityMarkets().cities.map((c) => outlookPath(c.slug))];
   const homeValue = [homeValuePath(), ...HOME_VALUE_CITIES.map((c) => homeValuePath(c.slug))];
   const pos = ["/power-of-sale", ...OUTLOOK_CITIES.map((c) => `/power-of-sale/${c.slug}`)];
   const notSelling = ["/house-not-selling", ...OUTLOOK_CITIES.map((c) => `/house-not-selling/${c.slug}`)];
