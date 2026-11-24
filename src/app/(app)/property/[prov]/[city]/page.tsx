@@ -44,6 +44,7 @@ import { buildCityFacts, boardRowFor } from "@/lib/data/cityFacts";
 import CityMarketFacts from "@/components/seo/CityMarketFacts";
 import { outlookCityBySlug, outlookPath } from "@/lib/data/outlookCities";
 import CityTopicLinks from "@/components/seo/CityTopicLinks";
+import { PRICE_BANDS, priceBandPath } from "@/lib/listings/priceBands";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
 export const dynamicParams = true;
@@ -229,6 +230,20 @@ export default async function CityHubPage({
                 </Link>
               )}
             </div>
+          )}
+          {totalFound > 0 && (
+            <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>By price:</span>
+              {PRICE_BANDS.map((b) => (
+                <Link
+                  key={b.slug}
+                  href={priceBandPath(city, b, prov.toLowerCase())}
+                  className="rounded-full border border-border px-2.5 py-0.5 text-xs transition-colors hover:border-foreground/40 hover:text-foreground"
+                >
+                  Under {b.label}
+                </Link>
+              ))}
+            </p>
           )}
         </header>
 
