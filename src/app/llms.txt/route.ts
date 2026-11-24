@@ -61,6 +61,9 @@ ${markets}## Housing market by city (for "is it a good time to buy or sell", "wi
 ## Price change (for "are home prices dropping in {city}" / "will house prices drop in 2027")
 - [Are home prices dropping in Ontario?](${SITE_URL}/data/price-change): same-home sale price change against a year earlier for each board city and home type (detached, semi and town, condo apartment, condo townhouse), and each quarter against the same quarter a year earlier, to show whether the drop is growing or shrinking. City pages: ${SITE_URL}/data/price-change/{city}. Measured, not a forecast. Refreshed monthly.
 
+## Condo prices (for "{city} condo prices" / "average condo fees per square foot")
+- [Ontario condo prices by city](${SITE_URL}/data/condo-prices): median condo apartment sale price, approximate price per square foot, median monthly condo fee and fee per square foot, sale-to-asking and days on market for each city with enough sales; city pages add prices by unit type (studio to 3 bedrooms) and by community. City pages: ${SITE_URL}/data/condo-prices/{city}. Refreshed monthly.
+
 ## Basements (for "does a finished basement add value in {city}")
 - [Does a finished basement add value in Ontario?](${SITE_URL}/data/basement-value): what a finished basement, a basement apartment and a separate entrance added to the sale price of similar houses in each board city, measured on MLS® sales, plus median basement rents. City pages: ${SITE_URL}/data/basement-value/{city}. Refreshed monthly.
 

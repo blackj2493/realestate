@@ -6,6 +6,7 @@ import { OUTLOOK_CITIES } from '@/lib/data/outlookCities';
 import sitemap from './sitemap';
 import { basementValuePath, getBasementData } from '@/lib/data/basementValue';
 import { getPriceChangeData, priceChangePath } from '@/lib/data/priceChange';
+import { condoPricesPath, getCondoData } from '@/lib/data/condoPrices';
 
 const SITE = 'https://www.pureproperty.ca';
 
@@ -23,9 +24,10 @@ describe('/data/sitemap.xml', () => {
     expect(urls).toContain(`${SITE}${basementValuePath()}`);
     for (const c of basementCities) expect(urls).toContain(`${SITE}${basementValuePath(c.slug)}`);
     const priceCities = getPriceChangeData().cities.filter((c) => c.all);
+    for (const c of getCondoData().cities) expect(urls).toContain(`${SITE}${condoPricesPath(c.slug)}`);
     expect(urls).toContain(`${SITE}${priceChangePath()}`);
     for (const c of priceCities) expect(urls).toContain(`${SITE}${priceChangePath(c.slug)}`);
-    expect(urls).toHaveLength(3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 2 + OUTLOOK_CITIES.length * 2 + 1 + basementCities.length + 1 + priceCities.length);
+    expect(urls).toHaveLength(3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 2 + OUTLOOK_CITIES.length * 2 + 1 + basementCities.length + 1 + priceCities.length + 1 + getCondoData().cities.length);
   });
 
   it('declares only /data URLs, so its coverage number means one thing', () => {
