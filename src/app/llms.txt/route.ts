@@ -64,6 +64,9 @@ ${markets}## Housing market by city (for "is it a good time to buy or sell", "wi
 ## Condo prices (for "{city} condo prices" / "average condo fees per square foot")
 - [Ontario condo prices by city](${SITE_URL}/data/condo-prices): median condo apartment sale price, approximate price per square foot, median monthly condo fee and fee per square foot, sale-to-asking and days on market for each city with enough sales; city pages add prices by unit type (studio to 3 bedrooms) and by community. City pages: ${SITE_URL}/data/condo-prices/{city}. Refreshed monthly.
 
+## Good time to buy? (for "is it a good time to buy a house in {city}")
+- [Is it a good time to buy a house in Ontario?](${SITE_URL}/data/good-time-to-buy): for each board city, the measured buyer's-market signals — market temperature (sale-to-list and months of supply), same-home price change, sale to asking, share of listings with a price cut, share listed over 90 days — and how many favour buyers. Measures the market, not a buyer's own situation. City pages: ${SITE_URL}/data/good-time-to-buy/{city}. Refreshed nightly.
+
 ## Basements (for "does a finished basement add value in {city}")
 - [Does a finished basement add value in Ontario?](${SITE_URL}/data/basement-value): what a finished basement, a basement apartment and a separate entrance added to the sale price of similar houses in each board city, measured on MLS® sales, plus median basement rents. City pages: ${SITE_URL}/data/basement-value/{city}. Refreshed monthly.
 

@@ -6,6 +6,7 @@ import { basementValuePath, getBasementData } from "@/lib/data/basementValue";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
 import { getPriceChangeData, priceChangePath } from "@/lib/data/priceChange";
 import { condoPricesPath, getCondoData } from "@/lib/data/condoPrices";
+import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
 
 /**
  * /data/sitemap.xml — the data desk's own sitemap, split out of the root one.
@@ -73,6 +74,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // "{city} condo prices {year}": price, $/sq ft, fees by unit and community (2026-11-25). Static, monthly.
     { url: `${SITE_URL}${condoPricesPath()}`, lastModified: new Date(getCondoData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
     ...getCondoData().cities.map((c) => ({ url: `${SITE_URL}${condoPricesPath(c.slug)}`, lastModified: new Date(getCondoData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 })),
+    // "Is it a good time to buy a house in {city}?" measured signals (2026-11-25). Board-backed, daily.
+    { url: `${SITE_URL}${goodTimeToBuyPath()}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 },
+    ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${goodTimeToBuyPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 })),
     // Monthly Ontario Power of Sale Index (2026-11-10). Editions are linked from the hub page.
     { url: `${SITE_URL}/data/power-of-sale-index`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },

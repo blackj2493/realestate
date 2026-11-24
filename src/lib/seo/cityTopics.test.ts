@@ -7,6 +7,7 @@ import { notSellingPath } from "@/components/notSelling/NotSellingView";
 import { basementValuePath } from "@/lib/data/basementValue";
 import { priceChangePath } from "@/lib/data/priceChange";
 import { condoPricesPath } from "@/lib/data/condoPrices";
+import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
 
 describe("cityTopics", () => {
   it("each topic path matches its family helper", () => {
@@ -24,6 +25,8 @@ describe("cityTopics", () => {
     expect(by["price-change"].hub).toBe(priceChangePath());
     expect(by["condo-prices"].path("markham")).toBe(condoPricesPath("markham"));
     expect(by["condo-prices"].hub).toBe(condoPricesPath());
+    expect(by["good-time-to-buy"].path("markham")).toBe(goodTimeToBuyPath("markham"));
+    expect(by["good-time-to-buy"].hub).toBe(goodTimeToBuyPath());
   });
 
   it("hub list covers every topic hub", () => {
