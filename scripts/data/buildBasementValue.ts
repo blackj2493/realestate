@@ -15,13 +15,12 @@
  *
  * TORONTO / OTTAWA. The feed has no single City value for either: Toronto is "Toronto C01" …
  * "Toronto W10", and Ottawa is ~51 area names (OTTAWA_AREAS). Every other city is its own
- * City value.
+ * City value, except London (3 districts). The city list is STUDY_CITIES.
  */
 import "dotenv/config";
 import { writeFileSync } from "node:fs";
 import { Client } from "pg";
-import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
-import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
+import { STUDY_CITIES, studyCityFilter } from "@/lib/data/studyCities";
 import {
   FIX_RE,
   RENO_RE,
@@ -41,11 +40,6 @@ const MIN_GROUP = 150;
 /** A rent median needs this many leases. */
 const MIN_LEASES = 30;
 
-function cityFilter(city: string, startParam: number): { sql: string; params: unknown[] } {
-  if (city === "Toronto") return { sql: `city like 'Toronto %'`, params: [] };
-  if (city === "Ottawa") return { sql: `city = any($${startParam}::text[])`, params: [OTTAWA_AREAS] };
-  return { sql: `city = $${startParam}`, params: [city] };
-}
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -65,8 +59,8 @@ async function main() {
   try {
     await client.query("BEGIN READ ONLY");
     await client.query("SET LOCAL statement_timeout = '170s'");
-    for (const { city, slug } of OUTLOOK_CITIES) {
-      const f = cityFilter(city, 3);
+    for (const { city, slug } of STUDY_CITIES) {
+      const f = studyCityFilter(city, 3);
       const sales = await client.query(
         `select city, raw_payload->>'CityRegion' hood, property_sub_type t, coalesce(bedrooms_above_grade,0)::int beds,
                 living_area_range band, close_price::float8 price, purchase_contract_date::text d,
@@ -103,7 +97,7 @@ async function main() {
         });
       }
 
-      const fl = cityFilter(city, 3);
+      const fl = studyCityFilter(city, 3);
       const leases = await client.query(
         `select close_price::float8 rent, coalesce(nullif(raw_payload->>'BedroomsTotal','')::int, bedrooms_above_grade, 0) beds
            from raw_vow_sold

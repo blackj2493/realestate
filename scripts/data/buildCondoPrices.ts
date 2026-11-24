@@ -16,8 +16,7 @@
 import "dotenv/config";
 import { writeFileSync } from "node:fs";
 import { Client } from "pg";
-import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
-import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
+import { STUDY_CITIES, studyCityFilter } from "@/lib/data/studyCities";
 import { UNIT_TYPES, unitTypeOf, type CondoArea, type CondoPricesFile, type CondoStats, type UnitType } from "@/lib/data/condoPricesModel";
 
 const OUT = "data/condo-prices.json";
@@ -70,11 +69,6 @@ function stats(sales: Sale[]): CondoStats {
   };
 }
 
-function cityFilter(city: string): { sql: string; params: unknown[] } {
-  if (city === "Toronto") return { sql: `city like 'Toronto %'`, params: [] };
-  if (city === "Ottawa") return { sql: `city = any($3::text[])`, params: [OTTAWA_AREAS] };
-  return { sql: `city = $3`, params: [city] };
-}
 
 async function main() {
   const url = process.env.DATABASE_URL || process.env.DIRECT_DB_URL;
@@ -90,8 +84,8 @@ async function main() {
   try {
     await client.query("BEGIN READ ONLY");
     await client.query("SET LOCAL statement_timeout = '170s'");
-    for (const { city, slug } of OUTLOOK_CITIES) {
-      const f = cityFilter(city);
+    for (const { city, slug } of STUDY_CITIES) {
+      const f = studyCityFilter(city, 3);
       const res = await client.query(
         `select coalesce(city_region,'') hood, coalesce(bedrooms_above_grade,0)::int ba,
                 nullif(raw_payload->>'BedroomsTotal','') bt, living_area_range sqft, close_price::float8 price,

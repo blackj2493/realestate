@@ -43,7 +43,9 @@ describe("cityTopics", () => {
   });
 
   it("resolves covered city slugs case-insensitively, and rejects others", () => {
-    expect(topicCity("Markham")?.slug).toBe("markham");
+    expect(topicCity("Markham")).toEqual({ city: "Markham", slug: "markham", board: true });
+    expect(topicCity("london")).toEqual({ city: "London", slug: "london", board: false });
+    expect(topicCity("st-catharines")?.city).toBe("St. Catharines");
     expect(topicCity("sudbury")).toBeNull();
     expect(topicCity(undefined)).toBeNull();
   });
