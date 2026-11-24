@@ -8,6 +8,7 @@ import { CITY_TOPICS, topicCity, type CityTopic } from "@/lib/seo/cityTopics";
 import { basementCityBySlug } from "@/lib/data/basementValue";
 import { priceChangeAreaBySlug } from "@/lib/data/priceChange";
 import { condoAreaBySlug } from "@/lib/data/condoPrices";
+import { schoolCityBySlug } from "@/lib/data/schoolPrices";
 
 export default function CityTopicLinks({
   citySlug,
@@ -26,7 +27,7 @@ export default function CityTopicLinks({
   if (!c) return null;
   // The basement study publishes a city only when it has enough sales in each group, so its
   // link follows the data file rather than the city list (a dropped city would 404).
-  const links = CITY_TOPICS.filter((t) => t.id !== current && (t.id !== "basement-value" || basementCityBySlug(c.slug)?.modelA) && (t.id !== "price-change" || priceChangeAreaBySlug(c.slug)?.all) && (t.id !== "condo-prices" || condoAreaBySlug(c.slug))).map((t) => ({ href: t.path(c.slug), label: t.label(c.city) }));
+  const links = CITY_TOPICS.filter((t) => t.id !== current && (t.id !== "basement-value" || basementCityBySlug(c.slug)?.modelA) && (t.id !== "price-change" || priceChangeAreaBySlug(c.slug)?.all) && (t.id !== "condo-prices" || condoAreaBySlug(c.slug)) && (t.id !== "school-catchment-prices" || schoolCityBySlug(c.slug))).map((t) => ({ href: t.path(c.slug), label: t.label(c.city) }));
   if (showCityHub) links.push({ href: `/property/on/${c.slug}`, label: `Homes for sale and neighbourhoods in ${c.city}` });
   const headingId = `more-${c.slug}`;
   return (
