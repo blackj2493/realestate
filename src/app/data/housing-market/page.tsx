@@ -8,20 +8,27 @@ import { getMarketBoard } from "@/lib/data/marketBoard";
 import { boardRowFor } from "@/lib/data/cityFacts";
 import { buildOutlook, outlookYear } from "@/lib/data/marketOutlook";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
+import { getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
+
+/** The extra study cities, from data/city-markets.json (weekly; not on the board). */
+function extraItems() {
+  const f = getCityMarkets();
+  return f.cities.map((c) => ({ city: c.city, slug: c.slug, outlook: buildOutlook(c.city, toMarketRow(c), f.generatedAt) }));
+}
 
 async function rows() {
   try {
     const board = await getMarketBoard();
     return {
       year: board.dataAsOf ? outlookYear(board.dataAsOf) : null,
-      items: OUTLOOK_CITIES.map((c) => ({ ...c, outlook: buildOutlook(c.city, boardRowFor(board.rows, c.city), board.dataAsOf) })),
+      items: [...OUTLOOK_CITIES.map((c) => ({ ...c, outlook: buildOutlook(c.city, boardRowFor(board.rows, c.city), board.dataAsOf) })), ...extraItems()],
     };
   } catch {
-    return { year: null, items: OUTLOOK_CITIES.map((c) => ({ ...c, outlook: null })) };
+    return { year: null, items: [...OUTLOOK_CITIES.map((c) => ({ ...c, outlook: null })), ...extraItems()] };
   }
 }
 
@@ -29,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const { year } = await rows();
   const title = year ? `Ontario Housing Market ${year}: What the Data Shows Now` : "Ontario Housing Market: What the Data Shows Now";
   const description =
-    "Sale prices, sales, sale-to-asking ratios and price cuts for 15 Ontario cities against a year earlier, from MLS® data, updated nightly. No forecasts.";
+    "Sale prices, sales, sale-to-asking ratios and price cuts for 26 Ontario cities against a year earlier, from MLS® data. No forecasts.";
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,

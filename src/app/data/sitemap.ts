@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { LIVE_TRACKERS } from "@/lib/data/trackers";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
+import { getCityMarkets } from "@/lib/data/cityMarkets";
 import { daysOnMarketPath } from "@/lib/seo/cityTopics";
 import { basementValuePath, getBasementData } from "@/lib/data/basementValue";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
@@ -62,6 +63,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // City housing-market pages ("{city} housing market 2027" — the most-searched housing query).
     { url: `${SITE_URL}/data/housing-market`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${outlookPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 })),
+    ...getCityMarkets().cities.map((c) => ({ url: `${SITE_URL}${outlookPath(c.slug)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.8 })),
     // "How long does it take to sell a house in {city}" + best month (2026-11-10).
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${daysOnMarketPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.7 })),
     // "Does a finished basement add value in {city}?" (2026-11-24). Static, rebuilt monthly.

@@ -1,0 +1,61 @@
+name: Refresh City Markets
+
+# Rebuilds data/city-markets.json — monthly sale prices, sales, sale-to-asking, sold below the
+# first asking price, price cuts and market type for the extra study cities (London, Kitchener,
+# ...), which the nightly region_metrics precompute does not cover — and commits it to main.
+# /data/housing-market/{city} renders that file for those cities, so the commit (and the deploy
+# it triggers) is what refreshes the pages. Read-only on the database.
+#
+# CADENCE: weekly, Monday. The price cuts describe homes for sale now, so monthly is too slow.
+#
+# NEW-WORKFLOW GOTCHA: workflow_dispatch only activates once this file is on main. Seed the
+# first run with the Actions "Run workflow" button, or: gh workflow run refresh-city-markets.yml
+on:
+  # NOT scheduled by GitHub (it drops `schedule` runs under load). Supabase pg_cron POSTs a
+  # workflow_dispatch at 12:27 UTC every Monday — supabase/migrations/173_pg_cron_city_markets.sql.
+  # Change the time in cron.job, NOT here.
+  workflow_dispatch:
+
+permissions:
+  contents: write # commits the data file back to main
+
+concurrency:
+  group: refresh-city-markets
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build city markets data
+        timeout-minutes: 20
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        # pipefail: `tsx … | tee` otherwise returns tee's 0 and a Fatal goes green.
+        run: |
+          set -o pipefail
+          npx tsx scripts/data/buildCityMarkets.ts --write 2>&1 | tee city-markets-run.log
+
+      - name: Commit data to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/city-markets.json
+          if git diff --cached --quiet; then
+            echo "No change to the city markets data."
+          else
+            git commit -m "chore(data): weekly city markets refresh ($(date -u +%Y-%m-%d))"
+            git push
+          fi

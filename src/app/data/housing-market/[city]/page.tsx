@@ -7,7 +7,9 @@
  * the FAQ answers and the Dataset JSON-LD reuse the same sentences.
  *
  * Aggregate statistics only (the public market board), same category as the /data
- * trackers. Static per city, hourly revalidate; unknown slugs 404.
+ * trackers. Static per city, hourly revalidate; unknown slugs 404. The extra study cities
+ * (London, Kitchener, ...) are not on the board: they read data/city-markets.json, built
+ * weekly with the same definitions, and have no days-on-market page or terminal link.
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -16,6 +18,7 @@ import { getMarketBoard } from "@/lib/data/marketBoard";
 import { boardRowFor, SOURCE_LINE } from "@/lib/data/cityFacts";
 import { buildOutlook } from "@/lib/data/marketOutlook";
 import { OUTLOOK_CITIES, outlookCityBySlug, outlookPath } from "@/lib/data/outlookCities";
+import { cityMarketBySlug, getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import HubFaq from "@/components/seo/HubFaq";
 import { BarChart3, LineChart } from "lucide-react";
 import { Change, CiteBox, HeaderCard, LinkCard, PriceOpinionCard, StatCard } from "@/components/dataPage/parts";
@@ -30,18 +33,25 @@ export const revalidate = 3600;
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return OUTLOOK_CITIES.map((c) => ({ city: c.slug }));
+  return [...OUTLOOK_CITIES, ...getCityMarkets().cities].map((c) => ({ city: c.slug }));
 }
+
+/** Board cities, then the extra cities from data/city-markets.json. */
+const allCities = () => [...OUTLOOK_CITIES, ...getCityMarkets().cities.map((c) => ({ city: c.city, slug: c.slug }))];
 
 async function load(slug: string) {
   const city = outlookCityBySlug(slug);
-  if (!city) return null;
+  if (!city) {
+    const extra = cityMarketBySlug(slug);
+    if (!extra) return null;
+    return { city: extra.city, board: false, outlook: buildOutlook(extra.city, toMarketRow(extra), getCityMarkets().generatedAt) };
+  }
   try {
     const board = await getMarketBoard();
-    return { city, outlook: buildOutlook(city, boardRowFor(board.rows, city), board.dataAsOf) };
+    return { city, board: true, outlook: buildOutlook(city, boardRowFor(board.rows, city), board.dataAsOf) };
   } catch (err) {
     console.error(`[housing-market] board read failed for ${slug}:`, err);
-    return { city, outlook: null };
+    return { city, board: true, outlook: null };
   }
 }
 
@@ -81,10 +91,10 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
   const { city: slug } = await params;
   const data = await load(slug);
   if (!data) notFound();
-  const { city, outlook } = data;
+  const { city, board, outlook } = data;
   const canonical = `${SITE_URL}${outlookPath(slug)}`;
   const hub = `/property/on/${slug}`;
-  const others = OUTLOOK_CITIES.filter((c) => c.slug !== slug);
+  const others = allCities().filter((c) => c.slug !== slug);
   const st = outlook?.stats;
   const citation = outlook ? `PureProperty, "${outlook.title}", updated ${outlook.updatedLabel}, ${canonical.replace(/^https?:\/\/(www\.)?/, "")}` : "";
 
@@ -145,7 +155,7 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
                 <>
                   <p>{outlook.summary}</p>
                   <p className="mt-2 text-sm">
-                    Updated <time dateTime={outlook.updatedIso}>{outlook.updatedLabel}</time> · MLS® sales and listings, refreshed nightly. PureProperty does not forecast prices: this page shows the measures that forecasts are built from.
+                    Updated <time dateTime={outlook.updatedIso}>{outlook.updatedLabel}</time> · MLS® sales and listings, refreshed {board ? "nightly" : "weekly"}. PureProperty does not forecast prices: this page shows the measures that forecasts are built from.
                   </p>
                 </>
               }
@@ -237,23 +247,27 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
               <section className="mt-8 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="season">
                 <h2 id="season" className="text-lg font-semibold">When homes sell in {city}</h2>
                 <p className="mt-2 text-sm leading-relaxed">{outlook.seasonText}</p>
-                <p className="mt-2 text-sm">
-                  <Link href={daysOnMarketPath(slug)} className="underline hover:text-foreground">
-                    Sales by month and how long homes take to sell in {city} →
-                  </Link>
-                </p>
+                {board && (
+                  <p className="mt-2 text-sm">
+                    <Link href={daysOnMarketPath(slug)} className="underline hover:text-foreground">
+                      Sales by month and how long homes take to sell in {city} →
+                    </Link>
+                  </p>
+                )}
               </section>
             )}
 
             <section className="mt-8 grid gap-3 sm:grid-cols-2">
               {/* The public page is the front door; the full terminal (filters by home type, beds and
                   price band, inventory, rental yield) is VOW-gated behind a free account. */}
-              <LinkCard
-                href={`/analytics?region=${encodeURIComponent(city)}`}
-                Icon={BarChart3}
-                title={`The full ${city} market data`}
-                text="Free account: filter by home type, bedrooms and price, and see inventory and rents."
-              />
+              {board && (
+                <LinkCard
+                  href={`/analytics?region=${encodeURIComponent(city)}`}
+                  Icon={BarChart3}
+                  title={`The full ${city} market data`}
+                  text="Free account: filter by home type, bedrooms and price, and see inventory and rents."
+                />
+              )}
               <PriceOpinionCard citySlug={slug} />
             </section>
             <p className="mt-3 text-sm text-muted-foreground">

@@ -43,6 +43,7 @@ import { getMarketBoard } from "@/lib/data/marketBoard";
 import { buildCityFacts, boardRowFor } from "@/lib/data/cityFacts";
 import CityMarketFacts from "@/components/seo/CityMarketFacts";
 import { outlookCityBySlug, outlookPath } from "@/lib/data/outlookCities";
+import { cityMarketBySlug } from "@/lib/data/cityMarkets";
 import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import { PRICE_BANDS, priceBandPath } from "@/lib/listings/priceBands";
 
@@ -251,7 +252,7 @@ export default async function CityHubPage({
           <CityMarketFacts
             facts={facts}
             canonical={canonical}
-            outlookHref={outlookCityBySlug(city) ? outlookPath(city.toLowerCase()) : undefined}
+            outlookHref={outlookCityBySlug(city) || cityMarketBySlug(city) ? outlookPath(city.toLowerCase()) : undefined}
           />
         )}
         <CityTopicLinks citySlug={city} showCityHub={false} className="mb-8" />
