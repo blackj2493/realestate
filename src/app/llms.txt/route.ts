@@ -67,6 +67,9 @@ ${markets}## Housing market by city (for "is it a good time to buy or sell", "wi
 ## Good time to buy? (for "is it a good time to buy a house in {city}")
 - [Is it a good time to buy a house in Ontario?](${SITE_URL}/data/good-time-to-buy): for each board city, the measured buyer's-market signals — market temperature (sale-to-list and months of supply), same-home price change, sale to asking, share of listings with a price cut, share listed over 90 days — and how many favour buyers. Measures the market, not a buyer's own situation. City pages: ${SITE_URL}/data/good-time-to-buy/{city}. Refreshed nightly.
 
+## School catchments (for "{city} school catchment house prices")
+- [Do better schools raise house prices in Ontario?](${SITE_URL}/data/school-catchment-prices): the sale price gap per PureProperty School Score point and by score band, comparing similar houses in the same community, for each city with public-board catchment maps (Toronto, Mississauga, Brampton, Markham, Vaughan, Richmond Hill, Hamilton); city pages list every elementary catchment with 15+ sales against similar houses in the city. City pages: ${SITE_URL}/data/school-catchment-prices/{city}. Refreshed monthly.
+
 ## Basements (for "does a finished basement add value in {city}")
 - [Does a finished basement add value in Ontario?](${SITE_URL}/data/basement-value): what a finished basement, a basement apartment and a separate entrance added to the sale price of similar houses in each board city, measured on MLS® sales, plus median basement rents. City pages: ${SITE_URL}/data/basement-value/{city}. Refreshed monthly.
 

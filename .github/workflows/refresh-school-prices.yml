@@ -1,0 +1,61 @@
+name: Refresh School Prices
+
+# Rebuilds data/school-prices.json — the school-catchment price premium per city and every public
+# elementary catchment against similar houses — and commits it to main. /data/school-catchment-prices renders
+# that file statically, so the commit (and the
+# deploy it triggers) is what refreshes the pages. Read-only on the database.
+#
+# CADENCE: monthly, the 5th (after last month's sales reach the feed). The window is the
+# last 24 full months, so a month's run moves every figure a little.
+#
+# NEW-WORKFLOW GOTCHA: workflow_dispatch only activates once this file is on main. Seed the
+# first run with the Actions "Run workflow" button, or: gh workflow run refresh-school-prices.yml
+on:
+  # NOT scheduled by GitHub (it drops `schedule` runs under load). Supabase pg_cron POSTs a
+  # workflow_dispatch at 11:47 UTC on the 5th — supabase/migrations/169_pg_cron_condo_prices.sql.
+  # Change the time in cron.job, NOT here.
+  workflow_dispatch:
+
+permissions:
+  contents: write # commits the data file back to main
+
+concurrency:
+  group: refresh-school-prices
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build basement value data
+        timeout-minutes: 20
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        # pipefail: `tsx … | tee` otherwise returns tee's 0 and a Fatal goes green.
+        run: |
+          set -o pipefail
+          npx tsx scripts/data/buildSchoolPrices.ts --write 2>&1 | tee school-prices-run.log
+
+      - name: Commit data to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/school-prices.json
+          if git diff --cached --quiet; then
+            echo "No change to the school price data."
+          else
+            git commit -m "chore(data): monthly school prices refresh ($(date -u +%Y-%m-%d))"
+            git push
+          fi

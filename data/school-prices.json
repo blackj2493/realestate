@@ -1,0 +1,4471 @@
+{
+ "generatedAt": "2026-11-24T15:53:58.613Z",
+ "from": "2024-11-01",
+ "to": "2026-11-01",
+ "cities": [
+  {
+   "city": "Toronto",
+   "slug": "toronto",
+   "board": "Toronto District School Board",
+   "sales": 12519,
+   "medianPrice": 1230000,
+   "perPoint": {
+    "pct": 2.0444389217863903,
+    "lo": 1.515410740995461,
+    "hi": 2.6357674684371584,
+    "significant": true
+   },
+   "bands": {
+    "lt6": {
+     "pct": -3.411977478858988,
+     "lo": -5.28378001743131,
+     "hi": -1.8400966698626842,
+     "significant": true,
+     "sales": 2979
+    },
+    "6to7": {
+     "pct": -2.146051315364585,
+     "lo": -3.702129311735806,
+     "hi": -0.5962828799352895,
+     "significant": true,
+     "sales": 2783
+    },
+    "7to8": null,
+    "8to9": {
+     "pct": 1.922959024825053,
+     "lo": 0.3441450650563885,
+     "hi": 3.7594194597895787,
+     "significant": true,
+     "sales": 2562
+    },
+    "9plus": {
+     "pct": 7.259410303462643,
+     "lo": 4.948847713769408,
+     "hi": 9.884020142140402,
+     "significant": true,
+     "sales": 861
+    }
+   },
+   "catchments": [
+    {
+     "school": "Cottingham Junior Public School",
+     "score": 10,
+     "sales": 19,
+     "medianPrice": 2129000,
+     "vsSimilar": 69.3
+    },
+    {
+     "school": "Rosedale Junior Public School",
+     "score": 9.4,
+     "sales": 24,
+     "medianPrice": 3400000,
+     "vsSimilar": 67.6
+    },
+    {
+     "school": "Oriole Park Junior Public School",
+     "score": 10,
+     "sales": 40,
+     "medianPrice": 2475000,
+     "vsSimilar": 53.8
+    },
+    {
+     "school": "John Ross Robertson Junior Public School",
+     "score": 8.3,
+     "sales": 77,
+     "medianPrice": 2650000,
+     "vsSimilar": 53.5
+    },
+    {
+     "school": "Whitney Junior Public School",
+     "score": 9.4,
+     "sales": 58,
+     "medianPrice": 3251000,
+     "vsSimilar": 52.3
+    },
+    {
+     "school": "Bessborough Drive Elementary and Middle School",
+     "score": 8.9,
+     "sales": 50,
+     "medianPrice": 1895000,
+     "vsSimilar": 51.4
+    },
+    {
+     "school": "Bedford Park Public School",
+     "score": 8.8,
+     "sales": 93,
+     "medianPrice": 2230000,
+     "vsSimilar": 50
+    },
+    {
+     "school": "Forest Hill Junior and Senior Public School",
+     "score": 8.2,
+     "sales": 36,
+     "medianPrice": 3303000,
+     "vsSimilar": 49
+    },
+    {
+     "school": "John Wanless Junior Public School",
+     "score": 8.8,
+     "sales": 85,
+     "medianPrice": 2080000,
+     "vsSimilar": 48.5
+    },
+    {
+     "school": "Fern Avenue Junior and Senior Public School",
+     "score": 7.5,
+     "sales": 38,
+     "medianPrice": 1861000,
+     "vsSimilar": 48.1
+    },
+    {
+     "school": "Brown Junior Public School",
+     "score": 8.6,
+     "sales": 36,
+     "medianPrice": 3190000,
+     "vsSimilar": 47.5
+    },
+    {
+     "school": "Humbercrest Public School",
+     "score": 8,
+     "sales": 58,
+     "medianPrice": 1958000,
+     "vsSimilar": 46.5
+    },
+    {
+     "school": "Northlea Elementary and Middle School",
+     "score": 8.4,
+     "sales": 64,
+     "medianPrice": 2199000,
+     "vsSimilar": 46.5
+    },
+    {
+     "school": "Deer Park Junior and Senior Public School",
+     "score": 8.4,
+     "sales": 37,
+     "medianPrice": 2600000,
+     "vsSimilar": 46.1
+    },
+    {
+     "school": "Rolph Road Elementary School",
+     "score": 8.8,
+     "sales": 59,
+     "medianPrice": 2223000,
+     "vsSimilar": 44.9
+    },
+    {
+     "school": "Lambton-Kingsway Junior Middle School",
+     "score": 9.1,
+     "sales": 110,
+     "medianPrice": 2528000,
+     "vsSimilar": 44.5
+    },
+    {
+     "school": "Huron Street Junior Public School",
+     "score": 7.4,
+     "sales": 32,
+     "medianPrice": 2423000,
+     "vsSimilar": 44.3
+    },
+    {
+     "school": "Hillcrest Community School",
+     "score": 8.5,
+     "sales": 39,
+     "medianPrice": 2127000,
+     "vsSimilar": 43.2
+    },
+    {
+     "school": "Bennington Heights Elementary School",
+     "score": 8,
+     "sales": 25,
+     "medianPrice": 3156000,
+     "vsSimilar": 43
+    },
+    {
+     "school": "Runnymede Junior and Senior Public School",
+     "score": 9.2,
+     "sales": 99,
+     "medianPrice": 1725000,
+     "vsSimilar": 42.5
+    },
+    {
+     "school": "Blythwood Junior Public School",
+     "score": 8.8,
+     "sales": 58,
+     "medianPrice": 3005000,
+     "vsSimilar": 42.3
+    },
+    {
+     "school": "Sunnylea Junior School",
+     "score": 9.6,
+     "sales": 45,
+     "medianPrice": 1925000,
+     "vsSimilar": 41.1
+    },
+    {
+     "school": "Allenby Junior Public School",
+     "score": 7.8,
+     "sales": 97,
+     "medianPrice": 2125000,
+     "vsSimilar": 40
+    },
+    {
+     "school": "Frankland Community School",
+     "score": 8.7,
+     "sales": 26,
+     "medianPrice": 2083000,
+     "vsSimilar": 39.2
+    },
+    {
+     "school": "Williamson Road Junior Public School",
+     "score": 7.8,
+     "sales": 74,
+     "medianPrice": 2140000,
+     "vsSimilar": 39
+    },
+    {
+     "school": "Garden Avenue Junior Public School",
+     "score": 9.1,
+     "sales": 22,
+     "medianPrice": 2300000,
+     "vsSimilar": 38.8
+    },
+    {
+     "school": "Cedarvale Community School",
+     "score": 8.5,
+     "sales": 39,
+     "medianPrice": 2200000,
+     "vsSimilar": 38.2
+    },
+    {
+     "school": "Davisville Junior Public School",
+     "score": 8.6,
+     "sales": 39,
+     "medianPrice": 2350000,
+     "vsSimilar": 37.7
+    },
+    {
+     "school": "Jackman Avenue Junior Public School",
+     "score": 7.9,
+     "sales": 31,
+     "medianPrice": 1875000,
+     "vsSimilar": 37.6
+    },
+    {
+     "school": "Humewood Community School",
+     "score": 7.5,
+     "sales": 50,
+     "medianPrice": 1655000,
+     "vsSimilar": 37.6
+    },
+    {
+     "school": "Montrose Junior Public School",
+     "score": 9.5,
+     "sales": 20,
+     "medianPrice": 1718000,
+     "vsSimilar": 37
+    },
+    {
+     "school": "Armour Heights Public School",
+     "score": 7,
+     "sales": 64,
+     "medianPrice": 2439000,
+     "vsSimilar": 36.2
+    },
+    {
+     "school": "Maurice Cody Junior Public School",
+     "score": 9,
+     "sales": 74,
+     "medianPrice": 1812000,
+     "vsSimilar": 35.8
+    },
+    {
+     "school": "Clinton Street Junior Public School",
+     "score": 9,
+     "sales": 16,
+     "medianPrice": 1600000,
+     "vsSimilar": 35.4
+    },
+    {
+     "school": "Withrow Avenue Junior Public School",
+     "score": 8.5,
+     "sales": 19,
+     "medianPrice": 1700000,
+     "vsSimilar": 35
+    },
+    {
+     "school": "Balmy Beach Community School",
+     "score": 8.8,
+     "sales": 47,
+     "medianPrice": 2120000,
+     "vsSimilar": 34.8
+    },
+    {
+     "school": "Sprucecourt Public School",
+     "score": 5.9,
+     "sales": 35,
+     "medianPrice": 1450000,
+     "vsSimilar": 33.1
+    },
+    {
+     "school": "West Preparatory Junior Public School",
+     "score": 7.7,
+     "sales": 42,
+     "medianPrice": 2173000,
+     "vsSimilar": 31.5
+    },
+    {
+     "school": "Annette Street Junior and Senior Public School",
+     "score": 8.1,
+     "sales": 48,
+     "medianPrice": 1651000,
+     "vsSimilar": 30.1
+    },
+    {
+     "school": "Eglinton Junior Public School",
+     "score": 7,
+     "sales": 24,
+     "medianPrice": 1933000,
+     "vsSimilar": 30
+    },
+    {
+     "school": "Swansea Junior and Senior Public School",
+     "score": 7.8,
+     "sales": 95,
+     "medianPrice": 1885000,
+     "vsSimilar": 29.4
+    },
+    {
+     "school": "Kensington Community School",
+     "score": 9.7,
+     "sales": 17,
+     "medianPrice": 1502000,
+     "vsSimilar": 28.4
+    },
+    {
+     "school": "North Preparatory Junior Public School",
+     "score": 7.1,
+     "sales": 24,
+     "medianPrice": 2509000,
+     "vsSimilar": 28.4
+    },
+    {
+     "school": "Park Lawn Junior Middle School",
+     "score": 7.1,
+     "sales": 58,
+     "medianPrice": 1627000,
+     "vsSimilar": 28.3
+    },
+    {
+     "school": "Kew Beach Junior Public School",
+     "score": 8.5,
+     "sales": 37,
+     "medianPrice": 2000000,
+     "vsSimilar": 27.8
+    },
+    {
+     "school": "Rippleton Public School",
+     "score": 7.5,
+     "sales": 36,
+     "medianPrice": 1785000,
+     "vsSimilar": 27.8
+    },
+    {
+     "school": "Owen Public School",
+     "score": 5.9,
+     "sales": 85,
+     "medianPrice": 2780000,
+     "vsSimilar": 26.7
+    },
+    {
+     "school": "Palmerston Avenue Junior Public School",
+     "score": 8,
+     "sales": 30,
+     "medianPrice": 1609000,
+     "vsSimilar": 26.2
+    },
+    {
+     "school": "Niagara Street Junior Public School",
+     "score": 8.2,
+     "sales": 46,
+     "medianPrice": 1353000,
+     "vsSimilar": 25.9
+    },
+    {
+     "school": "Wilkinson Junior Public School",
+     "score": 8.6,
+     "sales": 17,
+     "medianPrice": 1501000,
+     "vsSimilar": 25.7
+    },
+    {
+     "school": "Elkhorn Public School",
+     "score": 8.5,
+     "sales": 101,
+     "medianPrice": 1880000,
+     "vsSimilar": 25.5
+    },
+    {
+     "school": "Howard Junior Public School",
+     "score": 7.6,
+     "sales": 41,
+     "medianPrice": 2007000,
+     "vsSimilar": 24.8
+    },
+    {
+     "school": "Keele Street Public School",
+     "score": 8.2,
+     "sales": 25,
+     "medianPrice": 1724000,
+     "vsSimilar": 24.2
+    },
+    {
+     "school": "Ledbury Park Elementary and Middle School",
+     "score": 7.7,
+     "sales": 127,
+     "medianPrice": 2750000,
+     "vsSimilar": 23.7
+    },
+    {
+     "school": "Courcelette Public School",
+     "score": 7.7,
+     "sales": 33,
+     "medianPrice": 1717000,
+     "vsSimilar": 23.1
+    },
+    {
+     "school": "Humber Valley Village Junior Middle School",
+     "score": 8.5,
+     "sales": 78,
+     "medianPrice": 2363000,
+     "vsSimilar": 21.8
+    },
+    {
+     "school": "Dundas Junior Public School",
+     "score": 5.9,
+     "sales": 39,
+     "medianPrice": 1330000,
+     "vsSimilar": 20.7
+    },
+    {
+     "school": "Bowmore Road Junior and Senior Public School",
+     "score": 6.4,
+     "sales": 38,
+     "medianPrice": 1448000,
+     "vsSimilar": 19.6
+    },
+    {
+     "school": "St George&#39;s Junior School",
+     "score": 8.1,
+     "sales": 65,
+     "medianPrice": 2135000,
+     "vsSimilar": 19.4
+    },
+    {
+     "school": "Charles G Fraser Junior Public School",
+     "score": 7.4,
+     "sales": 61,
+     "medianPrice": 1277000,
+     "vsSimilar": 19.4
+    },
+    {
+     "school": "Alexander Muir/Gladstone Ave Junior and Senior Public School",
+     "score": 7.3,
+     "sales": 40,
+     "medianPrice": 1274000,
+     "vsSimilar": 18.9
+    },
+    {
+     "school": "Blake Street Junior Public School",
+     "score": 7.5,
+     "sales": 51,
+     "medianPrice": 1279000,
+     "vsSimilar": 17.9
+    },
+    {
+     "school": "Earl Beatty Junior and Senior Public School",
+     "score": 8.7,
+     "sales": 17,
+     "medianPrice": 1275000,
+     "vsSimilar": 17.2
+    },
+    {
+     "school": "Indian Road Crescent Junior Public School",
+     "score": 8.8,
+     "sales": 20,
+     "medianPrice": 1480000,
+     "vsSimilar": 17.1
+    },
+    {
+     "school": "Islington Junior Middle School",
+     "score": 6.6,
+     "sales": 50,
+     "medianPrice": 1684000,
+     "vsSimilar": 16.7
+    },
+    {
+     "school": "Chester Elementary School",
+     "score": 7,
+     "sales": 62,
+     "medianPrice": 1383000,
+     "vsSimilar": 16.4
+    },
+    {
+     "school": "Givins/Shaw Junior Public School",
+     "score": 8.1,
+     "sales": 24,
+     "medianPrice": 1410000,
+     "vsSimilar": 16.4
+    },
+    {
+     "school": "Earl Haig Public School",
+     "score": 6.2,
+     "sales": 27,
+     "medianPrice": 1185000,
+     "vsSimilar": 16.1
+    },
+    {
+     "school": "Morse Street Junior Public School",
+     "score": 7.6,
+     "sales": 35,
+     "medianPrice": 1435000,
+     "vsSimilar": 16
+    },
+    {
+     "school": "Bruce Public School",
+     "score": 6.8,
+     "sales": 32,
+     "medianPrice": 1335000,
+     "vsSimilar": 14.6
+    },
+    {
+     "school": "Shaughnessy Public School",
+     "score": 6.9,
+     "sales": 16,
+     "medianPrice": 1710000,
+     "vsSimilar": 14.6
+    },
+    {
+     "school": "King George Junior Public School",
+     "score": 9.1,
+     "sales": 39,
+     "medianPrice": 1250000,
+     "vsSimilar": 14.5
+    },
+    {
+     "school": "Leslieville Junior Public School",
+     "score": 6.2,
+     "sales": 29,
+     "medianPrice": 1500000,
+     "vsSimilar": 14.4
+    },
+    {
+     "school": "Denlow Public School",
+     "score": 9,
+     "sales": 57,
+     "medianPrice": 2510000,
+     "vsSimilar": 13.6
+    },
+    {
+     "school": "Norway Junior Public School",
+     "score": 8.5,
+     "sales": 38,
+     "medianPrice": 1400000,
+     "vsSimilar": 13.4
+    },
+    {
+     "school": "Harrison Public School",
+     "score": 8.2,
+     "sales": 19,
+     "medianPrice": 3150000,
+     "vsSimilar": 13.4
+    },
+    {
+     "school": "Castlebar Junior School",
+     "score": 8.2,
+     "sales": 83,
+     "medianPrice": 1140000,
+     "vsSimilar": 12.8
+    },
+    {
+     "school": "James S Bell Junior Middle School",
+     "score": 7.1,
+     "sales": 36,
+     "medianPrice": 1375000,
+     "vsSimilar": 12.1
+    },
+    {
+     "school": "Sloane Public School",
+     "score": 6.5,
+     "sales": 21,
+     "medianPrice": 1250000,
+     "vsSimilar": 11.9
+    },
+    {
+     "school": "Seventh Street Junior School",
+     "score": 7.3,
+     "sales": 65,
+     "medianPrice": 1288000,
+     "vsSimilar": 11.7
+    },
+    {
+     "school": "Greenland Public School",
+     "score": 7.1,
+     "sales": 18,
+     "medianPrice": 1236000,
+     "vsSimilar": 11.5
+    },
+    {
+     "school": "Shirley Street Junior Public School",
+     "score": 7,
+     "sales": 19,
+     "medianPrice": 1100000,
+     "vsSimilar": 11.2
+    },
+    {
+     "school": "Summit Heights Public School",
+     "score": 8.5,
+     "sales": 20,
+     "medianPrice": 1843000,
+     "vsSimilar": 11.1
+    },
+    {
+     "school": "Norman Ingram Public School",
+     "score": 6.5,
+     "sales": 38,
+     "medianPrice": 1725000,
+     "vsSimilar": 11
+    },
+    {
+     "school": "Rosethorn Junior School",
+     "score": 6.5,
+     "sales": 82,
+     "medianPrice": 1803000,
+     "vsSimilar": 10.9
+    },
+    {
+     "school": "Glen Park Public School",
+     "score": 5.5,
+     "sales": 63,
+     "medianPrice": 1600000,
+     "vsSimilar": 10.5
+    },
+    {
+     "school": "Duke of Connaught Junior and Senior Public School",
+     "score": 7.1,
+     "sales": 39,
+     "medianPrice": 1250000,
+     "vsSimilar": 10.4
+    },
+    {
+     "school": "Diefenbaker Elementary School",
+     "score": 6.8,
+     "sales": 74,
+     "medianPrice": 1250000,
+     "vsSimilar": 10.3
+    },
+    {
+     "school": "Perth Avenue Junior Public School",
+     "score": 7.7,
+     "sales": 27,
+     "medianPrice": 1305000,
+     "vsSimilar": 10.3
+    },
+    {
+     "school": "Regal Road Junior Public School",
+     "score": 7.3,
+     "sales": 51,
+     "medianPrice": 1350000,
+     "vsSimilar": 10
+    },
+    {
+     "school": "Nelson Mandela Park Public School",
+     "score": 4.7,
+     "sales": 25,
+     "medianPrice": 1090000,
+     "vsSimilar": 9.8
+    },
+    {
+     "school": "Cameron Public School",
+     "score": 8.1,
+     "sales": 70,
+     "medianPrice": 1948000,
+     "vsSimilar": 9.8
+    },
+    {
+     "school": "Pauline Junior Public School",
+     "score": 7.6,
+     "sales": 34,
+     "medianPrice": 1418000,
+     "vsSimilar": 9.6
+    },
+    {
+     "school": "Kimberley Junior Public School",
+     "score": 8.2,
+     "sales": 29,
+     "medianPrice": 1325000,
+     "vsSimilar": 9.5
+    },
+    {
+     "school": "Hollywood Public School",
+     "score": 9.6,
+     "sales": 83,
+     "medianPrice": 2336000,
+     "vsSimilar": 9.3
+    },
+    {
+     "school": "McMurrich Junior Public School",
+     "score": 8.1,
+     "sales": 34,
+     "medianPrice": 1435000,
+     "vsSimilar": 9.3
+    },
+    {
+     "school": "Baycrest Public School",
+     "score": 6.9,
+     "sales": 50,
+     "medianPrice": 1284000,
+     "vsSimilar": 8.9
+    },
+    {
+     "school": "Blantyre Public School",
+     "score": 7.1,
+     "sales": 48,
+     "medianPrice": 1220000,
+     "vsSimilar": 8.9
+    },
+    {
+     "school": "Princess Margaret Junior School",
+     "score": 6,
+     "sales": 77,
+     "medianPrice": 1400000,
+     "vsSimilar": 8.5
+    },
+    {
+     "school": "Essex Junior and Senior Public School",
+     "score": 6.4,
+     "sales": 26,
+     "medianPrice": 1288000,
+     "vsSimilar": 8.5
+    },
+    {
+     "school": "Millwood Junior School",
+     "score": 6.5,
+     "sales": 35,
+     "medianPrice": 1535000,
+     "vsSimilar": 8.4
+    },
+    {
+     "school": "R H McGregor Elementary School",
+     "score": 6.8,
+     "sales": 112,
+     "medianPrice": 1205000,
+     "vsSimilar": 8.3
+    },
+    {
+     "school": "Brock Public School",
+     "score": 8.1,
+     "sales": 19,
+     "medianPrice": 1250000,
+     "vsSimilar": 8.3
+    },
+    {
+     "school": "Norseman Junior Middle School",
+     "score": 7.7,
+     "sales": 111,
+     "medianPrice": 1310000,
+     "vsSimilar": 8.1
+    },
+    {
+     "school": "George Anderson Public School",
+     "score": 8.8,
+     "sales": 19,
+     "medianPrice": 1069000,
+     "vsSimilar": 7.5
+    },
+    {
+     "school": "Dovercourt Public School",
+     "score": 6.2,
+     "sales": 40,
+     "medianPrice": 1241000,
+     "vsSimilar": 7.5
+    },
+    {
+     "school": "Churchill Public School",
+     "score": 8.3,
+     "sales": 77,
+     "medianPrice": 1832000,
+     "vsSimilar": 7.2
+    },
+    {
+     "school": "West Glen Junior School",
+     "score": 5.7,
+     "sales": 40,
+     "medianPrice": 1916000,
+     "vsSimilar": 7.2
+    },
+    {
+     "school": "McKee Public School",
+     "score": 8.6,
+     "sales": 37,
+     "medianPrice": 2510000,
+     "vsSimilar": 7.2
+    },
+    {
+     "school": "J R Wilcox Community School",
+     "score": 7.2,
+     "sales": 68,
+     "medianPrice": 1100000,
+     "vsSimilar": 6.7
+    },
+    {
+     "school": "Valleyfield Junior School",
+     "score": 7.7,
+     "sales": 67,
+     "medianPrice": 1300000,
+     "vsSimilar": 6.6
+    },
+    {
+     "school": "Mill Valley Junior School",
+     "score": 9,
+     "sales": 30,
+     "medianPrice": 1240000,
+     "vsSimilar": 6.4
+    },
+    {
+     "school": "Presteign Heights Elementary School",
+     "score": 9.1,
+     "sales": 22,
+     "medianPrice": 1438000,
+     "vsSimilar": 6.4
+    },
+    {
+     "school": "David Hornell Junior School",
+     "score": 6.8,
+     "sales": 39,
+     "medianPrice": 1160000,
+     "vsSimilar": 6.3
+    },
+    {
+     "school": "Wedgewood Junior School",
+     "score": 7.9,
+     "sales": 85,
+     "medianPrice": 1350000,
+     "vsSimilar": 5.9
+    },
+    {
+     "school": "Broadacres Junior School",
+     "score": 5.5,
+     "sales": 27,
+     "medianPrice": 1200000,
+     "vsSimilar": 5.8
+    },
+    {
+     "school": "Roden Public School",
+     "score": 6.5,
+     "sales": 39,
+     "medianPrice": 1150000,
+     "vsSimilar": 5.7
+    },
+    {
+     "school": "Sir Adam Beck Junior School",
+     "score": 8.6,
+     "sales": 63,
+     "medianPrice": 1149000,
+     "vsSimilar": 5.6
+    },
+    {
+     "school": "Rawlinson Community School",
+     "score": 6.3,
+     "sales": 119,
+     "medianPrice": 1215000,
+     "vsSimilar": 5.3
+    },
+    {
+     "school": "&#201;tienne Br&#251;l&#233; Junior School",
+     "score": 7.9,
+     "sales": 21,
+     "medianPrice": 1051000,
+     "vsSimilar": 4.6
+    },
+    {
+     "school": "Maple Leaf Public School",
+     "score": 4.2,
+     "sales": 48,
+     "medianPrice": 1103000,
+     "vsSimilar": 3.7
+    },
+    {
+     "school": "Eatonville Junior School",
+     "score": 7.5,
+     "sales": 51,
+     "medianPrice": 1168000,
+     "vsSimilar": 3.6
+    },
+    {
+     "school": "Gledhill Junior Public School",
+     "score": 7.6,
+     "sales": 61,
+     "medianPrice": 1200000,
+     "vsSimilar": 3.5
+    },
+    {
+     "school": "Parkside Elementary School",
+     "score": 7.5,
+     "sales": 68,
+     "medianPrice": 1148000,
+     "vsSimilar": 2.9
+    },
+    {
+     "school": "Yorkview Public School",
+     "score": 5.2,
+     "sales": 33,
+     "medianPrice": 1725000,
+     "vsSimilar": 2.5
+    },
+    {
+     "school": "William Burgess Elementary School",
+     "score": 5.9,
+     "sales": 73,
+     "medianPrice": 1200000,
+     "vsSimilar": 2.4
+    },
+    {
+     "school": "George R Gauld Junior School",
+     "score": 7.3,
+     "sales": 51,
+     "medianPrice": 1180000,
+     "vsSimilar": 1.7
+    },
+    {
+     "school": "Victoria Village Public School",
+     "score": 4.3,
+     "sales": 35,
+     "medianPrice": 1253000,
+     "vsSimilar": 1.7
+    },
+    {
+     "school": "John English Junior Middle School",
+     "score": 7.3,
+     "sales": 67,
+     "medianPrice": 1200000,
+     "vsSimilar": 1.5
+    },
+    {
+     "school": "Lanor Junior Middle School",
+     "score": 7.9,
+     "sales": 76,
+     "medianPrice": 1125000,
+     "vsSimilar": 1.4
+    },
+    {
+     "school": "Ranchdale Public School",
+     "score": 6.7,
+     "sales": 30,
+     "medianPrice": 1390000,
+     "vsSimilar": 0.9
+    },
+    {
+     "school": "Lillian Public School",
+     "score": 6.2,
+     "sales": 100,
+     "medianPrice": 1423000,
+     "vsSimilar": 0.9
+    },
+    {
+     "school": "Cassandra Public School",
+     "score": 5.9,
+     "sales": 41,
+     "medianPrice": 1225000,
+     "vsSimilar": 0.5
+    },
+    {
+     "school": "Wellesworth Junior School",
+     "score": 5.8,
+     "sales": 27,
+     "medianPrice": 1053000,
+     "vsSimilar": 0.5
+    },
+    {
+     "school": "Avondale Public School",
+     "score": 7,
+     "sales": 18,
+     "medianPrice": 1347000,
+     "vsSimilar": 0.5
+    },
+    {
+     "school": "Faywood Arts-Based Curriculum School",
+     "score": 7,
+     "sales": 57,
+     "medianPrice": 1409000,
+     "vsSimilar": 0.3
+    },
+    {
+     "school": "Westway Junior School",
+     "score": 5.4,
+     "sales": 76,
+     "medianPrice": 1173000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Pleasant Public School",
+     "score": 5.8,
+     "sales": 31,
+     "medianPrice": 1135000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Dunlace Public School",
+     "score": 6.9,
+     "sales": 30,
+     "medianPrice": 2200000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Westmount Junior School",
+     "score": 5.3,
+     "sales": 70,
+     "medianPrice": 1213000,
+     "vsSimilar": -0.5
+    },
+    {
+     "school": "Lescon Public School",
+     "score": 4.4,
+     "sales": 30,
+     "medianPrice": 1272000,
+     "vsSimilar": -0.6
+    },
+    {
+     "school": "Cliffwood Public School",
+     "score": 9.3,
+     "sales": 27,
+     "medianPrice": 1378000,
+     "vsSimilar": -0.7
+    },
+    {
+     "school": "Cresthaven Public School",
+     "score": 7.5,
+     "sales": 26,
+     "medianPrice": 1144000,
+     "vsSimilar": -0.8
+    },
+    {
+     "school": "Dixon Grove Junior Middle School",
+     "score": 4.5,
+     "sales": 79,
+     "medianPrice": 1100000,
+     "vsSimilar": -0.9
+    },
+    {
+     "school": "Briarcrest Junior School",
+     "score": 8.1,
+     "sales": 40,
+     "medianPrice": 1083000,
+     "vsSimilar": -1.6
+    },
+    {
+     "school": "R J Lang Elementary and Middle School",
+     "score": 6,
+     "sales": 90,
+     "medianPrice": 1225000,
+     "vsSimilar": -1.7
+    },
+    {
+     "school": "Birch Cliff Public School",
+     "score": 6.8,
+     "sales": 90,
+     "medianPrice": 1061000,
+     "vsSimilar": -2
+    },
+    {
+     "school": "Finch Public School",
+     "score": 7.2,
+     "sales": 63,
+     "medianPrice": 1920000,
+     "vsSimilar": -2.7
+    },
+    {
+     "school": "Dallington Public School",
+     "score": 4.4,
+     "sales": 27,
+     "medianPrice": 1184000,
+     "vsSimilar": -2.7
+    },
+    {
+     "school": "Twentieth Street Junior School",
+     "score": 7,
+     "sales": 55,
+     "medianPrice": 1020000,
+     "vsSimilar": -2.8
+    },
+    {
+     "school": "Gracefield Public School",
+     "score": 2.9,
+     "sales": 45,
+     "medianPrice": 1100000,
+     "vsSimilar": -2.9
+    },
+    {
+     "school": "Cliffside Public School",
+     "score": 5.5,
+     "sales": 18,
+     "medianPrice": 1096000,
+     "vsSimilar": -3.3
+    },
+    {
+     "school": "Lord Dufferin Junior and Senior Public School",
+     "score": 5.5,
+     "sales": 28,
+     "medianPrice": 1021000,
+     "vsSimilar": -3.6
+    },
+    {
+     "school": "Victoria Park Elementary School",
+     "score": 9.2,
+     "sales": 30,
+     "medianPrice": 960000,
+     "vsSimilar": -4.4
+    },
+    {
+     "school": "Tumpane Public School",
+     "score": 5.5,
+     "sales": 66,
+     "medianPrice": 978000,
+     "vsSimilar": -4.4
+    },
+    {
+     "school": "Second Street Junior Middle School",
+     "score": 6.9,
+     "sales": 28,
+     "medianPrice": 1003000,
+     "vsSimilar": -4.6
+    },
+    {
+     "school": "Blaydon Public School",
+     "score": 3.8,
+     "sales": 23,
+     "medianPrice": 965000,
+     "vsSimilar": -4.8
+    },
+    {
+     "school": "Lambton Park Community School",
+     "score": 5.3,
+     "sales": 22,
+     "medianPrice": 921000,
+     "vsSimilar": -4.8
+    },
+    {
+     "school": "Terraview-Willowfield Public School",
+     "score": 7.3,
+     "sales": 37,
+     "medianPrice": 973000,
+     "vsSimilar": -4.8
+    },
+    {
+     "school": "Secord Elementary School",
+     "score": 6.1,
+     "sales": 66,
+     "medianPrice": 953000,
+     "vsSimilar": -4.9
+    },
+    {
+     "school": "Elizabeth Simcoe Junior Public School",
+     "score": 8.1,
+     "sales": 37,
+     "medianPrice": 1075000,
+     "vsSimilar": -4.9
+    },
+    {
+     "school": "Maryvale Public School",
+     "score": 5.2,
+     "sales": 41,
+     "medianPrice": 920000,
+     "vsSimilar": -5.1
+    },
+    {
+     "school": "Chine Drive Public School",
+     "score": 9,
+     "sales": 15,
+     "medianPrice": 1215000,
+     "vsSimilar": -5.1
+    },
+    {
+     "school": "Lynngate Junior Public School",
+     "score": 6.1,
+     "sales": 23,
+     "medianPrice": 1078000,
+     "vsSimilar": -5.2
+    },
+    {
+     "school": "Ellesmere-Statton Public School",
+     "score": 6.4,
+     "sales": 27,
+     "medianPrice": 880000,
+     "vsSimilar": -6.2
+    },
+    {
+     "school": "Dublin Heights Elementary and Middle School",
+     "score": 6.8,
+     "sales": 49,
+     "medianPrice": 1270000,
+     "vsSimilar": -6.8
+    },
+    {
+     "school": "Vradenburg Junior Public School",
+     "score": 7.5,
+     "sales": 31,
+     "medianPrice": 1000000,
+     "vsSimilar": -6.9
+    },
+    {
+     "school": "Selwyn Elementary School",
+     "score": 8.5,
+     "sales": 26,
+     "medianPrice": 902000,
+     "vsSimilar": -7.2
+    },
+    {
+     "school": "Ionview Public School",
+     "score": 6.4,
+     "sales": 27,
+     "medianPrice": 930000,
+     "vsSimilar": -7.5
+    },
+    {
+     "school": "Lamberton Public School",
+     "score": 6.3,
+     "sales": 20,
+     "medianPrice": 1055000,
+     "vsSimilar": -7.8
+    },
+    {
+     "school": "St Andrews Public School",
+     "score": 7.7,
+     "sales": 32,
+     "medianPrice": 935000,
+     "vsSimilar": -8
+    },
+    {
+     "school": "Woburn Junior Public School",
+     "score": 6.7,
+     "sales": 16,
+     "medianPrice": 990000,
+     "vsSimilar": -8.2
+    },
+    {
+     "school": "Bridlewood Junior Public School",
+     "score": 8.3,
+     "sales": 15,
+     "medianPrice": 1100000,
+     "vsSimilar": -8.3
+    },
+    {
+     "school": "George Peck Public School",
+     "score": 7,
+     "sales": 35,
+     "medianPrice": 925000,
+     "vsSimilar": -8.3
+    },
+    {
+     "school": "Charles E Webster Public School",
+     "score": 4.7,
+     "sales": 28,
+     "medianPrice": 945000,
+     "vsSimilar": -8.6
+    },
+    {
+     "school": "General Crerar Public School",
+     "score": 5.7,
+     "sales": 21,
+     "medianPrice": 925000,
+     "vsSimilar": -8.9
+    },
+    {
+     "school": "Hunter&#39;s Glen Junior Public School",
+     "score": 6.6,
+     "sales": 25,
+     "medianPrice": 930000,
+     "vsSimilar": -9.5
+    },
+    {
+     "school": "George Webster Elementary School",
+     "score": 5.8,
+     "sales": 54,
+     "medianPrice": 1095000,
+     "vsSimilar": -9.7
+    },
+    {
+     "school": "Fairbank Memorial Community School",
+     "score": 6.6,
+     "sales": 88,
+     "medianPrice": 870000,
+     "vsSimilar": -9.7
+    },
+    {
+     "school": "Seneca Hill Public School",
+     "score": 9.2,
+     "sales": 17,
+     "medianPrice": 1360000,
+     "vsSimilar": -9.7
+    },
+    {
+     "school": "Parkfield Junior School",
+     "score": 7,
+     "sales": 17,
+     "medianPrice": 1046000,
+     "vsSimilar": -9.8
+    },
+    {
+     "school": "North Agincourt Junior Public School",
+     "score": 7.4,
+     "sales": 24,
+     "medianPrice": 1245000,
+     "vsSimilar": -10.5
+    },
+    {
+     "school": "Lord Roberts Junior Public School",
+     "score": 6.9,
+     "sales": 36,
+     "medianPrice": 955000,
+     "vsSimilar": -10.6
+    },
+    {
+     "school": "Poplar Road Junior Public School",
+     "score": 8.5,
+     "sales": 31,
+     "medianPrice": 1049000,
+     "vsSimilar": -10.7
+    },
+    {
+     "school": "Buchanan Public School",
+     "score": 5.3,
+     "sales": 34,
+     "medianPrice": 983000,
+     "vsSimilar": -11.1
+    },
+    {
+     "school": "Ernest Public School",
+     "score": 6.3,
+     "sales": 29,
+     "medianPrice": 1250000,
+     "vsSimilar": -11.1
+    },
+    {
+     "school": "Gracedale Public School",
+     "score": 5.3,
+     "sales": 21,
+     "medianPrice": 1040000,
+     "vsSimilar": -11.1
+    },
+    {
+     "school": "Glen Ravine Junior Public School",
+     "score": 6.2,
+     "sales": 15,
+     "medianPrice": 929000,
+     "vsSimilar": -11.1
+    },
+    {
+     "school": "Guildwood Junior Public School",
+     "score": 8,
+     "sales": 31,
+     "medianPrice": 1050000,
+     "vsSimilar": -11.3
+    },
+    {
+     "school": "Wexford Public School",
+     "score": 5.5,
+     "sales": 35,
+     "medianPrice": 950000,
+     "vsSimilar": -11.4
+    },
+    {
+     "school": "Joyce Public School",
+     "score": 6.4,
+     "sales": 25,
+     "medianPrice": 1198000,
+     "vsSimilar": -11.8
+    },
+    {
+     "school": "Ancaster Public School",
+     "score": 4.7,
+     "sales": 30,
+     "medianPrice": 972000,
+     "vsSimilar": -11.9
+    },
+    {
+     "school": "Fairmount Public School",
+     "score": 6.8,
+     "sales": 59,
+     "medianPrice": 1260000,
+     "vsSimilar": -11.9
+    },
+    {
+     "school": "John A Leslie Public School",
+     "score": 6,
+     "sales": 77,
+     "medianPrice": 900000,
+     "vsSimilar": -12.1
+    },
+    {
+     "school": "Silverthorn Community School",
+     "score": 6.5,
+     "sales": 34,
+     "medianPrice": 845000,
+     "vsSimilar": -12.2
+    },
+    {
+     "school": "F H Miller Junior Public School",
+     "score": 7.8,
+     "sales": 44,
+     "medianPrice": 892000,
+     "vsSimilar": -12.4
+    },
+    {
+     "school": "George P Mackie Junior Public School",
+     "score": 8.1,
+     "sales": 21,
+     "medianPrice": 1290000,
+     "vsSimilar": -12.8
+    },
+    {
+     "school": "Elmlea Junior School",
+     "score": 4.6,
+     "sales": 33,
+     "medianPrice": 810000,
+     "vsSimilar": -12.8
+    },
+    {
+     "school": "Gulfstream Public School",
+     "score": 7.7,
+     "sales": 56,
+     "medianPrice": 981000,
+     "vsSimilar": -12.9
+    },
+    {
+     "school": "Dorset Park Public School",
+     "score": 6.2,
+     "sales": 44,
+     "medianPrice": 870000,
+     "vsSimilar": -12.9
+    },
+    {
+     "school": "Corvette Junior Public School",
+     "score": 6,
+     "sales": 34,
+     "medianPrice": 850000,
+     "vsSimilar": -13.2
+    },
+    {
+     "school": "Churchill Heights Public School",
+     "score": 7.8,
+     "sales": 20,
+     "medianPrice": 900000,
+     "vsSimilar": -13.2
+    },
+    {
+     "school": "Keelesdale Junior Public School",
+     "score": 4.6,
+     "sales": 18,
+     "medianPrice": 838000,
+     "vsSimilar": -13.4
+    },
+    {
+     "school": "Danforth Gardens Public School",
+     "score": 5.8,
+     "sales": 25,
+     "medianPrice": 860000,
+     "vsSimilar": -13.4
+    },
+    {
+     "school": "Golf Road Junior Public School",
+     "score": 5.6,
+     "sales": 24,
+     "medianPrice": 856000,
+     "vsSimilar": -13.5
+    },
+    {
+     "school": "Clairlea Public School",
+     "score": 5.7,
+     "sales": 58,
+     "medianPrice": 899000,
+     "vsSimilar": -13.7
+    },
+    {
+     "school": "North Bridlewood Junior Public School",
+     "score": 6.9,
+     "sales": 26,
+     "medianPrice": 1289000,
+     "vsSimilar": -13.7
+    },
+    {
+     "school": "Fairglen Junior Public School",
+     "score": 7.4,
+     "sales": 20,
+     "medianPrice": 1248000,
+     "vsSimilar": -14.2
+    },
+    {
+     "school": "Tredway Woodsworth Public School",
+     "score": 6,
+     "sales": 23,
+     "medianPrice": 860000,
+     "vsSimilar": -14.2
+    },
+    {
+     "school": "Rivercrest Junior School",
+     "score": 5.9,
+     "sales": 83,
+     "medianPrice": 873000,
+     "vsSimilar": -14.3
+    },
+    {
+     "school": "Fairbank Public School",
+     "score": 5.9,
+     "sales": 33,
+     "medianPrice": 913000,
+     "vsSimilar": -14.7
+    },
+    {
+     "school": "H A Halbert Junior Public School",
+     "score": 4.7,
+     "sales": 30,
+     "medianPrice": 881000,
+     "vsSimilar": -14.9
+    },
+    {
+     "school": "Beaumonde Heights Junior Middle School",
+     "score": 7,
+     "sales": 60,
+     "medianPrice": 923000,
+     "vsSimilar": -15
+    },
+    {
+     "school": "Birch Cliff Heights Public School",
+     "score": 5.9,
+     "sales": 45,
+     "medianPrice": 855000,
+     "vsSimilar": -15.1
+    },
+    {
+     "school": "Cedarbrook Public School",
+     "score": 4.8,
+     "sales": 43,
+     "medianPrice": 900000,
+     "vsSimilar": -15.1
+    },
+    {
+     "school": "Milliken Public School",
+     "score": 7.8,
+     "sales": 24,
+     "medianPrice": 1023000,
+     "vsSimilar": -15.1
+    },
+    {
+     "school": "North Bendale Public School",
+     "score": 6.4,
+     "sales": 21,
+     "medianPrice": 895000,
+     "vsSimilar": -15.2
+    },
+    {
+     "school": "Steelesview Public School",
+     "score": 8.5,
+     "sales": 56,
+     "medianPrice": 1469000,
+     "vsSimilar": -15.6
+    },
+    {
+     "school": "C D Farquharson Junior Public School",
+     "score": 8.7,
+     "sales": 30,
+     "medianPrice": 1024000,
+     "vsSimilar": -15.7
+    },
+    {
+     "school": "Donwood Park Public School",
+     "score": 5.7,
+     "sales": 29,
+     "medianPrice": 950000,
+     "vsSimilar": -15.8
+    },
+    {
+     "school": "General Mercer Junior Public School",
+     "score": 5.5,
+     "sales": 39,
+     "medianPrice": 875000,
+     "vsSimilar": -15.9
+    },
+    {
+     "school": "Macklin Public School",
+     "score": 6.8,
+     "sales": 31,
+     "medianPrice": 959000,
+     "vsSimilar": -16.2
+    },
+    {
+     "school": "William G Miller Public School",
+     "score": 6.2,
+     "sales": 39,
+     "medianPrice": 868000,
+     "vsSimilar": -16.4
+    },
+    {
+     "school": "Pelmo Park Public School",
+     "score": 4.3,
+     "sales": 29,
+     "medianPrice": 1060000,
+     "vsSimilar": -16.5
+    },
+    {
+     "school": "Knob Hill Public School",
+     "score": 5.7,
+     "sales": 29,
+     "medianPrice": 851000,
+     "vsSimilar": -16.6
+    },
+    {
+     "school": "Claireville Junior School",
+     "score": 5.3,
+     "sales": 20,
+     "medianPrice": 897000,
+     "vsSimilar": -16.7
+    },
+    {
+     "school": "General Brock Public School",
+     "score": 5.5,
+     "sales": 16,
+     "medianPrice": 877000,
+     "vsSimilar": -16.9
+    },
+    {
+     "school": "Walter Perry Junior Public School",
+     "score": 6.6,
+     "sales": 26,
+     "medianPrice": 858000,
+     "vsSimilar": -17.1
+    },
+    {
+     "school": "Agnes Macphail Public School",
+     "score": 8.8,
+     "sales": 21,
+     "medianPrice": 936000,
+     "vsSimilar": -17.2
+    },
+    {
+     "school": "Highland Heights Junior Public School",
+     "score": 6.1,
+     "sales": 27,
+     "medianPrice": 1180000,
+     "vsSimilar": -17.3
+    },
+    {
+     "school": "Lynnwood Heights Junior Public School",
+     "score": 8.4,
+     "sales": 16,
+     "medianPrice": 998000,
+     "vsSimilar": -17.3
+    },
+    {
+     "school": "Taylor Creek Public School",
+     "score": 4.1,
+     "sales": 27,
+     "medianPrice": 875000,
+     "vsSimilar": -17.4
+    },
+    {
+     "school": "Harwood Public School",
+     "score": 5.5,
+     "sales": 20,
+     "medianPrice": 815000,
+     "vsSimilar": -17.5
+    },
+    {
+     "school": "William G Davis Junior Public School",
+     "score": 8.8,
+     "sales": 50,
+     "medianPrice": 986000,
+     "vsSimilar": -17.7
+    },
+    {
+     "school": "John D Parker Junior School",
+     "score": 7.2,
+     "sales": 25,
+     "medianPrice": 930000,
+     "vsSimilar": -17.8
+    },
+    {
+     "school": "Weston Memorial Junior Public School",
+     "score": 8.5,
+     "sales": 36,
+     "medianPrice": 921000,
+     "vsSimilar": -17.8
+    },
+    {
+     "school": "Bendale Junior Public School",
+     "score": 6.2,
+     "sales": 31,
+     "medianPrice": 875000,
+     "vsSimilar": -17.9
+    },
+    {
+     "school": "Kennedy Public School",
+     "score": 8,
+     "sales": 31,
+     "medianPrice": 1250000,
+     "vsSimilar": -18
+    },
+    {
+     "school": "The Elms Junior Middle School",
+     "score": 6.1,
+     "sales": 22,
+     "medianPrice": 1018000,
+     "vsSimilar": -18.1
+    },
+    {
+     "school": "Regent Heights Public School",
+     "score": 6.8,
+     "sales": 76,
+     "medianPrice": 884000,
+     "vsSimilar": -18.2
+    },
+    {
+     "school": "Bellmere Junior Public School",
+     "score": 6.5,
+     "sales": 20,
+     "medianPrice": 913000,
+     "vsSimilar": -18.3
+    },
+    {
+     "school": "Brookhaven Public School",
+     "score": 3.1,
+     "sales": 37,
+     "medianPrice": 940000,
+     "vsSimilar": -18.4
+    },
+    {
+     "school": "West Humber Junior Middle School",
+     "score": 6.9,
+     "sales": 43,
+     "medianPrice": 867000,
+     "vsSimilar": -18.6
+    },
+    {
+     "school": "Downsview Public School",
+     "score": 7,
+     "sales": 51,
+     "medianPrice": 964000,
+     "vsSimilar": -18.7
+    },
+    {
+     "school": "Port Royal Public School",
+     "score": 8.5,
+     "sales": 24,
+     "medianPrice": 1204000,
+     "vsSimilar": -18.9
+    },
+    {
+     "school": "Anson Park Public School",
+     "score": 6,
+     "sales": 20,
+     "medianPrice": 925000,
+     "vsSimilar": -19.3
+    },
+    {
+     "school": "John McCrae Public School",
+     "score": 5.5,
+     "sales": 37,
+     "medianPrice": 930000,
+     "vsSimilar": -19.4
+    },
+    {
+     "school": "Oakridge Junior Public School",
+     "score": 6.1,
+     "sales": 20,
+     "medianPrice": 879000,
+     "vsSimilar": -19.4
+    },
+    {
+     "school": "Cedar Drive Junior Public School",
+     "score": 5.3,
+     "sales": 19,
+     "medianPrice": 825000,
+     "vsSimilar": -19.4
+    },
+    {
+     "school": "Iroquois Junior Public School",
+     "score": 9.5,
+     "sales": 28,
+     "medianPrice": 1142000,
+     "vsSimilar": -19.8
+    },
+    {
+     "school": "Percy Williams Junior Public School",
+     "score": 8.2,
+     "sales": 34,
+     "medianPrice": 993000,
+     "vsSimilar": -19.9
+    },
+    {
+     "school": "White Haven Public School",
+     "score": 7.4,
+     "sales": 19,
+     "medianPrice": 865000,
+     "vsSimilar": -19.9
+    },
+    {
+     "school": "Sir Samuel B Steele Junior Public School",
+     "score": 7.1,
+     "sales": 56,
+     "medianPrice": 1108000,
+     "vsSimilar": -20
+    },
+    {
+     "school": "Albion Heights Junior Middle School",
+     "score": 4.7,
+     "sales": 28,
+     "medianPrice": 862000,
+     "vsSimilar": -20
+    },
+    {
+     "school": "West Rouge Junior Public School",
+     "score": 7.1,
+     "sales": 61,
+     "medianPrice": 1185000,
+     "vsSimilar": -20
+    },
+    {
+     "school": "George B Little Public School",
+     "score": 5.4,
+     "sales": 37,
+     "medianPrice": 815000,
+     "vsSimilar": -20.2
+    },
+    {
+     "school": "Chartland Junior Public School",
+     "score": 7.1,
+     "sales": 23,
+     "medianPrice": 1152000,
+     "vsSimilar": -20.7
+    },
+    {
+     "school": "Beverly Glen Junior Public School",
+     "score": 7.4,
+     "sales": 26,
+     "medianPrice": 1095000,
+     "vsSimilar": -20.8
+    },
+    {
+     "school": "Charlottetown Junior Public School",
+     "score": 6.8,
+     "sales": 82,
+     "medianPrice": 1105000,
+     "vsSimilar": -21.1
+    },
+    {
+     "school": "Alexmuir Junior Public School",
+     "score": 7.4,
+     "sales": 27,
+     "medianPrice": 895000,
+     "vsSimilar": -21.3
+    },
+    {
+     "school": "Edgewood Public School",
+     "score": 3.7,
+     "sales": 26,
+     "medianPrice": 848000,
+     "vsSimilar": -21.4
+    },
+    {
+     "school": "Highcastle Public School",
+     "score": 6.5,
+     "sales": 36,
+     "medianPrice": 982000,
+     "vsSimilar": -21.7
+    },
+    {
+     "school": "Mason Road Junior Public School",
+     "score": 4.3,
+     "sales": 23,
+     "medianPrice": 850000,
+     "vsSimilar": -21.9
+    },
+    {
+     "school": "H J Alexander Community School",
+     "score": 6.8,
+     "sales": 19,
+     "medianPrice": 840000,
+     "vsSimilar": -22.3
+    },
+    {
+     "school": "Norman Cook Junior Public School",
+     "score": 5.6,
+     "sales": 23,
+     "medianPrice": 881000,
+     "vsSimilar": -22.7
+    },
+    {
+     "school": "Pauline Johnson Junior Public School",
+     "score": 5.8,
+     "sales": 20,
+     "medianPrice": 1189000,
+     "vsSimilar": -22.8
+    },
+    {
+     "school": "Heather Heights Junior Public School",
+     "score": 6.4,
+     "sales": 34,
+     "medianPrice": 864000,
+     "vsSimilar": -23.4
+    },
+    {
+     "school": "Banting and Best Public School",
+     "score": 6.9,
+     "sales": 20,
+     "medianPrice": 1135000,
+     "vsSimilar": -23.6
+    },
+    {
+     "school": "Grey Owl Junior Public School",
+     "score": 5.4,
+     "sales": 19,
+     "medianPrice": 750000,
+     "vsSimilar": -23.7
+    },
+    {
+     "school": "Centennial Road Junior Public School",
+     "score": 7.1,
+     "sales": 63,
+     "medianPrice": 1080000,
+     "vsSimilar": -23.7
+    },
+    {
+     "school": "Alvin Curling Public School",
+     "score": 7.8,
+     "sales": 22,
+     "medianPrice": 858000,
+     "vsSimilar": -24.1
+    },
+    {
+     "school": "Terry Fox Public School",
+     "score": 8,
+     "sales": 29,
+     "medianPrice": 1150000,
+     "vsSimilar": -24.4
+    },
+    {
+     "school": "Eastview Public School",
+     "score": 5.2,
+     "sales": 38,
+     "medianPrice": 810000,
+     "vsSimilar": -24.5
+    },
+    {
+     "school": "Dennis Avenue Community School",
+     "score": 5.7,
+     "sales": 31,
+     "medianPrice": 896000,
+     "vsSimilar": -24.8
+    },
+    {
+     "school": "Berner Trail Junior Public School",
+     "score": 5.7,
+     "sales": 22,
+     "medianPrice": 810000,
+     "vsSimilar": -25.5
+    },
+    {
+     "school": "Timberbank Junior Public School",
+     "score": 7.1,
+     "sales": 20,
+     "medianPrice": 1150000,
+     "vsSimilar": -26
+    },
+    {
+     "school": "Willow Park Junior Public School",
+     "score": 2.7,
+     "sales": 21,
+     "medianPrice": 950000,
+     "vsSimilar": -26.1
+    },
+    {
+     "school": "Humberwood Downs Junior Middle Academy",
+     "score": 8.1,
+     "sales": 15,
+     "medianPrice": 1180000,
+     "vsSimilar": -26.4
+    },
+    {
+     "school": "Calico Public School",
+     "score": 2.8,
+     "sales": 30,
+     "medianPrice": 810000,
+     "vsSimilar": -26.8
+    },
+    {
+     "school": "Malvern Junior Public School",
+     "score": 5.8,
+     "sales": 16,
+     "medianPrice": 845000,
+     "vsSimilar": -26.9
+    },
+    {
+     "school": "Anson S Taylor Junior Public School",
+     "score": 8.1,
+     "sales": 17,
+     "medianPrice": 960000,
+     "vsSimilar": -27.3
+    },
+    {
+     "school": "Brookside Public School",
+     "score": 6.9,
+     "sales": 35,
+     "medianPrice": 1160000,
+     "vsSimilar": -27.4
+    },
+    {
+     "school": "Morrish Public School",
+     "score": 8.2,
+     "sales": 30,
+     "medianPrice": 1123000,
+     "vsSimilar": -27.6
+    },
+    {
+     "school": "Thomas L Wells Public School",
+     "score": 8,
+     "sales": 19,
+     "medianPrice": 1075000,
+     "vsSimilar": -27.7
+    },
+    {
+     "school": "Meadowvale Public School",
+     "score": 8.1,
+     "sales": 44,
+     "medianPrice": 1163000,
+     "vsSimilar": -29.1
+    },
+    {
+     "school": "Joseph Brant Public School",
+     "score": 4.3,
+     "sales": 46,
+     "medianPrice": 924000,
+     "vsSimilar": -29.1
+    },
+    {
+     "school": "Mary Shadd Public School",
+     "score": 5.6,
+     "sales": 24,
+     "medianPrice": 854000,
+     "vsSimilar": -29.3
+    },
+    {
+     "school": "Bala Avenue Community School",
+     "score": 5.1,
+     "sales": 20,
+     "medianPrice": 730000,
+     "vsSimilar": -30.1
+    },
+    {
+     "school": "Rockford Public School",
+     "score": 5.4,
+     "sales": 22,
+     "medianPrice": 1333000,
+     "vsSimilar": -30.3
+    },
+    {
+     "school": "Rouge Valley Public School",
+     "score": 7.3,
+     "sales": 18,
+     "medianPrice": 1260000,
+     "vsSimilar": -30.5
+    },
+    {
+     "school": "Tom Longboat Junior Public School",
+     "score": 7.8,
+     "sales": 16,
+     "medianPrice": 839000,
+     "vsSimilar": -30.7
+    },
+    {
+     "school": "Highland Creek Public School",
+     "score": 5.3,
+     "sales": 27,
+     "medianPrice": 1235000,
+     "vsSimilar": -33.7
+    },
+    {
+     "school": "Heritage Park Public School",
+     "score": 6.9,
+     "sales": 18,
+     "medianPrice": 1160000,
+     "vsSimilar": -36.3
+    }
+   ]
+  },
+  {
+   "city": "Mississauga",
+   "slug": "mississauga",
+   "board": "Peel District School Board",
+   "sales": 3536,
+   "medianPrice": 1235000,
+   "perPoint": {
+    "pct": 1.2830326357365056,
+    "lo": 0.6448557183287466,
+    "hi": 1.9562837361445478,
+    "significant": true
+   },
+   "bands": {
+    "lt6": {
+     "pct": -2.395402650648485,
+     "lo": -5.121446292150341,
+     "hi": 0.3844599658395557,
+     "significant": false,
+     "sales": 614
+    },
+    "6to7": {
+     "pct": 0.03860225540666168,
+     "lo": -1.2548947130349943,
+     "hi": 1.5493349796233704,
+     "significant": false,
+     "sales": 1365
+    },
+    "7to8": null,
+    "8to9": {
+     "pct": 1.5032828259984337,
+     "lo": -0.7636632606727178,
+     "hi": 4.185479231043687,
+     "significant": false,
+     "sales": 552
+    },
+    "9plus": null
+   },
+   "catchments": [
+    {
+     "school": "Kenollie PS",
+     "score": 8.9,
+     "sales": 27,
+     "medianPrice": 2700000,
+     "vsSimilar": 51.3
+    },
+    {
+     "school": "Tecumseh PS",
+     "score": 8.5,
+     "sales": 43,
+     "medianPrice": 2030000,
+     "vsSimilar": 41.6
+    },
+    {
+     "school": "Clarkson PS",
+     "score": 6,
+     "sales": 27,
+     "medianPrice": 1950000,
+     "vsSimilar": 37.4
+    },
+    {
+     "school": "Forest Avenue PS",
+     "score": 7.3,
+     "sales": 22,
+     "medianPrice": 1710000,
+     "vsSimilar": 36.3
+    },
+    {
+     "school": "Mineola PS",
+     "score": 8.3,
+     "sales": 46,
+     "medianPrice": 1588000,
+     "vsSimilar": 30.1
+    },
+    {
+     "school": "Lorne Park PS",
+     "score": 6.9,
+     "sales": 63,
+     "medianPrice": 1779000,
+     "vsSimilar": 28.4
+    },
+    {
+     "school": "Riverside PS",
+     "score": 5.1,
+     "sales": 38,
+     "medianPrice": 1813000,
+     "vsSimilar": 27.9
+    },
+    {
+     "school": "Hillcrest MS",
+     "score": 8.3,
+     "sales": 83,
+     "medianPrice": 1420000,
+     "vsSimilar": 23.8
+    },
+    {
+     "school": "Green Glade Sr.",
+     "score": 8,
+     "sales": 43,
+     "medianPrice": 1675000,
+     "vsSimilar": 15.5
+    },
+    {
+     "school": "Homelands Sr.",
+     "score": 6.1,
+     "sales": 125,
+     "medianPrice": 1480000,
+     "vsSimilar": 12.8
+    },
+    {
+     "school": "Allan A Martin Sr.",
+     "score": 7.8,
+     "sales": 227,
+     "medianPrice": 1280000,
+     "vsSimilar": 12.7
+    },
+    {
+     "school": "Westacres PS",
+     "score": 6.3,
+     "sales": 80,
+     "medianPrice": 1299000,
+     "vsSimilar": 12.4
+    },
+    {
+     "school": "Forest Glen PS",
+     "score": 5.1,
+     "sales": 49,
+     "medianPrice": 1325000,
+     "vsSimilar": 4.2
+    },
+    {
+     "school": "Burnhamthorpe PS",
+     "score": 7.4,
+     "sales": 41,
+     "medianPrice": 1291000,
+     "vsSimilar": 4
+    },
+    {
+     "school": "Glenhaven Sr PS",
+     "score": 6.9,
+     "sales": 47,
+     "medianPrice": 1220000,
+     "vsSimilar": 3.8
+    },
+    {
+     "school": "Springfield PS",
+     "score": 6.5,
+     "sales": 44,
+     "medianPrice": 1157000,
+     "vsSimilar": 3.2
+    },
+    {
+     "school": "Erin Mills Middle",
+     "score": 6,
+     "sales": 111,
+     "medianPrice": 1289000,
+     "vsSimilar": 3.1
+    },
+    {
+     "school": "Hawthorn PS",
+     "score": 9.1,
+     "sales": 20,
+     "medianPrice": 1378000,
+     "vsSimilar": 2.8
+    },
+    {
+     "school": "Camilla Road Sr.",
+     "score": 6.9,
+     "sales": 122,
+     "medianPrice": 1216000,
+     "vsSimilar": 2.4
+    },
+    {
+     "school": "Brookmede PS",
+     "score": 5.9,
+     "sales": 35,
+     "medianPrice": 1130000,
+     "vsSimilar": 1.5
+    },
+    {
+     "school": "Hillside PS",
+     "score": 5.8,
+     "sales": 61,
+     "medianPrice": 1035000,
+     "vsSimilar": 1.2
+    },
+    {
+     "school": "Artesian Drive PS",
+     "score": 6.1,
+     "sales": 53,
+     "medianPrice": 1220000,
+     "vsSimilar": 0.8
+    },
+    {
+     "school": "Oscar Peterson PS ",
+     "score": 7.1,
+     "sales": 33,
+     "medianPrice": 1098000,
+     "vsSimilar": 0.6
+    },
+    {
+     "school": "Dolphin Sr.",
+     "score": 6.7,
+     "sales": 148,
+     "medianPrice": 1273000,
+     "vsSimilar": 0.6
+    },
+    {
+     "school": "Castlebridge PS",
+     "score": 7.9,
+     "sales": 62,
+     "medianPrice": 1286000,
+     "vsSimilar": 0.4
+    },
+    {
+     "school": "Dixie PS",
+     "score": 7.1,
+     "sales": 29,
+     "medianPrice": 1120000,
+     "vsSimilar": 0.3
+    },
+    {
+     "school": "David Leeder Middle",
+     "score": 7.6,
+     "sales": 91,
+     "medianPrice": 1275000,
+     "vsSimilar": 0.2
+    },
+    {
+     "school": "Credit Valley PS",
+     "score": 8.8,
+     "sales": 51,
+     "medianPrice": 1325000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Briarwood PS",
+     "score": 6.4,
+     "sales": 45,
+     "medianPrice": 1225000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Middlebury PS",
+     "score": 7.2,
+     "sales": 68,
+     "medianPrice": 1463000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Churchill Meadows PS",
+     "score": 7.4,
+     "sales": 67,
+     "medianPrice": 1205000,
+     "vsSimilar": -0.1
+    },
+    {
+     "school": "Ruth Thompson Middle",
+     "score": 7.3,
+     "sales": 55,
+     "medianPrice": 1177000,
+     "vsSimilar": -0.2
+    },
+    {
+     "school": "Cashmere Avenue PS",
+     "score": 6.6,
+     "sales": 52,
+     "medianPrice": 1300000,
+     "vsSimilar": -0.2
+    },
+    {
+     "school": "Britannia PS",
+     "score": 7.7,
+     "sales": 64,
+     "medianPrice": 1150000,
+     "vsSimilar": -1.4
+    },
+    {
+     "school": "Edenrose PS",
+     "score": 6.9,
+     "sales": 60,
+     "medianPrice": 1310000,
+     "vsSimilar": -1.8
+    },
+    {
+     "school": "Barondale PS",
+     "score": 7.2,
+     "sales": 55,
+     "medianPrice": 1080000,
+     "vsSimilar": -2.3
+    },
+    {
+     "school": "Silverthorn PS",
+     "score": 6.9,
+     "sales": 53,
+     "medianPrice": 1200000,
+     "vsSimilar": -2.5
+    },
+    {
+     "school": "Garthwood Park PS",
+     "score": 3.9,
+     "sales": 108,
+     "medianPrice": 1266000,
+     "vsSimilar": -2.6
+    },
+    {
+     "school": "Fairwind Sr.",
+     "score": 6.6,
+     "sales": 40,
+     "medianPrice": 1260000,
+     "vsSimilar": -2.7
+    },
+    {
+     "school": "Floradale PS",
+     "score": 6.6,
+     "sales": 22,
+     "medianPrice": 1168000,
+     "vsSimilar": -3
+    },
+    {
+     "school": "Champlain Trail PS",
+     "score": 6.5,
+     "sales": 77,
+     "medianPrice": 1155000,
+     "vsSimilar": -3.5
+    },
+    {
+     "school": "Queenston Drive PS",
+     "score": 7.1,
+     "sales": 42,
+     "medianPrice": 1145000,
+     "vsSimilar": -3.6
+    },
+    {
+     "school": "Silver Creek PS",
+     "score": 5.7,
+     "sales": 23,
+     "medianPrice": 1090000,
+     "vsSimilar": -3.8
+    },
+    {
+     "school": "Lisgar Middle",
+     "score": 8.1,
+     "sales": 176,
+     "medianPrice": 1168000,
+     "vsSimilar": -4
+    },
+    {
+     "school": "Willow Way PS",
+     "score": 6.5,
+     "sales": 56,
+     "medianPrice": 1368000,
+     "vsSimilar": -4.1
+    },
+    {
+     "school": "Bristol Road Middle",
+     "score": 7.8,
+     "sales": 65,
+     "medianPrice": 1138000,
+     "vsSimilar": -4.4
+    },
+    {
+     "school": "Derry West Village PS",
+     "score": 5.6,
+     "sales": 25,
+     "medianPrice": 1265000,
+     "vsSimilar": -4.7
+    },
+    {
+     "school": "Kindree PS",
+     "score": 5.5,
+     "sales": 43,
+     "medianPrice": 1200000,
+     "vsSimilar": -5
+    },
+    {
+     "school": "Fallingbrook Middle",
+     "score": 6.4,
+     "sales": 62,
+     "medianPrice": 1248000,
+     "vsSimilar": -5.1
+    },
+    {
+     "school": "Cooksville Creek PS",
+     "score": 5.3,
+     "sales": 37,
+     "medianPrice": 1233000,
+     "vsSimilar": -5.5
+    },
+    {
+     "school": "Ellengale PS",
+     "score": 8.4,
+     "sales": 28,
+     "medianPrice": 1026000,
+     "vsSimilar": -6.9
+    },
+    {
+     "school": "Shelter Bay PS",
+     "score": 7.2,
+     "sales": 21,
+     "medianPrice": 1060000,
+     "vsSimilar": -7.3
+    },
+    {
+     "school": "Plum Tree Park PS",
+     "score": 8.3,
+     "sales": 77,
+     "medianPrice": 1075000,
+     "vsSimilar": -7.5
+    },
+    {
+     "school": "McBride PS",
+     "score": 5.5,
+     "sales": 40,
+     "medianPrice": 1038000,
+     "vsSimilar": -8
+    },
+    {
+     "school": "Miller's Grove PS",
+     "score": 6.8,
+     "sales": 72,
+     "medianPrice": 975000,
+     "vsSimilar": -8.3
+    },
+    {
+     "school": "Maple Wood PS",
+     "score": 3.8,
+     "sales": 21,
+     "medianPrice": 957000,
+     "vsSimilar": -8.9
+    },
+    {
+     "school": "Plowman's Park PS",
+     "score": 6.5,
+     "sales": 28,
+     "medianPrice": 980000,
+     "vsSimilar": -10.1
+    },
+    {
+     "school": "Darcel Avenue Sr.",
+     "score": 6.4,
+     "sales": 26,
+     "medianPrice": 876000,
+     "vsSimilar": -10.4
+    },
+    {
+     "school": "Marvin Heights PS",
+     "score": 8.4,
+     "sales": 21,
+     "medianPrice": 860000,
+     "vsSimilar": -13.2
+    },
+    {
+     "school": "Brandon Gate PS",
+     "score": 7,
+     "sales": 21,
+     "medianPrice": 850000,
+     "vsSimilar": -15.6
+    },
+    {
+     "school": "Ridgewood PS",
+     "score": 6.4,
+     "sales": 20,
+     "medianPrice": 844000,
+     "vsSimilar": -18
+    }
+   ]
+  },
+  {
+   "city": "Brampton",
+   "slug": "brampton",
+   "board": "Peel District School Board",
+   "sales": 5008,
+   "medianPrice": 920000,
+   "perPoint": {
+    "pct": -0.22136604381970845,
+    "lo": -0.6360808419178233,
+    "hi": 0.306945881267879,
+    "significant": false
+   },
+   "bands": {
+    "lt6": {
+     "pct": 0.17455275404895854,
+     "lo": -1.6386630914373836,
+     "hi": 1.7639621016741127,
+     "significant": false,
+     "sales": 966
+    },
+    "6to7": {
+     "pct": 0.8248448827277618,
+     "lo": -0.04140889077287059,
+     "hi": 1.5544151338180667,
+     "significant": false,
+     "sales": 1654
+    },
+    "7to8": null,
+    "8to9": {
+     "pct": 0.8206873329413502,
+     "lo": -0.8509328341676194,
+     "hi": 2.7600548773504,
+     "significant": false,
+     "sales": 311
+    },
+    "9plus": {
+     "pct": -1.9173138001823404,
+     "lo": -5.7673282106480155,
+     "hi": 0.9625423276299548,
+     "significant": false,
+     "sales": 63
+    }
+   },
+   "catchments": [
+    {
+     "school": "Springbrook P.S.",
+     "score": 7.7,
+     "sales": 17,
+     "medianPrice": 1231000,
+     "vsSimilar": 8.9
+    },
+    {
+     "school": "Eldorado P.S.",
+     "score": 7.9,
+     "sales": 76,
+     "medianPrice": 1275000,
+     "vsSimilar": 8.2
+    },
+    {
+     "school": "Ingleborough PS",
+     "score": 7,
+     "sales": 69,
+     "medianPrice": 1370000,
+     "vsSimilar": 6.7
+    },
+    {
+     "school": "Huttonville PS",
+     "score": 7.6,
+     "sales": 59,
+     "medianPrice": 1171000,
+     "vsSimilar": 6.7
+    },
+    {
+     "school": "Red Cedar PS",
+     "score": 7.2,
+     "sales": 51,
+     "medianPrice": 921000,
+     "vsSimilar": 4.9
+    },
+    {
+     "school": "Treeline PS",
+     "score": 8,
+     "sales": 226,
+     "medianPrice": 1303000,
+     "vsSimilar": 4.6
+    },
+    {
+     "school": "Lorenville P.S.",
+     "score": 6.7,
+     "sales": 65,
+     "medianPrice": 965000,
+     "vsSimilar": 4.6
+    },
+    {
+     "school": "Whaley's Corners PS",
+     "score": 7,
+     "sales": 26,
+     "medianPrice": 930000,
+     "vsSimilar": 4.3
+    },
+    {
+     "school": "Claireville PS",
+     "score": 6.5,
+     "sales": 31,
+     "medianPrice": 1075000,
+     "vsSimilar": 4.2
+    },
+    {
+     "school": "Thorndale PS",
+     "score": 6.7,
+     "sales": 45,
+     "medianPrice": 952000,
+     "vsSimilar": 4
+    },
+    {
+     "school": "Cherrytree PS",
+     "score": 6.5,
+     "sales": 66,
+     "medianPrice": 969000,
+     "vsSimilar": 3.9
+    },
+    {
+     "school": "Sir Wilfrid Laurier PS",
+     "score": 5.5,
+     "sales": 21,
+     "medianPrice": 830000,
+     "vsSimilar": 3.8
+    },
+    {
+     "school": "Countryside Village P.S.",
+     "score": 7.4,
+     "sales": 30,
+     "medianPrice": 1119000,
+     "vsSimilar": 3.7
+    },
+    {
+     "school": "Mount Royal PS",
+     "score": 7,
+     "sales": 56,
+     "medianPrice": 1348000,
+     "vsSimilar": 3.4
+    },
+    {
+     "school": "Earnscliffe Sr.",
+     "score": 7.3,
+     "sales": 50,
+     "medianPrice": 790000,
+     "vsSimilar": 2.9
+    },
+    {
+     "school": "Red Willow PS",
+     "score": 9.1,
+     "sales": 63,
+     "medianPrice": 1215000,
+     "vsSimilar": 2.4
+    },
+    {
+     "school": "Roberta Bondar PS ",
+     "score": 7.2,
+     "sales": 27,
+     "medianPrice": 970000,
+     "vsSimilar": 2
+    },
+    {
+     "school": "Springdale PS",
+     "score": 6.2,
+     "sales": 73,
+     "medianPrice": 943000,
+     "vsSimilar": 1.7
+    },
+    {
+     "school": "Carberry PS",
+     "score": 7.3,
+     "sales": 32,
+     "medianPrice": 1073000,
+     "vsSimilar": 1.7
+    },
+    {
+     "school": "Helen Wilson PS",
+     "score": 6.6,
+     "sales": 59,
+     "medianPrice": 770000,
+     "vsSimilar": 1.5
+    },
+    {
+     "school": "Queen Street PS",
+     "score": 6.9,
+     "sales": 52,
+     "medianPrice": 848000,
+     "vsSimilar": 1.4
+    },
+    {
+     "school": "Parkway PS",
+     "score": 6.3,
+     "sales": 82,
+     "medianPrice": 870000,
+     "vsSimilar": 1.3
+    },
+    {
+     "school": "Aylesbury P.S.",
+     "score": 6.7,
+     "sales": 111,
+     "medianPrice": 866000,
+     "vsSimilar": 1.2
+    },
+    {
+     "school": "Burnt Elm PS",
+     "score": 7.2,
+     "sales": 126,
+     "medianPrice": 938000,
+     "vsSimilar": 0.7
+    },
+    {
+     "school": "Dolson P.S.",
+     "score": 6.4,
+     "sales": 33,
+     "medianPrice": 900000,
+     "vsSimilar": 0.6
+    },
+    {
+     "school": "Cheyne Middle",
+     "score": 7.7,
+     "sales": 293,
+     "medianPrice": 920000,
+     "vsSimilar": 0.6
+    },
+    {
+     "school": "Great Lakes PS",
+     "score": 8.3,
+     "sales": 41,
+     "medianPrice": 880000,
+     "vsSimilar": 0.5
+    },
+    {
+     "school": "Centennial Sr PS",
+     "score": 7.1,
+     "sales": 325,
+     "medianPrice": 901000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Larkspur PS",
+     "score": 5.7,
+     "sales": 107,
+     "medianPrice": 945000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Homestead PS",
+     "score": 5.9,
+     "sales": 109,
+     "medianPrice": 903000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Balmoral Drive Sr.",
+     "score": 5.1,
+     "sales": 61,
+     "medianPrice": 820000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Alloa PS",
+     "score": 7.9,
+     "sales": 74,
+     "medianPrice": 944000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Edenbrook Hill PS",
+     "score": 7.4,
+     "sales": 105,
+     "medianPrice": 933000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Tribune Drive P.S.",
+     "score": 7.3,
+     "sales": 128,
+     "medianPrice": 838000,
+     "vsSimilar": -0.2
+    },
+    {
+     "school": "Fletcher's Creek Sr.",
+     "score": 7.2,
+     "sales": 80,
+     "medianPrice": 902000,
+     "vsSimilar": -0.4
+    },
+    {
+     "school": "Sir Winston Churchill PS",
+     "score": 2.9,
+     "sales": 34,
+     "medianPrice": 786000,
+     "vsSimilar": -0.7
+    },
+    {
+     "school": "Dorset Drive PS",
+     "score": 6,
+     "sales": 38,
+     "medianPrice": 829000,
+     "vsSimilar": -1
+    },
+    {
+     "school": "Sunny View Middle",
+     "score": 7.2,
+     "sales": 101,
+     "medianPrice": 1057000,
+     "vsSimilar": -1
+    },
+    {
+     "school": "Esker Lake PS",
+     "score": 6.1,
+     "sales": 54,
+     "medianPrice": 891000,
+     "vsSimilar": -1
+    },
+    {
+     "school": "Shaw PS",
+     "score": 7,
+     "sales": 24,
+     "medianPrice": 869000,
+     "vsSimilar": -1.2
+    },
+    {
+     "school": "Worthington PS",
+     "score": 6.6,
+     "sales": 62,
+     "medianPrice": 926000,
+     "vsSimilar": -1.2
+    },
+    {
+     "school": "McCrimmon Middle",
+     "score": 6.4,
+     "sales": 191,
+     "medianPrice": 979000,
+     "vsSimilar": -1.6
+    },
+    {
+     "school": "Beatty-Fleming Sr.",
+     "score": 5.9,
+     "sales": 289,
+     "medianPrice": 890000,
+     "vsSimilar": -1.9
+    },
+    {
+     "school": "Jefferson PS",
+     "score": 7.8,
+     "sales": 69,
+     "medianPrice": 900000,
+     "vsSimilar": -1.9
+    },
+    {
+     "school": "Eagle Plains PS",
+     "score": 6.2,
+     "sales": 15,
+     "medianPrice": 1125000,
+     "vsSimilar": -2.1
+    },
+    {
+     "school": "Fernforest PS",
+     "score": 7.1,
+     "sales": 75,
+     "medianPrice": 968000,
+     "vsSimilar": -2.2
+    },
+    {
+     "school": "Kingswood Drive PS",
+     "score": 6.7,
+     "sales": 44,
+     "medianPrice": 820000,
+     "vsSimilar": -2.3
+    },
+    {
+     "school": "Massey Street PS",
+     "score": 7.1,
+     "sales": 44,
+     "medianPrice": 870000,
+     "vsSimilar": -2.4
+    },
+    {
+     "school": "Agnes Taylor PS",
+     "score": 6.2,
+     "sales": 24,
+     "medianPrice": 774000,
+     "vsSimilar": -2.5
+    },
+    {
+     "school": "Conestoga PS",
+     "score": 6.6,
+     "sales": 75,
+     "medianPrice": 900000,
+     "vsSimilar": -2.5
+    },
+    {
+     "school": "Ray Lawson PS",
+     "score": 7.4,
+     "sales": 16,
+     "medianPrice": 1010000,
+     "vsSimilar": -2.7
+    },
+    {
+     "school": "Westervelts Corners PS",
+     "score": 5.2,
+     "sales": 55,
+     "medianPrice": 745000,
+     "vsSimilar": -2.9
+    },
+    {
+     "school": "Robert J Lee PS",
+     "score": 7,
+     "sales": 43,
+     "medianPrice": 925000,
+     "vsSimilar": -3.1
+    },
+    {
+     "school": "Arnott Charlton PS",
+     "score": 5.5,
+     "sales": 88,
+     "medianPrice": 806000,
+     "vsSimilar": -3.3
+    },
+    {
+     "school": "Russell D Barber PS",
+     "score": 6.2,
+     "sales": 114,
+     "medianPrice": 934000,
+     "vsSimilar": -3.6
+    },
+    {
+     "school": "Robert H Lagerquist Sr.",
+     "score": 6.5,
+     "sales": 270,
+     "medianPrice": 848000,
+     "vsSimilar": -3.6
+    },
+    {
+     "school": "Mountain Ash PS",
+     "score": 7.3,
+     "sales": 34,
+     "medianPrice": 1030000,
+     "vsSimilar": -3.9
+    },
+    {
+     "school": "Harold F Loughin PS",
+     "score": 8,
+     "sales": 37,
+     "medianPrice": 703000,
+     "vsSimilar": -5
+    },
+    {
+     "school": "Grenoble PS",
+     "score": 7.9,
+     "sales": 46,
+     "medianPrice": 802000,
+     "vsSimilar": -5.1
+    },
+    {
+     "school": "Hilldale PS",
+     "score": 5.4,
+     "sales": 73,
+     "medianPrice": 762000,
+     "vsSimilar": -5.4
+    },
+    {
+     "school": "Goldcrest PS",
+     "score": 4.8,
+     "sales": 40,
+     "medianPrice": 743000,
+     "vsSimilar": -5.9
+    },
+    {
+     "school": "Gordon Graydon Sr.",
+     "score": 5.5,
+     "sales": 24,
+     "medianPrice": 713000,
+     "vsSimilar": -7.3
+    },
+    {
+     "school": "Hanover PS",
+     "score": 5.5,
+     "sales": 57,
+     "medianPrice": 677000,
+     "vsSimilar": -10.6
+    }
+   ]
+  },
+  {
+   "city": "Markham",
+   "slug": "markham",
+   "board": "York Region District School Board",
+   "sales": 2790,
+   "medianPrice": 1321000,
+   "perPoint": {
+    "pct": 0.8296505543259836,
+    "lo": -0.31626116301476076,
+    "hi": 1.9904389388761188,
+    "significant": false
+   },
+   "bands": {
+    "lt6": null,
+    "6to7": {
+     "pct": 0.02430730633294852,
+     "lo": -1.904622148349216,
+     "hi": 2.1611994100085368,
+     "significant": false,
+     "sales": 144
+    },
+    "7to8": null,
+    "8to9": {
+     "pct": 1.4799677871200194,
+     "lo": -0.35377627917083504,
+     "hi": 3.2130894751316337,
+     "significant": false,
+     "sales": 1524
+    },
+    "9plus": {
+     "pct": 1.910888514703633,
+     "lo": -1.6334340741358402,
+     "hi": 4.920755147905731,
+     "significant": false,
+     "sales": 198
+    }
+   },
+   "catchments": [
+    {
+     "school": "Parkview PS",
+     "score": 8.4,
+     "sales": 72,
+     "medianPrice": 1558000,
+     "vsSimilar": 17.5
+    },
+    {
+     "school": "Henderson Avenue PS",
+     "score": 8.1,
+     "sales": 44,
+     "medianPrice": 1315000,
+     "vsSimilar": 14.8
+    },
+    {
+     "school": "E.J. Sand PS",
+     "score": 7.3,
+     "sales": 36,
+     "medianPrice": 1948000,
+     "vsSimilar": 12.8
+    },
+    {
+     "school": "William Berczy PS",
+     "score": 8.3,
+     "sales": 40,
+     "medianPrice": 1732000,
+     "vsSimilar": 12.6
+    },
+    {
+     "school": "Buttonville PS",
+     "score": 8.6,
+     "sales": 229,
+     "medianPrice": 1456000,
+     "vsSimilar": 7.2
+    },
+    {
+     "school": "Baythorn PS",
+     "score": 8.2,
+     "sales": 49,
+     "medianPrice": 1408000,
+     "vsSimilar": 6.9
+    },
+    {
+     "school": "Bayview Glen PS",
+     "score": 8.6,
+     "sales": 45,
+     "medianPrice": 1788000,
+     "vsSimilar": 6.9
+    },
+    {
+     "school": "Unionville PS",
+     "score": 7.6,
+     "sales": 118,
+     "medianPrice": 1709000,
+     "vsSimilar": 6.8
+    },
+    {
+     "school": "Beckett Farm PS",
+     "score": 8.3,
+     "sales": 18,
+     "medianPrice": 1308000,
+     "vsSimilar": 5.8
+    },
+    {
+     "school": "Coledale PS",
+     "score": 7.8,
+     "sales": 52,
+     "medianPrice": 1633000,
+     "vsSimilar": 5.1
+    },
+    {
+     "school": "Willowbrook PS",
+     "score": 7.9,
+     "sales": 42,
+     "medianPrice": 1409000,
+     "vsSimilar": 5.1
+    },
+    {
+     "school": "Castlemore PS",
+     "score": 8.7,
+     "sales": 101,
+     "medianPrice": 1385000,
+     "vsSimilar": 4.9
+    },
+    {
+     "school": "German Mills PS",
+     "score": 8.8,
+     "sales": 45,
+     "medianPrice": 1356000,
+     "vsSimilar": 4.4
+    },
+    {
+     "school": "Bayview Fairways PS",
+     "score": 9.1,
+     "sales": 32,
+     "medianPrice": 1415000,
+     "vsSimilar": 4.4
+    },
+    {
+     "school": "Ashton Meadows PS",
+     "score": 7.4,
+     "sales": 68,
+     "medianPrice": 2106000,
+     "vsSimilar": 4.2
+    },
+    {
+     "school": "Lincoln Alexander PS",
+     "score": 8.9,
+     "sales": 80,
+     "medianPrice": 1550000,
+     "vsSimilar": 3.9
+    },
+    {
+     "school": "Stonebridge PS",
+     "score": 8.5,
+     "sales": 46,
+     "medianPrice": 1241000,
+     "vsSimilar": 3.7
+    },
+    {
+     "school": "Unionville Meadows PS",
+     "score": 7.9,
+     "sales": 46,
+     "medianPrice": 1432000,
+     "vsSimilar": 3
+    },
+    {
+     "school": "Nokiidaa PS",
+     "score": 8,
+     "sales": 30,
+     "medianPrice": 1373000,
+     "vsSimilar": 2.4
+    },
+    {
+     "school": "Victoria Square PS",
+     "score": 7.6,
+     "sales": 41,
+     "medianPrice": 1175000,
+     "vsSimilar": 2.3
+    },
+    {
+     "school": "John McCrae PS",
+     "score": 9,
+     "sales": 42,
+     "medianPrice": 1319000,
+     "vsSimilar": 1.7
+    },
+    {
+     "school": "Central Park PS",
+     "score": 9,
+     "sales": 68,
+     "medianPrice": 1540000,
+     "vsSimilar": 1
+    },
+    {
+     "school": "Wismer PS",
+     "score": 8.5,
+     "sales": 94,
+     "medianPrice": 1494000,
+     "vsSimilar": 0.5
+    },
+    {
+     "school": "Doncrest PS",
+     "score": 8.1,
+     "sales": 17,
+     "medianPrice": 1168000,
+     "vsSimilar": 0.4
+    },
+    {
+     "school": "Highgate PS",
+     "score": 7.1,
+     "sales": 49,
+     "medianPrice": 1140000,
+     "vsSimilar": 0.2
+    },
+    {
+     "school": "Roy H. Crosby PS",
+     "score": 8.7,
+     "sales": 43,
+     "medianPrice": 1150000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Johnsview Village PS",
+     "score": 8.4,
+     "sales": 17,
+     "medianPrice": 1265000,
+     "vsSimilar": -0.4
+    },
+    {
+     "school": "Donald Cousens PS",
+     "score": 8,
+     "sales": 28,
+     "medianPrice": 1133000,
+     "vsSimilar": -0.9
+    },
+    {
+     "school": "James Robinson PS",
+     "score": 7.4,
+     "sales": 36,
+     "medianPrice": 1220000,
+     "vsSimilar": -2.1
+    },
+    {
+     "school": "Milliken Mills PS",
+     "score": 7.3,
+     "sales": 32,
+     "medianPrice": 1139000,
+     "vsSimilar": -2.3
+    },
+    {
+     "school": "Randall PS",
+     "score": 8.3,
+     "sales": 55,
+     "medianPrice": 1390000,
+     "vsSimilar": -2.6
+    },
+    {
+     "school": "Fred Varley PS",
+     "score": 7.6,
+     "sales": 23,
+     "medianPrice": 1165000,
+     "vsSimilar": -3.1
+    },
+    {
+     "school": "Franklin Street PS",
+     "score": 8.6,
+     "sales": 50,
+     "medianPrice": 1223000,
+     "vsSimilar": -3.7
+    },
+    {
+     "school": "Cornell Village PS",
+     "score": 8.1,
+     "sales": 91,
+     "medianPrice": 1050000,
+     "vsSimilar": -4.2
+    },
+    {
+     "school": "Mount Joy PS",
+     "score": 8.8,
+     "sales": 65,
+     "medianPrice": 1159000,
+     "vsSimilar": -4.2
+    },
+    {
+     "school": "Ramer Wood PS",
+     "score": 7.8,
+     "sales": 39,
+     "medianPrice": 1265000,
+     "vsSimilar": -4.3
+    },
+    {
+     "school": "William Armstrong PS",
+     "score": 8,
+     "sales": 53,
+     "medianPrice": 1200000,
+     "vsSimilar": -4.6
+    },
+    {
+     "school": "Coppard Glen PS",
+     "score": 7.1,
+     "sales": 21,
+     "medianPrice": 1240000,
+     "vsSimilar": -4.7
+    },
+    {
+     "school": "Wilclay PS",
+     "score": 8.4,
+     "sales": 25,
+     "medianPrice": 1250000,
+     "vsSimilar": -4.7
+    },
+    {
+     "school": "Greensborough PS",
+     "score": 8.3,
+     "sales": 74,
+     "medianPrice": 1267000,
+     "vsSimilar": -4.8
+    },
+    {
+     "school": "Edward T. Crowle PS",
+     "score": 9.1,
+     "sales": 56,
+     "medianPrice": 1342000,
+     "vsSimilar": -4.9
+    },
+    {
+     "school": "Little Rouge PS",
+     "score": 7.8,
+     "sales": 39,
+     "medianPrice": 1098000,
+     "vsSimilar": -5.4
+    },
+    {
+     "school": "Ellen Fairclough PS",
+     "score": 7.4,
+     "sales": 58,
+     "medianPrice": 1062000,
+     "vsSimilar": -5.8
+    },
+    {
+     "school": "Reesor Park PS",
+     "score": 7.2,
+     "sales": 85,
+     "medianPrice": 1268000,
+     "vsSimilar": -7
+    },
+    {
+     "school": "Rouge Park PS",
+     "score": 8.9,
+     "sales": 49,
+     "medianPrice": 1210000,
+     "vsSimilar": -7.5
+    },
+    {
+     "school": "Armadale PS",
+     "score": 6.6,
+     "sales": 30,
+     "medianPrice": 1105000,
+     "vsSimilar": -8.2
+    },
+    {
+     "school": "Parkland PS",
+     "score": 6.9,
+     "sales": 31,
+     "medianPrice": 1350000,
+     "vsSimilar": -8.3
+    },
+    {
+     "school": "Black Walnut PS",
+     "score": 8.1,
+     "sales": 35,
+     "medianPrice": 1230000,
+     "vsSimilar": -8.5
+    },
+    {
+     "school": "Aldergrove PS",
+     "score": 7,
+     "sales": 73,
+     "medianPrice": 1192000,
+     "vsSimilar": -8.8
+    },
+    {
+     "school": "Markham Gateway PS",
+     "score": 7.2,
+     "sales": 28,
+     "medianPrice": 1168000,
+     "vsSimilar": -9.1
+    },
+    {
+     "school": "Legacy PS",
+     "score": 8.5,
+     "sales": 54,
+     "medianPrice": 1332000,
+     "vsSimilar": -9.2
+    },
+    {
+     "school": "David Suzuki PS",
+     "score": 8.5,
+     "sales": 34,
+     "medianPrice": 955000,
+     "vsSimilar": -11.9
+    },
+    {
+     "school": "Boxwood PS",
+     "score": 7.3,
+     "sales": 28,
+     "medianPrice": 1322000,
+     "vsSimilar": -13.1
+    }
+   ]
+  },
+  {
+   "city": "Vaughan",
+   "slug": "vaughan",
+   "board": "York Region District School Board",
+   "sales": 2770,
+   "medianPrice": 1350000,
+   "perPoint": {
+    "pct": 0.5051170622059893,
+    "lo": -0.6060564554921385,
+    "hi": 1.5787834671363736,
+    "significant": false
+   },
+   "bands": {
+    "lt6": {
+     "pct": 2.2108249297324525,
+     "lo": -1.581024165727935,
+     "hi": 5.915546712602753,
+     "significant": false,
+     "sales": 159
+    },
+    "6to7": {
+     "pct": -0.0020091538907083795,
+     "lo": -2.5931513587871797,
+     "hi": 2.505156051793662,
+     "significant": false,
+     "sales": 590
+    },
+    "7to8": null,
+    "8to9": {
+     "pct": 0.5635910277217256,
+     "lo": -1.1795489609444014,
+     "hi": 2.2590456023303735,
+     "significant": false,
+     "sales": 972
+    },
+    "9plus": null
+   },
+   "catchments": [
+    {
+     "school": "Dr. Roberta Bondar PS",
+     "score": 8.2,
+     "sales": 17,
+     "medianPrice": 1410000,
+     "vsSimilar": 8.8
+    },
+    {
+     "school": "Kleinburg PS",
+     "score": 7.8,
+     "sales": 74,
+     "medianPrice": 2053000,
+     "vsSimilar": 7.4
+    },
+    {
+     "school": "Thornhill Woods PS",
+     "score": 8.1,
+     "sales": 60,
+     "medianPrice": 1593000,
+     "vsSimilar": 6.3
+    },
+    {
+     "school": "Thornhill PS",
+     "score": 7.8,
+     "sales": 59,
+     "medianPrice": 1335000,
+     "vsSimilar": 5
+    },
+    {
+     "school": "Herbert H. Carnegie PS",
+     "score": 8.3,
+     "sales": 238,
+     "medianPrice": 1483000,
+     "vsSimilar": 4.8
+    },
+    {
+     "school": "Nellie McClung PS",
+     "score": 7.4,
+     "sales": 63,
+     "medianPrice": 1310000,
+     "vsSimilar": 4
+    },
+    {
+     "school": "Bakersfield PS",
+     "score": 7.7,
+     "sales": 54,
+     "medianPrice": 1395000,
+     "vsSimilar": 3.8
+    },
+    {
+     "school": "Michael Cranny ES",
+     "score": 8.9,
+     "sales": 145,
+     "medianPrice": 1336000,
+     "vsSimilar": 2
+    },
+    {
+     "school": "Carrville Mills PS",
+     "score": 8.5,
+     "sales": 60,
+     "medianPrice": 1244000,
+     "vsSimilar": 1.7
+    },
+    {
+     "school": "Wilshire ES",
+     "score": 5.8,
+     "sales": 69,
+     "medianPrice": 1680000,
+     "vsSimilar": 1.3
+    },
+    {
+     "school": "Lorna Jackson PS",
+     "score": 6.8,
+     "sales": 272,
+     "medianPrice": 1400000,
+     "vsSimilar": 1
+    },
+    {
+     "school": "Tanya Khan PS",
+     "score": 8,
+     "sales": 74,
+     "medianPrice": 1479000,
+     "vsSimilar": 0.9
+    },
+    {
+     "school": "Pierre Berton PS",
+     "score": 8,
+     "sales": 73,
+     "medianPrice": 1500000,
+     "vsSimilar": 0.4
+    },
+    {
+     "school": "Forest Run PS",
+     "score": 7.4,
+     "sales": 55,
+     "medianPrice": 1260000,
+     "vsSimilar": 0.2
+    },
+    {
+     "school": "Joseph A. Gibson PS",
+     "score": 8.1,
+     "sales": 99,
+     "medianPrice": 1300000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Yorkhill ES",
+     "score": 8.1,
+     "sales": 55,
+     "medianPrice": 1365000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Rosedale Heights PS",
+     "score": 7.2,
+     "sales": 63,
+     "medianPrice": 1638000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Johnny Lombardi PS",
+     "score": 8.4,
+     "sales": 22,
+     "medianPrice": 1105000,
+     "vsSimilar": -0.5
+    },
+    {
+     "school": "Mackenzie Glen PS",
+     "score": 8.8,
+     "sales": 120,
+     "medianPrice": 1284000,
+     "vsSimilar": -0.7
+    },
+    {
+     "school": "Vellore Woods PS",
+     "score": 7.5,
+     "sales": 81,
+     "medianPrice": 1185000,
+     "vsSimilar": -1.1
+    },
+    {
+     "school": "Pine Grove PS",
+     "score": 6.9,
+     "sales": 194,
+     "medianPrice": 1529000,
+     "vsSimilar": -1.3
+    },
+    {
+     "school": "Fossil Hill PS",
+     "score": 8.5,
+     "sales": 62,
+     "medianPrice": 1310000,
+     "vsSimilar": -1.7
+    },
+    {
+     "school": "Glenn Gould PS",
+     "score": 7.7,
+     "sales": 38,
+     "medianPrice": 1265000,
+     "vsSimilar": -2.1
+    },
+    {
+     "school": "Brownridge PS",
+     "score": 7.3,
+     "sales": 57,
+     "medianPrice": 1275000,
+     "vsSimilar": -3.3
+    },
+    {
+     "school": "Discovery PS",
+     "score": 7.4,
+     "sales": 40,
+     "medianPrice": 1183000,
+     "vsSimilar": -3.8
+    },
+    {
+     "school": "Blue Willow PS",
+     "score": 7.5,
+     "sales": 178,
+     "medianPrice": 1384000,
+     "vsSimilar": -4
+    },
+    {
+     "school": "Maple Creek PS",
+     "score": 6.3,
+     "sales": 79,
+     "medianPrice": 1140000,
+     "vsSimilar": -4.1
+    },
+    {
+     "school": "Charlton PS",
+     "score": 6.9,
+     "sales": 43,
+     "medianPrice": 1195000,
+     "vsSimilar": -5.5
+    },
+    {
+     "school": "Westminster PS",
+     "score": 6,
+     "sales": 59,
+     "medianPrice": 1286000,
+     "vsSimilar": -6.7
+    },
+    {
+     "school": "Woodbridge PS",
+     "score": 7.9,
+     "sales": 143,
+     "medianPrice": 1265000,
+     "vsSimilar": -8.2
+    },
+    {
+     "school": "Glen Shields PS",
+     "score": 7.3,
+     "sales": 55,
+     "medianPrice": 1050000,
+     "vsSimilar": -9.7
+    }
+   ]
+  },
+  {
+   "city": "Richmond Hill",
+   "slug": "richmond-hill",
+   "board": "York Region District School Board",
+   "sales": 2038,
+   "medianPrice": 1364000,
+   "perPoint": {
+    "pct": -1.5737488451140842,
+    "lo": -2.327131656586244,
+    "hi": -0.8240083210358672,
+    "significant": true
+   },
+   "bands": {
+    "lt6": {
+     "pct": 4.168508614954847,
+     "lo": 0.37800418412503006,
+     "hi": 8.387282354708136,
+     "significant": true,
+     "sales": 292
+    },
+    "6to7": {
+     "pct": 5.694511981958263,
+     "lo": 2.653455658753034,
+     "hi": 9.510895669818392,
+     "significant": true,
+     "sales": 441
+    },
+    "7to8": null,
+    "8to9": {
+     "pct": 1.8435391098189438,
+     "lo": -0.47413211144183476,
+     "hi": 4.846126244101876,
+     "significant": false,
+     "sales": 879
+    },
+    "9plus": null
+   },
+   "catchments": [
+    {
+     "school": "Victoria Square PS",
+     "score": 7.6,
+     "sales": 28,
+     "medianPrice": 1308000,
+     "vsSimilar": 15.2
+    },
+    {
+     "school": "Silver Stream PS",
+     "score": 8.8,
+     "sales": 46,
+     "medianPrice": 1521000,
+     "vsSimilar": 13.1
+    },
+    {
+     "school": "Charles Howitt PS",
+     "score": 7.4,
+     "sales": 69,
+     "medianPrice": 1575000,
+     "vsSimilar": 6.9
+    },
+    {
+     "school": "Red Maple PS",
+     "score": 6.9,
+     "sales": 63,
+     "medianPrice": 1132000,
+     "vsSimilar": 6.4
+    },
+    {
+     "school": "Richmond Rose PS",
+     "score": 8.3,
+     "sales": 73,
+     "medianPrice": 1459000,
+     "vsSimilar": 4.9
+    },
+    {
+     "school": "Doncrest PS",
+     "score": 8.1,
+     "sales": 76,
+     "medianPrice": 1804000,
+     "vsSimilar": 3.8
+    },
+    {
+     "school": "Bayview Hill ES",
+     "score": 8.8,
+     "sales": 89,
+     "medianPrice": 2350000,
+     "vsSimilar": 2.1
+    },
+    {
+     "school": "Sixteenth Avenue PS",
+     "score": 7.1,
+     "sales": 62,
+     "medianPrice": 1694000,
+     "vsSimilar": 2
+    },
+    {
+     "school": "Redstone PS",
+     "score": 8.4,
+     "sales": 85,
+     "medianPrice": 1328000,
+     "vsSimilar": 1.5
+    },
+    {
+     "school": "O.M. MacKillop PS",
+     "score": 6,
+     "sales": 123,
+     "medianPrice": 1320000,
+     "vsSimilar": 1.2
+    },
+    {
+     "school": "Moraine Hills PS",
+     "score": 6.9,
+     "sales": 57,
+     "medianPrice": 1508000,
+     "vsSimilar": 0.9
+    },
+    {
+     "school": "Ross Doan PS",
+     "score": 8,
+     "sales": 150,
+     "medianPrice": 1237000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Trillium Woods PS",
+     "score": 8.5,
+     "sales": 77,
+     "medianPrice": 1500000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Silver Pines PS",
+     "score": 7.6,
+     "sales": 160,
+     "medianPrice": 1380000,
+     "vsSimilar": -0.2
+    },
+    {
+     "school": "Walter Scott PS",
+     "score": 5.5,
+     "sales": 94,
+     "medianPrice": 1114000,
+     "vsSimilar": -1
+    },
+    {
+     "school": "Lake Wilcox PS",
+     "score": 6.9,
+     "sales": 129,
+     "medianPrice": 1368000,
+     "vsSimilar": -1.5
+    },
+    {
+     "school": "MacLeod's Landing PS",
+     "score": 8.6,
+     "sales": 64,
+     "medianPrice": 1178000,
+     "vsSimilar": -2.2
+    },
+    {
+     "school": "Crosby Heights PS",
+     "score": 5.7,
+     "sales": 75,
+     "medianPrice": 1100000,
+     "vsSimilar": -2.3
+    },
+    {
+     "school": "Oak Ridges PS",
+     "score": 6.2,
+     "sales": 151,
+     "medianPrice": 1295000,
+     "vsSimilar": -2.9
+    },
+    {
+     "school": "Kettle Lakes PS",
+     "score": 8.3,
+     "sales": 148,
+     "medianPrice": 1273000,
+     "vsSimilar": -3.5
+    },
+    {
+     "school": "Bond Lake PS",
+     "score": 8.9,
+     "sales": 95,
+     "medianPrice": 1280000,
+     "vsSimilar": -3.9
+    },
+    {
+     "school": "Pleasantville PS",
+     "score": 8,
+     "sales": 42,
+     "medianPrice": 1650000,
+     "vsSimilar": -4.4
+    },
+    {
+     "school": "H.G. Bernard PS",
+     "score": 7.1,
+     "sales": 64,
+     "medianPrice": 1343000,
+     "vsSimilar": -8.4
+    }
+   ]
+  },
+  {
+   "city": "Hamilton",
+   "slug": "hamilton",
+   "board": "Hamilton-Wentworth District School Board",
+   "sales": 6058,
+   "medianPrice": 740000,
+   "perPoint": {
+    "pct": 0.4103049582033666,
+    "lo": -0.7656873465022339,
+    "hi": 1.5279576557157837,
+    "significant": false
+   },
+   "bands": {
+    "lt6": {
+     "pct": -1.6341883655145002,
+     "lo": -4.065504569197385,
+     "hi": 0.3711821303501008,
+     "significant": false,
+     "sales": 1842
+    },
+    "6to7": {
+     "pct": -0.8346670208373711,
+     "lo": -2.708662538691435,
+     "hi": 0.8991774558811028,
+     "significant": false,
+     "sales": 2333
+    },
+    "7to8": null,
+    "8to9": {
+     "pct": -1.934385588457941,
+     "lo": -6.922679171503693,
+     "hi": 2.5896234411570385,
+     "significant": false,
+     "sales": 363
+    },
+    "9plus": null
+   },
+   "catchments": [
+    {
+     "school": "Balaclava",
+     "score": 7.5,
+     "sales": 50,
+     "medianPrice": 1608000,
+     "vsSimilar": 39.4
+    },
+    {
+     "school": "Millgrove",
+     "score": 7.4,
+     "sales": 25,
+     "medianPrice": 1125000,
+     "vsSimilar": 34.5
+    },
+    {
+     "school": "Greensville",
+     "score": 6.6,
+     "sales": 51,
+     "medianPrice": 1149000,
+     "vsSimilar": 32.6
+    },
+    {
+     "school": "Dundas Central",
+     "score": 7.3,
+     "sales": 44,
+     "medianPrice": 983000,
+     "vsSimilar": 29.2
+    },
+    {
+     "school": "Rousseau",
+     "score": 6.9,
+     "sales": 77,
+     "medianPrice": 1180000,
+     "vsSimilar": 28.3
+    },
+    {
+     "school": "Flamborough Centre",
+     "score": 6.5,
+     "sales": 60,
+     "medianPrice": 1236000,
+     "vsSimilar": 27.5
+    },
+    {
+     "school": "Mary Hopkins",
+     "score": 6.1,
+     "sales": 123,
+     "medianPrice": 990000,
+     "vsSimilar": 23.2
+    },
+    {
+     "school": "Guy B. Brown",
+     "score": 7,
+     "sales": 94,
+     "medianPrice": 1127000,
+     "vsSimilar": 21.6
+    },
+    {
+     "school": "Yorkview",
+     "score": 9,
+     "sales": 44,
+     "medianPrice": 920000,
+     "vsSimilar": 21.5
+    },
+    {
+     "school": "Spring Valley",
+     "score": 7.1,
+     "sales": 128,
+     "medianPrice": 1238000,
+     "vsSimilar": 21.4
+    },
+    {
+     "school": "Dundana",
+     "score": 8.3,
+     "sales": 65,
+     "medianPrice": 930000,
+     "vsSimilar": 20.6
+    },
+    {
+     "school": "Central",
+     "score": 4.1,
+     "sales": 35,
+     "medianPrice": 1023000,
+     "vsSimilar": 15.7
+    },
+    {
+     "school": "Allan A. Greenleaf",
+     "score": 8.5,
+     "sales": 139,
+     "medianPrice": 1130000,
+     "vsSimilar": 15.4
+    },
+    {
+     "school": "Frank Panabaker",
+     "score": 7.2,
+     "sales": 135,
+     "medianPrice": 970000,
+     "vsSimilar": 13.6
+    },
+    {
+     "school": "Earl Kitchener",
+     "score": 7.2,
+     "sales": 95,
+     "medianPrice": 900000,
+     "vsSimilar": 13
+    },
+    {
+     "school": "Sir William Osler",
+     "score": 8.3,
+     "sales": 75,
+     "medianPrice": 1015000,
+     "vsSimilar": 12.9
+    },
+    {
+     "school": "Cootes Paradise",
+     "score": 7,
+     "sales": 179,
+     "medianPrice": 760000,
+     "vsSimilar": 11.5
+    },
+    {
+     "school": "Rockton",
+     "score": 6.1,
+     "sales": 43,
+     "medianPrice": 865000,
+     "vsSimilar": 7.4
+    },
+    {
+     "school": "Mountview",
+     "score": 8.3,
+     "sales": 48,
+     "medianPrice": 840000,
+     "vsSimilar": 7
+    },
+    {
+     "school": "Holbrook",
+     "score": 6.8,
+     "sales": 39,
+     "medianPrice": 695000,
+     "vsSimilar": 6.5
+    },
+    {
+     "school": "R.A. Riddell",
+     "score": 7.2,
+     "sales": 66,
+     "medianPrice": 813000,
+     "vsSimilar": 4.8
+    },
+    {
+     "school": "Cecil B. Stirling",
+     "score": 7.2,
+     "sales": 21,
+     "medianPrice": 745000,
+     "vsSimilar": 4.6
+    },
+    {
+     "school": "Lawfield",
+     "score": 5.8,
+     "sales": 53,
+     "medianPrice": 690000,
+     "vsSimilar": 4.4
+    },
+    {
+     "school": "Tiffany Hills",
+     "score": 7.4,
+     "sales": 44,
+     "medianPrice": 829000,
+     "vsSimilar": 4.4
+    },
+    {
+     "school": "Billy Green",
+     "score": 7.2,
+     "sales": 55,
+     "medianPrice": 800000,
+     "vsSimilar": 4.1
+    },
+    {
+     "school": "Ancaster Meadow",
+     "score": 7.6,
+     "sales": 140,
+     "medianPrice": 1048000,
+     "vsSimilar": 3.7
+    },
+    {
+     "school": "James Macdonald",
+     "score": 5.7,
+     "sales": 108,
+     "medianPrice": 852000,
+     "vsSimilar": 3.4
+    },
+    {
+     "school": "Chedoke",
+     "score": 6.9,
+     "sales": 71,
+     "medianPrice": 745000,
+     "vsSimilar": 2.8
+    },
+    {
+     "school": "Ridgemount",
+     "score": 6.4,
+     "sales": 77,
+     "medianPrice": 725000,
+     "vsSimilar": 2.7
+    },
+    {
+     "school": "Collegiate Elementary",
+     "score": 7.2,
+     "sales": 104,
+     "medianPrice": 738000,
+     "vsSimilar": 2.6
+    },
+    {
+     "school": "Tapleytown",
+     "score": 5.9,
+     "sales": 76,
+     "medianPrice": 800000,
+     "vsSimilar": 2.5
+    },
+    {
+     "school": "Winona",
+     "score": 6.6,
+     "sales": 190,
+     "medianPrice": 815000,
+     "vsSimilar": 2.3
+    },
+    {
+     "school": "Westwood",
+     "score": 5.8,
+     "sales": 32,
+     "medianPrice": 700000,
+     "vsSimilar": 1.8
+    },
+    {
+     "school": "Gatestone",
+     "score": 6.1,
+     "sales": 53,
+     "medianPrice": 892000,
+     "vsSimilar": 1.5
+    },
+    {
+     "school": "Sir Wilfrid Laurier",
+     "score": 5,
+     "sales": 78,
+     "medianPrice": 730000,
+     "vsSimilar": 1.2
+    },
+    {
+     "school": "Huntington Park",
+     "score": 7.2,
+     "sales": 117,
+     "medianPrice": 660000,
+     "vsSimilar": 0.9
+    },
+    {
+     "school": "Ray Lewis",
+     "score": 6.6,
+     "sales": 45,
+     "medianPrice": 806000,
+     "vsSimilar": 0.7
+    },
+    {
+     "school": "South Meadow",
+     "score": 6.4,
+     "sales": 85,
+     "medianPrice": 820000,
+     "vsSimilar": 0.1
+    },
+    {
+     "school": "Mount Albion",
+     "score": 6.7,
+     "sales": 124,
+     "medianPrice": 758000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Viola Desmond",
+     "score": 5.5,
+     "sales": 107,
+     "medianPrice": 720000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Eastdale",
+     "score": 5.9,
+     "sales": 93,
+     "medianPrice": 772000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Richard Beasley",
+     "score": 5.5,
+     "sales": 31,
+     "medianPrice": 687000,
+     "vsSimilar": 0
+    },
+    {
+     "school": "Mount Hope",
+     "score": 5.7,
+     "sales": 141,
+     "medianPrice": 822000,
+     "vsSimilar": -0.1
+    },
+    {
+     "school": "Buchanan Park",
+     "score": 7.4,
+     "sales": 53,
+     "medianPrice": 685000,
+     "vsSimilar": -0.4
+    },
+    {
+     "school": "Highview",
+     "score": 6.2,
+     "sales": 109,
+     "medianPrice": 627000,
+     "vsSimilar": -1.1
+    },
+    {
+     "school": "Franklin Road",
+     "score": 6.5,
+     "sales": 127,
+     "medianPrice": 642000,
+     "vsSimilar": -1.4
+    },
+    {
+     "school": "Pauline Johnson",
+     "score": 5,
+     "sales": 56,
+     "medianPrice": 727000,
+     "vsSimilar": -1.6
+    },
+    {
+     "school": "Janet Lee",
+     "score": 7.8,
+     "sales": 63,
+     "medianPrice": 695000,
+     "vsSimilar": -2.5
+    },
+    {
+     "school": "Bellmoore",
+     "score": 6.7,
+     "sales": 370,
+     "medianPrice": 782000,
+     "vsSimilar": -2.9
+    },
+    {
+     "school": "Gordon Price",
+     "score": 5.9,
+     "sales": 47,
+     "medianPrice": 810000,
+     "vsSimilar": -3.1
+    },
+    {
+     "school": "Lisgar",
+     "score": 4.2,
+     "sales": 42,
+     "medianPrice": 744000,
+     "vsSimilar": -3.5
+    },
+    {
+     "school": "Rosedale",
+     "score": 4.8,
+     "sales": 80,
+     "medianPrice": 645000,
+     "vsSimilar": -3.7
+    },
+    {
+     "school": "Queensdale",
+     "score": 6.4,
+     "sales": 103,
+     "medianPrice": 660000,
+     "vsSimilar": -4
+    },
+    {
+     "school": "Templemead",
+     "score": 6.2,
+     "sales": 53,
+     "medianPrice": 770000,
+     "vsSimilar": -4.4
+    },
+    {
+     "school": "Helen Detwiler",
+     "score": 6.1,
+     "sales": 64,
+     "medianPrice": 792000,
+     "vsSimilar": -6
+    },
+    {
+     "school": "Lincoln M. Alexander",
+     "score": 6.8,
+     "sales": 43,
+     "medianPrice": 750000,
+     "vsSimilar": -6.5
+    },
+    {
+     "school": "A.M. Cunningham",
+     "score": 5.7,
+     "sales": 95,
+     "medianPrice": 635000,
+     "vsSimilar": -7.9
+    },
+    {
+     "school": "Viscount Montgomery",
+     "score": 7.2,
+     "sales": 73,
+     "medianPrice": 585000,
+     "vsSimilar": -9
+    },
+    {
+     "school": "George L. Armstrong",
+     "score": 5.8,
+     "sales": 160,
+     "medianPrice": 588000,
+     "vsSimilar": -10.1
+    },
+    {
+     "school": "Strathcona",
+     "score": 8.1,
+     "sales": 36,
+     "medianPrice": 583000,
+     "vsSimilar": -10.3
+    },
+    {
+     "school": "Hillcrest",
+     "score": 4.6,
+     "sales": 94,
+     "medianPrice": 538000,
+     "vsSimilar": -14.9
+    },
+    {
+     "school": "Adelaide Hoodless",
+     "score": 6.7,
+     "sales": 76,
+     "medianPrice": 670000,
+     "vsSimilar": -15.1
+    },
+    {
+     "school": "Parkdale",
+     "score": 7.6,
+     "sales": 84,
+     "medianPrice": 502000,
+     "vsSimilar": -17.6
+    },
+    {
+     "school": "Queen Victoria",
+     "score": 4.6,
+     "sales": 48,
+     "medianPrice": 608000,
+     "vsSimilar": -18.1
+    },
+    {
+     "school": "Memorial",
+     "score": 4.9,
+     "sales": 126,
+     "medianPrice": 553000,
+     "vsSimilar": -20
+    },
+    {
+     "school": "Bennetto",
+     "score": 4.4,
+     "sales": 94,
+     "medianPrice": 536000,
+     "vsSimilar": -22.1
+    },
+    {
+     "school": "W.H. Ballard",
+     "score": 4.9,
+     "sales": 111,
+     "medianPrice": 473000,
+     "vsSimilar": -24
+    },
+    {
+     "school": "Queen Mary",
+     "score": 6.4,
+     "sales": 138,
+     "medianPrice": 471000,
+     "vsSimilar": -25.6
+    },
+    {
+     "school": "Dr. J. Edgar Davey",
+     "score": 4.9,
+     "sales": 39,
+     "medianPrice": 550000,
+     "vsSimilar": -27.9
+    },
+    {
+     "school": "Prince of Wales",
+     "score": 6.1,
+     "sales": 117,
+     "medianPrice": 487000,
+     "vsSimilar": -28.3
+    },
+    {
+     "school": "Hess Street",
+     "score": 4.5,
+     "sales": 27,
+     "medianPrice": 485000,
+     "vsSimilar": -29.7
+    },
+    {
+     "school": "Cathy Wever",
+     "score": 5.1,
+     "sales": 66,
+     "medianPrice": 516000,
+     "vsSimilar": -30.3
+    }
+   ]
+  }
+ ]
+}
