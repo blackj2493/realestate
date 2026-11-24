@@ -9,6 +9,7 @@ import { condoPricesPath, getCondoData } from "@/lib/data/condoPrices";
 import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
 import { getSchoolData, schoolPricesPath } from "@/lib/data/schoolPrices";
 import { getSoldData, soldPricesPath } from "@/lib/data/soldPrices";
+import { getBestTimeData, bestTimeToSellPath } from "@/lib/data/bestTimeToSell";
 
 /**
  * /data/sitemap.xml — the data desk's own sitemap, split out of the root one.
@@ -85,6 +86,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // "{city} sold prices": medians by type, bedrooms and community (2026-11-25). Static, monthly.
     { url: `${SITE_URL}${soldPricesPath()}`, lastModified: new Date(getSoldData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
     ...getSoldData().cities.map((c) => ({ url: `${SITE_URL}${soldPricesPath(c.slug)}`, lastModified: new Date(getSoldData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 })),
+    // "Best time to sell a house in {city}": price, speed and over-asking by month (2026-11-24). Static, monthly.
+    { url: `${SITE_URL}${bestTimeToSellPath()}`, lastModified: new Date(getBestTimeData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
+    ...getBestTimeData().cities.map((c) => ({ url: `${SITE_URL}${bestTimeToSellPath(c.slug)}`, lastModified: new Date(getBestTimeData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 })),
     // Monthly Ontario Power of Sale Index (2026-11-10). Editions are linked from the hub page.
     { url: `${SITE_URL}/data/power-of-sale-index`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },

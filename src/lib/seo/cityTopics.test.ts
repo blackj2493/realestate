@@ -10,6 +10,7 @@ import { condoPricesPath } from "@/lib/data/condoPrices";
 import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
 import { schoolPricesPath } from "@/lib/data/schoolPrices";
 import { soldPricesPath } from "@/lib/data/soldPrices";
+import { bestTimeToSellPath } from "@/lib/data/bestTimeToSell";
 
 describe("cityTopics", () => {
   it("each topic path matches its family helper", () => {
@@ -23,6 +24,8 @@ describe("cityTopics", () => {
     expect(by["home-value"].hub).toBe(homeValuePath());
     expect(by["basement-value"].path("markham")).toBe(basementValuePath("markham"));
     expect(by["basement-value"].hub).toBe(basementValuePath());
+    expect(by["best-time-to-sell"].path("markham")).toBe(bestTimeToSellPath("markham"));
+    expect(by["best-time-to-sell"].hub).toBe(bestTimeToSellPath());
     expect(by["sold-prices"].path("markham")).toBe(soldPricesPath("markham"));
     expect(by["sold-prices"].hub).toBe(soldPricesPath());
     expect(by["school-catchment-prices"].path("markham")).toBe(schoolPricesPath("markham"));
