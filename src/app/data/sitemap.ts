@@ -4,6 +4,7 @@ import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { daysOnMarketPath } from "@/lib/seo/cityTopics";
 import { basementValuePath, getBasementData } from "@/lib/data/basementValue";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
+import { getPriceChangeData, priceChangePath } from "@/lib/data/priceChange";
 
 /**
  * /data/sitemap.xml — the data desk's own sitemap, split out of the root one.
@@ -63,6 +64,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...getBasementData()
       .cities.filter((c) => c.modelA)
       .map((c) => ({ url: `${SITE_URL}${basementValuePath(c.slug)}`, lastModified: new Date(getBasementData().generatedAt), changeFrequency: "monthly" as const, priority: 0.7 })),
+    // "Are home prices dropping in {city}?" same-home change (2026-11-25). Static, rebuilt monthly.
+    { url: `${SITE_URL}${priceChangePath()}`, lastModified: new Date(getPriceChangeData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
+    ...getPriceChangeData()
+      .cities.filter((c) => c.all)
+      .map((c) => ({ url: `${SITE_URL}${priceChangePath(c.slug)}`, lastModified: new Date(getPriceChangeData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 })),
     // Monthly Ontario Power of Sale Index (2026-11-10). Editions are linked from the hub page.
     { url: `${SITE_URL}/data/power-of-sale-index`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },

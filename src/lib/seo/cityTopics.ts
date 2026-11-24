@@ -1,6 +1,6 @@
 /**
  * The city question pages (market facts, days on market, power of sale, homes not selling,
- * home value, basement value)
+ * home value, price change, basement value)
  * and their paths, in one module so every page can link all of them. Search engines and AI
  * answer engines find and weigh pages through internal links: before this, a city hub linked
  * only the market page and a neighbourhood page linked none.
@@ -12,7 +12,7 @@
  */
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
 
-export type CityTopic = "market" | "days-on-market" | "power-of-sale" | "not-selling" | "home-value" | "basement-value";
+export type CityTopic = "market" | "days-on-market" | "power-of-sale" | "not-selling" | "home-value" | "basement-value" | "price-change";
 
 export const daysOnMarketPath = (slug?: string) => (slug ? `/data/days-on-market/${slug}` : "/data/days-on-market");
 
@@ -22,6 +22,7 @@ export const CITY_TOPICS: { id: CityTopic; hub: string; path: (slug: string) => 
   { id: "power-of-sale", hub: "/power-of-sale", path: (s) => `/power-of-sale/${s}`, label: (c) => `Power of sale homes in ${c}` },
   { id: "not-selling", hub: "/house-not-selling", path: (s) => `/house-not-selling/${s}`, label: (c) => `Why homes do not sell in ${c}` },
   { id: "home-value", hub: "/home-value", path: (s) => `/home-value/${s}`, label: (c) => `What is my home worth in ${c}?` },
+  { id: "price-change", hub: "/data/price-change", path: (s) => `/data/price-change/${s}`, label: (c) => `Are home prices dropping in ${c}?` },
   { id: "basement-value", hub: "/data/basement-value", path: (s) => `/data/basement-value/${s}`, label: (c) => `Does a finished basement add value in ${c}?` },
 ];
 
@@ -31,6 +32,7 @@ export const TOPIC_HUBS: { href: string; label: string }[] = [
   { href: "/power-of-sale", label: "Power of sale in Ontario" },
   { href: "/house-not-selling", label: "Why homes do not sell" },
   { href: "/home-value", label: "Free home value opinion" },
+  { href: "/data/price-change", label: "Are home prices dropping? Same-home change" },
   { href: "/data/basement-value", label: "What a finished basement adds" },
 ];
 

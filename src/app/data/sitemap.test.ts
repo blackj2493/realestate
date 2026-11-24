@@ -5,6 +5,7 @@ import { LIVE_FINDINGS } from '@/lib/data/findings';
 import { OUTLOOK_CITIES } from '@/lib/data/outlookCities';
 import sitemap from './sitemap';
 import { basementValuePath, getBasementData } from '@/lib/data/basementValue';
+import { getPriceChangeData, priceChangePath } from '@/lib/data/priceChange';
 
 const SITE = 'https://www.pureproperty.ca';
 
@@ -21,7 +22,10 @@ describe('/data/sitemap.xml', () => {
     const basementCities = getBasementData().cities.filter((c) => c.modelA);
     expect(urls).toContain(`${SITE}${basementValuePath()}`);
     for (const c of basementCities) expect(urls).toContain(`${SITE}${basementValuePath(c.slug)}`);
-    expect(urls).toHaveLength(3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 2 + OUTLOOK_CITIES.length * 2 + 1 + basementCities.length);
+    const priceCities = getPriceChangeData().cities.filter((c) => c.all);
+    expect(urls).toContain(`${SITE}${priceChangePath()}`);
+    for (const c of priceCities) expect(urls).toContain(`${SITE}${priceChangePath(c.slug)}`);
+    expect(urls).toHaveLength(3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 2 + OUTLOOK_CITIES.length * 2 + 1 + basementCities.length + 1 + priceCities.length);
   });
 
   it('declares only /data URLs, so its coverage number means one thing', () => {
