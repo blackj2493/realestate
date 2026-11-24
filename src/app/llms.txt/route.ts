@@ -58,6 +58,9 @@ ${markets}## Housing market by city (for "is it a good time to buy or sell", "wi
 - [Power of sale homes in Ontario](${SITE_URL}/power-of-sale): today's power-of-sale homes for sale, cheapest first, with each board city's share of power-of-sale sales and how they sold against other homes. City pages: ${SITE_URL}/power-of-sale/{city}.
 - [Why is my house not selling? (Ontario)](${SITE_URL}/house-not-selling): homes that sold vs homes that came off the market unsold in the last 12 months, and how their asking prices compared with similar homes that sold. City pages: ${SITE_URL}/house-not-selling/{city}.
 
+## Basements (for "does a finished basement add value in {city}")
+- [Does a finished basement add value in Ontario?](${SITE_URL}/data/basement-value): what a finished basement, a basement apartment and a separate entrance added to the sale price of similar houses in each board city, measured on MLS® sales, plus median basement rents. City pages: ${SITE_URL}/data/basement-value/{city}. Refreshed monthly.
+
 ## Data trackers (all board cities, updated nightly)
 - [Sold over asking](${SITE_URL}/data/over-asking): share of homes sold above and below asking, by city.
 - [Days on market](${SITE_URL}/data/days-on-market): median days to sell, and true vs reported days on market.
