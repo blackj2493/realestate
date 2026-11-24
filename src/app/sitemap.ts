@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
 import { HOME_VALUE_CITIES, homeValuePath } from "@/lib/homeValue/content";
+import { PRICE_BANDS, priceBandFilter, priceBandPath } from "@/lib/listings/priceBands";
 import {
   cityHubsWithInventory,
   neighbourhoodHubsForSitemap,
@@ -47,6 +48,11 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
     // Commercial hub tree (commercial-gap Phase 2) — counted over its OWN population.
     cityHubsWithInventory(HUB_MIN, "", COMMERCIAL_ACTIVE_FILTER),
   ]);
+  // Price-band hubs ("homes for sale in {city} under $1 million"), each counted with the SAME
+  // filter the page uses (priceBandFilter), so no thin band is sitemapped.
+  const bandHubs = await Promise.all(
+    PRICE_BANDS.map(async (b) => (await cityHubsWithInventory(HUB_MIN, priceBandFilter(b))).map(({ slug }) => ({ slug, band: b }))),
+  );
   return [
     ...cityHubs.map(({ slug }) => ({
       url: `${SITE_URL}/property/on/${slug}`,
@@ -82,6 +88,11 @@ async function cityHubRoutes(): Promise<MetadataRoute.Sitemap> {
       url: `${SITE_URL}/property/on/${citySlug}/${hoodSlug}`,
       changeFrequency: "daily" as const,
       priority: 0.6,
+    })),
+    ...bandHubs.flat().map(({ slug, band }) => ({
+      url: `${SITE_URL}${priceBandPath(slug, band)}`,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
     })),
     ...commercialHubs.map(({ slug }) => ({
       url: `${SITE_URL}/commercial/on/${slug}`,
