@@ -4,6 +4,7 @@ import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { PriceRankingsBoard } from "./PriceRankingsBoard";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -12,7 +13,7 @@ const SLUG = "price-rankings";
 const DEF = trackerBySlug(SLUG)!;
 
 const H1 = "GTA & Toronto Home Price Rankings";
-const TITLE = "GTA & Toronto Home Price Rankings — Median & Average Sold Prices by Market";
+const TITLE = `Toronto & GTA House Prices ${titleYear()}: Median & Average Sold Prices by Market`;
 const DESCRIPTION =
   "Median and average sold prices for Toronto, Ottawa and every GTA market, ranked — with year-over-year change, price per square foot and sold-to-list ratio. Updated nightly from MLS® sold data.";
 

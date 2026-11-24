@@ -4,6 +4,7 @@ import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { MarketTemperatureBoard } from "./MarketTemperatureBoard";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -12,7 +13,7 @@ const SLUG = "market-temperature";
 const DEF = trackerBySlug(SLUG)!;
 
 const H1 = "GTA & Toronto Market Temperature";
-const TITLE = "GTA & Toronto Market Temperature — Buyer's or Seller's Market by City";
+const TITLE = `Buyer's or Seller's Market? Toronto & GTA Market Temperature by City, ${titleYear()}`;
 const DESCRIPTION =
   "Is it a buyer's or seller's market? Every Toronto, Ottawa and GTA city scored from months of supply and sold-to-list ratio, with sell-through. Updated nightly from MLS® data.";
 

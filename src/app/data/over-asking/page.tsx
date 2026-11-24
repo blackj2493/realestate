@@ -5,6 +5,7 @@ import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { OverAskingBoard } from "./OverAskingBoard";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -13,7 +14,7 @@ const SLUG = "over-asking";
 const DEF = trackerBySlug(SLUG)!;
 
 const H1 = "How Often Homes Sell Over Asking — Toronto, Ottawa & the GTA";
-const TITLE = "How Often Homes Sell Over Asking — By Neighbourhood";
+const TITLE = `How Much Over Asking in Toronto & the GTA? ${titleYear()} Sold-Over-Asking by Neighbourhood`;
 const DESCRIPTION =
   "The share of Ontario home sales that closed above the seller's asking price, by neighbourhood, for houses and condos — plus how much above. Closed MLS® sale prices, updated nightly.";
 

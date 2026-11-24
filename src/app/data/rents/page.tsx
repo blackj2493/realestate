@@ -5,6 +5,7 @@ import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { RentsBoard } from "./RentsBoard";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -13,7 +14,7 @@ const SLUG = "rents";
 const DEF = trackerBySlug(SLUG)!;
 
 const H1 = "What Homes Actually Rent For — Toronto, Ottawa & the GTA";
-const TITLE = "What Homes Actually Rent For — Median Closed Rent by Neighbourhood";
+const TITLE = `Average Rent in Toronto & the GTA ${titleYear()}: Median Signed Rent by Neighbourhood`;
 const DESCRIPTION =
   "Median rent that leases actually closed at, by neighbourhood, for houses and condos across Toronto, Ottawa and the GTA. Closed prices from MLS® data — not asking rents. Updated nightly.";
 

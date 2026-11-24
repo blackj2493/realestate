@@ -4,6 +4,7 @@ import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { CondoFeesBoard } from "./CondoFeesBoard";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -12,7 +13,7 @@ const SLUG = "condo-fees";
 const DEF = trackerBySlug(SLUG)!;
 
 const H1 = "Toronto & GTA Condo Fee Tracker";
-const TITLE = "Toronto & GTA Condo Fee Tracker — Where Maintenance Fees Are Rising Fastest";
+const TITLE = `Average Condo Fees in Toronto & the GTA ${titleYear()}: Where Fees Are Rising Fastest`;
 const DESCRIPTION =
   "Where condo maintenance fees are climbing fastest across Toronto and the GTA — the annualized trend in fee per square foot, by neighbourhood, with the typical current fee. Built from MLS® sold data.";
 

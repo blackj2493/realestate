@@ -10,6 +10,7 @@ import { notFound } from "next/navigation";
 import NotSellingView, { notSellingPath } from "@/components/notSelling/NotSellingView";
 import { buildNotSellingFacts, getOutcomeStats } from "@/lib/data/notSelling";
 import { OUTLOOK_CITIES, outlookCityBySlug } from "@/lib/data/outlookCities";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -31,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   const data = await load(slug);
   if (!data) return {};
   const canonical = `${SITE_URL}${notSellingPath(slug)}`;
-  const title = `Why Is My House Not Selling in ${data.city}? What the Sales Data Shows`;
+  const title = `Why Is My House Not Selling in ${data.city}? What ${titleYear()} Sales Data Shows`;
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,

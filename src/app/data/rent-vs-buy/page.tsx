@@ -4,6 +4,7 @@ import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { RentVsBuyBoard } from "./RentVsBuyBoard";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -12,7 +13,7 @@ const SLUG = "rent-vs-buy";
 const DEF = trackerBySlug(SLUG)!;
 
 const H1 = "GTA & Toronto Rent-vs-Buy Tracker";
-const TITLE = "GTA & Toronto Rent-vs-Buy — Rental Yield & Price-to-Rent by Market";
+const TITLE = `Rent vs Buy in Toronto & the GTA ${titleYear()}: Rental Yield & Price-to-Rent by Market`;
 const DESCRIPTION =
   "Rent versus buy across Toronto and the GTA: typical rent, median price, gross rental yield and the price-to-rent ratio, by bedroom count. See where renting or owning has the edge. Updated nightly from MLS® data.";
 

@@ -7,6 +7,7 @@ import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { DaysOnMarketBoard } from "./DaysOnMarketBoard";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -15,7 +16,7 @@ const SLUG = "days-on-market";
 const DEF = trackerBySlug(SLUG)!;
 
 const H1 = "GTA & Toronto Days-on-Market Leaderboard";
-const TITLE = "GTA & Toronto Days-on-Market Leaderboard — How Fast Homes Sell";
+const TITLE = `Average Days on Market in Toronto & the GTA ${titleYear()}: How Fast Homes Sell`;
 const DESCRIPTION =
   "How fast homes sell in Toronto, Ottawa and every GTA market — median days to sell, the typical range, and how much active inventory is sitting 90+ days. Updated nightly from MLS® data.";
 

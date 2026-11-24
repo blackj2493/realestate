@@ -5,11 +5,12 @@
  */
 import type { Metadata } from "next";
 import HomeValueView from "@/components/homeValue/HomeValueView";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
 
-const TITLE = "How Much Is My House Worth in Ontario? Free Price Opinion";
+const TITLE = `How Much Is My House Worth in Ontario? (${titleYear()}) Free Price Opinion`;
 const DESCRIPTION =
   "Get a free written price opinion for your Ontario home, based on real sales nearby and checked by a person. A range with the reasons, by email. No calls unless you ask.";
 

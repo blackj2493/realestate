@@ -11,6 +11,7 @@ import HomeValueView from "@/components/homeValue/HomeValueView";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { boardRowFor, buildCityFacts } from "@/lib/data/cityFacts";
 import { HOME_VALUE_CITIES, homeValueCityBySlug, homeValuePath } from "@/lib/homeValue/content";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   if (!data) return {};
   const { city } = data;
   const canonical = `${SITE_URL}${homeValuePath(slug)}`;
-  const title = `How Much Is My House Worth in ${city}? Free Price Opinion`;
+  const title = `How Much Is My House Worth in ${city}? (${titleYear()}) Free Price Opinion`;
   const description = `Get a free written price opinion for your ${city} home, based on real ${city} sales and checked by a person. A range with the reasons, by email. No calls unless you ask.`;
   return {
     metadataBase: new URL(SITE_URL),
