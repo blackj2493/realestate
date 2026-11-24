@@ -17,6 +17,7 @@ import { cityHubSlug } from "@/lib/listings/listingPath";
 import { HOME_VALUE_CITIES, homeValuePath } from "@/lib/homeValue/content";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { getBasementData } from "@/lib/data/basementValue";
+import { getPriceChangeData } from "@/lib/data/priceChange";
 
 export const INDEXNOW_KEY = "6f0622a42624d95dc2c200c194920550";
 export const INDEXNOW_ENDPOINT = "https://api.indexnow.org/indexnow";
@@ -44,7 +45,8 @@ export function nightlyPaths(): string[] {
   const notSelling = ["/house-not-selling", ...OUTLOOK_CITIES.map((c) => `/house-not-selling/${c.slug}`)];
   const dom = OUTLOOK_CITIES.map((c) => `/data/days-on-market/${c.slug}`);
   const basement = ["/data/basement-value", ...getBasementData().cities.filter((c) => c.modelA).map((c) => `/data/basement-value/${c.slug}`)];
-  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling, ...dom, ...basement])];
+  const priceChange = ["/data/price-change", ...getPriceChangeData().cities.filter((c) => c.all).map((c) => `/data/price-change/${c.slug}`)];
+  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling, ...dom, ...basement, ...priceChange])];
 }
 
 /** The listing page path: the stored canonical, else the legacy key path (same fallback as the sitemap). */

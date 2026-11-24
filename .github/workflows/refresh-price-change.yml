@@ -1,0 +1,61 @@
+name: Refresh Price Change
+
+# Rebuilds data/price-change.json — same-home sale price change by city and home type against
+# a year earlier, and quarter by quarter — and commits it to main. /data/price-change renders
+# that file statically, so the commit (and the
+# deploy it triggers) is what refreshes the pages. Read-only on the database.
+#
+# CADENCE: monthly, the 5th (after last month's sales reach the feed). The window is the
+# last 12 full months against the 12 before, so a month's run moves every figure a little.
+#
+# NEW-WORKFLOW GOTCHA: workflow_dispatch only activates once this file is on main. Seed the
+# first run with the Actions "Run workflow" button, or: gh workflow run refresh-price-change.yml
+on:
+  # NOT scheduled by GitHub (it drops `schedule` runs under load). Supabase pg_cron POSTs a
+  # workflow_dispatch at 10:47 UTC on the 5th — supabase/migrations/168_pg_cron_price_change.sql.
+  # Change the time in cron.job, NOT here.
+  workflow_dispatch:
+
+permissions:
+  contents: write # commits the data file back to main
+
+concurrency:
+  group: refresh-price-change
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build basement value data
+        timeout-minutes: 20
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        # pipefail: `tsx … | tee` otherwise returns tee's 0 and a Fatal goes green.
+        run: |
+          set -o pipefail
+          npx tsx scripts/data/buildPriceChange.ts --write 2>&1 | tee price-change-run.log
+
+      - name: Commit data to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/price-change.json
+          if git diff --cached --quiet; then
+            echo "No change to the price change data."
+          else
+            git commit -m "chore(data): monthly price change refresh ($(date -u +%Y-%m-%d))"
+            git push
+          fi

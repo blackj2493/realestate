@@ -1,0 +1,2608 @@
+{
+ "generatedAt": "2026-11-24T14:35:58.197Z",
+ "earlierFrom": "2024-11-01",
+ "laterFrom": "2025-11-01",
+ "laterTo": "2026-11-01",
+ "ontario": {
+  "city": "Ontario",
+  "slug": "",
+  "sales": 56663,
+  "all": {
+   "pct": -7.000730626824566,
+   "lo": -7.267534306885596,
+   "hi": -6.769664664807065,
+   "significant": true,
+   "cells": 3537,
+   "sales": 38473,
+   "shareDown": 0.8760809883321894
+  },
+  "byType": {
+   "detached": {
+    "pct": -5.608162242816063,
+    "lo": -5.942078498314755,
+    "hi": -5.250303990969384,
+    "significant": true,
+    "cells": 1746,
+    "sales": 18928,
+    "shareDown": 0.8289669544507294
+   },
+   "semiTown": {
+    "pct": -5.520324797909432,
+    "lo": -6.059493238524446,
+    "hi": -4.954328863487554,
+    "significant": true,
+    "cells": 425,
+    "sales": 5092,
+    "shareDown": 0.8894553259994634
+   },
+   "condoApt": {
+    "pct": -9.015062900833435,
+    "lo": -9.505643993869608,
+    "hi": -8.556667151572412,
+    "significant": true,
+    "cells": 1008,
+    "sales": 12053,
+    "shareDown": 0.9263063422417231
+   },
+   "condoTown": {
+    "pct": -8.841765862105442,
+    "lo": -9.604518000425767,
+    "hi": -7.990936784153568,
+    "significant": true,
+    "cells": 358,
+    "sales": 2400,
+    "shareDown": 0.9168804515135968
+   }
+  },
+  "medianPrice": {
+   "detached": 1072000,
+   "semiTown": 768000,
+   "condoApt": 525000,
+   "condoTown": 625000
+  },
+  "quarters": [
+   {
+    "label": "Q3 2025",
+    "all": {
+     "pct": -7.3984931444915745,
+     "lo": -7.917876921925105,
+     "hi": -6.747202067611719,
+     "significant": true,
+     "cells": 837,
+     "sales": 4383,
+     "shareDown": 0.8334417696811971
+    },
+    "house": {
+     "pct": -5.86029653198305,
+     "lo": -6.886492425593516,
+     "hi": -4.9523960204109905,
+     "significant": true,
+     "cells": 434,
+     "sales": 2146,
+     "shareDown": 0.7551330798479088
+    },
+    "condo": {
+     "pct": -8.531983463747357,
+     "lo": -9.284010650382138,
+     "hi": -7.741260706351953,
+     "significant": true,
+     "cells": 403,
+     "sales": 2237,
+     "shareDown": 0.8919840818646958
+    }
+   },
+   {
+    "label": "Q4 2025",
+    "all": {
+     "pct": -8.384317425940512,
+     "lo": -9.015344107585461,
+     "hi": -7.7511630355324606,
+     "significant": true,
+     "cells": 789,
+     "sales": 3761,
+     "shareDown": 0.8513420509291122
+    },
+    "house": {
+     "pct": -6.796618957123505,
+     "lo": -7.722149892359672,
+     "hi": -5.869568422818359,
+     "significant": true,
+     "cells": 414,
+     "sales": 1819,
+     "shareDown": 0.8155573376102646
+    },
+    "condo": {
+     "pct": -9.559892774179755,
+     "lo": -10.459594390284078,
+     "hi": -8.68906313714905,
+     "significant": true,
+     "cells": 375,
+     "sales": 1942,
+     "shareDown": 0.8782399035563593
+    }
+   },
+   {
+    "label": "Q1 2026",
+    "all": {
+     "pct": -8.733288757337839,
+     "lo": -9.431196940121058,
+     "hi": -8.013660843696613,
+     "significant": true,
+     "cells": 750,
+     "sales": 3528,
+     "shareDown": 0.8603223330775134
+    },
+    "house": {
+     "pct": -6.802562799697469,
+     "lo": -7.784461378124309,
+     "hi": -5.9000224342738505,
+     "significant": true,
+     "cells": 375,
+     "sales": 1650,
+     "shareDown": 0.7975632614807873
+    },
+    "condo": {
+     "pct": -10.048346754468202,
+     "lo": -10.999346448778041,
+     "hi": -9.114502044842334,
+     "significant": true,
+     "cells": 375,
+     "sales": 1878,
+     "shareDown": 0.9038336582196231
+    }
+   },
+   {
+    "label": "Q2 2026",
+    "all": {
+     "pct": -6.782354788930685,
+     "lo": -7.1943710546366155,
+     "hi": -6.3170606928969235,
+     "significant": true,
+     "cells": 1763,
+     "sales": 9469,
+     "shareDown": 0.8035866780529461
+    },
+    "house": {
+     "pct": -5.697379543151724,
+     "lo": -6.254199827022715,
+     "hi": -5.229188447042759,
+     "significant": true,
+     "cells": 1211,
+     "sales": 6252,
+     "shareDown": 0.7700557700557701
+    },
+    "condo": {
+     "pct": -8.885568152961572,
+     "lo": -9.650033543586936,
+     "hi": -8.127462853356636,
+     "significant": true,
+     "cells": 552,
+     "sales": 3217,
+     "shareDown": 0.8697123519458545
+    }
+   },
+   {
+    "label": "Q3 2026",
+    "all": {
+     "pct": -6.28767673906588,
+     "lo": -6.743017101304888,
+     "hi": -5.839982657708837,
+     "significant": true,
+     "cells": 1546,
+     "sales": 7926,
+     "shareDown": 0.7893694288544074
+    },
+    "house": {
+     "pct": -5.50694383176757,
+     "lo": -6.035147259746509,
+     "hi": -5.003289922060851,
+     "significant": true,
+     "cells": 1028,
+     "sales": 5016,
+     "shareDown": 0.7568067671160454
+    },
+    "condo": {
+     "pct": -7.571668487513702,
+     "lo": -8.389226213714766,
+     "hi": -6.792347001722539,
+     "significant": true,
+     "cells": 518,
+     "sales": 2910,
+     "shareDown": 0.8435164835164836
+    }
+   }
+  ]
+ },
+ "cities": [
+  {
+   "city": "Toronto",
+   "slug": "toronto",
+   "sales": 18664,
+   "all": {
+    "pct": -7.607237773950902,
+    "lo": -8.02918455783383,
+    "hi": -7.193223588581487,
+    "significant": true,
+    "cells": 1120,
+    "sales": 13372,
+    "shareDown": 0.8830364058869093
+   },
+   "byType": {
+    "detached": {
+     "pct": -5.14134391382675,
+     "lo": -5.965938745335729,
+     "hi": -4.210586236618675,
+     "significant": true,
+     "cells": 426,
+     "sales": 4517,
+     "shareDown": 0.7672727272727272
+    },
+    "semiTown": {
+     "pct": -5.7305233589579725,
+     "lo": -8.340776568508746,
+     "hi": -3.233688024060359,
+     "significant": true,
+     "cells": 40,
+     "sales": 289,
+     "shareDown": 0.7881773399014779
+    },
+    "condoApt": {
+     "pct": -8.711976800325852,
+     "lo": -9.323610510767981,
+     "hi": -8.152802760956599,
+     "significant": true,
+     "cells": 570,
+     "sales": 8080,
+     "shareDown": 0.938955223880597
+    },
+    "condoTown": {
+     "pct": -8.335155321320332,
+     "lo": -9.626185661720884,
+     "hi": -6.9384592154863745,
+     "significant": true,
+     "cells": 84,
+     "sales": 486,
+     "shareDown": 0.87
+    }
+   },
+   "medianPrice": {
+    "detached": 1240000,
+    "semiTown": 1055000,
+    "condoApt": 558000,
+    "condoTown": 700000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -8.439914414292945,
+      "lo": -9.369933696695286,
+      "hi": -7.5528199704897405,
+      "significant": true,
+      "cells": 273,
+      "sales": 1730,
+      "shareDown": 0.8851823118696664
+     },
+     "house": {
+      "pct": -8.330641483701791,
+      "lo": -11.595247399439755,
+      "hi": -4.911475386655276,
+      "significant": true,
+      "cells": 44,
+      "sales": 235,
+      "shareDown": 0.8108108108108109
+     },
+     "condo": {
+      "pct": -8.450204212246714,
+      "lo": -9.388555143936312,
+      "hi": -7.414992275170677,
+      "significant": true,
+      "cells": 229,
+      "sales": 1495,
+      "shareDown": 0.8921901528013583
+     }
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -8.902082402897744,
+      "lo": -9.994675811505761,
+      "hi": -7.9035430643119335,
+      "significant": true,
+      "cells": 271,
+      "sales": 1534,
+      "shareDown": 0.8644338118022329
+     },
+     "house": {
+      "pct": -5.477240724622462,
+      "lo": -9.34814105240871,
+      "hi": -1.857938480483962,
+      "significant": true,
+      "cells": 47,
+      "sales": 216,
+      "shareDown": 0.7391304347826086
+     },
+     "condo": {
+      "pct": -9.240900901536014,
+      "lo": -10.294567135326096,
+      "hi": -8.178647430570916,
+      "significant": true,
+      "cells": 224,
+      "sales": 1318,
+      "shareDown": 0.8770851624231782
+     }
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -9.498012850056838,
+      "lo": -10.568032808610617,
+      "hi": -8.509402049617504,
+      "significant": true,
+      "cells": 244,
+      "sales": 1421,
+      "shareDown": 0.8827272727272727
+     },
+     "house": {
+      "pct": -7.463776704502173,
+      "lo": -10.65697084997385,
+      "hi": -3.727341861662599,
+      "significant": true,
+      "cells": 42,
+      "sales": 192,
+      "shareDown": 0.7254901960784313
+     },
+     "condo": {
+      "pct": -9.703385212501281,
+      "lo": -10.79375562447559,
+      "hi": -8.743537184723712,
+      "significant": true,
+      "cells": 202,
+      "sales": 1229,
+      "shareDown": 0.8987975951903807
+     }
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -6.979112024694034,
+      "lo": -7.759600993893168,
+      "hi": -6.146579610341931,
+      "significant": true,
+      "cells": 529,
+      "sales": 3202,
+      "shareDown": 0.8052985702270816
+     },
+     "house": {
+      "pct": -4.865849259127908,
+      "lo": -6.1682012293146045,
+      "hi": -3.388521737557299,
+      "significant": true,
+      "cells": 248,
+      "sales": 1201,
+      "shareDown": 0.6776315789473685
+     },
+     "condo": {
+      "pct": -8.270022698682638,
+      "lo": -9.12199496963653,
+      "hi": -7.372198730066347,
+      "significant": true,
+      "cells": 281,
+      "sales": 2001,
+      "shareDown": 0.8847203274215553
+     }
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -6.784378199895282,
+      "lo": -7.5887110299643314,
+      "hi": -5.942807588508591,
+      "significant": true,
+      "cells": 489,
+      "sales": 2852,
+      "shareDown": 0.8210862619808307
+     },
+     "house": {
+      "pct": -6.129891014999354,
+      "lo": -7.490524764311343,
+      "hi": -4.5471439018316895,
+      "significant": true,
+      "cells": 207,
+      "sales": 952,
+      "shareDown": 0.7565698478561549
+     },
+     "condo": {
+      "pct": -7.105038457152764,
+      "lo": -8.186370019431557,
+      "hi": -6.1018289175723615,
+      "significant": true,
+      "cells": 282,
+      "sales": 1900,
+      "shareDown": 0.8528610354223434
+     }
+    }
+   ]
+  },
+  {
+   "city": "Mississauga",
+   "slug": "mississauga",
+   "sales": 4192,
+   "all": {
+    "pct": -7.958362068449963,
+    "lo": -8.817156302280067,
+    "hi": -7.063578610692234,
+    "significant": true,
+    "cells": 270,
+    "sales": 3212,
+    "shareDown": 0.9298245614035088
+   },
+   "byType": {
+    "detached": {
+     "pct": -5.654189932044322,
+     "lo": -6.8271969796752,
+     "hi": -4.629326902492458,
+     "significant": true,
+     "cells": 128,
+     "sales": 1576,
+     "shareDown": 0.870817843866171
+    },
+    "semiTown": null,
+    "condoApt": {
+     "pct": -10.502284793676274,
+     "lo": -12.045725882683419,
+     "hi": -9.008996742551334,
+     "significant": true,
+     "cells": 72,
+     "sales": 994,
+     "shareDown": 0.971764705882353
+    },
+    "condoTown": {
+     "pct": -8.978637469877446,
+     "lo": -10.142588857210836,
+     "hi": -7.684571965720258,
+     "significant": true,
+     "cells": 60,
+     "sales": 554,
+     "shareDown": 1
+    }
+   },
+   "medianPrice": {
+    "detached": 1220000,
+    "semiTown": 888000,
+    "condoApt": 487000,
+    "condoTown": 690000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -7.33377169394292,
+      "lo": -9.069060548961827,
+      "hi": -5.528709702415606,
+      "significant": true,
+      "cells": 90,
+      "sales": 470,
+      "shareDown": 0.8427299703264095
+     },
+     "house": {
+      "pct": -4.675843856138879,
+      "lo": -7.496194383333164,
+      "hi": -1.809328849593288,
+      "significant": true,
+      "cells": 36,
+      "sales": 193,
+      "shareDown": 0.725
+     },
+     "condo": {
+      "pct": -8.771636683385042,
+      "lo": -10.810238965218879,
+      "hi": -6.2272872045630825,
+      "significant": true,
+      "cells": 54,
+      "sales": 277,
+      "shareDown": 0.9078341013824884
+     }
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -10.266097669151062,
+      "lo": -11.875161981238623,
+      "hi": -8.174677425752149,
+      "significant": true,
+      "cells": 74,
+      "sales": 390,
+      "shareDown": 0.8481848184818482
+     },
+     "house": {
+      "pct": -9.40181833532682,
+      "lo": -11.694320672465823,
+      "hi": -6.801555182757248,
+      "significant": true,
+      "cells": 31,
+      "sales": 155,
+      "shareDown": 0.8365384615384616
+     },
+     "condo": {
+      "pct": -10.714495930128724,
+      "lo": -12.767694376226435,
+      "hi": -8.185816181062192,
+      "significant": true,
+      "cells": 43,
+      "sales": 235,
+      "shareDown": 0.8542713567839196
+     }
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -9.535235297515904,
+      "lo": -11.423471515218754,
+      "hi": -7.45384363859261,
+      "significant": true,
+      "cells": 75,
+      "sales": 324,
+      "shareDown": 0.8638132295719845
+     },
+     "house": {
+      "pct": -7.1569420936283965,
+      "lo": -10.499714254094581,
+      "hi": -2.9909956463890084,
+      "significant": true,
+      "cells": 28,
+      "sales": 111,
+      "shareDown": 0.6794871794871795
+     },
+     "condo": {
+      "pct": -10.552435962925113,
+      "lo": -12.585241474255154,
+      "hi": -8.37875685060302,
+      "significant": true,
+      "cells": 47,
+      "sales": 213,
+      "shareDown": 0.9441340782122905
+     }
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -7.678107308315425,
+      "lo": -9.041578725616565,
+      "hi": -6.314336634381143,
+      "significant": true,
+      "cells": 135,
+      "sales": 787,
+      "shareDown": 0.8212389380530973
+     },
+     "house": {
+      "pct": -5.808258358578563,
+      "lo": -7.834179467071631,
+      "hi": -3.8551820605063054,
+      "significant": true,
+      "cells": 73,
+      "sales": 411,
+      "shareDown": 0.7474747474747475
+     },
+     "condo": {
+      "pct": -9.70696022268448,
+      "lo": -11.00836559799277,
+      "hi": -8.264195112162929,
+      "significant": true,
+      "cells": 62,
+      "sales": 376,
+      "shareDown": 0.9029850746268657
+     }
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -7.049490250740349,
+      "lo": -8.525778365644065,
+      "hi": -5.698987811504075,
+      "significant": true,
+      "cells": 129,
+      "sales": 720,
+      "shareDown": 0.8305084745762712
+     },
+     "house": {
+      "pct": -5.075402144733525,
+      "lo": -7.103328749373257,
+      "hi": -2.9861447178667455,
+      "significant": true,
+      "cells": 71,
+      "sales": 393,
+      "shareDown": 0.7720588235294118
+     },
+     "condo": {
+      "pct": -9.078482781982895,
+      "lo": -11.109837657365723,
+      "hi": -6.978057383475648,
+      "significant": true,
+      "cells": 58,
+      "sales": 327,
+      "shareDown": 0.8918918918918919
+     }
+    }
+   ]
+  },
+  {
+   "city": "Brampton",
+   "slug": "brampton",
+   "sales": 3555,
+   "all": {
+    "pct": -8.083538768763484,
+    "lo": -8.792018260969254,
+    "hi": -7.365436059027814,
+    "significant": true,
+    "cells": 212,
+    "sales": 2780,
+    "shareDown": 0.9627100840336135
+   },
+   "byType": {
+    "detached": {
+     "pct": -7.700648043340823,
+     "lo": -8.492360710165961,
+     "hi": -6.96205946640336,
+     "significant": true,
+     "cells": 140,
+     "sales": 2008,
+     "shareDown": 0.9581111957349581
+    },
+    "semiTown": {
+     "pct": -6.15005664479187,
+     "lo": -7.162818862341166,
+     "hi": -5.2208354176852945,
+     "significant": true,
+     "cells": 31,
+     "sales": 483,
+     "shareDown": 0.9554317548746518
+    },
+    "condoApt": null,
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 950000,
+    "semiTown": 755000,
+    "condoApt": 415000,
+    "condoTown": 570000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -8.544735316241923,
+      "lo": -10.370057495567634,
+      "hi": -6.691744102342055,
+      "significant": true,
+      "cells": 60,
+      "sales": 343,
+      "shareDown": 0.9191919191919192
+     },
+     "house": {
+      "pct": -8.723507659631695,
+      "lo": -10.466017061985387,
+      "hi": -7.153812873824464,
+      "significant": true,
+      "cells": 51,
+      "sales": 306,
+      "shareDown": 0.9479768786127167
+     },
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -7.827453934840562,
+      "lo": -9.32340908025312,
+      "hi": -6.231545882286835,
+      "significant": true,
+      "cells": 58,
+      "sales": 306,
+      "shareDown": 0.9310344827586207
+     },
+     "house": {
+      "pct": -7.233226730569234,
+      "lo": -8.721410845326814,
+      "hi": -5.707976318008271,
+      "significant": true,
+      "cells": 52,
+      "sales": 284,
+      "shareDown": 0.9234972677595629
+     },
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -9.036617425957788,
+      "lo": -11.126844216763782,
+      "hi": -6.856074878337867,
+      "significant": true,
+      "cells": 47,
+      "sales": 234,
+      "shareDown": 0.9281045751633987
+     },
+     "house": {
+      "pct": -8.822039801745312,
+      "lo": -11.450628052292771,
+      "hi": -6.774983462848126,
+      "significant": true,
+      "cells": 42,
+      "sales": 220,
+      "shareDown": 0.920863309352518
+     },
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -8.218999649661361,
+      "lo": -9.398939677420188,
+      "hi": -7.15830171589905,
+      "significant": true,
+      "cells": 110,
+      "sales": 638,
+      "shareDown": 0.9261603375527426
+     },
+     "house": {
+      "pct": -7.823403071471723,
+      "lo": -8.8992100776641,
+      "hi": -6.656573085227987,
+      "significant": true,
+      "cells": 93,
+      "sales": 590,
+      "shareDown": 0.9186046511627907
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -6.611423175330175,
+      "lo": -7.7793528887032695,
+      "hi": -5.497772642595043,
+      "significant": true,
+      "cells": 107,
+      "sales": 663,
+      "shareDown": 0.8719646799116998
+     },
+     "house": {
+      "pct": -5.974310390891808,
+      "lo": -7.096495300871827,
+      "hi": -4.824409113773342,
+      "significant": true,
+      "cells": 94,
+      "sales": 611,
+      "shareDown": 0.8650602409638555
+     },
+     "condo": null
+    }
+   ]
+  },
+  {
+   "city": "Markham",
+   "slug": "markham",
+   "sales": 2546,
+   "all": {
+    "pct": -8.813780055293545,
+    "lo": -9.917363666463329,
+    "hi": -7.5504526500197775,
+    "significant": true,
+    "cells": 145,
+    "sales": 1531,
+    "shareDown": 0.9347048300536672
+   },
+   "byType": {
+    "detached": {
+     "pct": -6.843075446963083,
+     "lo": -8.12613755216901,
+     "hi": -5.715435979041306,
+     "significant": true,
+     "cells": 67,
+     "sales": 717,
+     "shareDown": 0.9261603375527426
+    },
+    "semiTown": {
+     "pct": -9.80650319543091,
+     "lo": -11.69282136745531,
+     "hi": -8.080635897236833,
+     "significant": true,
+     "cells": 36,
+     "sales": 315,
+     "shareDown": 0.9826086956521739
+    },
+    "condoApt": {
+     "pct": -10.004134260678889,
+     "lo": -12.188983270107515,
+     "hi": -6.776856940686035,
+     "significant": true,
+     "cells": 33,
+     "sales": 440,
+     "shareDown": 0.907103825136612
+    },
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 1420000,
+    "semiTown": 1020000,
+    "condoApt": 564000,
+    "condoTown": 750000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -12.117768677801742,
+      "lo": -14.394389613935497,
+      "hi": -9.557649369076866,
+      "significant": true,
+      "cells": 32,
+      "sales": 152,
+      "shareDown": 0.9629629629629629
+     },
+     "house": {
+      "pct": -11.973039847110147,
+      "lo": -15.90119068719305,
+      "hi": -7.891415148129051,
+      "significant": true,
+      "cells": 17,
+      "sales": 68,
+      "shareDown": 0.9555555555555556
+     },
+     "condo": {
+      "pct": -12.22100070459608,
+      "lo": -14.210609654359674,
+      "hi": -9.030740119902653,
+      "significant": true,
+      "cells": 15,
+      "sales": 84,
+      "shareDown": 0.9682539682539683
+     }
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -10.587881069406006,
+      "lo": -12.425400746369537,
+      "hi": -8.628112177382539,
+      "significant": true,
+      "cells": 35,
+      "sales": 153,
+      "shareDown": 0.8943089430894309
+     },
+     "house": {
+      "pct": -8.498835773920272,
+      "lo": -10.93118494417647,
+      "hi": -5.515659800562554,
+      "significant": true,
+      "cells": 22,
+      "sales": 78,
+      "shareDown": 0.796875
+     },
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -13.594816858988532,
+      "lo": -18.014119117808626,
+      "hi": -9.449863401229646,
+      "significant": true,
+      "cells": 30,
+      "sales": 136,
+      "shareDown": 0.9519230769230769
+     },
+     "house": null,
+     "condo": {
+      "pct": -15.132541553954926,
+      "lo": -21.223132550355977,
+      "hi": -9.202517042726143,
+      "significant": true,
+      "cells": 17,
+      "sales": 83,
+      "shareDown": 0.927536231884058
+     }
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -8.178875081740241,
+      "lo": -10.264499401267244,
+      "hi": -5.4879616896554575,
+      "significant": true,
+      "cells": 68,
+      "sales": 342,
+      "shareDown": 0.8314176245210728
+     },
+     "house": {
+      "pct": -7.9094494648779,
+      "lo": -10.0060531849553,
+      "hi": -5.719600153841825,
+      "significant": true,
+      "cells": 50,
+      "sales": 216,
+      "shareDown": 0.8047337278106509
+     },
+     "condo": {
+      "pct": -8.671745978905111,
+      "lo": -12.725638212186569,
+      "hi": -1.8753088963370277,
+      "significant": true,
+      "cells": 18,
+      "sales": 126,
+      "shareDown": 0.8804347826086957
+     }
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -6.617571218513237,
+      "lo": -8.58653047507949,
+      "hi": -4.540631999619695,
+      "significant": true,
+      "cells": 71,
+      "sales": 325,
+      "shareDown": 0.8312236286919831
+     },
+     "house": {
+      "pct": -5.937202947972456,
+      "lo": -7.952008425376965,
+      "hi": -3.838324055454649,
+      "significant": true,
+      "cells": 55,
+      "sales": 229,
+      "shareDown": 0.8170731707317073
+     },
+     "condo": {
+      "pct": -8.12817692837053,
+      "lo": -11.86788149142788,
+      "hi": -2.845446662431515,
+      "significant": true,
+      "cells": 16,
+      "sales": 96,
+      "shareDown": 0.863013698630137
+     }
+    }
+   ]
+  },
+  {
+   "city": "Vaughan",
+   "slug": "vaughan",
+   "sales": 2468,
+   "all": {
+    "pct": -8.086254078851441,
+    "lo": -9.135330682140118,
+    "hi": -7.144086902314795,
+    "significant": true,
+    "cells": 148,
+    "sales": 1891,
+    "shareDown": 0.9368565545641729
+   },
+   "byType": {
+    "detached": {
+     "pct": -6.052208039847818,
+     "lo": -7.553792749131438,
+     "hi": -4.749668603682139,
+     "significant": true,
+     "cells": 65,
+     "sales": 996,
+     "shareDown": 0.8955223880597015
+    },
+    "semiTown": {
+     "pct": -7.2767292126927705,
+     "lo": -8.918649630010544,
+     "hi": -5.914816707735264,
+     "significant": true,
+     "cells": 20,
+     "sales": 296,
+     "shareDown": 0.9861751152073732
+    },
+    "condoApt": {
+     "pct": -11.418523644645047,
+     "lo": -12.535450862694875,
+     "hi": -10.20642224222248,
+     "significant": true,
+     "cells": 57,
+     "sales": 574,
+     "shareDown": 0.9752066115702479
+    },
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 1405000,
+    "semiTown": 1000000,
+    "condoApt": 530000,
+    "condoTown": 770000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -8.412735544434764,
+      "lo": -10.037547565523278,
+      "hi": -6.491598579804507,
+      "significant": true,
+      "cells": 53,
+      "sales": 300,
+      "shareDown": 0.8663101604278075
+     },
+     "house": {
+      "pct": -7.523990139474956,
+      "lo": -9.695736910059855,
+      "hi": -5.25477376882473,
+      "significant": true,
+      "cells": 30,
+      "sales": 206,
+      "shareDown": 0.8440366972477065
+     },
+     "condo": {
+      "pct": -9.640410664220708,
+      "lo": -11.856914934952705,
+      "hi": -6.7788392419070265,
+      "significant": true,
+      "cells": 23,
+      "sales": 94,
+      "shareDown": 0.8974358974358975
+     }
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -8.308057566917352,
+      "lo": -10.715890145658937,
+      "hi": -5.887059411793229,
+      "significant": true,
+      "cells": 58,
+      "sales": 272,
+      "shareDown": 0.835
+     },
+     "house": {
+      "pct": -5.972293291684272,
+      "lo": -8.669938784907202,
+      "hi": -2.530580152685333,
+      "significant": true,
+      "cells": 35,
+      "sales": 187,
+      "shareDown": 0.8
+     },
+     "condo": {
+      "pct": -12.07277070265547,
+      "lo": -14.655790898205149,
+      "hi": -8.570674348376912,
+      "significant": true,
+      "cells": 23,
+      "sales": 85,
+      "shareDown": 0.8933333333333333
+     }
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -10.179652115872893,
+      "lo": -11.966824951583641,
+      "hi": -8.278175980530952,
+      "significant": true,
+      "cells": 47,
+      "sales": 224,
+      "shareDown": 0.9559748427672956
+     },
+     "house": {
+      "pct": -8.29700727102697,
+      "lo": -10.552852920516157,
+      "hi": -5.767638079441505,
+      "significant": true,
+      "cells": 28,
+      "sales": 146,
+      "shareDown": 0.9263157894736842
+     },
+     "condo": {
+      "pct": -12.90317363577942,
+      "lo": -15.502552362035107,
+      "hi": -10.480610054312061,
+      "significant": true,
+      "cells": 19,
+      "sales": 78,
+      "shareDown": 1
+     }
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -9.550073309354023,
+      "lo": -11.38533030034545,
+      "hi": -7.624178593181434,
+      "significant": true,
+      "cells": 76,
+      "sales": 472,
+      "shareDown": 0.9053254437869822
+     },
+     "house": {
+      "pct": -8.727929193746292,
+      "lo": -10.282805938525657,
+      "hi": -7.021567079945974,
+      "significant": true,
+      "cells": 52,
+      "sales": 357,
+      "shareDown": 0.9322709163346613
+     },
+     "condo": {
+      "pct": -11.880737728556708,
+      "lo": -16.797091938853303,
+      "hi": -4.820893999598387,
+      "significant": true,
+      "cells": 24,
+      "sales": 115,
+      "shareDown": 0.8275862068965517
+     }
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -6.99869304857995,
+      "lo": -8.57997196640919,
+      "hi": -5.235712918880417,
+      "significant": true,
+      "cells": 75,
+      "sales": 408,
+      "shareDown": 0.864516129032258
+     },
+     "house": {
+      "pct": -5.080694462744657,
+      "lo": -6.950571869338071,
+      "hi": -3.148527006048455,
+      "significant": true,
+      "cells": 55,
+      "sales": 308,
+      "shareDown": 0.8297872340425532
+     },
+     "condo": {
+      "pct": -12.761039116524431,
+      "lo": -15.61448427164471,
+      "hi": -9.798940536503345,
+      "significant": true,
+      "cells": 20,
+      "sales": 100,
+      "shareDown": 0.9733333333333334
+     }
+    }
+   ]
+  },
+  {
+   "city": "Richmond Hill",
+   "slug": "richmond-hill",
+   "sales": 1736,
+   "all": {
+    "pct": -8.414121244735135,
+    "lo": -9.567687773560248,
+    "hi": -7.350239131383179,
+    "significant": true,
+    "cells": 114,
+    "sales": 1169,
+    "shareDown": 0.9285714285714286
+   },
+   "byType": {
+    "detached": {
+     "pct": -7.752648065502542,
+     "lo": -9.423304950531556,
+     "hi": -6.235411330379074,
+     "significant": true,
+     "cells": 59,
+     "sales": 630,
+     "shareDown": 0.9048723897911833
+    },
+    "semiTown": {
+     "pct": -8.46342379283184,
+     "lo": -10.678499741740072,
+     "hi": -6.16950511969576,
+     "significant": true,
+     "cells": 23,
+     "sales": 269,
+     "shareDown": 0.9619565217391305
+    },
+    "condoApt": {
+     "pct": -9.277408463668042,
+     "lo": -11.396803565082912,
+     "hi": -6.75554711354085,
+     "significant": true,
+     "cells": 25,
+     "sales": 235,
+     "shareDown": 0.9380952380952381
+    },
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 1480000,
+    "semiTown": 1049000,
+    "condoApt": 531000,
+    "condoTown": 691000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -6.972918185252998,
+      "lo": -10.300412091232712,
+      "hi": -4.320990005953668,
+      "significant": true,
+      "cells": 33,
+      "sales": 148,
+      "shareDown": 0.8269230769230769
+     },
+     "house": {
+      "pct": -6.804601424568213,
+      "lo": -10.35550959462278,
+      "hi": -2.680499946351311,
+      "significant": true,
+      "cells": 20,
+      "sales": 91,
+      "shareDown": 0.7868852459016393
+     },
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -10.28571720875997,
+      "lo": -12.756828771343326,
+      "hi": -7.383306863473433,
+      "significant": true,
+      "cells": 32,
+      "sales": 145,
+      "shareDown": 0.9611650485436893
+     },
+     "house": {
+      "pct": -10.627786927912423,
+      "lo": -13.870758051435491,
+      "hi": -6.737307825547606,
+      "significant": true,
+      "cells": 24,
+      "sales": 104,
+      "shareDown": 0.9420289855072463
+     },
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -8.958456639028507,
+      "lo": -11.82665024832737,
+      "hi": -6.227562193124717,
+      "significant": true,
+      "cells": 27,
+      "sales": 90,
+      "shareDown": 0.9154929577464789
+     },
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -10.661453412322846,
+      "lo": -12.716553364442909,
+      "hi": -8.842414840067121,
+      "significant": true,
+      "cells": 52,
+      "sales": 259,
+      "shareDown": 0.9763313609467456
+     },
+     "house": {
+      "pct": -10.343762460810808,
+      "lo": -12.473415820119426,
+      "hi": -8.307570267386485,
+      "significant": true,
+      "cells": 39,
+      "sales": 201,
+      "shareDown": 0.9849624060150376
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -8.298557321107936,
+      "lo": -10.92731298904042,
+      "hi": -5.824588829690625,
+      "significant": true,
+      "cells": 47,
+      "sales": 226,
+      "shareDown": 0.8203592814371258
+     },
+     "house": {
+      "pct": -7.46437801212643,
+      "lo": -10.62438208655994,
+      "hi": -4.674318338255167,
+      "significant": true,
+      "cells": 36,
+      "sales": 178,
+      "shareDown": 0.796875
+     },
+     "condo": null
+    }
+   ]
+  },
+  {
+   "city": "Oshawa",
+   "slug": "oshawa",
+   "sales": 1453,
+   "all": {
+    "pct": -7.201751887083521,
+    "lo": -8.401159390465914,
+    "hi": -5.926385093020533,
+    "significant": true,
+    "cells": 99,
+    "sales": 1087,
+    "shareDown": 0.9217809867629362
+   },
+   "byType": {
+    "detached": {
+     "pct": -6.315703380290814,
+     "lo": -7.6252438177763375,
+     "hi": -5.078245343405387,
+     "significant": true,
+     "cells": 68,
+     "sales": 893,
+     "shareDown": 0.900459418070444
+    },
+    "semiTown": null,
+    "condoApt": null,
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 735000,
+    "semiTown": 661000,
+    "condoApt": 340000,
+    "condoTown": 522000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -7.13923307402694,
+      "lo": -10.490801587944802,
+      "hi": -3.8201568266677954,
+      "significant": true,
+      "cells": 26,
+      "sales": 135,
+      "shareDown": 0.8133333333333334
+     },
+     "house": {
+      "pct": -6.611174213645323,
+      "lo": -10.404400529844581,
+      "hi": -1.8454916265975845,
+      "significant": true,
+      "cells": 19,
+      "sales": 108,
+      "shareDown": 0.7962962962962963
+     },
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -6.760881176096231,
+      "lo": -9.47667961036784,
+      "hi": -4.232464704931685,
+      "significant": true,
+      "cells": 24,
+      "sales": 107,
+      "shareDown": 0.859375
+     },
+     "house": {
+      "pct": -6.1668796000512875,
+      "lo": -8.933748381305593,
+      "hi": -3.4543456587961927,
+      "significant": true,
+      "cells": 17,
+      "sales": 87,
+      "shareDown": 0.8478260869565217
+     },
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -9.786456921527833,
+      "lo": -12.167240621010222,
+      "hi": -7.477733981280273,
+      "significant": true,
+      "cells": 26,
+      "sales": 113,
+      "shareDown": 0.9565217391304348
+     },
+     "house": {
+      "pct": -8.484373437198634,
+      "lo": -10.763839669058745,
+      "hi": -6.094308248158108,
+      "significant": true,
+      "cells": 22,
+      "sales": 100,
+      "shareDown": 0.9473684210526315
+     },
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -7.071854607954566,
+      "lo": -8.957921913945164,
+      "hi": -4.7166841793124235,
+      "significant": true,
+      "cells": 52,
+      "sales": 231,
+      "shareDown": 0.8315789473684211
+     },
+     "house": {
+      "pct": -6.783131517608753,
+      "lo": -8.767164076060643,
+      "hi": -4.712354939323921,
+      "significant": true,
+      "cells": 48,
+      "sales": 218,
+      "shareDown": 0.8202247191011236
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -7.896234866294069,
+      "lo": -9.996119313230631,
+      "hi": -5.811775043021267,
+      "significant": true,
+      "cells": 55,
+      "sales": 249,
+      "shareDown": 0.8490566037735849
+     },
+     "house": {
+      "pct": -7.49959991195837,
+      "lo": -9.99829959918996,
+      "hi": -5.2958979597574345,
+      "significant": true,
+      "cells": 46,
+      "sales": 221,
+      "shareDown": 0.8440860215053764
+     },
+     "condo": null
+    }
+   ]
+  },
+  {
+   "city": "Whitby",
+   "slug": "whitby",
+   "sales": 1264,
+   "all": {
+    "pct": -5.931075015416355,
+    "lo": -7.163297629449378,
+    "hi": -4.840257655952338,
+    "significant": true,
+    "cells": 83,
+    "sales": 917,
+    "shareDown": 0.8808864265927978
+   },
+   "byType": {
+    "detached": {
+     "pct": -5.983646287652798,
+     "lo": -7.730131728956207,
+     "hi": -4.378564129618636,
+     "significant": true,
+     "cells": 50,
+     "sales": 648,
+     "shareDown": 0.8871287128712871
+    },
+    "semiTown": {
+     "pct": -4.955325325296,
+     "lo": -6.626143308179838,
+     "hi": -3.4301798767136535,
+     "significant": true,
+     "cells": 23,
+     "sales": 196,
+     "shareDown": 0.8606060606060606
+    },
+    "condoApt": null,
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 979000,
+    "semiTown": 785000,
+    "condoApt": 555000,
+    "condoTown": 620000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": 0.27231055225864886,
+      "lo": -3.8528974334036805,
+      "hi": 4.171900384813148,
+      "significant": false,
+      "cells": 25,
+      "sales": 147,
+      "shareDown": 0.4666666666666667
+     },
+     "house": {
+      "pct": 0.6210419645290496,
+      "lo": -3.2309357462478525,
+      "hi": 4.525076087965585,
+      "significant": false,
+      "cells": 24,
+      "sales": 144,
+      "shareDown": 0.4444444444444444
+     },
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -6.336968827212804,
+      "lo": -8.829988473150902,
+      "hi": -3.650543715820693,
+      "significant": true,
+      "cells": 23,
+      "sales": 94,
+      "shareDown": 0.873015873015873
+     },
+     "house": {
+      "pct": -6.390976062906615,
+      "lo": -9.022292936514797,
+      "hi": -3.8358225160126636,
+      "significant": true,
+      "cells": 21,
+      "sales": 89,
+      "shareDown": 0.864406779661017
+     },
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": null,
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -4.7469778550967305,
+      "lo": -6.5738383514606715,
+      "hi": -2.9846462978872417,
+      "significant": true,
+      "cells": 56,
+      "sales": 263,
+      "shareDown": 0.7799043062200957
+     },
+     "house": {
+      "pct": -5.030687807489877,
+      "lo": -6.89492363010983,
+      "hi": -3.1260116055425726,
+      "significant": true,
+      "cells": 51,
+      "sales": 242,
+      "shareDown": 0.7918781725888325
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -8.37123875474025,
+      "lo": -11.022419920062825,
+      "hi": -6.2021588531443665,
+      "significant": true,
+      "cells": 40,
+      "sales": 188,
+      "shareDown": 0.8666666666666667
+     },
+     "house": {
+      "pct": -8.222117152768154,
+      "lo": -11.030412142425899,
+      "hi": -6.055276956000929,
+      "significant": true,
+      "cells": 38,
+      "sales": 181,
+      "shareDown": 0.8611111111111112
+     },
+     "condo": null
+    }
+   ]
+  },
+  {
+   "city": "Ajax",
+   "slug": "ajax",
+   "sales": 852,
+   "all": {
+    "pct": -7.440073387291311,
+    "lo": -8.889401500037282,
+    "hi": -5.9281479610769034,
+    "significant": true,
+    "cells": 58,
+    "sales": 642,
+    "shareDown": 0.908203125
+   },
+   "byType": {
+    "detached": {
+     "pct": -6.722528486820958,
+     "lo": -8.163945842094655,
+     "hi": -4.994390787050985,
+     "significant": true,
+     "cells": 41,
+     "sales": 503,
+     "shareDown": 0.8868894601542416
+    },
+    "semiTown": null,
+    "condoApt": null,
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 928000,
+    "semiTown": 750000,
+    "condoApt": 445000,
+    "condoTown": 625000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": null,
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": null,
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": null,
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -7.472505574563244,
+      "lo": -9.367869401319751,
+      "hi": -5.432842721400808,
+      "significant": true,
+      "cells": 37,
+      "sales": 175,
+      "shareDown": 0.8333333333333334
+     },
+     "house": {
+      "pct": -7.108170802074447,
+      "lo": -8.719330544614415,
+      "hi": -4.992673487027955,
+      "significant": true,
+      "cells": 35,
+      "sales": 166,
+      "shareDown": 0.8260869565217391
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -5.925063712456502,
+      "lo": -8.414359595784685,
+      "hi": -3.7912028681143504,
+      "significant": true,
+      "cells": 28,
+      "sales": 136,
+      "shareDown": 0.8260869565217391
+     },
+     "house": {
+      "pct": -5.7640875844471955,
+      "lo": -8.185814169783297,
+      "hi": -3.365798152895999,
+      "significant": true,
+      "cells": 27,
+      "sales": 133,
+      "shareDown": 0.8230088495575221
+     },
+     "condo": null
+    }
+   ]
+  },
+  {
+   "city": "Pickering",
+   "slug": "pickering",
+   "sales": 1016,
+   "all": {
+    "pct": -6.528200101083678,
+    "lo": -7.971635563255636,
+    "hi": -4.95050260676609,
+    "significant": true,
+    "cells": 70,
+    "sales": 672,
+    "shareDown": 0.8600823045267489
+   },
+   "byType": {
+    "detached": {
+     "pct": -5.341536941822579,
+     "lo": -7.162346131596434,
+     "hi": -3.0185672605645895,
+     "significant": true,
+     "cells": 36,
+     "sales": 392,
+     "shareDown": 0.8302583025830258
+    },
+    "semiTown": null,
+    "condoApt": null,
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 1038000,
+    "semiTown": 790000,
+    "condoApt": 470000,
+    "condoTown": 608000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -4.914791486219199,
+      "lo": -9.37794092747581,
+      "hi": -0.14851854681228793,
+      "significant": true,
+      "cells": 23,
+      "sales": 85,
+      "shareDown": 0.8923076923076924
+     },
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -7.1276824678023765,
+      "lo": -11.955660240853156,
+      "hi": -2.938758620559056,
+      "significant": true,
+      "cells": 18,
+      "sales": 69,
+      "shareDown": 0.7333333333333333
+     },
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": null,
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -7.9054363357863044,
+      "lo": -10.883315368703874,
+      "hi": -5.418152986770502,
+      "significant": true,
+      "cells": 32,
+      "sales": 154,
+      "shareDown": 0.8974358974358975
+     },
+     "house": {
+      "pct": -6.967604470588201,
+      "lo": -9.304159499000528,
+      "hi": -4.451463150114329,
+      "significant": true,
+      "cells": 24,
+      "sales": 123,
+      "shareDown": 0.9222222222222223
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -2.9902160759521754,
+      "lo": -6.161159376791255,
+      "hi": 0.2903290489594929,
+      "significant": false,
+      "cells": 29,
+      "sales": 135,
+      "shareDown": 0.6704545454545454
+     },
+     "house": {
+      "pct": -2.0124788772966102,
+      "lo": -5.7454866079298075,
+      "hi": 1.9382376580546619,
+      "significant": false,
+      "cells": 19,
+      "sales": 104,
+      "shareDown": 0.625
+     },
+     "condo": null
+    }
+   ]
+  },
+  {
+   "city": "Oakville",
+   "slug": "oakville",
+   "sales": 2157,
+   "all": {
+    "pct": -6.492728612571062,
+    "lo": -7.804490078782053,
+    "hi": -4.943504374890056,
+    "significant": true,
+    "cells": 162,
+    "sales": 1561,
+    "shareDown": 0.8363486842105263
+   },
+   "byType": {
+    "detached": {
+     "pct": -5.2330377288600785,
+     "lo": -6.7177681503081415,
+     "hi": -3.7091304526315345,
+     "significant": true,
+     "cells": 91,
+     "sales": 953,
+     "shareDown": 0.8230337078651685
+    },
+    "semiTown": {
+     "pct": -8.045190242744328,
+     "lo": -10.178598001465526,
+     "hi": -5.700750576013883,
+     "significant": true,
+     "cells": 25,
+     "sales": 278,
+     "shareDown": 0.9155555555555556
+    },
+    "condoApt": {
+     "pct": -11.00336124733012,
+     "lo": -14.875476268747793,
+     "hi": -7.213178221650734,
+     "significant": true,
+     "cells": 35,
+     "sales": 237,
+     "shareDown": 0.8407960199004975
+    },
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 1618000,
+    "semiTown": 1010000,
+    "condoApt": 523000,
+    "condoTown": 700000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -7.520573717419519,
+      "lo": -9.953719170788544,
+      "hi": -4.945619651960423,
+      "significant": true,
+      "cells": 54,
+      "sales": 204,
+      "shareDown": 0.7635135135135135
+     },
+     "house": {
+      "pct": -6.065685571357112,
+      "lo": -9.355702644391044,
+      "hi": -2.630059251523144,
+      "significant": true,
+      "cells": 41,
+      "sales": 156,
+      "shareDown": 0.6846846846846847
+     },
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -7.724971431227671,
+      "lo": -10.339289603124465,
+      "hi": -4.8264935841317005,
+      "significant": true,
+      "cells": 52,
+      "sales": 185,
+      "shareDown": 0.8299319727891157
+     },
+     "house": {
+      "pct": -6.579202307689681,
+      "lo": -9.480014250138828,
+      "hi": -3.1313287274253927,
+      "significant": true,
+      "cells": 39,
+      "sales": 144,
+      "shareDown": 0.8017241379310345
+     },
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -10.420889189481947,
+      "lo": -13.454150087195844,
+      "hi": -7.392575605764609,
+      "significant": true,
+      "cells": 33,
+      "sales": 111,
+      "shareDown": 0.9418604651162791
+     },
+     "house": {
+      "pct": -8.52128541615243,
+      "lo": -12.539224039311328,
+      "hi": -4.84168817561675,
+      "significant": true,
+      "cells": 21,
+      "sales": 75,
+      "shareDown": 0.9152542372881356
+     },
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -6.069188261138067,
+      "lo": -8.283312649941259,
+      "hi": -3.832675933615247,
+      "significant": true,
+      "cells": 84,
+      "sales": 402,
+      "shareDown": 0.7611940298507462
+     },
+     "house": {
+      "pct": -6.099842331091904,
+      "lo": -8.490288393960576,
+      "hi": -3.6603157597264744,
+      "significant": true,
+      "cells": 67,
+      "sales": 350,
+      "shareDown": 0.762114537444934
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -4.521381879165038,
+      "lo": -7.161923681584917,
+      "hi": -1.531347318605511,
+      "significant": true,
+      "cells": 68,
+      "sales": 287,
+      "shareDown": 0.7096774193548387
+     },
+     "house": {
+      "pct": -4.729710613754092,
+      "lo": -7.6998694025637,
+      "hi": -1.4975372251562173,
+      "significant": true,
+      "cells": 54,
+      "sales": 238,
+      "shareDown": 0.6949152542372882
+     },
+     "condo": null
+    }
+   ]
+  },
+  {
+   "city": "Burlington",
+   "slug": "burlington",
+   "sales": 2027,
+   "all": {
+    "pct": -6.056313465888895,
+    "lo": -7.3757788153179655,
+    "hi": -4.796127944262234,
+    "significant": true,
+    "cells": 157,
+    "sales": 1339,
+    "shareDown": 0.8064516129032258
+   },
+   "byType": {
+    "detached": {
+     "pct": -3.9628247061220514,
+     "lo": -5.378449269596627,
+     "hi": -2.3625502933222973,
+     "significant": true,
+     "cells": 79,
+     "sales": 823,
+     "shareDown": 0.7515060240963856
+    },
+    "semiTown": null,
+    "condoApt": {
+     "pct": -9.950900832600249,
+     "lo": -12.768603490434899,
+     "hi": -6.829800258980279,
+     "significant": true,
+     "cells": 37,
+     "sales": 246,
+     "shareDown": 0.8823529411764706
+    },
+    "condoTown": {
+     "pct": -9.490761526765402,
+     "lo": -13.072366965826618,
+     "hi": -5.788655549354944,
+     "significant": true,
+     "cells": 26,
+     "sales": 171,
+     "shareDown": 0.8604651162790697
+    }
+   },
+   "medianPrice": {
+    "detached": 1230000,
+    "semiTown": 853000,
+    "condoApt": 528000,
+    "condoTown": 695000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -6.724990368152077,
+      "lo": -10.23919053931877,
+      "hi": -2.2519352467633866,
+      "significant": true,
+      "cells": 46,
+      "sales": 182,
+      "shareDown": 0.7716535433070866
+     },
+     "house": {
+      "pct": -7.292191063099891,
+      "lo": -11.711658918028728,
+      "hi": -2.279532639148775,
+      "significant": true,
+      "cells": 32,
+      "sales": 141,
+      "shareDown": 0.8043478260869565
+     },
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -6.563106247592578,
+      "lo": -10.52456640643375,
+      "hi": -1.9677689344829663,
+      "significant": true,
+      "cells": 41,
+      "sales": 127,
+      "shareDown": 0.8256880733944955
+     },
+     "house": {
+      "pct": -8.848868406812432,
+      "lo": -12.610298249714075,
+      "hi": -4.183056652862643,
+      "significant": true,
+      "cells": 26,
+      "sales": 88,
+      "shareDown": 0.8533333333333334
+     },
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -4.884162804060888,
+      "lo": -10.433729454914289,
+      "hi": 0.8962316471025435,
+      "significant": false,
+      "cells": 28,
+      "sales": 99,
+      "shareDown": 0.7142857142857143
+     },
+     "house": {
+      "pct": -7.342739031005073,
+      "lo": -11.723359168621176,
+      "hi": -2.837992399069924,
+      "significant": true,
+      "cells": 17,
+      "sales": 68,
+      "shareDown": 0.7678571428571429
+     },
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -6.698487980833489,
+      "lo": -9.64195432819437,
+      "hi": -4.28405481917572,
+      "significant": true,
+      "cells": 61,
+      "sales": 325,
+      "shareDown": 0.7370689655172413
+     },
+     "house": {
+      "pct": -5.5673558706408315,
+      "lo": -8.563238506299879,
+      "hi": -2.6493880989559484,
+      "significant": true,
+      "cells": 47,
+      "sales": 259,
+      "shareDown": 0.7461928934010152
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -3.2724123618448737,
+      "lo": -5.836858978072161,
+      "hi": -0.3321978518050328,
+      "significant": true,
+      "cells": 58,
+      "sales": 230,
+      "shareDown": 0.6476683937823834
+     },
+     "house": {
+      "pct": -2.248303647915463,
+      "lo": -5.414784478852496,
+      "hi": 0.689400593752085,
+      "significant": false,
+      "cells": 40,
+      "sales": 166,
+      "shareDown": 0.6575342465753424
+     },
+     "condo": {
+      "pct": -6.385757250634827,
+      "lo": -12.511896775291595,
+      "hi": -0.425658494048778,
+      "significant": true,
+      "cells": 18,
+      "sales": 64,
+      "shareDown": 0.6170212765957447
+     }
+    }
+   ]
+  },
+  {
+   "city": "Milton",
+   "slug": "milton",
+   "sales": 1183,
+   "all": {
+    "pct": -6.734743149209699,
+    "lo": -7.666781252500615,
+    "hi": -5.757834440882935,
+    "significant": true,
+    "cells": 90,
+    "sales": 790,
+    "shareDown": 0.9522292993630573
+   },
+   "byType": {
+    "detached": {
+     "pct": -6.031845904306275,
+     "lo": -7.865506474071656,
+     "hi": -4.169078337996425,
+     "significant": true,
+     "cells": 51,
+     "sales": 404,
+     "shareDown": 0.9105960264900662
+    },
+    "semiTown": {
+     "pct": -6.862465518025795,
+     "lo": -8.008762454118015,
+     "hi": -5.745138918258079,
+     "significant": true,
+     "cells": 28,
+     "sales": 326,
+     "shareDown": 1
+    },
+    "condoApt": null,
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 1130000,
+    "semiTown": 810000,
+    "condoApt": 518000,
+    "condoTown": 630000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -3.919318523448216,
+      "lo": -6.440485148308681,
+      "hi": -0.6780804789729078,
+      "significant": true,
+      "cells": 36,
+      "sales": 144,
+      "shareDown": 0.7980769230769231
+     },
+     "house": {
+      "pct": -3.981542155646683,
+      "lo": -6.7549453367525905,
+      "hi": -0.24203694371552298,
+      "significant": true,
+      "cells": 33,
+      "sales": 136,
+      "shareDown": 0.8061224489795918
+     },
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -6.304390839181682,
+      "lo": -8.742123705788456,
+      "hi": -3.2159973832589284,
+      "significant": true,
+      "cells": 25,
+      "sales": 84,
+      "shareDown": 0.7702702702702703
+     },
+     "house": {
+      "pct": -6.3492363691517175,
+      "lo": -8.898787568728544,
+      "hi": -2.995214480134781,
+      "significant": true,
+      "cells": 22,
+      "sales": 75,
+      "shareDown": 0.7794117647058824
+     },
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": null,
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -6.467984644769738,
+      "lo": -8.343550659949077,
+      "hi": -4.393713455426522,
+      "significant": true,
+      "cells": 47,
+      "sales": 197,
+      "shareDown": 0.9319727891156463
+     },
+     "house": {
+      "pct": -6.362958755900239,
+      "lo": -8.187955215222392,
+      "hi": -4.243800848633015,
+      "significant": true,
+      "cells": 45,
+      "sales": 191,
+      "shareDown": 0.9290780141843972
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -5.616075776761201,
+      "lo": -7.45157765967123,
+      "hi": -3.7540433690007653,
+      "significant": true,
+      "cells": 41,
+      "sales": 158,
+      "shareDown": 0.8615384615384616
+     },
+     "house": {
+      "pct": -5.186774509287841,
+      "lo": -7.289777423294278,
+      "hi": -3.4028015820311293,
+      "significant": true,
+      "cells": 36,
+      "sales": 146,
+      "shareDown": 0.8487394957983193
+     },
+     "condo": null
+    }
+   ]
+  },
+  {
+   "city": "Hamilton",
+   "slug": "hamilton",
+   "sales": 4054,
+   "all": {
+    "pct": -7.368910079083012,
+    "lo": -8.211248336342221,
+    "hi": -6.590423562158174,
+    "significant": true,
+    "cells": 277,
+    "sales": 2385,
+    "shareDown": 0.849016480595428
+   },
+   "byType": {
+    "detached": {
+     "pct": -6.534623006537012,
+     "lo": -7.643833674604429,
+     "hi": -5.475766349277507,
+     "significant": true,
+     "cells": 199,
+     "sales": 1789,
+     "shareDown": 0.8096935138987883
+    },
+    "semiTown": {
+     "pct": -8.032855956721342,
+     "lo": -8.971837977968821,
+     "hi": -7.149966724863033,
+     "significant": true,
+     "cells": 30,
+     "sales": 320,
+     "shareDown": 0.9745762711864406
+    },
+    "condoApt": null,
+    "condoTown": null
+   },
+   "medianPrice": {
+    "detached": 740000,
+    "semiTown": 664000,
+    "condoApt": 375000,
+    "condoTown": 556000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": {
+      "pct": -2.71023923010432,
+      "lo": -5.486451250747501,
+      "hi": 0.21497287695869893,
+      "significant": false,
+      "cells": 71,
+      "sales": 278,
+      "shareDown": 0.5462962962962963
+     },
+     "house": {
+      "pct": -2.6419339086227644,
+      "lo": -5.666554368914436,
+      "hi": 0.40713824442360597,
+      "significant": false,
+      "cells": 64,
+      "sales": 259,
+      "shareDown": 0.535
+     },
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": {
+      "pct": -4.4991343467864,
+      "lo": -7.665735484487207,
+      "hi": -1.3754457316094821,
+      "significant": true,
+      "cells": 59,
+      "sales": 219,
+      "shareDown": 0.7309941520467836
+     },
+     "house": {
+      "pct": -4.394647239586037,
+      "lo": -7.309905051501402,
+      "hi": -1.2253733798468578,
+      "significant": true,
+      "cells": 55,
+      "sales": 207,
+      "shareDown": 0.7160493827160493
+     },
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -5.7528540414254214,
+      "lo": -8.549383285436404,
+      "hi": -3.2104442724479196,
+      "significant": true,
+      "cells": 57,
+      "sales": 212,
+      "shareDown": 0.7590361445783133
+     },
+     "house": {
+      "pct": -4.870816090087988,
+      "lo": -7.635525736904669,
+      "hi": -2.1259523735402137,
+      "significant": true,
+      "cells": 48,
+      "sales": 188,
+      "shareDown": 0.7222222222222222
+     },
+     "condo": null
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -8.041044229422951,
+      "lo": -9.722763866031984,
+      "hi": -6.275914403405117,
+      "significant": true,
+      "cells": 129,
+      "sales": 554,
+      "shareDown": 0.8140096618357487
+     },
+     "house": {
+      "pct": -7.435938622044663,
+      "lo": -9.357157954202647,
+      "hi": -5.751716387560817,
+      "significant": true,
+      "cells": 112,
+      "sales": 506,
+      "shareDown": 0.7967479674796748
+     },
+     "condo": null
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -8.047534247572003,
+      "lo": -9.773322463559616,
+      "hi": -6.2957751495727186,
+      "significant": true,
+      "cells": 110,
+      "sales": 418,
+      "shareDown": 0.7439759036144579
+     },
+     "house": {
+      "pct": -8.10792845206695,
+      "lo": -9.954267747932349,
+      "hi": -6.028198741997825,
+      "significant": true,
+      "cells": 98,
+      "sales": 386,
+      "shareDown": 0.7491749174917491
+     },
+     "condo": null
+    }
+   ]
+  },
+  {
+   "city": "Ottawa",
+   "slug": "ottawa",
+   "sales": 9496,
+   "all": {
+    "pct": -3.1434654721608943,
+    "lo": -3.765972599626803,
+    "hi": -2.510586931508811,
+    "significant": true,
+    "cells": 532,
+    "sales": 5125,
+    "shareDown": 0.7422961548950096
+   },
+   "byType": {
+    "detached": {
+     "pct": -2.6081123575360228,
+     "lo": -3.618228006658839,
+     "hi": -1.7299080718926403,
+     "significant": true,
+     "cells": 246,
+     "sales": 2079,
+     "shareDown": 0.6961512491559757
+    },
+    "semiTown": {
+     "pct": -2.1516052005485213,
+     "lo": -2.868512894074981,
+     "hi": -1.4894132103065978,
+     "significant": true,
+     "cells": 109,
+     "sales": 1854,
+     "shareDown": 0.7869634340222575
+    },
+    "condoApt": {
+     "pct": -4.496296896294313,
+     "lo": -6.454671949203769,
+     "hi": -2.364027110424148,
+     "significant": true,
+     "cells": 108,
+     "sales": 738,
+     "shareDown": 0.7035775127768313
+    },
+    "condoTown": {
+     "pct": -6.690887183341139,
+     "lo": -8.499069270531656,
+     "hi": -4.961741870297734,
+     "significant": true,
+     "cells": 69,
+     "sales": 454,
+     "shareDown": 0.844574780058651
+    }
+   },
+   "medianPrice": {
+    "detached": 823000,
+    "semiTown": 598000,
+    "condoApt": 375000,
+    "condoTown": 393000
+   },
+   "quarters": [
+    {
+     "label": "Q3 2025",
+     "all": null,
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q4 2025",
+     "all": null,
+     "house": null,
+     "condo": null
+    },
+    {
+     "label": "Q1 2026",
+     "all": {
+      "pct": -3.3536209623311217,
+      "lo": -5.394364804647376,
+      "hi": -1.0559582632667344,
+      "significant": true,
+      "cells": 79,
+      "sales": 369,
+      "shareDown": 0.6244343891402715
+     },
+     "house": {
+      "pct": -1.493975204056511,
+      "lo": -3.2950798265935304,
+      "hi": 0.434368227105582,
+      "significant": false,
+      "cells": 51,
+      "sales": 278,
+      "shareDown": 0.5789473684210527
+     },
+     "condo": {
+      "pct": -7.327315867470937,
+      "lo": -12.645213107698133,
+      "hi": -2.230311008435143,
+      "significant": true,
+      "cells": 28,
+      "sales": 91,
+      "shareDown": 0.7246376811594203
+     }
+    },
+    {
+     "label": "Q2 2026",
+     "all": {
+      "pct": -3.341258868816166,
+      "lo": -4.5109250854988385,
+      "hi": -2.1865861114085514,
+      "significant": true,
+      "cells": 295,
+      "sales": 1468,
+      "shareDown": 0.6651785714285714
+     },
+     "house": {
+      "pct": -2.2376159676441314,
+      "lo": -3.173062780670086,
+      "hi": -1.2358311663768868,
+      "significant": true,
+      "cells": 227,
+      "sales": 1221,
+      "shareDown": 0.6538049303322615
+     },
+     "condo": {
+      "pct": -8.664286975766784,
+      "lo": -12.830514133417875,
+      "hi": -4.824758277455402,
+      "significant": true,
+      "cells": 68,
+      "sales": 247,
+      "shareDown": 0.7219251336898396
+     }
+    },
+    {
+     "label": "Q3 2026",
+     "all": {
+      "pct": -3.2802267182171247,
+      "lo": -4.531245791578117,
+      "hi": -2.1692025072550383,
+      "significant": true,
+      "cells": 199,
+      "sales": 931,
+      "shareDown": 0.605191256830601
+     },
+     "house": {
+      "pct": -2.9643620553637797,
+      "lo": -4.260421228117753,
+      "hi": -1.6438698669227407,
+      "significant": true,
+      "cells": 152,
+      "sales": 770,
+      "shareDown": 0.5976430976430976
+     },
+     "condo": {
+      "pct": -4.628122474461248,
+      "lo": -7.458876084366138,
+      "hi": -2.0810107735631913,
+      "significant": true,
+      "cells": 47,
+      "sales": 161,
+      "shareDown": 0.6376811594202898
+     }
+    }
+   ]
+  }
+ ]
+}
