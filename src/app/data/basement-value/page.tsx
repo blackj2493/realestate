@@ -39,10 +39,11 @@ function overview() {
   const window = `${monthLabel(file.salesFrom)} to ${lastMonthLabel(file.salesTo)}`;
   const sepSig = ranked.filter((c) => c.modelA!.effects.sep.significant && c.modelA!.effects.sep.pct > 0);
   const nothingWithBaths = ranked.filter((c) => c.modelB && !c.modelB.effects.fin.significant);
+  const aptSame = ranked.filter((c) => !c.modelA!.aptMinusFin.significant);
   const summary =
     `Across ${ranked.length} Ontario cities and ${sales.toLocaleString("en-CA")} house sales (${window}), a finished basement added ` +
     `from ${top.modelA!.effects.fin.pct.toFixed(1)}% (${top.city}) down to ${low.modelA!.effects.fin.pct.toFixed(1)}% (${low.city}) to the sale price of a similar house.`;
-  return { file, ranked, top, low, sales, window, sepSig, nothingWithBaths, summary };
+  return { file, ranked, top, low, sales, window, sepSig, nothingWithBaths, aptSame, summary };
 }
 
 export function generateMetadata(): Metadata {
@@ -65,7 +66,7 @@ export function generateMetadata(): Metadata {
 }
 
 export default function BasementValueIndexPage() {
-  const { file, ranked, top, low, sales, window, sepSig, nothingWithBaths, summary } = overview();
+  const { file, ranked, top, low, sales, window, sepSig, nothingWithBaths, aptSame, summary } = overview();
   const canonical = `${SITE_URL}${basementValuePath()}`;
   const updatedIso = file.generatedAt.slice(0, 10);
   const updatedLabel = new Date(file.generatedAt).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Toronto" });
@@ -74,7 +75,9 @@ export default function BasementValueIndexPage() {
 
   const facts = [
     `A finished basement added the most in ${top.city} (${top.modelA!.effects.fin.pct.toFixed(1)}%) and the least in ${low.city} (${low.modelA!.effects.fin.pct.toFixed(1)}%).`,
-    `A basement apartment added about the same as a plain finished basement in most cities. Its extra value is the rent.`,
+    aptSame.length >= ranked.length / 2
+      ? `A basement apartment added about the same as a plain finished basement in ${aptSame.length} of ${ranked.length} cities (no significant difference). Its extra value is the rent.`
+      : `A basement apartment added a different amount from a plain finished basement in ${ranked.length - aptSame.length} of ${ranked.length} cities.`,
     nothingWithBaths.length
       ? `With the bathroom count held the same, a finished basement added nothing measurable in ${nothingWithBaths.map((c) => c.city).join(", ")}: there, the basement bathroom carries the gain.`
       : `With the bathroom count held the same, the gain is smaller in every city: much of it is the basement bathroom.`,
