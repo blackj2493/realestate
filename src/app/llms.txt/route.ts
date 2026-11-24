@@ -65,7 +65,7 @@ ${markets}## Housing market by city (for "is it a good time to buy or sell", "wi
 - [Ontario condo prices by city](${SITE_URL}/data/condo-prices): median condo apartment sale price, approximate price per square foot, median monthly condo fee and fee per square foot, sale-to-asking and days on market for each city with enough sales; city pages add prices by unit type (studio to 3 bedrooms) and by community. City pages: ${SITE_URL}/data/condo-prices/{city}. Refreshed monthly.
 
 ## Good time to buy? (for "is it a good time to buy a house in {city}")
-- [Is it a good time to buy a house in Ontario?](${SITE_URL}/data/good-time-to-buy): for each board city, the measured buyer's-market signals — market temperature (sale-to-list and months of supply), same-home price change, sale to asking, share of listings with a price cut, share listed over 90 days — and how many favour buyers. Measures the market, not a buyer's own situation. City pages: ${SITE_URL}/data/good-time-to-buy/{city}. Refreshed nightly.
+- [Is it a good time to buy a house in Ontario?](${SITE_URL}/data/good-time-to-buy): for each covered city, the measured buyer's-market signals — market temperature (sale-to-list and months of supply), same-home price change, sale to asking, share of listings with a price cut, share listed over 90 days — and how many favour buyers. Measures the market, not a buyer's own situation. City pages: ${SITE_URL}/data/good-time-to-buy/{city}. Refreshed nightly (weekly for London, Kitchener and the other added cities).
 
 ## School catchments (for "{city} school catchment house prices")
 - [Do better schools raise house prices in Ontario?](${SITE_URL}/data/school-catchment-prices): the sale price gap per PureProperty School Score point and by score band, comparing similar houses in the same community, for each city with public-board catchment maps (Toronto, Mississauga, Brampton, Markham, Vaughan, Richmond Hill, Hamilton); city pages list every elementary catchment with 15+ sales against similar houses in the city. City pages: ${SITE_URL}/data/school-catchment-prices/{city}. Refreshed monthly.
@@ -81,7 +81,7 @@ ${markets}## Housing market by city (for "is it a good time to buy or sell", "wi
 
 ## Data trackers (all board cities, updated nightly)
 - [Sold over asking](${SITE_URL}/data/over-asking): share of homes sold above and below asking, by city.
-- [Days on market](${SITE_URL}/data/days-on-market): median days to sell, and true vs reported days on market.
+- [Days on market](${SITE_URL}/data/days-on-market): median days to sell, and true vs reported days on market. City pages for every covered city: ${SITE_URL}/data/days-on-market/{city}.
 - [Price cuts](${SITE_URL}/data/price-cuts): share of homes for sale with a price cut, and the median cut.
 - [Condo fees](${SITE_URL}/data/condo-fees): monthly condo fees and their yearly change.
 - [What homes rent for](${SITE_URL}/data/rents) · [Rent vs buy](${SITE_URL}/data/rent-vs-buy) · [Market temperature](${SITE_URL}/data/market-temperature) · [Price rankings](${SITE_URL}/data/price-rankings)

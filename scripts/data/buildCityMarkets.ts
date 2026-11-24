@@ -77,22 +77,68 @@ async function main() {
       const soldToListPct = listOk ? Math.round(Number(s.ratio_avg) * 1000) / 10 : null;
       const pctOverAsking = listOk ? Math.round((Number(s.over_ask) / withList) * 1000) / 10 : null;
 
-      // region_sold_dynamics: last 12 months, sale against the FIRST asking price.
+      // region_sold_dynamics: last 12 months, sale against the FIRST asking price, and the
+      // days to sell (board value, else the contract-date span; 0..730).
       const dyn = await client.query(
         `with base as (
            select close_price::numeric price,
-                  coalesce(original_list_price, nullif(raw_payload->>'OriginalListPrice', '')::numeric) olp
+                  coalesce(original_list_price, nullif(raw_payload->>'OriginalListPrice', '')::numeric) olp,
+                  coalesce(days_on_market,
+                           case when listing_contract_date is not null
+                                then greatest(0, purchase_contract_date - listing_contract_date) end,
+                           nullif(raw_payload->>'DaysOnMarket', '')::numeric,
+                           case when raw_payload->>'ListingContractDate' ~ '^\\d{4}-\\d{2}-\\d{2}'
+                                then greatest(0, purchase_contract_date - (raw_payload->>'ListingContractDate')::date) end) dom
              from raw_vow_sold
             where ${f.sql} and transaction_type = 'For Sale' and close_price >= 50000
               and purchase_contract_date >= (current_date - interval '12 months')),
          gap as (select (price - olp) / olp gap, (price < olp) under from base
-                  where olp > 50000 and (price - olp) / olp between -0.6 and 0.6)
+                  where olp > 50000 and (price - olp) / olp between -0.6 and 0.6),
+         dom_band as (select dom from base where dom is not null and dom >= 0 and dom <= 730)
          select (select count(*)::int from base) sold,
+                (select round(percentile_cont(0.5) within group (order by dom))::int from dom_band) dom_median,
+                (select round(percentile_cont(0.25) within group (order by dom))::int from dom_band) dom_p25,
+                (select round(percentile_cont(0.75) within group (order by dom))::int from dom_band) dom_p75,
                 (select round((percentile_cont(0.5) within group (order by gap) * 100)::numeric, 1) from gap) gap_median,
                 (select round(avg(case when under then 1 else 0 end), 3) from gap) under_share`,
         f.params,
       );
       const d = dyn.rows[0];
+
+      // region_dom_distribution: homes for sale now, latest listing per property, relist chains
+      // joined (property_dom_chain), true clock against the listing's own clock.
+      const domq = await client.query(
+        `with scoped as materialized (
+           select distinct on (coalesce(nullif(property_hash, ''), nullif(norm_address, ''), listing_key))
+                  property_hash, original_entry_timestamp oet_ts,
+                  coalesce(standard_status, lower(coalesce(full_payload->>'Status', full_payload->>'MlsStatus', full_payload->>'StandardStatus', ''))) eff_status
+             from listings
+            where ${f.sql} and list_price >= 50000
+              and coalesce(last_seen_at, '-infinity'::timestamptz) >= public.feed_liveness_floor()
+            order by coalesce(nullif(property_hash, ''), nullif(norm_address, ''), listing_key),
+                     original_entry_timestamp desc nulls last, listing_key desc),
+         live as (
+           select s.oet_ts, c.stitched_start, c.newest_entry
+             from scoped s left join property_dom_chain c on c.property_hash = s.property_hash
+            where case when c.newest_status is not null then c.newest_status = 'Active'
+                       else s.eff_status not in ('sold','closed','closed sale','leased','terminated','expired','suspended') end),
+         calc as (
+           select greatest(0, floor(extract(epoch from (now() - coalesce(newest_entry, oet_ts))) / 86400))::int naive,
+                  greatest(0, floor(extract(epoch from (now() - coalesce(stitched_start, newest_entry, oet_ts))) / 86400))::int td
+             from live where coalesce(newest_entry, oet_ts) is not null)
+         select count(*)::int n,
+                round(percentile_cont(0.5) within group (order by td))::int true_dom,
+                round(percentile_cont(0.5) within group (order by naive))::int naive_dom,
+                count(*) filter (where td between 0 and 14)::int d0_14,
+                count(*) filter (where td between 15 and 30)::int d15_30,
+                count(*) filter (where td between 31 and 60)::int d31_60,
+                count(*) filter (where td between 61 and 90)::int d61_90,
+                count(*) filter (where td >= 91)::int d90plus
+           from calc`,
+        f.params,
+      );
+      const dm = domq.rows[0];
+      const domActive = Number(dm.n);
 
       // region_price_cuts: homes for sale now (latest row per property, feed-verified live).
       const cuts = await client.query(
@@ -133,6 +179,15 @@ async function main() {
         soldToListPct,
         pctOverAsking,
         soldCount12m: Number(d.sold),
+        soldMedianDom: num(d.dom_median),
+        soldP25Dom: num(d.dom_p25),
+        soldP75Dom: num(d.dom_p75),
+        // assembleRegionScore: the true clock needs 10+ homes for sale.
+        trueDom: domActive >= 10 ? num(dm.true_dom) : null,
+        medianNaiveDom: num(dm.naive_dom),
+        domBuckets: domActive > 0
+          ? { d0_14: Number(dm.d0_14), d15_30: Number(dm.d15_30), d31_60: Number(dm.d31_60), d61_90: Number(dm.d61_90), d90plus: Number(dm.d90plus) }
+          : null,
         underAskShare: num(d.under_share),
         askGapMedian: num(d.gap_median),
         activeCount,
@@ -146,7 +201,8 @@ async function main() {
       const last = monthly[monthly.length - 1];
       console.log(
         `${city.padEnd(14)} months=${monthly.length} last=${last?.month} $${last?.medianPrice} n=${last?.sales} | s90=${sales90} s2l=${soldToListPct} over=${pctOverAsking}% | ` +
-          `12m=${row.soldCount12m} under=${row.underAskShare} gap=${row.askGapMedian} | active=${activeCount} cut=${row.cutCount} (${row.medianCutPct}%) | mos=${monthsOfSupply} ${row.temperature}`,
+          `12m=${row.soldCount12m} under=${row.underAskShare} gap=${row.askGapMedian} dom=${row.soldMedianDom} (${row.soldP25Dom}-${row.soldP75Dom}) | ` +
+          `true=${row.trueDom} naive=${row.medianNaiveDom} 90+=${row.domBuckets?.d90plus}/${domActive} | active=${activeCount} cut=${row.cutCount} (${row.medianCutPct}%) | mos=${monthsOfSupply} ${row.temperature}`,
       );
     }
     await client.query("ROLLBACK");

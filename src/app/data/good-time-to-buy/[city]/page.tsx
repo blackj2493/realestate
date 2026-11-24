@@ -4,7 +4,9 @@
  * Claims the market only: the page says buying also depends on the reader's own money.
  *
  * Board figures refresh nightly (hourly revalidate, like /data/days-on-market); the price
- * signal comes from the monthly static price change file.
+ * signal comes from the monthly static price change file. The extra study cities (London,
+ * Kitchener, ...) read data/city-markets.json, built weekly with the same definitions. The
+ * cut and 90-day benchmarks are the medians of every covered city.
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -16,7 +18,8 @@ import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { SOURCE_LINE, boardRowFor } from "@/lib/data/cityFacts";
-import { OUTLOOK_CITIES, outlookCityBySlug } from "@/lib/data/outlookCities";
+import { outlookCityBySlug } from "@/lib/data/outlookCities";
+import { cityMarketBySlug, coveredMarketCities, coveredMarketRows, getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import { buildBuyVerdict, buyFaqs, goodTimeToBuyPath, type Lean } from "@/lib/data/goodTimeToBuy";
 import { priceChangeAreaBySlug } from "@/lib/data/priceChange";
 import { titleYear } from "@/lib/seo/titleYear";
@@ -27,20 +30,21 @@ export const revalidate = 3600;
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return OUTLOOK_CITIES.map((c) => ({ city: c.slug }));
+  return coveredMarketCities().map((c) => ({ city: c.slug }));
 }
 
 async function load(slug: string) {
-  const city = outlookCityBySlug(slug);
+  const extra = outlookCityBySlug(slug) ? null : cityMarketBySlug(slug);
+  const city = outlookCityBySlug(slug) ?? extra?.city;
   if (!city) return null;
   try {
     const board = await getMarketBoard();
-    const row = boardRowFor(board.rows, city);
-    const verdict = row ? buildBuyVerdict(city, row, board.rows, priceChangeAreaBySlug(slug)) : null;
-    return { city, verdict, dataAsOf: board.dataAsOf };
+    const row = extra ? toMarketRow(extra) : boardRowFor(board.rows, city);
+    const verdict = row ? buildBuyVerdict(city, row, coveredMarketRows(board.rows), priceChangeAreaBySlug(slug)) : null;
+    return { city, board: !extra, verdict, dataAsOf: extra ? getCityMarkets().generatedAt : board.dataAsOf };
   } catch (err) {
     console.error(`[good-time-to-buy] board read failed for ${slug}:`, err);
-    return { city, verdict: null, dataAsOf: null };
+    return { city, board: !extra, verdict: null, dataAsOf: null };
   }
 }
 
@@ -80,7 +84,7 @@ export default async function GoodTimeToBuyCityPage({ params }: { params: Promis
   const { city: slug } = await params;
   const loaded = await load(slug);
   if (!loaded) notFound();
-  const { city, verdict, dataAsOf } = loaded;
+  const { city, board, verdict, dataAsOf } = loaded;
   const year = titleYear();
   const title = titleFor(city);
   const canonical = `${SITE_URL}${goodTimeToBuyPath(slug)}`;
@@ -88,7 +92,7 @@ export default async function GoodTimeToBuyCityPage({ params }: { params: Promis
   const updatedLabel = dataAsOf ? new Date(dataAsOf).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Toronto" }) : null;
   const citation = `PureProperty, "${title}"${updatedLabel ? `, updated ${updatedLabel}` : ""}, ${canonical.replace(/^https?:\/\/(www\.)?/, "")}`;
   const faqs = verdict ? buyFaqs(city, verdict, year) : [];
-  const others = OUTLOOK_CITIES.filter((c) => c.slug !== slug);
+  const others = coveredMarketCities().filter((c) => c.slug !== slug);
 
   const breadcrumb = {
     "@context": "https://schema.org",
@@ -131,7 +135,7 @@ export default async function GoodTimeToBuyCityPage({ params }: { params: Promis
                   <p>{verdict.summary}</p>
                   {updatedIso && (
                     <p className="mt-2 text-sm">
-                      Updated <time dateTime={updatedIso}>{updatedLabel}</time> · MLS® sales and listings, refreshed nightly
+                      Updated <time dateTime={updatedIso}>{updatedLabel}</time> · MLS® sales and listings, refreshed {board ? "nightly" : "weekly"}
                     </p>
                   )}
                 </>

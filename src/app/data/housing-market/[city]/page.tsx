@@ -247,13 +247,11 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
               <section className="mt-8 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="season">
                 <h2 id="season" className="text-lg font-semibold">When homes sell in {city}</h2>
                 <p className="mt-2 text-sm leading-relaxed">{outlook.seasonText}</p>
-                {board && (
-                  <p className="mt-2 text-sm">
-                    <Link href={daysOnMarketPath(slug)} className="underline hover:text-foreground">
-                      Sales by month and how long homes take to sell in {city} →
-                    </Link>
-                  </p>
-                )}
+                <p className="mt-2 text-sm">
+                  <Link href={daysOnMarketPath(slug)} className="underline hover:text-foreground">
+                    Sales by month and how long homes take to sell in {city} →
+                  </Link>
+                </p>
               </section>
             )}
 

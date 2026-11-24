@@ -1,7 +1,8 @@
 /**
  * /data/good-time-to-buy — "Is it a good time to buy a house in Ontario?" One row per covered
  * city: market temperature and how many measured signals favour buyers. City pages carry
- * each signal. Hourly revalidate (the market board refreshes nightly).
+ * each signal. Hourly revalidate (the market board refreshes nightly; the extra study cities
+ * read data/city-markets.json, built weekly with the same definitions).
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -11,7 +12,7 @@ import { CiteBox, HeaderCard, PriceOpinionCard } from "@/components/dataPage/par
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { SOURCE_LINE, boardRowFor } from "@/lib/data/cityFacts";
-import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
+import { cityMarketBySlug, coveredMarketCities, coveredMarketRows, toMarketRow } from "@/lib/data/cityMarkets";
 import { buildBuyVerdict, goodTimeToBuyPath, SALE_TO_LIST_BUYER } from "@/lib/data/goodTimeToBuy";
 import { priceChangeAreaBySlug } from "@/lib/data/priceChange";
 import { titleYear } from "@/lib/seo/titleYear";
@@ -25,9 +26,11 @@ async function load() {
   const title = `Is It a Good Time to Buy a House in Ontario? ${year} Buyer's Market Signals by City`;
   try {
     const board = await getMarketBoard();
-    const rows = OUTLOOK_CITIES.map((c) => {
-      const row = boardRowFor(board.rows, c.city);
-      return { ...c, verdict: row ? buildBuyVerdict(c.city, row, board.rows, priceChangeAreaBySlug(c.slug)) : null };
+    const all = coveredMarketRows(board.rows);
+    const rows = coveredMarketCities().map((c) => {
+      const extra = cityMarketBySlug(c.slug);
+      const row = extra ? toMarketRow(extra) : boardRowFor(board.rows, c.city);
+      return { ...c, verdict: row ? buildBuyVerdict(c.city, row, all, priceChangeAreaBySlug(c.slug)) : null };
     }).filter((r) => r.verdict);
     rows.sort((a, b) => b.verdict!.forBuyers / b.verdict!.counted - a.verdict!.forBuyers / a.verdict!.counted);
     const buyers = rows.filter((r) => r.verdict!.market.startsWith("a buyer's"));

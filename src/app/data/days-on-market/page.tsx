@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
+import { coveredMarketCities } from "@/lib/data/cityMarkets";
 import { daysOnMarketPath } from "@/lib/seo/cityTopics";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { TrackerShell } from "@/components/data/TrackerShell";
@@ -105,7 +105,7 @@ export default async function DaysOnMarketPage() {
         },
         {
           q: "Which markets are covered?",
-          a: "Toronto and Ottawa plus the GTA municipalities — Mississauga, Brampton, Markham, Vaughan, Richmond Hill, Oakville, Burlington, Milton, Oshawa, Whitby, Ajax, Pickering and Hamilton.",
+          a: "Toronto and Ottawa plus the GTA municipalities — Mississauga, Brampton, Markham, Vaughan, Richmond Hill, Oakville, Burlington, Milton, Oshawa, Whitby, Ajax, Pickering and Hamilton. London, Kitchener, Barrie, Guelph, Kingston, St. Catharines, Cambridge, Waterloo, Peterborough, Niagara Falls and Brantford have their own city pages, refreshed weekly.",
         },
       ]}
     >
@@ -121,7 +121,7 @@ export default async function DaysOnMarketPage() {
           How long homes take to sell, and the busiest months, by city
         </h2>
         <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-          {OUTLOOK_CITIES.map((c) => (
+          {coveredMarketCities().map((c) => (
             <Link key={c.slug} href={daysOnMarketPath(c.slug)} className="underline hover:text-foreground">
               {c.city}
             </Link>
