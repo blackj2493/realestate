@@ -10,13 +10,12 @@
  * Run monthly by refresh-price-change.yml.
  *
  * SALES. "For Sale" records with a sold price of $150K–$8M, by the date the deal was signed
- * (purchase_contract_date). Toronto = every "Toronto C01…W10" City value; Ottawa = OTTAWA_AREAS.
+ * (purchase_contract_date). Cities = STUDY_CITIES; studyCityFilter maps Toronto, Ottawa and London to their City values.
  */
 import "dotenv/config";
 import { writeFileSync } from "node:fs";
 import { Client } from "pg";
-import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
-import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
+import { MODEL_HOOD_SQL, STUDY_CITIES, studyCityFilter } from "@/lib/data/studyCities";
 import { TYPE_GROUPS, sameHomeChange, typeGroupOf, type Change, type PricedSale, type TypeGroup } from "@/lib/data/priceChangeModel";
 import type { PriceChangeArea, PriceChangeFile, QuarterChange } from "@/lib/data/priceChange";
 
@@ -44,11 +43,6 @@ const addMonths = (iso: string, n: number) => {
   return ymd(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1)));
 };
 
-function cityFilter(city: string): { sql: string; params: unknown[] } {
-  if (city === "Toronto") return { sql: `city like 'Toronto %'`, params: [] };
-  if (city === "Ottawa") return { sql: `city = any($3::text[])`, params: [OTTAWA_AREAS] };
-  return { sql: `city = $3`, params: [city] };
-}
 
 const keep = (c: Change | null, min: number) => (c && c.sales >= min ? c : null);
 
@@ -122,10 +116,10 @@ async function main() {
   try {
     await client.query("BEGIN READ ONLY");
     await client.query("SET LOCAL statement_timeout = '170s'");
-    for (const { city, slug } of OUTLOOK_CITIES) {
-      const f = cityFilter(city);
+    for (const { city, slug } of STUDY_CITIES) {
+      const f = studyCityFilter(city, 3);
       const res = await client.query(
-        `select city, coalesce(city_region,'') hood, property_sub_type t, coalesce(bedrooms_above_grade,0)::int beds,
+        `select city, ${MODEL_HOOD_SQL} hood, property_sub_type t, coalesce(bedrooms_above_grade,0)::int beds,
                 living_area_range::text band, close_price::float8 price, purchase_contract_date::text d
            from raw_vow_sold
           where transaction_type = 'For Sale' and close_price between 150000 and 8000000
@@ -156,7 +150,7 @@ async function main() {
 
   const ontario = analyse(pooled, { a0, a1, b1 }, quarters);
   const fmt = (c: Change | null) => (c ? `${c.pct.toFixed(1)}% [${c.lo.toFixed(1)},${c.hi.toFixed(1)}]` : "-");
-  console.log(`ALL 15        n=${ontario.sales} all ${fmt(ontario.all)} | det ${fmt(ontario.byType.detached)} ca ${fmt(ontario.byType.condoApt)}`);
+  console.log(`ALL ${String(areas.length).padEnd(10)} n=${ontario.sales} all ${fmt(ontario.all)} | det ${fmt(ontario.byType.detached)} ca ${fmt(ontario.byType.condoApt)}`);
   console.log(`  quarters house: ${ontario.quarters.map((x) => `${x.label} ${fmt(x.house)}`).join(" | ")}`);
   console.log(`  quarters condo: ${ontario.quarters.map((x) => `${x.label} ${fmt(x.condo)}`).join(" | ")}`);
 

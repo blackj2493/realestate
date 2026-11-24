@@ -11,6 +11,7 @@
  * each string to its helper.
  */
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
+import { STUDY_CITIES } from "@/lib/data/studyCities";
 
 export type CityTopic = "market" | "days-on-market" | "power-of-sale" | "not-selling" | "home-value" | "basement-value" | "price-change" | "condo-prices" | "good-time-to-buy" | "school-catchment-prices" | "sold-prices" | "best-time-to-sell";
 
@@ -46,8 +47,13 @@ export const TOPIC_HUBS: { href: string; label: string }[] = [
   { href: "/data/basement-value", label: "What a finished basement adds" },
 ];
 
+/** The topics with a page for every board market and no other city (live board data). */
+export const BOARD_ONLY_TOPICS: ReadonlySet<CityTopic> = new Set(["market", "days-on-market", "power-of-sale", "not-selling", "home-value", "good-time-to-buy"]);
+
 /** The covered city for a hub slug (e.g. "markham" or "Markham"), else null. */
-export function topicCity(slug: string | null | undefined): { city: string; slug: string } | null {
+export function topicCity(slug: string | null | undefined): { city: string; slug: string; board: boolean } | null {
   if (!slug) return null;
-  return OUTLOOK_CITIES.find((c) => c.slug === slug.toLowerCase()) ?? null;
+  const s = slug.toLowerCase();
+  const c = STUDY_CITIES.find((x) => x.slug === s);
+  return c ? { ...c, board: OUTLOOK_CITIES.some((x) => x.slug === s) } : null;
 }

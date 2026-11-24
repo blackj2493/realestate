@@ -4,7 +4,7 @@
  * server-rendered links, so crawlers that do not run JavaScript follow them.
  */
 import Link from "next/link";
-import { CITY_TOPICS, topicCity, type CityTopic } from "@/lib/seo/cityTopics";
+import { BOARD_ONLY_TOPICS, CITY_TOPICS, topicCity, type CityTopic } from "@/lib/seo/cityTopics";
 import { basementCityBySlug } from "@/lib/data/basementValue";
 import { priceChangeAreaBySlug } from "@/lib/data/priceChange";
 import { condoAreaBySlug } from "@/lib/data/condoPrices";
@@ -27,9 +27,10 @@ export default function CityTopicLinks({
 }) {
   const c = topicCity(citySlug);
   if (!c) return null;
+  // The extra study cities have no live board pages (market, days on market, ...).
   // The basement study publishes a city only when it has enough sales in each group, so its
   // link follows the data file rather than the city list (a dropped city would 404).
-  const links = CITY_TOPICS.filter((t) => t.id !== current && (t.id !== "basement-value" || basementCityBySlug(c.slug)?.modelA) && (t.id !== "price-change" || priceChangeAreaBySlug(c.slug)?.all) && (t.id !== "condo-prices" || condoAreaBySlug(c.slug)) && (t.id !== "school-catchment-prices" || schoolCityBySlug(c.slug)) && (t.id !== "sold-prices" || soldCityBySlug(c.slug)) && (t.id !== "best-time-to-sell" || bestTimeCityBySlug(c.slug))).map((t) => ({ href: t.path(c.slug), label: t.label(c.city) }));
+  const links = CITY_TOPICS.filter((t) => t.id !== current && (c.board || !BOARD_ONLY_TOPICS.has(t.id)) && (t.id !== "basement-value" || basementCityBySlug(c.slug)?.modelA) && (t.id !== "price-change" || priceChangeAreaBySlug(c.slug)?.all) && (t.id !== "condo-prices" || condoAreaBySlug(c.slug)) && (t.id !== "school-catchment-prices" || schoolCityBySlug(c.slug)) && (t.id !== "sold-prices" || soldCityBySlug(c.slug)) && (t.id !== "best-time-to-sell" || bestTimeCityBySlug(c.slug))).map((t) => ({ href: t.path(c.slug), label: t.label(c.city) }));
   if (showCityHub) links.push({ href: `/property/on/${c.slug}`, label: `Homes for sale and neighbourhoods in ${c.city}` });
   const headingId = `more-${c.slug}`;
   return (

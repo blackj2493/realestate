@@ -127,7 +127,7 @@ export default function PriceChangeIndexPage() {
 
         <section className="mt-8 rounded-2xl border border-border bg-card/40 p-5 sm:p-6" aria-labelledby="quarters">
           <h2 id="quarters" className="text-lg font-semibold">Is the drop getting smaller? Quarter by quarter</h2>
-          <p className="mt-1 text-sm text-muted-foreground">All 15 cities, each quarter against the same quarter a year earlier, same homes.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Every city, each quarter against the same quarter a year earlier, same homes.</p>
           <div className="mt-4">
             <QuarterBars quarters={o.quarters} />
           </div>

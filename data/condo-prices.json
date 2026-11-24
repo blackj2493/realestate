@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-24T15:20:23.948Z",
+ "generatedAt": "2026-11-24T20:49:38.820Z",
  "from": "2025-11-01",
  "to": "2026-11-01",
  "cities": [
@@ -2631,6 +2631,401 @@
      "medianDom": 37
     }
    ]
+  },
+  {
+   "city": "London",
+   "slug": "london",
+   "all": {
+    "sales": 347,
+    "medianPrice": 285000,
+    "medianSqft": 950,
+    "pricePsf": 300,
+    "medianFee": 553,
+    "feePsf": 0.57,
+    "feeSample": 347,
+    "saleToAsk": 96.1,
+    "overAskShare": 7,
+    "medianDom": 42
+   },
+   "byUnit": {
+    "studio": null,
+    "one": {
+     "sales": 84,
+     "medianPrice": 212000,
+     "medianSqft": 650,
+     "pricePsf": 320,
+     "medianFee": 484,
+     "feePsf": 0.67,
+     "feeSample": 84,
+     "saleToAsk": 95.4,
+     "overAskShare": 2,
+     "medianDom": 37
+    },
+    "oneDen": null,
+    "two": {
+     "sales": 220,
+     "medianPrice": 296000,
+     "medianSqft": 1100,
+     "pricePsf": 287,
+     "medianFee": 602,
+     "feePsf": 0.56,
+     "feeSample": 220,
+     "saleToAsk": 96.5,
+     "overAskShare": 8,
+     "medianDom": 43
+    },
+    "twoDen": null,
+    "three": {
+     "sales": 25,
+     "medianPrice": 340000,
+     "medianSqft": 1300,
+     "pricePsf": 262,
+     "medianFee": 645,
+     "feePsf": 0.47,
+     "feeSample": 25,
+     "saleToAsk": 96.3,
+     "overAskShare": 8,
+     "medianDom": 46
+    }
+   },
+   "communities": [
+    {
+     "name": "South X",
+     "sales": 43,
+     "medianPrice": 220000,
+     "medianSqft": 750,
+     "pricePsf": 309,
+     "medianFee": 488,
+     "feePsf": 0.68,
+     "feeSample": 43,
+     "saleToAsk": 94.6,
+     "overAskShare": 0,
+     "medianDom": 42
+    },
+    {
+     "name": "East F",
+     "sales": 42,
+     "medianPrice": 327000,
+     "medianSqft": 1300,
+     "pricePsf": 293,
+     "medianFee": 713,
+     "feePsf": 0.62,
+     "feeSample": 42,
+     "saleToAsk": 96.5,
+     "overAskShare": 2,
+     "medianDom": 44
+    },
+    {
+     "name": "East K",
+     "sales": 41,
+     "medianPrice": 250000,
+     "medianSqft": 1100,
+     "pricePsf": 241,
+     "medianFee": 763,
+     "feePsf": 0.68,
+     "feeSample": 41,
+     "saleToAsk": 95.5,
+     "overAskShare": 7,
+     "medianDom": 48
+    }
+   ]
+  },
+  {
+   "city": "Kitchener",
+   "slug": "kitchener",
+   "all": {
+    "sales": 178,
+    "medianPrice": 330000,
+    "medianSqft": 850,
+    "pricePsf": 432,
+    "medianFee": 629,
+    "feePsf": 0.73,
+    "feeSample": 172,
+    "saleToAsk": 96.8,
+    "overAskShare": 9,
+    "medianDom": 44
+   },
+   "byUnit": {
+    "studio": null,
+    "one": {
+     "sales": 62,
+     "medianPrice": 309000,
+     "medianSqft": 650,
+     "pricePsf": 481,
+     "medianFee": 547,
+     "feePsf": 0.82,
+     "feeSample": 58,
+     "saleToAsk": 97,
+     "overAskShare": 10,
+     "medianDom": 41
+    },
+    "oneDen": null,
+    "two": {
+     "sales": 86,
+     "medianPrice": 347000,
+     "medianSqft": 950,
+     "pricePsf": 345,
+     "medianFee": 688,
+     "feePsf": 0.72,
+     "feeSample": 84,
+     "saleToAsk": 96.7,
+     "overAskShare": 9,
+     "medianDom": 48
+    },
+    "twoDen": null,
+    "three": null
+   },
+   "communities": []
+  },
+  {
+   "city": "Barrie",
+   "slug": "barrie",
+   "all": {
+    "sales": 204,
+    "medianPrice": 405000,
+    "medianSqft": 1100,
+    "pricePsf": 426,
+    "medianFee": 650,
+    "feePsf": 0.66,
+    "feeSample": 204,
+    "saleToAsk": 96.2,
+    "overAskShare": 3,
+    "medianDom": 39
+   },
+   "byUnit": {
+    "studio": null,
+    "one": {
+     "sales": 33,
+     "medianPrice": 355000,
+     "medianSqft": 750,
+     "pricePsf": 482,
+     "medianFee": 571,
+     "feePsf": 0.77,
+     "feeSample": 33,
+     "saleToAsk": 96.1,
+     "overAskShare": 0,
+     "medianDom": 42
+    },
+    "oneDen": {
+     "sales": 29,
+     "medianPrice": 406000,
+     "medianSqft": 750,
+     "pricePsf": 515,
+     "medianFee": 828,
+     "feePsf": 0.82,
+     "feeSample": 29,
+     "saleToAsk": 96.2,
+     "overAskShare": 3,
+     "medianDom": 39
+    },
+    "two": {
+     "sales": 84,
+     "medianPrice": 383000,
+     "medianSqft": 1100,
+     "pricePsf": 387,
+     "medianFee": 616,
+     "feePsf": 0.66,
+     "feeSample": 84,
+     "saleToAsk": 96.5,
+     "overAskShare": 4,
+     "medianDom": 38
+    },
+    "twoDen": {
+     "sales": 26,
+     "medianPrice": 525000,
+     "medianSqft": 1300,
+     "pricePsf": 422,
+     "medianFee": 719,
+     "feePsf": 0.53,
+     "feeSample": 26,
+     "saleToAsk": 96.7,
+     "overAskShare": 8,
+     "medianDom": 33
+    },
+    "three": {
+     "sales": 29,
+     "medianPrice": 505000,
+     "medianSqft": 1300,
+     "pricePsf": 355,
+     "medianFee": 668,
+     "feePsf": 0.5,
+     "feeSample": 29,
+     "saleToAsk": 95.8,
+     "overAskShare": 3,
+     "medianDom": 46
+    }
+   },
+   "communities": [
+    {
+     "name": "City Centre",
+     "sales": 52,
+     "medianPrice": 504000,
+     "medianSqft": 1100,
+     "pricePsf": 495,
+     "medianFee": 1059,
+     "feePsf": 0.86,
+     "feeSample": 52,
+     "saleToAsk": 96,
+     "overAskShare": 2,
+     "medianDom": 41
+    },
+    {
+     "name": "Ardagh",
+     "sales": 28,
+     "medianPrice": 369000,
+     "medianSqft": 950,
+     "pricePsf": 404,
+     "medianFee": 503,
+     "feePsf": 0.48,
+     "feeSample": 28,
+     "saleToAsk": 96.4,
+     "overAskShare": 0,
+     "medianDom": 26
+    }
+   ]
+  },
+  {
+   "city": "Guelph",
+   "slug": "guelph",
+   "all": {
+    "sales": 187,
+    "medianPrice": 456000,
+    "medianSqft": 950,
+    "pricePsf": 499,
+    "medianFee": 543,
+    "feePsf": 0.58,
+    "feeSample": 187,
+    "saleToAsk": 96.9,
+    "overAskShare": 7,
+    "medianDom": 35
+   },
+   "byUnit": {
+    "studio": null,
+    "one": {
+     "sales": 44,
+     "medianPrice": 415000,
+     "medianSqft": 750,
+     "pricePsf": 550,
+     "medianFee": 394,
+     "feePsf": 0.57,
+     "feeSample": 44,
+     "saleToAsk": 96.8,
+     "overAskShare": 9,
+     "medianDom": 35
+    },
+    "oneDen": null,
+    "two": {
+     "sales": 93,
+     "medianPrice": 458000,
+     "medianSqft": 1100,
+     "pricePsf": 482,
+     "medianFee": 662,
+     "feePsf": 0.6,
+     "feeSample": 93,
+     "saleToAsk": 97.1,
+     "overAskShare": 9,
+     "medianDom": 35
+    },
+    "twoDen": null,
+    "three": {
+     "sales": 36,
+     "medianPrice": 510000,
+     "medianSqft": 1100,
+     "pricePsf": 490,
+     "medianFee": 565,
+     "feePsf": 0.52,
+     "feeSample": 36,
+     "saleToAsk": 96.6,
+     "overAskShare": 0,
+     "medianDom": 43
+    }
+   },
+   "communities": [
+    {
+     "name": "Pineridge/Westminster Woods",
+     "sales": 61,
+     "medianPrice": 460000,
+     "medianSqft": 850,
+     "pricePsf": 514,
+     "medianFee": 441,
+     "feePsf": 0.46,
+     "feeSample": 61,
+     "saleToAsk": 97.1,
+     "overAskShare": 11,
+     "medianDom": 38
+    },
+    {
+     "name": "St. Patrick's Ward",
+     "sales": 30,
+     "medianPrice": 476000,
+     "medianSqft": 950,
+     "pricePsf": 599,
+     "medianFee": 605,
+     "feePsf": 0.6,
+     "feeSample": 30,
+     "saleToAsk": 97.1,
+     "overAskShare": 7,
+     "medianDom": 31
+    }
+   ]
+  },
+  {
+   "city": "Waterloo",
+   "slug": "waterloo",
+   "all": {
+    "sales": 196,
+    "medianPrice": 402000,
+    "medianSqft": 850,
+    "pricePsf": 500,
+    "medianFee": 554,
+    "feePsf": 0.68,
+    "feeSample": 196,
+    "saleToAsk": 96.1,
+    "overAskShare": 11,
+    "medianDom": 39
+   },
+   "byUnit": {
+    "studio": null,
+    "one": {
+     "sales": 61,
+     "medianPrice": 300000,
+     "medianSqft": 550,
+     "pricePsf": 596,
+     "medianFee": 428,
+     "feePsf": 0.91,
+     "feeSample": 61,
+     "saleToAsk": 96.5,
+     "overAskShare": 10,
+     "medianDom": 42
+    },
+    "oneDen": {
+     "sales": 28,
+     "medianPrice": 415000,
+     "medianSqft": 550,
+     "pricePsf": 688,
+     "medianFee": 395,
+     "feePsf": 0.64,
+     "feeSample": 28,
+     "saleToAsk": 95.5,
+     "overAskShare": 4,
+     "medianDom": 31
+    },
+    "two": {
+     "sales": 83,
+     "medianPrice": 420000,
+     "medianSqft": 1100,
+     "pricePsf": 435,
+     "medianFee": 692,
+     "feePsf": 0.64,
+     "feeSample": 83,
+     "saleToAsk": 96.4,
+     "overAskShare": 14,
+     "medianDom": 36
+    },
+    "twoDen": null,
+    "three": null
+   },
+   "communities": []
   }
  ]
 }

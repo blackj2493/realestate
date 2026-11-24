@@ -8,13 +8,12 @@
  *
  * Read-only (one READ ONLY transaction over raw_vow_sold). Run monthly by refresh-sold-prices.yml.
  * Medians only: no address, no single sale. Sold records with a price of $150K–$8M, by the date
- * the deal was signed. Toronto = every "Toronto C01…W10" City value; Ottawa = OTTAWA_AREAS.
+ * the deal was signed. Cities = STUDY_CITIES; studyCityFilter maps Toronto, Ottawa and London to their City values.
  */
 import "dotenv/config";
 import { writeFileSync } from "node:fs";
 import { Client } from "pg";
-import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
-import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
+import { STUDY_CITIES, studyCityFilter } from "@/lib/data/studyCities";
 import { TYPE_GROUPS, typeGroupOf, type TypeGroup } from "@/lib/data/priceChangeModel";
 import type { SoldCity, SoldCommunity, SoldPricesFile, SoldStats } from "@/lib/data/soldPricesModel";
 
@@ -60,11 +59,6 @@ function stats(s: Sale[]): SoldStats {
   };
 }
 
-function cityFilter(city: string): { sql: string; params: unknown[] } {
-  if (city === "Toronto") return { sql: `city like 'Toronto %'`, params: [] };
-  if (city === "Ottawa") return { sql: `city = any($3::text[])`, params: [OTTAWA_AREAS] };
-  return { sql: `city = $3`, params: [city] };
-}
 
 async function main() {
   const url = process.env.DATABASE_URL || process.env.DIRECT_DB_URL;
@@ -78,8 +72,8 @@ async function main() {
   try {
     await client.query("BEGIN READ ONLY");
     await client.query("SET LOCAL statement_timeout = '170s'");
-    for (const { city, slug } of OUTLOOK_CITIES) {
-      const f = cityFilter(city);
+    for (const { city, slug } of STUDY_CITIES) {
+      const f = studyCityFilter(city, 3);
       const res = await client.query(
         `select coalesce(city_region,'') hood, property_sub_type t, coalesce(bedrooms_above_grade,0)::int beds,
                 close_price::float8 price, list_price::float8 lp, days_on_market dom
