@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import NotSellingView from "@/components/notSelling/NotSellingView";
 import { buildNotSellingFacts, getOutcomeStats } from "@/lib/data/notSelling";
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -24,7 +25,7 @@ async function load() {
 
 export async function generateMetadata(): Promise<Metadata> {
   const { facts } = await load();
-  const title = "Why Is My House Not Selling in Ontario? What the Sales Data Shows";
+  const title = `Why Is My House Not Selling in Ontario? What ${titleYear()} Sales Data Shows`;
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,

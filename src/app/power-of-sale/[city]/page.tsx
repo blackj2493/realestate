@@ -11,6 +11,7 @@ import PowerOfSaleView, { powerOfSalePath } from "@/components/powerOfSale/Power
 import { buildPosFacts, getPosStats } from "@/lib/data/powerOfSale";
 import { powerOfSaleListings } from "@/lib/data/powerOfSaleListings";
 import { OUTLOOK_CITIES, outlookCityBySlug } from "@/lib/data/outlookCities";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   const data = await load(slug);
   if (!data) return {};
   const canonical = `${SITE_URL}${powerOfSalePath(slug)}`;
-  const title = `Power of Sale Homes in ${data.city}: ${data.totalFound.toLocaleString("en-CA")} For Sale Now`;
+  const title = `Power of Sale Homes in ${data.city} (${titleYear()}): ${data.totalFound.toLocaleString("en-CA")} For Sale Now`;
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,

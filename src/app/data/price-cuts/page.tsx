@@ -4,6 +4,7 @@ import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { PriceCutsBoard } from "./PriceCutsBoard";
+import { titleYear } from "@/lib/seo/titleYear";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -12,7 +13,7 @@ const SLUG = "price-cuts";
 const DEF = trackerBySlug(SLUG)!;
 
 const H1 = "GTA & Toronto Price-Cut Tracker";
-const TITLE = "GTA & Toronto Price-Cut Tracker — % of Listings Reducing Their Price";
+const TITLE = `Toronto & GTA Price Cuts ${titleYear()}: % of Listings Reducing Their Price`;
 const DESCRIPTION =
   "See what share of active listings have cut their asking price in Toronto, Ottawa and every GTA market — plus how big the typical reduction is. A live read on which markets are cooling. Updated nightly from MLS® data.";
 
