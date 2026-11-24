@@ -6,7 +6,9 @@
  * Never throws: an empty list on failure (the page still has its facts).
  */
 import { searchListings, type ListingDocument } from "@/lib/typesense/client";
-import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
+import { citiesForHubSlug, cityFilterClause, cityHubsWithInventory } from "@/lib/listings/cityHubs";
+import { cityHubSlug, deslugCity } from "@/lib/listings/listingPath";
+import { OTTAWA_AREAS } from "@/lib/dashboard/ottawaAreas";
 
 const PER_PAGE = 24;
 /**
@@ -31,5 +33,29 @@ export async function powerOfSaleListings(citySlug: string | null): Promise<{ li
   } catch (err) {
     console.error(`[powerOfSale] listings query failed for ${citySlug ?? "ontario"}:`, err);
     return { listings: [], totalFound: 0 };
+  }
+}
+
+/** A city outside the 15 board markets gets a page with this many power-of-sale homes for sale. */
+export const MIN_POS_CITY = 3;
+
+/**
+ * Every city hub with at least `min` power-of-sale homes for sale now, most first. The
+ * 15 board cities have pages regardless; this list opens the page to the rest of Ontario
+ * ("power of sale homes in Barrie"), and the sitemap and the city lists read it so a page
+ * is linked only while it has homes on it. [] on any Typesense failure.
+ */
+export async function posCityHubs(min = MIN_POS_CITY): Promise<{ slug: string; city: string; count: number }[]> {
+  try {
+    const hubs = await cityHubsWithInventory(min, `description_signals:=power_of_sale && ListPrice:>=${MIN_LIST_PRICE}`);
+    // Ottawa's ~51 areas are each their own City value, but /power-of-sale/ottawa covers them.
+    const ottawa = new Set(OTTAWA_AREAS.map(cityHubSlug));
+    return hubs
+      .filter((h) => !ottawa.has(h.slug))
+      .map((h) => ({ ...h, city: deslugCity(h.slug) }))
+      .sort((a, b) => b.count - a.count);
+  } catch (err) {
+    console.error("[powerOfSale] city list failed:", err);
+    return [];
   }
 }

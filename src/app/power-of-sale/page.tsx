@@ -6,7 +6,8 @@
 import type { Metadata } from "next";
 import PowerOfSaleView from "@/components/powerOfSale/PowerOfSaleView";
 import { buildPosFacts, getPosStats } from "@/lib/data/powerOfSale";
-import { powerOfSaleListings } from "@/lib/data/powerOfSaleListings";
+import { posCityHubs, powerOfSaleListings } from "@/lib/data/powerOfSaleListings";
+import { outlookCityBySlug } from "@/lib/data/outlookCities";
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
 import { titleYear } from "@/lib/seo/titleYear";
 
@@ -20,7 +21,8 @@ async function load() {
     const f = buildPosFacts(c.city, c.city.toLowerCase(), rows, null);
     return { city: c.city, slug: c.slug, share: f.share, posSales: f.posSales };
   }).sort((a, b) => (b.share ?? -1) - (a.share ?? -1));
-  return { facts, listings, totalFound, cityShares };
+  const moreCities = (await posCityHubs()).filter((h) => !outlookCityBySlug(h.slug));
+  return { facts, listings, totalFound, cityShares, moreCities };
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -36,6 +38,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PowerOfSaleOntarioPage() {
-  const { facts, listings, totalFound, cityShares } = await load();
-  return <PowerOfSaleView city={null} slug={null} facts={facts} listings={listings} totalFound={totalFound} cityShares={cityShares} />;
+  const { facts, listings, totalFound, cityShares, moreCities } = await load();
+  return <PowerOfSaleView city={null} slug={null} facts={facts} listings={listings} totalFound={totalFound} cityShares={cityShares} moreCities={moreCities} />;
 }

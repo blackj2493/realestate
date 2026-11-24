@@ -1,5 +1,5 @@
 /**
- * The /power-of-sale page body, shared by the Ontario page (city = null) and the 15 city
+ * The /power-of-sale page body, shared by the Ontario page (city = null) and the city
  * pages: today's power-of-sale homes (IDX cards, cheapest first), the facts, what a power
  * of sale is, and FAQ answers. Server component. Aggregates + IDX listing cards only; the
  * compliance notice renders with the cards.
@@ -39,6 +39,7 @@ export default function PowerOfSaleView({
   listings,
   totalFound,
   cityShares,
+  moreCities = [],
 }: {
   city: string | null;
   slug: string | null;
@@ -47,6 +48,8 @@ export default function PowerOfSaleView({
   totalFound: number;
   /** Ontario page only: each city's 12-month share, for the city list. */
   cityShares?: { city: string; slug: string; share: number | null; posSales: number | null }[];
+  /** Cities outside the 15 with power-of-sale homes for sale now (posCityHubs), for crawlable links. */
+  moreCities?: { slug: string; city: string; count: number }[];
 }) {
   const place = city ?? "Ontario";
   const others = OUTLOOK_CITIES.filter((c) => c.slug !== slug);
@@ -245,6 +248,25 @@ export default function PowerOfSaleView({
             )}
 
             {slug && <CityTopicLinks citySlug={slug} current="power-of-sale" />}
+
+            {moreCities.filter((c) => c.slug !== slug).length > 0 && (
+              <section className="mt-8">
+                <h2 className="text-sm font-semibold text-muted-foreground">Power of sale homes in more Ontario cities</h2>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {moreCities
+                    .filter((c) => c.slug !== slug)
+                    .map((c) => (
+                      <Link
+                        key={c.slug}
+                        href={powerOfSalePath(c.slug)}
+                        className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+                      >
+                        {c.city} <span className="tabular-nums">({c.count})</span>
+                      </Link>
+                    ))}
+                </div>
+              </section>
+            )}
 
             {city && (
               <section className="mt-8">
