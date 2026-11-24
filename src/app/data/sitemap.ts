@@ -8,6 +8,7 @@ import { getPriceChangeData, priceChangePath } from "@/lib/data/priceChange";
 import { condoPricesPath, getCondoData } from "@/lib/data/condoPrices";
 import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
 import { getSchoolData, schoolPricesPath } from "@/lib/data/schoolPrices";
+import { getSoldData, soldPricesPath } from "@/lib/data/soldPrices";
 
 /**
  * /data/sitemap.xml — the data desk's own sitemap, split out of the root one.
@@ -81,6 +82,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // "Do better schools raise house prices in {city}?" + every catchment (2026-11-25). Static, monthly.
     { url: `${SITE_URL}${schoolPricesPath()}`, lastModified: new Date(getSchoolData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
     ...getSchoolData().cities.map((c) => ({ url: `${SITE_URL}${schoolPricesPath(c.slug)}`, lastModified: new Date(getSchoolData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 })),
+    // "{city} sold prices": medians by type, bedrooms and community (2026-11-25). Static, monthly.
+    { url: `${SITE_URL}${soldPricesPath()}`, lastModified: new Date(getSoldData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
+    ...getSoldData().cities.map((c) => ({ url: `${SITE_URL}${soldPricesPath(c.slug)}`, lastModified: new Date(getSoldData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 })),
     // Monthly Ontario Power of Sale Index (2026-11-10). Editions are linked from the hub page.
     { url: `${SITE_URL}/data/power-of-sale-index`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/data/findings`, changeFrequency: "weekly", priority: 0.7 },

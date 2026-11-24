@@ -1,0 +1,6598 @@
+{
+ "generatedAt": "2026-11-24T16:00:41.401Z",
+ "from": "2025-11-01",
+ "to": "2026-11-01",
+ "cities": [
+  {
+   "city": "Toronto",
+   "slug": "toronto",
+   "all": {
+    "sales": 18734,
+    "medianPrice": 775000,
+    "saleToAsk": 97,
+    "overAskShare": 20,
+    "medianDom": 22
+   },
+   "byType": {
+    "detached": {
+     "sales": 6802,
+     "medianPrice": 1240000,
+     "saleToAsk": 97.2,
+     "overAskShare": 28,
+     "medianDom": 16
+    },
+    "semiTown": {
+     "sales": 875,
+     "medianPrice": 1052000,
+     "saleToAsk": 98.1,
+     "overAskShare": 34,
+     "medianDom": 15
+    },
+    "condoApt": {
+     "sales": 9771,
+     "medianPrice": 558000,
+     "saleToAsk": 96.7,
+     "overAskShare": 12,
+     "medianDom": 28
+    },
+    "condoTown": {
+     "sales": 1286,
+     "medianPrice": 700000,
+     "saleToAsk": 97.6,
+     "overAskShare": 21,
+     "medianDom": 26
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 740,
+     "medianPrice": 900000
+    },
+    {
+     "beds": "3",
+     "sales": 3348,
+     "medianPrice": 1100000
+    },
+    {
+     "beds": "4",
+     "sales": 2163,
+     "medianPrice": 1721000
+    },
+    {
+     "beds": "5+",
+     "sales": 495,
+     "medianPrice": 2175000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Waterfront Communities C1",
+     "sales": 1181,
+     "medianPrice": 615000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 615000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Willowdale East",
+     "sales": 632,
+     "medianPrice": 635000,
+     "byType": {
+      "detached": 2295000,
+      "semiTown": null,
+      "condoApt": 570000,
+      "condoTown": 805000
+     }
+    },
+    {
+     "name": "Mimico",
+     "sales": 554,
+     "medianPrice": 670000,
+     "byType": {
+      "detached": 1193000,
+      "semiTown": 1160000,
+      "condoApt": 610000,
+      "condoTown": 874000
+     }
+    },
+    {
+     "name": "Niagara",
+     "sales": 545,
+     "medianPrice": 617000,
+     "byType": {
+      "detached": null,
+      "semiTown": 1238000,
+      "condoApt": 590000,
+      "condoTown": 800000
+     }
+    },
+    {
+     "name": "Islington-City Centre West",
+     "sales": 533,
+     "medianPrice": 580000,
+     "byType": {
+      "detached": 1303000,
+      "semiTown": 1140000,
+      "condoApt": 515000,
+      "condoTown": 751000
+     }
+    },
+    {
+     "name": "Church-Yonge Corridor",
+     "sales": 530,
+     "medianPrice": 575000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 575000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bay Street Corridor",
+     "sales": 409,
+     "medianPrice": 587000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 585000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Mount Pleasant West",
+     "sales": 384,
+     "medianPrice": 626000,
+     "byType": {
+      "detached": 2340000,
+      "semiTown": null,
+      "condoApt": 611000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Waterfront Communities C8",
+     "sales": 372,
+     "medianPrice": 618000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 608000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bayview Village",
+     "sales": 354,
+     "medianPrice": 603000,
+     "byType": {
+      "detached": 1938000,
+      "semiTown": null,
+      "condoApt": 537000,
+      "condoTown": 773000
+     }
+    },
+    {
+     "name": "Banbury-Don Mills",
+     "sales": 278,
+     "medianPrice": 756000,
+     "byType": {
+      "detached": 2330000,
+      "semiTown": null,
+      "condoApt": 618000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Annex",
+     "sales": 277,
+     "medianPrice": 960000,
+     "byType": {
+      "detached": 2010000,
+      "semiTown": 1781000,
+      "condoApt": 840000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Moss Park",
+     "sales": 257,
+     "medianPrice": 547000,
+     "byType": {
+      "detached": null,
+      "semiTown": 907000,
+      "condoApt": 530000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Woburn",
+     "sales": 254,
+     "medianPrice": 738000,
+     "byType": {
+      "detached": 875000,
+      "semiTown": null,
+      "condoApt": 458000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "South Riverdale",
+     "sales": 223,
+     "medianPrice": 889000,
+     "byType": {
+      "detached": 1565000,
+      "semiTown": 1230000,
+      "condoApt": 670000,
+      "condoTown": 715000
+     }
+    },
+    {
+     "name": "Bendale",
+     "sales": 208,
+     "medianPrice": 648000,
+     "byType": {
+      "detached": 885000,
+      "semiTown": null,
+      "condoApt": 465000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Downsview-Roding-CFB",
+     "sales": 207,
+     "medianPrice": 840000,
+     "byType": {
+      "detached": 970000,
+      "semiTown": 828000,
+      "condoApt": 500000,
+      "condoTown": 553000
+     }
+    },
+    {
+     "name": "Willowdale West",
+     "sales": 207,
+     "medianPrice": 775000,
+     "byType": {
+      "detached": 1461000,
+      "semiTown": null,
+      "condoApt": 592000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "High Park-Swansea",
+     "sales": 204,
+     "medianPrice": 998000,
+     "byType": {
+      "detached": 1950000,
+      "semiTown": null,
+      "condoApt": 657000,
+      "condoTown": 750000
+     }
+    },
+    {
+     "name": "Malvern",
+     "sales": 199,
+     "medianPrice": 620000,
+     "byType": {
+      "detached": 820000,
+      "semiTown": 685000,
+      "condoApt": 430000,
+      "condoTown": 545000
+     }
+    },
+    {
+     "name": "Stonegate-Queensway",
+     "sales": 199,
+     "medianPrice": 1250000,
+     "byType": {
+      "detached": 1534000,
+      "semiTown": 1190000,
+      "condoApt": 563000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Birchcliffe-Cliffside",
+     "sales": 198,
+     "medianPrice": 920000,
+     "byType": {
+      "detached": 982000,
+      "semiTown": null,
+      "condoApt": 609000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "L'Amoreaux",
+     "sales": 196,
+     "medianPrice": 735000,
+     "byType": {
+      "detached": 1188000,
+      "semiTown": 835000,
+      "condoApt": 500000,
+      "condoTown": 665000
+     }
+    },
+    {
+     "name": "Dovercourt-Wallace Emerson-Junction",
+     "sales": 193,
+     "medianPrice": 875000,
+     "byType": {
+      "detached": 1350000,
+      "semiTown": 1106000,
+      "condoApt": 481000,
+      "condoTown": 783000
+     }
+    },
+    {
+     "name": "Agincourt South-Malvern West",
+     "sales": 186,
+     "medianPrice": 510000,
+     "byType": {
+      "detached": 990000,
+      "semiTown": null,
+      "condoApt": 453000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Clanton Park",
+     "sales": 171,
+     "medianPrice": 550000,
+     "byType": {
+      "detached": 1223000,
+      "semiTown": null,
+      "condoApt": 490000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Henry Farm",
+     "sales": 170,
+     "medianPrice": 497000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 473000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rosedale-Moore Park",
+     "sales": 170,
+     "medianPrice": 1997000,
+     "byType": {
+      "detached": 3493000,
+      "semiTown": null,
+      "condoApt": 825000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bedford Park-Nortown",
+     "sales": 169,
+     "medianPrice": 2269000,
+     "byType": {
+      "detached": 2580000,
+      "semiTown": null,
+      "condoApt": 957000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Newtonbrook West",
+     "sales": 162,
+     "medianPrice": 965000,
+     "byType": {
+      "detached": 1183000,
+      "semiTown": null,
+      "condoApt": 557000,
+      "condoTown": 684000
+     }
+    },
+    {
+     "name": "Don Valley Village",
+     "sales": 160,
+     "medianPrice": 766000,
+     "byType": {
+      "detached": 1220000,
+      "semiTown": null,
+      "condoApt": 523000,
+      "condoTown": 719000
+     }
+    },
+    {
+     "name": "West Hill",
+     "sales": 153,
+     "medianPrice": 772000,
+     "byType": {
+      "detached": 850000,
+      "semiTown": null,
+      "condoApt": 385000,
+      "condoTown": 610000
+     }
+    },
+    {
+     "name": "Clairlea-Birchmount",
+     "sales": 151,
+     "medianPrice": 825000,
+     "byType": {
+      "detached": 857000,
+      "semiTown": 867000,
+      "condoApt": 483000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Agincourt North",
+     "sales": 147,
+     "medianPrice": 789000,
+     "byType": {
+      "detached": 1020000,
+      "semiTown": 809000,
+      "condoApt": 415000,
+      "condoTown": 631000
+     }
+    },
+    {
+     "name": "The Beaches",
+     "sales": 146,
+     "medianPrice": 1600000,
+     "byType": {
+      "detached": 2250000,
+      "semiTown": null,
+      "condoApt": 818000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Dorset Park",
+     "sales": 143,
+     "medianPrice": 720000,
+     "byType": {
+      "detached": 865000,
+      "semiTown": null,
+      "condoApt": 385000,
+      "condoTown": 710000
+     }
+    },
+    {
+     "name": "Kensington-Chinatown",
+     "sales": 142,
+     "medianPrice": 629000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 618000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Parkwoods-Donalda",
+     "sales": 141,
+     "medianPrice": 764000,
+     "byType": {
+      "detached": 1305000,
+      "semiTown": null,
+      "condoApt": 484000,
+      "condoTown": 650000
+     }
+    },
+    {
+     "name": "Newtonbrook East",
+     "sales": 141,
+     "medianPrice": 1228000,
+     "byType": {
+      "detached": 1375000,
+      "semiTown": null,
+      "condoApt": 527000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Tam O'Shanter-Sullivan",
+     "sales": 137,
+     "medianPrice": 700000,
+     "byType": {
+      "detached": 1077000,
+      "semiTown": null,
+      "condoApt": 559000,
+      "condoTown": 645000
+     }
+    },
+    {
+     "name": "Lansing-Westgate",
+     "sales": 135,
+     "medianPrice": 795000,
+     "byType": {
+      "detached": 1895000,
+      "semiTown": null,
+      "condoApt": 610000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Wexford-Maryvale",
+     "sales": 131,
+     "medianPrice": 870000,
+     "byType": {
+      "detached": 900000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Leaside",
+     "sales": 131,
+     "medianPrice": 2020000,
+     "byType": {
+      "detached": 2325000,
+      "semiTown": null,
+      "condoApt": 603000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Lawrence Park South",
+     "sales": 130,
+     "medianPrice": 2300000,
+     "byType": {
+      "detached": 2750000,
+      "semiTown": null,
+      "condoApt": 966000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Steeles",
+     "sales": 129,
+     "medianPrice": 900000,
+     "byType": {
+      "detached": 1133000,
+      "semiTown": null,
+      "condoApt": 508000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Englemount-Lawrence",
+     "sales": 124,
+     "medianPrice": 790000,
+     "byType": {
+      "detached": 1834000,
+      "semiTown": null,
+      "condoApt": 525000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Hillcrest Village",
+     "sales": 123,
+     "medianPrice": 795000,
+     "byType": {
+      "detached": 1185000,
+      "semiTown": null,
+      "condoApt": 760000,
+      "condoTown": 714000
+     }
+    },
+    {
+     "name": "St. Andrew-Windfields",
+     "sales": 120,
+     "medianPrice": 2200000,
+     "byType": {
+      "detached": 2410000,
+      "semiTown": null,
+      "condoApt": 800000,
+      "condoTown": 939000
+     }
+    },
+    {
+     "name": "Yonge-St. Clair",
+     "sales": 119,
+     "medianPrice": 1400000,
+     "byType": {
+      "detached": 2760000,
+      "semiTown": null,
+      "condoApt": 995000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Willowridge-Martingrove-Richview",
+     "sales": 117,
+     "medianPrice": 1110000,
+     "byType": {
+      "detached": 1150000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "West Humber-Clairville",
+     "sales": 116,
+     "medianPrice": 759000,
+     "byType": {
+      "detached": 870000,
+      "semiTown": null,
+      "condoApt": 421000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Regent Park",
+     "sales": 116,
+     "medianPrice": 563000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 520000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Eringate-Centennial-West Deane",
+     "sales": 114,
+     "medianPrice": 1009000,
+     "byType": {
+      "detached": 1135000,
+      "semiTown": null,
+      "condoApt": 550000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rouge E11",
+     "sales": 112,
+     "medianPrice": 913000,
+     "byType": {
+      "detached": 1110000,
+      "semiTown": null,
+      "condoApt": 484000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Oakwood Village",
+     "sales": 112,
+     "medianPrice": 1119000,
+     "byType": {
+      "detached": 1193000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Danforth Village-East York",
+     "sales": 111,
+     "medianPrice": 1175000,
+     "byType": {
+      "detached": 1205000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Yorkdale-Glen Park",
+     "sales": 109,
+     "medianPrice": 615000,
+     "byType": {
+      "detached": 1210000,
+      "semiTown": null,
+      "condoApt": 448000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Lawrence Park North",
+     "sales": 108,
+     "medianPrice": 1975000,
+     "byType": {
+      "detached": 2010000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Edenbridge-Humber Valley",
+     "sales": 107,
+     "medianPrice": 1500000,
+     "byType": {
+      "detached": 2266000,
+      "semiTown": null,
+      "condoApt": 559000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Kingsview Village-The Westway",
+     "sales": 104,
+     "medianPrice": 770000,
+     "byType": {
+      "detached": 1070000,
+      "semiTown": null,
+      "condoApt": 370000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Westminster-Branson",
+     "sales": 103,
+     "medianPrice": 590000,
+     "byType": {
+      "detached": 1460000,
+      "semiTown": null,
+      "condoApt": 539000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Trinity-Bellwoods",
+     "sales": 102,
+     "medianPrice": 1185000,
+     "byType": {
+      "detached": 1569000,
+      "semiTown": 1241000,
+      "condoApt": 708000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Kingsway South",
+     "sales": 101,
+     "medianPrice": 2300000,
+     "byType": {
+      "detached": 2481000,
+      "semiTown": null,
+      "condoApt": 1150000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Long Branch",
+     "sales": 100,
+     "medianPrice": 844000,
+     "byType": {
+      "detached": 1295000,
+      "semiTown": null,
+      "condoApt": 523000,
+      "condoTown": 738000
+     }
+    },
+    {
+     "name": "Mount Pleasant East",
+     "sales": 100,
+     "medianPrice": 1575000,
+     "byType": {
+      "detached": 1949000,
+      "semiTown": null,
+      "condoApt": 681000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "York University Heights",
+     "sales": 100,
+     "medianPrice": 513000,
+     "byType": {
+      "detached": 1020000,
+      "semiTown": null,
+      "condoApt": 462000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Flemingdon Park",
+     "sales": 99,
+     "medianPrice": 447000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 430000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Milliken",
+     "sales": 98,
+     "medianPrice": 839000,
+     "byType": {
+      "detached": 1015000,
+      "semiTown": null,
+      "condoApt": 480000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Little Portugal",
+     "sales": 97,
+     "medianPrice": 680000,
+     "byType": {
+      "detached": null,
+      "semiTown": 1118000,
+      "condoApt": 557000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Cabbagetown-South St. James Town",
+     "sales": 96,
+     "medianPrice": 609000,
+     "byType": {
+      "detached": null,
+      "semiTown": 1425000,
+      "condoApt": 525000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Markland Wood",
+     "sales": 95,
+     "medianPrice": 815000,
+     "byType": {
+      "detached": 1400000,
+      "semiTown": null,
+      "condoApt": 560000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "High Park North",
+     "sales": 94,
+     "medianPrice": 1150000,
+     "byType": {
+      "detached": 1775000,
+      "semiTown": null,
+      "condoApt": 800000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Weston",
+     "sales": 93,
+     "medianPrice": 605000,
+     "byType": {
+      "detached": 858000,
+      "semiTown": null,
+      "condoApt": 400000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Cliffcrest",
+     "sales": 91,
+     "medianPrice": 870000,
+     "byType": {
+      "detached": 921000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Yonge-Eglinton",
+     "sales": 91,
+     "medianPrice": 1350000,
+     "byType": {
+      "detached": 2200000,
+      "semiTown": null,
+      "condoApt": 610000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bridle Path-Sunnybrook-York Mills",
+     "sales": 88,
+     "medianPrice": 2523000,
+     "byType": {
+      "detached": 4320000,
+      "semiTown": null,
+      "condoApt": 1413000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Centennial Scarborough",
+     "sales": 87,
+     "medianPrice": 1050000,
+     "byType": {
+      "detached": 1081000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Guildwood",
+     "sales": 86,
+     "medianPrice": 917000,
+     "byType": {
+      "detached": 1035000,
+      "semiTown": null,
+      "condoApt": 620000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Princess-Rosethorn",
+     "sales": 86,
+     "medianPrice": 1738000,
+     "byType": {
+      "detached": 1756000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "O'Connor-Parkview",
+     "sales": 86,
+     "medianPrice": 970000,
+     "byType": {
+      "detached": 1090000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Briar Hill-Belgravia",
+     "sales": 86,
+     "medianPrice": 728000,
+     "byType": {
+      "detached": 848000,
+      "semiTown": null,
+      "condoApt": 565000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rockcliffe-Smythe",
+     "sales": 86,
+     "medianPrice": 709000,
+     "byType": {
+      "detached": 849000,
+      "semiTown": null,
+      "condoApt": 575000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Alderwood",
+     "sales": 84,
+     "medianPrice": 1033000,
+     "byType": {
+      "detached": 1073000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Roncesvalles",
+     "sales": 84,
+     "medianPrice": 1008000,
+     "byType": {
+      "detached": 1868000,
+      "semiTown": null,
+      "condoApt": 686000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Humewood-Cedarvale",
+     "sales": 81,
+     "medianPrice": 1700000,
+     "byType": {
+      "detached": 1875000,
+      "semiTown": null,
+      "condoApt": 413000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Etobicoke West Mall",
+     "sales": 80,
+     "medianPrice": 528000,
+     "byType": {
+      "detached": 1183000,
+      "semiTown": null,
+      "condoApt": 477000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Casa Loma",
+     "sales": 80,
+     "medianPrice": 1515000,
+     "byType": {
+      "detached": 3700000,
+      "semiTown": null,
+      "condoApt": 950000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Eglinton East",
+     "sales": 79,
+     "medianPrice": 645000,
+     "byType": {
+      "detached": 853000,
+      "semiTown": null,
+      "condoApt": 404000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Forest Hill South",
+     "sales": 79,
+     "medianPrice": 2220000,
+     "byType": {
+      "detached": 4050000,
+      "semiTown": null,
+      "condoApt": 1200000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bathurst Manor",
+     "sales": 77,
+     "medianPrice": 1165000,
+     "byType": {
+      "detached": 1270000,
+      "semiTown": null,
+      "condoApt": 560000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Morningside",
+     "sales": 76,
+     "medianPrice": 788000,
+     "byType": {
+      "detached": 835000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 604000
+     }
+    },
+    {
+     "name": "Kennedy Park",
+     "sales": 75,
+     "medianPrice": 750000,
+     "byType": {
+      "detached": 840000,
+      "semiTown": null,
+      "condoApt": 470000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "East End-Danforth",
+     "sales": 74,
+     "medianPrice": 998000,
+     "byType": {
+      "detached": 1257000,
+      "semiTown": null,
+      "condoApt": 543000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Greenwood-Coxwell",
+     "sales": 74,
+     "medianPrice": 1130000,
+     "byType": {
+      "detached": 1243000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Scarborough Village",
+     "sales": 73,
+     "medianPrice": 590000,
+     "byType": {
+      "detached": 930000,
+      "semiTown": null,
+      "condoApt": 440000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "East York",
+     "sales": 73,
+     "medianPrice": 1095000,
+     "byType": {
+      "detached": 1098000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Junction Area",
+     "sales": 71,
+     "medianPrice": 760000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 592000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "New Toronto",
+     "sales": 71,
+     "medianPrice": 880000,
+     "byType": {
+      "detached": 1100000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Victoria Village",
+     "sales": 70,
+     "medianPrice": 877000,
+     "byType": {
+      "detached": 1228000,
+      "semiTown": null,
+      "condoApt": 450000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "South Parkdale",
+     "sales": 69,
+     "medianPrice": 580000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 530000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "North St. James Town",
+     "sales": 68,
+     "medianPrice": 568000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 565000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Mount Olive-Silverstone-Jamestown",
+     "sales": 67,
+     "medianPrice": 621000,
+     "byType": {
+      "detached": 895000,
+      "semiTown": null,
+      "condoApt": 466000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Runnymede-Bloor West Village",
+     "sales": 67,
+     "medianPrice": 1515000,
+     "byType": {
+      "detached": 1604000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Elms-Old Rexdale",
+     "sales": 66,
+     "medianPrice": 763000,
+     "byType": {
+      "detached": 830000,
+      "semiTown": null,
+      "condoApt": 370000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bayview Woods-Steeles",
+     "sales": 63,
+     "medianPrice": 1380000,
+     "byType": {
+      "detached": 1440000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rexdale-Kipling",
+     "sales": 62,
+     "medianPrice": 848000,
+     "byType": {
+      "detached": 860000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Woodbine-Lumsden",
+     "sales": 58,
+     "medianPrice": 999000,
+     "byType": {
+      "detached": 1000000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Caledonia-Fairbank",
+     "sales": 58,
+     "medianPrice": 878000,
+     "byType": {
+      "detached": 878000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Humber Heights",
+     "sales": 56,
+     "medianPrice": 948000,
+     "byType": {
+      "detached": 1055000,
+      "semiTown": null,
+      "condoApt": 564000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Keelesdale-Eglinton West",
+     "sales": 56,
+     "medianPrice": 775000,
+     "byType": {
+      "detached": 810000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rouge E10",
+     "sales": 55,
+     "medianPrice": 1005000,
+     "byType": {
+      "detached": 1060000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Highland Creek",
+     "sales": 55,
+     "medianPrice": 1165000,
+     "byType": {
+      "detached": 1165000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Crescent Town",
+     "sales": 53,
+     "medianPrice": 530000,
+     "byType": {
+      "detached": 918000,
+      "semiTown": null,
+      "condoApt": 389000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Pleasant View",
+     "sales": 50,
+     "medianPrice": 805000,
+     "byType": {
+      "detached": 1259000,
+      "semiTown": null,
+      "condoApt": 445000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Broadview North",
+     "sales": 48,
+     "medianPrice": 1274000,
+     "byType": {
+      "detached": 1501000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Lambton Baby Point",
+     "sales": 47,
+     "medianPrice": 1850000,
+     "byType": {
+      "detached": 1850000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Dufferin Grove",
+     "sales": 45,
+     "medianPrice": 901000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 885000
+     }
+    },
+    {
+     "name": "Brookhaven-Amesbury",
+     "sales": 45,
+     "medianPrice": 855000,
+     "byType": {
+      "detached": 1000000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Maple Leaf",
+     "sales": 44,
+     "medianPrice": 1073000,
+     "byType": {
+      "detached": 1089000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Mount Dennis",
+     "sales": 43,
+     "medianPrice": 590000,
+     "byType": {
+      "detached": 750000,
+      "semiTown": null,
+      "condoApt": 450000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Woodbine Corridor",
+     "sales": 42,
+     "medianPrice": 1320000,
+     "byType": {
+      "detached": 1472000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Forest Hill North",
+     "sales": 42,
+     "medianPrice": 2375000,
+     "byType": {
+      "detached": 2400000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Corso Italia-Davenport",
+     "sales": 41,
+     "medianPrice": 1125000,
+     "byType": {
+      "detached": 1153000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Thistletown-Beaumonde Heights",
+     "sales": 41,
+     "medianPrice": 920000,
+     "byType": {
+      "detached": 920000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Palmerston-Little Italy",
+     "sales": 39,
+     "medianPrice": 1425000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Humberlea-Pelmo Park W5",
+     "sales": 37,
+     "medianPrice": 770000,
+     "byType": {
+      "detached": 981000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Black Creek",
+     "sales": 37,
+     "medianPrice": 390000,
+     "byType": {
+      "detached": 875000,
+      "semiTown": null,
+      "condoApt": 300000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Thorncliffe Park",
+     "sales": 37,
+     "medianPrice": 489000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 480000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Oakridge",
+     "sales": 36,
+     "medianPrice": 763000,
+     "byType": {
+      "detached": 800000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "University",
+     "sales": 36,
+     "medianPrice": 1335000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Weston-Pellam Park",
+     "sales": 36,
+     "medianPrice": 735000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Wychwood",
+     "sales": 35,
+     "medianPrice": 1260000,
+     "byType": {
+      "detached": 1511000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "North Riverdale",
+     "sales": 34,
+     "medianPrice": 1623000,
+     "byType": {
+      "detached": 1985000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Ionview",
+     "sales": 34,
+     "medianPrice": 820000,
+     "byType": {
+      "detached": 920000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Humbermede",
+     "sales": 34,
+     "medianPrice": 803000,
+     "byType": {
+      "detached": 1019000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Beechborough-Greenbrook",
+     "sales": 28,
+     "medianPrice": 719000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Glenfield-Jane Heights",
+     "sales": 28,
+     "medianPrice": 558000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Blake-Jones",
+     "sales": 27,
+     "medianPrice": 1158000,
+     "byType": {
+      "detached": 1352000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Playter Estates-Danforth",
+     "sales": 25,
+     "medianPrice": 1600000,
+     "byType": {
+      "detached": 1800000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Mississauga",
+   "slug": "mississauga",
+   "all": {
+    "sales": 4212,
+    "medianPrice": 847000,
+    "saleToAsk": 96.7,
+    "overAskShare": 14,
+    "medianDom": 25
+   },
+   "byType": {
+    "detached": {
+     "sales": 1925,
+     "medianPrice": 1225000,
+     "saleToAsk": 96.2,
+     "overAskShare": 14,
+     "medianDom": 21
+    },
+    "semiTown": {
+     "sales": 180,
+     "medianPrice": 888000,
+     "saleToAsk": 97.8,
+     "overAskShare": 18,
+     "medianDom": 20
+    },
+    "condoApt": {
+     "sales": 1277,
+     "medianPrice": 487000,
+     "saleToAsk": 96.7,
+     "overAskShare": 12,
+     "medianDom": 31
+    },
+    "condoTown": {
+     "sales": 830,
+     "medianPrice": 690000,
+     "saleToAsk": 97.5,
+     "overAskShare": 15,
+     "medianDom": 27
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 42,
+     "medianPrice": 1041000
+    },
+    {
+     "beds": "3",
+     "sales": 720,
+     "medianPrice": 1051000
+    },
+    {
+     "beds": "4",
+     "sales": 1049,
+     "medianPrice": 1315000
+    },
+    {
+     "beds": "5+",
+     "sales": 111,
+     "medianPrice": 1640000
+    }
+   ],
+   "communities": [
+    {
+     "name": "City Centre",
+     "sales": 474,
+     "medianPrice": 480000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 479000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Hurontario",
+     "sales": 384,
+     "medianPrice": 800000,
+     "byType": {
+      "detached": 1188000,
+      "semiTown": 852000,
+      "condoApt": 508000,
+      "condoTown": 718000
+     }
+    },
+    {
+     "name": "Central Erin Mills",
+     "sales": 280,
+     "medianPrice": 771000,
+     "byType": {
+      "detached": 1330000,
+      "semiTown": null,
+      "condoApt": 514000,
+      "condoTown": 770000
+     }
+    },
+    {
+     "name": "Erin Mills",
+     "sales": 268,
+     "medianPrice": 958000,
+     "byType": {
+      "detached": 1240000,
+      "semiTown": null,
+      "condoApt": 535000,
+      "condoTown": 689000
+     }
+    },
+    {
+     "name": "Meadowvale",
+     "sales": 248,
+     "medianPrice": 790000,
+     "byType": {
+      "detached": 980000,
+      "semiTown": null,
+      "condoApt": 428000,
+      "condoTown": 639000
+     }
+    },
+    {
+     "name": "East Credit",
+     "sales": 245,
+     "medianPrice": 1100000,
+     "byType": {
+      "detached": 1261000,
+      "semiTown": 905000,
+      "condoApt": null,
+      "condoTown": 750000
+     }
+    },
+    {
+     "name": "Clarkson",
+     "sales": 223,
+     "medianPrice": 861000,
+     "byType": {
+      "detached": 1200000,
+      "semiTown": null,
+      "condoApt": 547000,
+      "condoTown": 703000
+     }
+    },
+    {
+     "name": "Cooksville",
+     "sales": 218,
+     "medianPrice": 663000,
+     "byType": {
+      "detached": 1153000,
+      "semiTown": null,
+      "condoApt": 438000,
+      "condoTown": 670000
+     }
+    },
+    {
+     "name": "Churchill Meadows",
+     "sales": 209,
+     "medianPrice": 959000,
+     "byType": {
+      "detached": 1300000,
+      "semiTown": 903000,
+      "condoApt": null,
+      "condoTown": 639000
+     }
+    },
+    {
+     "name": "Lakeview",
+     "sales": 200,
+     "medianPrice": 1039000,
+     "byType": {
+      "detached": 1238000,
+      "semiTown": null,
+      "condoApt": 620000,
+      "condoTown": 725000
+     }
+    },
+    {
+     "name": "Lisgar",
+     "sales": 153,
+     "medianPrice": 1111000,
+     "byType": {
+      "detached": 1170000,
+      "semiTown": 844000,
+      "condoApt": null,
+      "condoTown": 660000
+     }
+    },
+    {
+     "name": "Rathwood",
+     "sales": 143,
+     "medianPrice": 965000,
+     "byType": {
+      "detached": 1225000,
+      "semiTown": null,
+      "condoApt": 448000,
+      "condoTown": 775000
+     }
+    },
+    {
+     "name": "Applewood",
+     "sales": 130,
+     "medianPrice": 873000,
+     "byType": {
+      "detached": 1150000,
+      "semiTown": null,
+      "condoApt": 458000,
+      "condoTown": 522000
+     }
+    },
+    {
+     "name": "Mississauga Valleys",
+     "sales": 114,
+     "medianPrice": 577000,
+     "byType": {
+      "detached": 1110000,
+      "semiTown": null,
+      "condoApt": 497000,
+      "condoTown": 640000
+     }
+    },
+    {
+     "name": "Erindale",
+     "sales": 108,
+     "medianPrice": 944000,
+     "byType": {
+      "detached": 1238000,
+      "semiTown": null,
+      "condoApt": 395000,
+      "condoTown": 620000
+     }
+    },
+    {
+     "name": "Streetsville",
+     "sales": 102,
+     "medianPrice": 873000,
+     "byType": {
+      "detached": 1178000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 700000
+     }
+    },
+    {
+     "name": "Port Credit",
+     "sales": 102,
+     "medianPrice": 1061000,
+     "byType": {
+      "detached": 1713000,
+      "semiTown": null,
+      "condoApt": 698000,
+      "condoTown": 1280000
+     }
+    },
+    {
+     "name": "Lorne Park",
+     "sales": 98,
+     "medianPrice": 1835000,
+     "byType": {
+      "detached": 1910000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Sheridan",
+     "sales": 93,
+     "medianPrice": 1395000,
+     "byType": {
+      "detached": 1500000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Malton",
+     "sales": 93,
+     "medianPrice": 756000,
+     "byType": {
+      "detached": 843000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 590000
+     }
+    },
+    {
+     "name": "Mineola",
+     "sales": 91,
+     "medianPrice": 1425000,
+     "byType": {
+      "detached": 1576000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Meadowvale Village",
+     "sales": 91,
+     "medianPrice": 1178000,
+     "byType": {
+      "detached": 1327000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 739000
+     }
+    },
+    {
+     "name": "Creditview",
+     "sales": 85,
+     "medianPrice": 940000,
+     "byType": {
+      "detached": 1033000,
+      "semiTown": null,
+      "condoApt": 533000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Fairview",
+     "sales": 58,
+     "medianPrice": 772000,
+     "byType": {
+      "detached": 1300000,
+      "semiTown": null,
+      "condoApt": 470000,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Brampton",
+   "slug": "brampton",
+   "all": {
+    "sales": 3573,
+    "medianPrice": 851000,
+    "saleToAsk": 96.9,
+    "overAskShare": 17,
+    "medianDom": 22
+   },
+   "byType": {
+    "detached": {
+     "sales": 2458,
+     "medianPrice": 952000,
+     "saleToAsk": 96.7,
+     "overAskShare": 17,
+     "medianDom": 21
+    },
+    "semiTown": {
+     "sales": 623,
+     "medianPrice": 755000,
+     "saleToAsk": 97.8,
+     "overAskShare": 21,
+     "medianDom": 21
+    },
+    "condoApt": {
+     "sales": 238,
+     "medianPrice": 415000,
+     "saleToAsk": 95.9,
+     "overAskShare": 8,
+     "medianDom": 42
+    },
+    "condoTown": {
+     "sales": 254,
+     "medianPrice": 570000,
+     "saleToAsk": 97,
+     "overAskShare": 15,
+     "medianDom": 32
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 56,
+     "medianPrice": 760000
+    },
+    {
+     "beds": "3",
+     "sales": 842,
+     "medianPrice": 811000
+    },
+    {
+     "beds": "4",
+     "sales": 1364,
+     "medianPrice": 1050000
+    },
+    {
+     "beds": "5+",
+     "sales": 192,
+     "medianPrice": 1325000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Northwest Brampton",
+     "sales": 393,
+     "medianPrice": 835000,
+     "byType": {
+      "detached": 1050000,
+      "semiTown": 777000,
+      "condoApt": 426000,
+      "condoTown": 545000
+     }
+    },
+    {
+     "name": "Sandringham-Wellington",
+     "sales": 361,
+     "medianPrice": 940000,
+     "byType": {
+      "detached": 1045000,
+      "semiTown": 754000,
+      "condoApt": 420000,
+      "condoTown": 632000
+     }
+    },
+    {
+     "name": "Fletcher's Meadow",
+     "sales": 244,
+     "medianPrice": 918000,
+     "byType": {
+      "detached": 936000,
+      "semiTown": 737000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Credit Valley",
+     "sales": 195,
+     "medianPrice": 1200000,
+     "byType": {
+      "detached": 1260000,
+      "semiTown": 780000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bram East",
+     "sales": 187,
+     "medianPrice": 1140000,
+     "byType": {
+      "detached": 1200000,
+      "semiTown": 827000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bram West",
+     "sales": 153,
+     "medianPrice": 970000,
+     "byType": {
+      "detached": 1260000,
+      "semiTown": 840000,
+      "condoApt": null,
+      "condoTown": 637000
+     }
+    },
+    {
+     "name": "Fletcher's Creek South",
+     "sales": 132,
+     "medianPrice": 771000,
+     "byType": {
+      "detached": 917000,
+      "semiTown": 728000,
+      "condoApt": 400000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Central Park",
+     "sales": 127,
+     "medianPrice": 685000,
+     "byType": {
+      "detached": 778000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 503000
+     }
+    },
+    {
+     "name": "Brampton East",
+     "sales": 112,
+     "medianPrice": 777000,
+     "byType": {
+      "detached": 780000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Heart Lake West",
+     "sales": 107,
+     "medianPrice": 780000,
+     "byType": {
+      "detached": 830000,
+      "semiTown": 652000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Fletcher's West",
+     "sales": 105,
+     "medianPrice": 830000,
+     "byType": {
+      "detached": 886000,
+      "semiTown": 718000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Madoc",
+     "sales": 105,
+     "medianPrice": 730000,
+     "byType": {
+      "detached": 765000,
+      "semiTown": 665000,
+      "condoApt": null,
+      "condoTown": 478000
+     }
+    },
+    {
+     "name": "Brampton West",
+     "sales": 98,
+     "medianPrice": 760000,
+     "byType": {
+      "detached": 774000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Snelgrove",
+     "sales": 97,
+     "medianPrice": 982000,
+     "byType": {
+      "detached": 1002000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Queen Street Corridor",
+     "sales": 96,
+     "medianPrice": 440000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 422000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Northgate",
+     "sales": 88,
+     "medianPrice": 733000,
+     "byType": {
+      "detached": 786000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Brampton South",
+     "sales": 87,
+     "medianPrice": 749000,
+     "byType": {
+      "detached": 840000,
+      "semiTown": null,
+      "condoApt": 344000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Sandringham-Wellington North",
+     "sales": 83,
+     "medianPrice": 1121000,
+     "byType": {
+      "detached": 1195000,
+      "semiTown": 823000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Heart Lake East",
+     "sales": 80,
+     "medianPrice": 739000,
+     "byType": {
+      "detached": 910000,
+      "semiTown": 675000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Westgate",
+     "sales": 79,
+     "medianPrice": 874000,
+     "byType": {
+      "detached": 895000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Downtown Brampton",
+     "sales": 77,
+     "medianPrice": 650000,
+     "byType": {
+      "detached": 776000,
+      "semiTown": null,
+      "condoApt": 415000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Brampton North",
+     "sales": 71,
+     "medianPrice": 665000,
+     "byType": {
+      "detached": 788000,
+      "semiTown": 657000,
+      "condoApt": null,
+      "condoTown": 608000
+     }
+    },
+    {
+     "name": "Southgate",
+     "sales": 71,
+     "medianPrice": 740000,
+     "byType": {
+      "detached": 782000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 490000
+     }
+    },
+    {
+     "name": "Northwood Park",
+     "sales": 70,
+     "medianPrice": 842000,
+     "byType": {
+      "detached": 846000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Northwest Sandalwood Parkway",
+     "sales": 67,
+     "medianPrice": 925000,
+     "byType": {
+      "detached": 947000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Vales of Castlemore",
+     "sales": 63,
+     "medianPrice": 1190000,
+     "byType": {
+      "detached": 1190000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Toronto Gore Rural Estate",
+     "sales": 52,
+     "medianPrice": 1715000,
+     "byType": {
+      "detached": 1715000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Fletcher's Creek Village",
+     "sales": 40,
+     "medianPrice": 893000,
+     "byType": {
+      "detached": 949000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Avondale",
+     "sales": 37,
+     "medianPrice": 775000,
+     "byType": {
+      "detached": 779000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Goreway Drive Corridor",
+     "sales": 29,
+     "medianPrice": 515000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 462000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Vales of Castlemore North",
+     "sales": 26,
+     "medianPrice": 1299000,
+     "byType": {
+      "detached": 1299000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Markham",
+   "slug": "markham",
+   "all": {
+    "sales": 2555,
+    "medianPrice": 1095000,
+    "saleToAsk": 97.1,
+    "overAskShare": 26,
+    "medianDom": 21
+   },
+   "byType": {
+    "detached": {
+     "sales": 1195,
+     "medianPrice": 1420000,
+     "saleToAsk": 96.9,
+     "overAskShare": 28,
+     "medianDom": 19
+    },
+    "semiTown": {
+     "sales": 518,
+     "medianPrice": 1020000,
+     "saleToAsk": 97.8,
+     "overAskShare": 32,
+     "medianDom": 20
+    },
+    "condoApt": {
+     "sales": 629,
+     "medianPrice": 564000,
+     "saleToAsk": 96.6,
+     "overAskShare": 16,
+     "medianDom": 27
+    },
+    "condoTown": {
+     "sales": 213,
+     "medianPrice": 750000,
+     "saleToAsk": 97.8,
+     "overAskShare": 30,
+     "medianDom": 27
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 20,
+     "medianPrice": 1062000
+    },
+    {
+     "beds": "3",
+     "sales": 275,
+     "medianPrice": 1148000
+    },
+    {
+     "beds": "4",
+     "sales": 765,
+     "medianPrice": 1495000
+    },
+    {
+     "beds": "5+",
+     "sales": 131,
+     "medianPrice": 1790000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Unionville",
+     "sales": 461,
+     "medianPrice": 750000,
+     "byType": {
+      "detached": 1659000,
+      "semiTown": 1449000,
+      "condoApt": 572000,
+      "condoTown": 830000
+     }
+    },
+    {
+     "name": "Cornell",
+     "sales": 166,
+     "medianPrice": 933000,
+     "byType": {
+      "detached": 1259000,
+      "semiTown": 900000,
+      "condoApt": null,
+      "condoTown": 603000
+     }
+    },
+    {
+     "name": "Wismer",
+     "sales": 143,
+     "medianPrice": 1158000,
+     "byType": {
+      "detached": 1535000,
+      "semiTown": 1048000,
+      "condoApt": 471000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Berczy",
+     "sales": 139,
+     "medianPrice": 1263000,
+     "byType": {
+      "detached": 1520000,
+      "semiTown": 950000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Greensborough",
+     "sales": 133,
+     "medianPrice": 1000000,
+     "byType": {
+      "detached": 1301000,
+      "semiTown": 910000,
+      "condoApt": 740000,
+      "condoTown": 839000
+     }
+    },
+    {
+     "name": "Commerce Valley",
+     "sales": 123,
+     "medianPrice": 625000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 565000,
+      "condoTown": 852000
+     }
+    },
+    {
+     "name": "Middlefield",
+     "sales": 97,
+     "medianPrice": 1110000,
+     "byType": {
+      "detached": 1192000,
+      "semiTown": 1040000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Markham Village",
+     "sales": 96,
+     "medianPrice": 1233000,
+     "byType": {
+      "detached": 1260000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Royal Orchard",
+     "sales": 91,
+     "medianPrice": 1130000,
+     "byType": {
+      "detached": 1328000,
+      "semiTown": null,
+      "condoApt": 565000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Angus Glen",
+     "sales": 88,
+     "medianPrice": 1253000,
+     "byType": {
+      "detached": 1802000,
+      "semiTown": 1188000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Aileen-Willowbrook",
+     "sales": 84,
+     "medianPrice": 840000,
+     "byType": {
+      "detached": 1395000,
+      "semiTown": null,
+      "condoApt": 698000,
+      "condoTown": 653000
+     }
+    },
+    {
+     "name": "Milliken Mills East",
+     "sales": 81,
+     "medianPrice": 1100000,
+     "byType": {
+      "detached": 1300000,
+      "semiTown": 960000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Thornhill",
+     "sales": 59,
+     "medianPrice": 640000,
+     "byType": {
+      "detached": 1595000,
+      "semiTown": null,
+      "condoApt": 550000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Milliken Mills West",
+     "sales": 57,
+     "medianPrice": 1089000,
+     "byType": {
+      "detached": 1137000,
+      "semiTown": 1080000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Markville",
+     "sales": 53,
+     "medianPrice": 1236000,
+     "byType": {
+      "detached": 1590000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Box Grove",
+     "sales": 53,
+     "medianPrice": 1230000,
+     "byType": {
+      "detached": 1328000,
+      "semiTown": 905000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Cachet",
+     "sales": 52,
+     "medianPrice": 1818000,
+     "byType": {
+      "detached": 2088000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Grandview",
+     "sales": 50,
+     "medianPrice": 1078000,
+     "byType": {
+      "detached": 1303000,
+      "semiTown": null,
+      "condoApt": 515000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Cathedraltown",
+     "sales": 45,
+     "medianPrice": 1180000,
+     "byType": {
+      "detached": null,
+      "semiTown": 1165000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Raymerville",
+     "sales": 45,
+     "medianPrice": 1158000,
+     "byType": {
+      "detached": 1248000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Victoria Square",
+     "sales": 43,
+     "medianPrice": 1166000,
+     "byType": {
+      "detached": null,
+      "semiTown": 1128000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "German Mills",
+     "sales": 37,
+     "medianPrice": 1112000,
+     "byType": {
+      "detached": 1455000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bullock",
+     "sales": 37,
+     "medianPrice": 1160000,
+     "byType": {
+      "detached": 1180000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Cedarwood",
+     "sales": 36,
+     "medianPrice": 980000,
+     "byType": {
+      "detached": null,
+      "semiTown": 997000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Village Green-South Unionville",
+     "sales": 36,
+     "medianPrice": 1246000,
+     "byType": {
+      "detached": 1550000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Buttonville",
+     "sales": 30,
+     "medianPrice": 1505000,
+     "byType": {
+      "detached": 1539000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Old Markham Village",
+     "sales": 28,
+     "medianPrice": 945000,
+     "byType": {
+      "detached": 1100000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Thornlea",
+     "sales": 28,
+     "medianPrice": 1586000,
+     "byType": {
+      "detached": 1586000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Vaughan",
+   "slug": "vaughan",
+   "all": {
+    "sales": 2490,
+    "medianPrice": 1113000,
+    "saleToAsk": 96.6,
+    "overAskShare": 16,
+    "medianDom": 23
+   },
+   "byType": {
+    "detached": {
+     "sales": 1270,
+     "medianPrice": 1420000,
+     "saleToAsk": 96.4,
+     "overAskShare": 18,
+     "medianDom": 20
+    },
+    "semiTown": {
+     "sales": 416,
+     "medianPrice": 1000000,
+     "saleToAsk": 97.2,
+     "overAskShare": 23,
+     "medianDom": 22
+    },
+    "condoApt": {
+     "sales": 706,
+     "medianPrice": 530000,
+     "saleToAsk": 96.2,
+     "overAskShare": 9,
+     "medianDom": 30
+    },
+    "condoTown": {
+     "sales": 98,
+     "medianPrice": 770000,
+     "saleToAsk": 97.3,
+     "overAskShare": 16,
+     "medianDom": 30
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "3",
+     "sales": 362,
+     "medianPrice": 1180000
+    },
+    {
+     "beds": "4",
+     "sales": 782,
+     "medianPrice": 1525000
+    },
+    {
+     "beds": "5+",
+     "sales": 112,
+     "medianPrice": 2170000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Patterson",
+     "sales": 361,
+     "medianPrice": 1395000,
+     "byType": {
+      "detached": 1633000,
+      "semiTown": 1124000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Vellore Village",
+     "sales": 322,
+     "medianPrice": 1168000,
+     "byType": {
+      "detached": 1400000,
+      "semiTown": 998000,
+      "condoApt": 575000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Maple",
+     "sales": 287,
+     "medianPrice": 1095000,
+     "byType": {
+      "detached": 1287000,
+      "semiTown": 885000,
+      "condoApt": 615000,
+      "condoTown": 770000
+     }
+    },
+    {
+     "name": "East Woodbridge",
+     "sales": 200,
+     "medianPrice": 1150000,
+     "byType": {
+      "detached": 1349000,
+      "semiTown": 965000,
+      "condoApt": 614000,
+      "condoTown": 864000
+     }
+    },
+    {
+     "name": "Crestwood-Springfarm-Yorkhill",
+     "sales": 187,
+     "medianPrice": 864000,
+     "byType": {
+      "detached": 1373000,
+      "semiTown": null,
+      "condoApt": 619000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Kleinburg",
+     "sales": 169,
+     "medianPrice": 1612000,
+     "byType": {
+      "detached": 1725000,
+      "semiTown": 1050000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Brownridge",
+     "sales": 139,
+     "medianPrice": 925000,
+     "byType": {
+      "detached": 1260000,
+      "semiTown": null,
+      "condoApt": 618000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Concord",
+     "sales": 132,
+     "medianPrice": 520000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 520000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Beverley Glen",
+     "sales": 127,
+     "medianPrice": 650000,
+     "byType": {
+      "detached": 1774000,
+      "semiTown": null,
+      "condoApt": 510000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Vaughan Corporate Centre",
+     "sales": 121,
+     "medianPrice": 475000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 470000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "West Woodbridge",
+     "sales": 101,
+     "medianPrice": 1050000,
+     "byType": {
+      "detached": 1198000,
+      "semiTown": null,
+      "condoApt": 725000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rural Vaughan",
+     "sales": 56,
+     "medianPrice": 1038000,
+     "byType": {
+      "detached": 1725000,
+      "semiTown": null,
+      "condoApt": 597000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Islington Woods",
+     "sales": 55,
+     "medianPrice": 1800000,
+     "byType": {
+      "detached": 1955000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Sonoma Heights",
+     "sales": 53,
+     "medianPrice": 1281000,
+     "byType": {
+      "detached": 1300000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Vaughan Grove",
+     "sales": 45,
+     "medianPrice": 610000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 510000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Uplands",
+     "sales": 42,
+     "medianPrice": 1637000,
+     "byType": {
+      "detached": 1660000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Lakeview Estates",
+     "sales": 34,
+     "medianPrice": 885000,
+     "byType": {
+      "detached": 1040000,
+      "semiTown": null,
+      "condoApt": 525000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Glen Shields",
+     "sales": 34,
+     "medianPrice": 1008000,
+     "byType": {
+      "detached": 1045000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Richmond Hill",
+   "slug": "richmond-hill",
+   "all": {
+    "sales": 1752,
+    "medianPrice": 1130000,
+    "saleToAsk": 96.7,
+    "overAskShare": 24,
+    "medianDom": 24
+   },
+   "byType": {
+    "detached": {
+     "sales": 898,
+     "medianPrice": 1481000,
+     "saleToAsk": 96,
+     "overAskShare": 23,
+     "medianDom": 22
+    },
+    "semiTown": {
+     "sales": 366,
+     "medianPrice": 1049000,
+     "saleToAsk": 98.2,
+     "overAskShare": 35,
+     "medianDom": 22
+    },
+    "condoApt": {
+     "sales": 359,
+     "medianPrice": 531000,
+     "saleToAsk": 96.3,
+     "overAskShare": 14,
+     "medianDom": 29
+    },
+    "condoTown": {
+     "sales": 129,
+     "medianPrice": 691000,
+     "saleToAsk": 97.7,
+     "overAskShare": 22,
+     "medianDom": 31
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 19,
+     "medianPrice": 1222000
+    },
+    {
+     "beds": "3",
+     "sales": 211,
+     "medianPrice": 1140000
+    },
+    {
+     "beds": "4",
+     "sales": 562,
+     "medianPrice": 1530000
+    },
+    {
+     "beds": "5+",
+     "sales": 103,
+     "medianPrice": 2100000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Langstaff",
+     "sales": 196,
+     "medianPrice": 573000,
+     "byType": {
+      "detached": 2207000,
+      "semiTown": 1070000,
+      "condoApt": 515000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Jefferson",
+     "sales": 186,
+     "medianPrice": 1235000,
+     "byType": {
+      "detached": 1513000,
+      "semiTown": 1046000,
+      "condoApt": null,
+      "condoTown": 659000
+     }
+    },
+    {
+     "name": "Oak Ridges",
+     "sales": 170,
+     "medianPrice": 1243000,
+     "byType": {
+      "detached": 1410000,
+      "semiTown": 1000000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "North Richvale",
+     "sales": 137,
+     "medianPrice": 925000,
+     "byType": {
+      "detached": 1275000,
+      "semiTown": null,
+      "condoApt": 620000,
+      "condoTown": 775000
+     }
+    },
+    {
+     "name": "Rural Richmond Hill",
+     "sales": 134,
+     "medianPrice": 1076000,
+     "byType": {
+      "detached": 1819000,
+      "semiTown": 1090000,
+      "condoApt": 548000,
+      "condoTown": 620000
+     }
+    },
+    {
+     "name": "Oak Ridges Lake Wilcox",
+     "sales": 124,
+     "medianPrice": 1247000,
+     "byType": {
+      "detached": 1358000,
+      "semiTown": 1023000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rouge Woods",
+     "sales": 100,
+     "medianPrice": 1445000,
+     "byType": {
+      "detached": 1550000,
+      "semiTown": 982000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Westbrook",
+     "sales": 96,
+     "medianPrice": 1410000,
+     "byType": {
+      "detached": 1499000,
+      "semiTown": 1125000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Mill Pond",
+     "sales": 91,
+     "medianPrice": 1320000,
+     "byType": {
+      "detached": 1500000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Observatory",
+     "sales": 85,
+     "medianPrice": 735000,
+     "byType": {
+      "detached": 2059000,
+      "semiTown": null,
+      "condoApt": 527000,
+      "condoTown": 729000
+     }
+    },
+    {
+     "name": "Doncrest",
+     "sales": 83,
+     "medianPrice": 1190000,
+     "byType": {
+      "detached": 1715000,
+      "semiTown": null,
+      "condoApt": 525000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Devonsleigh",
+     "sales": 73,
+     "medianPrice": 1295000,
+     "byType": {
+      "detached": 1375000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Harding",
+     "sales": 72,
+     "medianPrice": 928000,
+     "byType": {
+      "detached": 1114000,
+      "semiTown": null,
+      "condoApt": 610000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Crosby",
+     "sales": 72,
+     "medianPrice": 995000,
+     "byType": {
+      "detached": 1013000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "South Richvale",
+     "sales": 68,
+     "medianPrice": 1437000,
+     "byType": {
+      "detached": 1845000,
+      "semiTown": null,
+      "condoApt": 557000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bayview Hill",
+     "sales": 48,
+     "medianPrice": 2445000,
+     "byType": {
+      "detached": 2450000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Oshawa",
+   "slug": "oshawa",
+   "all": {
+    "sales": 1464,
+    "medianPrice": 691000,
+    "saleToAsk": 98.1,
+    "overAskShare": 24,
+    "medianDom": 19
+   },
+   "byType": {
+    "detached": {
+     "sales": 1127,
+     "medianPrice": 733000,
+     "saleToAsk": 98.2,
+     "overAskShare": 27,
+     "medianDom": 16
+    },
+    "semiTown": {
+     "sales": 133,
+     "medianPrice": 660000,
+     "saleToAsk": 97.8,
+     "overAskShare": 18,
+     "medianDom": 26
+    },
+    "condoApt": {
+     "sales": 81,
+     "medianPrice": 340000,
+     "saleToAsk": 96.1,
+     "overAskShare": 9,
+     "medianDom": 43
+    },
+    "condoTown": {
+     "sales": 123,
+     "medianPrice": 522000,
+     "saleToAsk": 98,
+     "overAskShare": 20,
+     "medianDom": 24
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 176,
+     "medianPrice": 627000
+    },
+    {
+     "beds": "3",
+     "sales": 582,
+     "medianPrice": 705000
+    },
+    {
+     "beds": "4",
+     "sales": 327,
+     "medianPrice": 940000
+    },
+    {
+     "beds": "5+",
+     "sales": 32,
+     "medianPrice": 1050000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Windfields",
+     "sales": 157,
+     "medianPrice": 650000,
+     "byType": {
+      "detached": 955000,
+      "semiTown": 673000,
+      "condoApt": 353000,
+      "condoTown": 563000
+     }
+    },
+    {
+     "name": "O'Neill",
+     "sales": 127,
+     "medianPrice": 636000,
+     "byType": {
+      "detached": 670000,
+      "semiTown": null,
+      "condoApt": 348000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Taunton",
+     "sales": 126,
+     "medianPrice": 964000,
+     "byType": {
+      "detached": 978000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "McLaughlin",
+     "sales": 122,
+     "medianPrice": 684000,
+     "byType": {
+      "detached": 694000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Donevan",
+     "sales": 121,
+     "medianPrice": 662000,
+     "byType": {
+      "detached": 662000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Samac",
+     "sales": 120,
+     "medianPrice": 725000,
+     "byType": {
+      "detached": 819000,
+      "semiTown": 695000,
+      "condoApt": null,
+      "condoTown": 517000
+     }
+    },
+    {
+     "name": "Centennial",
+     "sales": 115,
+     "medianPrice": 695000,
+     "byType": {
+      "detached": 725000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 465000
+     }
+    },
+    {
+     "name": "Eastdale",
+     "sales": 112,
+     "medianPrice": 793000,
+     "byType": {
+      "detached": 830000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Pinecrest",
+     "sales": 106,
+     "medianPrice": 755000,
+     "byType": {
+      "detached": 785000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Central",
+     "sales": 99,
+     "medianPrice": 548000,
+     "byType": {
+      "detached": 576000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Lakeview",
+     "sales": 88,
+     "medianPrice": 584000,
+     "byType": {
+      "detached": 609000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Vanier",
+     "sales": 78,
+     "medianPrice": 534000,
+     "byType": {
+      "detached": 530000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Northglen",
+     "sales": 44,
+     "medianPrice": 844000,
+     "byType": {
+      "detached": 844000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Kedron",
+     "sales": 37,
+     "medianPrice": 928000,
+     "byType": {
+      "detached": 1045000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Whitby",
+   "slug": "whitby",
+   "all": {
+    "sales": 1266,
+    "medianPrice": 870000,
+    "saleToAsk": 98.1,
+    "overAskShare": 24,
+    "medianDom": 16
+   },
+   "byType": {
+    "detached": {
+     "sales": 814,
+     "medianPrice": 978000,
+     "saleToAsk": 97.9,
+     "overAskShare": 24,
+     "medianDom": 15
+    },
+    "semiTown": {
+     "sales": 302,
+     "medianPrice": 785000,
+     "saleToAsk": 98.4,
+     "overAskShare": 28,
+     "medianDom": 16
+    },
+    "condoApt": {
+     "sales": 90,
+     "medianPrice": 554000,
+     "saleToAsk": 97.8,
+     "overAskShare": 8,
+     "medianDom": 28
+    },
+    "condoTown": {
+     "sales": 60,
+     "medianPrice": 618000,
+     "saleToAsk": 98.1,
+     "overAskShare": 30,
+     "medianDom": 21
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 46,
+     "medianPrice": 840000
+    },
+    {
+     "beds": "3",
+     "sales": 315,
+     "medianPrice": 860000
+    },
+    {
+     "beds": "4",
+     "sales": 419,
+     "medianPrice": 1099000
+    },
+    {
+     "beds": "5+",
+     "sales": 30,
+     "medianPrice": 1315000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Brooklin",
+     "sales": 233,
+     "medianPrice": 935000,
+     "byType": {
+      "detached": 1122000,
+      "semiTown": 786000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Pringle Creek",
+     "sales": 191,
+     "medianPrice": 775000,
+     "byType": {
+      "detached": 991000,
+      "semiTown": 750000,
+      "condoApt": 485000,
+      "condoTown": 630000
+     }
+    },
+    {
+     "name": "Williamsburg",
+     "sales": 133,
+     "medianPrice": 915000,
+     "byType": {
+      "detached": 990000,
+      "semiTown": 780000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rolling Acres",
+     "sales": 120,
+     "medianPrice": 903000,
+     "byType": {
+      "detached": 943000,
+      "semiTown": 750000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rural Whitby",
+     "sales": 111,
+     "medianPrice": 1019000,
+     "byType": {
+      "detached": 1205000,
+      "semiTown": 839000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Port Whitby",
+     "sales": 107,
+     "medianPrice": 770000,
+     "byType": {
+      "detached": 980000,
+      "semiTown": 780000,
+      "condoApt": 595000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Downtown Whitby",
+     "sales": 104,
+     "medianPrice": 765000,
+     "byType": {
+      "detached": 800000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Blue Grass Meadows",
+     "sales": 101,
+     "medianPrice": 875000,
+     "byType": {
+      "detached": 917000,
+      "semiTown": 745000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Lynde Creek",
+     "sales": 95,
+     "medianPrice": 830000,
+     "byType": {
+      "detached": 908000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Taunton North",
+     "sales": 71,
+     "medianPrice": 865000,
+     "byType": {
+      "detached": 987000,
+      "semiTown": 780000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Ajax",
+   "slug": "ajax",
+   "all": {
+    "sales": 852,
+    "medianPrice": 841000,
+    "saleToAsk": 98.1,
+    "overAskShare": 28,
+    "medianDom": 17
+   },
+   "byType": {
+    "detached": {
+     "sales": 604,
+     "medianPrice": 926000,
+     "saleToAsk": 98,
+     "overAskShare": 30,
+     "medianDom": 16
+    },
+    "semiTown": {
+     "sales": 145,
+     "medianPrice": 750000,
+     "saleToAsk": 98.4,
+     "overAskShare": 24,
+     "medianDom": 16
+    },
+    "condoApt": {
+     "sales": 50,
+     "medianPrice": 443000,
+     "saleToAsk": 97,
+     "overAskShare": 10,
+     "medianDom": 29
+    },
+    "condoTown": {
+     "sales": 53,
+     "medianPrice": 625000,
+     "saleToAsk": 98.4,
+     "overAskShare": 30,
+     "medianDom": 23
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 29,
+     "medianPrice": 725000
+    },
+    {
+     "beds": "3",
+     "sales": 264,
+     "medianPrice": 820000
+    },
+    {
+     "beds": "4",
+     "sales": 286,
+     "medianPrice": 1054000
+    },
+    {
+     "beds": "5+",
+     "sales": 25,
+     "medianPrice": 1285000
+    }
+   ],
+   "communities": [
+    {
+     "name": "South East",
+     "sales": 201,
+     "medianPrice": 799000,
+     "byType": {
+      "detached": 855000,
+      "semiTown": 792000,
+      "condoApt": 433000,
+      "condoTown": 586000
+     }
+    },
+    {
+     "name": "Central West",
+     "sales": 152,
+     "medianPrice": 885000,
+     "byType": {
+      "detached": 945000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Central",
+     "sales": 147,
+     "medianPrice": 785000,
+     "byType": {
+      "detached": 820000,
+      "semiTown": 690000,
+      "condoApt": null,
+      "condoTown": 668000
+     }
+    },
+    {
+     "name": "Northwest Ajax",
+     "sales": 114,
+     "medianPrice": 1019000,
+     "byType": {
+      "detached": 1090000,
+      "semiTown": 786000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Northeast Ajax",
+     "sales": 92,
+     "medianPrice": 1030000,
+     "byType": {
+      "detached": 1099000,
+      "semiTown": 738000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "South West",
+     "sales": 87,
+     "medianPrice": 725000,
+     "byType": {
+      "detached": 855000,
+      "semiTown": 701000,
+      "condoApt": 445000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Central East",
+     "sales": 59,
+     "medianPrice": 799000,
+     "byType": {
+      "detached": 948000,
+      "semiTown": 675000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Pickering",
+   "slug": "pickering",
+   "all": {
+    "sales": 1021,
+    "medianPrice": 860000,
+    "saleToAsk": 97.9,
+    "overAskShare": 24,
+    "medianDom": 20
+   },
+   "byType": {
+    "detached": {
+     "sales": 574,
+     "medianPrice": 1039000,
+     "saleToAsk": 97.6,
+     "overAskShare": 23,
+     "medianDom": 18
+    },
+    "semiTown": {
+     "sales": 170,
+     "medianPrice": 790000,
+     "saleToAsk": 99,
+     "overAskShare": 29,
+     "medianDom": 18
+    },
+    "condoApt": {
+     "sales": 127,
+     "medianPrice": 470000,
+     "saleToAsk": 97.2,
+     "overAskShare": 14,
+     "medianDom": 23
+    },
+    "condoTown": {
+     "sales": 150,
+     "medianPrice": 608000,
+     "saleToAsk": 98.5,
+     "overAskShare": 28,
+     "medianDom": 23
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 19,
+     "medianPrice": 950000
+    },
+    {
+     "beds": "3",
+     "sales": 220,
+     "medianPrice": 911000
+    },
+    {
+     "beds": "4",
+     "sales": 303,
+     "medianPrice": 1130000
+    },
+    {
+     "beds": "5+",
+     "sales": 32,
+     "medianPrice": 1440000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Rural Pickering",
+     "sales": 205,
+     "medianPrice": 940000,
+     "byType": {
+      "detached": 1152000,
+      "semiTown": 840000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bay Ridges",
+     "sales": 134,
+     "medianPrice": 670000,
+     "byType": {
+      "detached": 830000,
+      "semiTown": 755000,
+      "condoApt": 455000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Liverpool",
+     "sales": 113,
+     "medianPrice": 955000,
+     "byType": {
+      "detached": 1038000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Duffin Heights",
+     "sales": 87,
+     "medianPrice": 620000,
+     "byType": {
+      "detached": null,
+      "semiTown": 806000,
+      "condoApt": null,
+      "condoTown": 580000
+     }
+    },
+    {
+     "name": "Amberlea",
+     "sales": 85,
+     "medianPrice": 975000,
+     "byType": {
+      "detached": 992000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Town Centre",
+     "sales": 76,
+     "medianPrice": 548000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 510000,
+      "condoTown": 546000
+     }
+    },
+    {
+     "name": "West Shore",
+     "sales": 65,
+     "medianPrice": 858000,
+     "byType": {
+      "detached": 880000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Village East",
+     "sales": 55,
+     "medianPrice": 640000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 423000,
+      "condoTown": 650000
+     }
+    },
+    {
+     "name": "Highbush",
+     "sales": 47,
+     "medianPrice": 1000000,
+     "byType": {
+      "detached": 1135000,
+      "semiTown": 800000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Brock Ridge",
+     "sales": 46,
+     "medianPrice": 939000,
+     "byType": {
+      "detached": 955000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Dunbarton",
+     "sales": 26,
+     "medianPrice": 1246000,
+     "byType": {
+      "detached": 1246000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Oakville",
+   "slug": "oakville",
+   "all": {
+    "sales": 2164,
+    "medianPrice": 1280000,
+    "saleToAsk": 96.3,
+    "overAskShare": 10,
+    "medianDom": 25
+   },
+   "byType": {
+    "detached": {
+     "sales": 1223,
+     "medianPrice": 1620000,
+     "saleToAsk": 95.7,
+     "overAskShare": 10,
+     "medianDom": 23
+    },
+    "semiTown": {
+     "sales": 398,
+     "medianPrice": 1010000,
+     "saleToAsk": 96.9,
+     "overAskShare": 14,
+     "medianDom": 20
+    },
+    "condoApt": {
+     "sales": 359,
+     "medianPrice": 523000,
+     "saleToAsk": 96.8,
+     "overAskShare": 7,
+     "medianDom": 34
+    },
+    "condoTown": {
+     "sales": 184,
+     "medianPrice": 700000,
+     "saleToAsk": 97.2,
+     "overAskShare": 10,
+     "medianDom": 31
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 35,
+     "medianPrice": 1350000
+    },
+    {
+     "beds": "3",
+     "sales": 341,
+     "medianPrice": 1290000
+    },
+    {
+     "beds": "4",
+     "sales": 735,
+     "medianPrice": 1730000
+    },
+    {
+     "beds": "5+",
+     "sales": 109,
+     "medianPrice": 1950000
+    }
+   ],
+   "communities": [
+    {
+     "name": "1015 - RO River Oaks",
+     "sales": 248,
+     "medianPrice": 930000,
+     "byType": {
+      "detached": 1452000,
+      "semiTown": 950000,
+      "condoApt": 490000,
+      "condoTown": 605000
+     }
+    },
+    {
+     "name": "1008 - GO Glenorchy",
+     "sales": 221,
+     "medianPrice": 1050000,
+     "byType": {
+      "detached": 1722000,
+      "semiTown": 990000,
+      "condoApt": 491000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1019 - WM Westmount",
+     "sales": 206,
+     "medianPrice": 1069000,
+     "byType": {
+      "detached": 1538000,
+      "semiTown": 948000,
+      "condoApt": 445000,
+      "condoTown": 592000
+     }
+    },
+    {
+     "name": "1007 - GA Glen Abbey",
+     "sales": 197,
+     "medianPrice": 1398000,
+     "byType": {
+      "detached": 1728000,
+      "semiTown": 1105000,
+      "condoApt": 524000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1001 - BR Bronte",
+     "sales": 189,
+     "medianPrice": 1338000,
+     "byType": {
+      "detached": 1615000,
+      "semiTown": 1280000,
+      "condoApt": 845000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1020 - WO West",
+     "sales": 154,
+     "medianPrice": 1337000,
+     "byType": {
+      "detached": 1323000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1010 - JM Joshua Meadows",
+     "sales": 118,
+     "medianPrice": 895000,
+     "byType": {
+      "detached": 1645000,
+      "semiTown": 990000,
+      "condoApt": 490000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1022 - WT West Oak Trails",
+     "sales": 94,
+     "medianPrice": 1215000,
+     "byType": {
+      "detached": 1450000,
+      "semiTown": 968000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1005 - FA Falgarwood",
+     "sales": 84,
+     "medianPrice": 940000,
+     "byType": {
+      "detached": 1350000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 657000
+     }
+    },
+    {
+     "name": "1002 - CO Central",
+     "sales": 82,
+     "medianPrice": 1038000,
+     "byType": {
+      "detached": 1338000,
+      "semiTown": null,
+      "condoApt": 525000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1009 - JC Joshua Creek",
+     "sales": 81,
+     "medianPrice": 1735000,
+     "byType": {
+      "detached": 2080000,
+      "semiTown": 1317000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1003 - CP College Park",
+     "sales": 78,
+     "medianPrice": 975000,
+     "byType": {
+      "detached": 1270000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 705000
+     }
+    },
+    {
+     "name": "1006 - FD Ford",
+     "sales": 69,
+     "medianPrice": 1880000,
+     "byType": {
+      "detached": 1880000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1013 - OO Old Oakville",
+     "sales": 68,
+     "medianPrice": 2161000,
+     "byType": {
+      "detached": 2500000,
+      "semiTown": null,
+      "condoApt": 860000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1000 - BC Bronte Creek",
+     "sales": 67,
+     "medianPrice": 1450000,
+     "byType": {
+      "detached": 1765000,
+      "semiTown": 1109000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1011 - MO Morrison",
+     "sales": 60,
+     "medianPrice": 3149000,
+     "byType": {
+      "detached": 3149000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1018 - WC Wedgewood Creek",
+     "sales": 54,
+     "medianPrice": 1289000,
+     "byType": {
+      "detached": 1475000,
+      "semiTown": 925000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1004 - CV Clearview",
+     "sales": 39,
+     "medianPrice": 1497000,
+     "byType": {
+      "detached": 1575000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1017 - SW Southwest",
+     "sales": 34,
+     "medianPrice": 2660000,
+     "byType": {
+      "detached": 2660000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Burlington",
+   "slug": "burlington",
+   "all": {
+    "sales": 2034,
+    "medianPrice": 942000,
+    "saleToAsk": 97.3,
+    "overAskShare": 14,
+    "medianDom": 22
+   },
+   "byType": {
+    "detached": {
+     "sales": 1090,
+     "medianPrice": 1230000,
+     "saleToAsk": 97.2,
+     "overAskShare": 17,
+     "medianDom": 18
+    },
+    "semiTown": {
+     "sales": 184,
+     "medianPrice": 852000,
+     "saleToAsk": 98,
+     "overAskShare": 20,
+     "medianDom": 19
+    },
+    "condoApt": {
+     "sales": 382,
+     "medianPrice": 528000,
+     "saleToAsk": 96.6,
+     "overAskShare": 6,
+     "medianDom": 34
+    },
+    "condoTown": {
+     "sales": 378,
+     "medianPrice": 695000,
+     "saleToAsk": 97.5,
+     "overAskShare": 11,
+     "medianDom": 28
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 85,
+     "medianPrice": 1100000
+    },
+    {
+     "beds": "3",
+     "sales": 555,
+     "medianPrice": 1080000
+    },
+    {
+     "beds": "4",
+     "sales": 388,
+     "medianPrice": 1450000
+    },
+    {
+     "beds": "5+",
+     "sales": 56,
+     "medianPrice": 1748000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Brant",
+     "sales": 293,
+     "medianPrice": 933000,
+     "byType": {
+      "detached": 1200000,
+      "semiTown": null,
+      "condoApt": 705000,
+      "condoTown": 674000
+     }
+    },
+    {
+     "name": "Appleby",
+     "sales": 230,
+     "medianPrice": 913000,
+     "byType": {
+      "detached": 1100000,
+      "semiTown": 833000,
+      "condoApt": 615000,
+      "condoTown": 726000
+     }
+    },
+    {
+     "name": "Roseland",
+     "sales": 153,
+     "medianPrice": 1015000,
+     "byType": {
+      "detached": 1467000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 670000
+     }
+    },
+    {
+     "name": "Headon",
+     "sales": 145,
+     "medianPrice": 940000,
+     "byType": {
+      "detached": 1200000,
+      "semiTown": null,
+      "condoApt": 412000,
+      "condoTown": 740000
+     }
+    },
+    {
+     "name": "Shoreacres",
+     "sales": 141,
+     "medianPrice": 1283000,
+     "byType": {
+      "detached": 1451000,
+      "semiTown": 730000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "LaSalle",
+     "sales": 132,
+     "medianPrice": 925000,
+     "byType": {
+      "detached": 1260000,
+      "semiTown": null,
+      "condoApt": 453000,
+      "condoTown": 680000
+     }
+    },
+    {
+     "name": "Brant Hills",
+     "sales": 111,
+     "medianPrice": 910000,
+     "byType": {
+      "detached": 1134000,
+      "semiTown": null,
+      "condoApt": 530000,
+      "condoTown": 560000
+     }
+    },
+    {
+     "name": "Alton",
+     "sales": 107,
+     "medianPrice": 1250000,
+     "byType": {
+      "detached": 1340000,
+      "semiTown": 865000,
+      "condoApt": 418000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Orchard",
+     "sales": 106,
+     "medianPrice": 1050000,
+     "byType": {
+      "detached": 1200000,
+      "semiTown": 940000,
+      "condoApt": 418000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rose",
+     "sales": 104,
+     "medianPrice": 1063000,
+     "byType": {
+      "detached": 1589000,
+      "semiTown": 950000,
+      "condoApt": null,
+      "condoTown": 838000
+     }
+    },
+    {
+     "name": "Mountainside",
+     "sales": 103,
+     "medianPrice": 825000,
+     "byType": {
+      "detached": 899000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 620000
+     }
+    },
+    {
+     "name": "Tansley",
+     "sales": 76,
+     "medianPrice": 565000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 446000,
+      "condoTown": 860000
+     }
+    },
+    {
+     "name": "Tyandaga",
+     "sales": 72,
+     "medianPrice": 1233000,
+     "byType": {
+      "detached": 1539000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 659000
+     }
+    },
+    {
+     "name": "Palmer",
+     "sales": 65,
+     "medianPrice": 893000,
+     "byType": {
+      "detached": 944000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Uptown",
+     "sales": 61,
+     "medianPrice": 635000,
+     "byType": {
+      "detached": null,
+      "semiTown": 848000,
+      "condoApt": 535000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bayview",
+     "sales": 48,
+     "medianPrice": 1213000,
+     "byType": {
+      "detached": 1632000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Freeman",
+     "sales": 42,
+     "medianPrice": 735000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rural Burlington",
+     "sales": 38,
+     "medianPrice": 1838000,
+     "byType": {
+      "detached": 1838000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Milton",
+   "slug": "milton",
+   "all": {
+    "sales": 1188,
+    "medianPrice": 901000,
+    "saleToAsk": 97.6,
+    "overAskShare": 15,
+    "medianDom": 21
+   },
+   "byType": {
+    "detached": {
+     "sales": 611,
+     "medianPrice": 1130000,
+     "saleToAsk": 97.2,
+     "overAskShare": 14,
+     "medianDom": 20
+    },
+    "semiTown": {
+     "sales": 407,
+     "medianPrice": 810000,
+     "saleToAsk": 98,
+     "overAskShare": 16,
+     "medianDom": 21
+    },
+    "condoApt": {
+     "sales": 115,
+     "medianPrice": 518000,
+     "saleToAsk": 97.4,
+     "overAskShare": 15,
+     "medianDom": 35
+    },
+    "condoTown": {
+     "sales": 55,
+     "medianPrice": 630000,
+     "saleToAsk": 97.7,
+     "overAskShare": 15,
+     "medianDom": 31
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 21,
+     "medianPrice": 933000
+    },
+    {
+     "beds": "3",
+     "sales": 214,
+     "medianPrice": 986000
+    },
+    {
+     "beds": "4",
+     "sales": 340,
+     "medianPrice": 1192000
+    },
+    {
+     "beds": "5+",
+     "sales": 34,
+     "medianPrice": 1556000
+    }
+   ],
+   "communities": [
+    {
+     "name": "1023 - BE Beaty",
+     "sales": 131,
+     "medianPrice": 973000,
+     "byType": {
+      "detached": 1138000,
+      "semiTown": 800000,
+      "condoApt": 520000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1027 - CL Clarke",
+     "sales": 119,
+     "medianPrice": 868000,
+     "byType": {
+      "detached": 1110000,
+      "semiTown": 828000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1038 - WI Willmott",
+     "sales": 106,
+     "medianPrice": 833000,
+     "byType": {
+      "detached": 1073000,
+      "semiTown": 800000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1029 - DE Dempsey",
+     "sales": 98,
+     "medianPrice": 773000,
+     "byType": {
+      "detached": 1053000,
+      "semiTown": 787000,
+      "condoApt": 490000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1033 - HA Harrison",
+     "sales": 93,
+     "medianPrice": 870000,
+     "byType": {
+      "detached": 1055000,
+      "semiTown": 742000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1032 - FO Ford",
+     "sales": 88,
+     "medianPrice": 925000,
+     "byType": {
+      "detached": 1220000,
+      "semiTown": 859000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1028 - CO Coates",
+     "sales": 77,
+     "medianPrice": 850000,
+     "byType": {
+      "detached": 1130000,
+      "semiTown": 810000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1037 - TM Timberlea",
+     "sales": 76,
+     "medianPrice": 893000,
+     "byType": {
+      "detached": 1075000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 650000
+     }
+    },
+    {
+     "name": "1035 - OM Old Milton",
+     "sales": 76,
+     "medianPrice": 810000,
+     "byType": {
+      "detached": 975000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 615000
+     }
+    },
+    {
+     "name": "1036 - SC Scott",
+     "sales": 73,
+     "medianPrice": 1122000,
+     "byType": {
+      "detached": 1266000,
+      "semiTown": 861000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1026 - CB Cobban",
+     "sales": 62,
+     "medianPrice": 1018000,
+     "byType": {
+      "detached": 1216000,
+      "semiTown": 795000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1051 - Walker",
+     "sales": 40,
+     "medianPrice": 958000,
+     "byType": {
+      "detached": 1270000,
+      "semiTown": 884000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1031 - DP Dorset Park",
+     "sales": 38,
+     "medianPrice": 855000,
+     "byType": {
+      "detached": 913000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1025 - BW Bowes",
+     "sales": 33,
+     "medianPrice": 1040000,
+     "byType": {
+      "detached": 1238000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Hamilton",
+   "slug": "hamilton",
+   "all": {
+    "sales": 4093,
+    "medianPrice": 680000,
+    "saleToAsk": 97,
+    "overAskShare": 12,
+    "medianDom": 28
+   },
+   "byType": {
+    "detached": {
+     "sales": 2928,
+     "medianPrice": 740000,
+     "saleToAsk": 97,
+     "overAskShare": 13,
+     "medianDom": 25
+    },
+    "semiTown": {
+     "sales": 458,
+     "medianPrice": 664000,
+     "saleToAsk": 97.5,
+     "overAskShare": 9,
+     "medianDom": 28
+    },
+    "condoApt": {
+     "sales": 317,
+     "medianPrice": 375000,
+     "saleToAsk": 96,
+     "overAskShare": 5,
+     "medianDom": 45
+    },
+    "condoTown": {
+     "sales": 390,
+     "medianPrice": 556000,
+     "saleToAsk": 97.3,
+     "overAskShare": 13,
+     "medianDom": 36
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 428,
+     "medianPrice": 550000
+    },
+    {
+     "beds": "3",
+     "sales": 1597,
+     "medianPrice": 713000
+    },
+    {
+     "beds": "4",
+     "sales": 738,
+     "medianPrice": 963000
+    },
+    {
+     "beds": "5+",
+     "sales": 142,
+     "medianPrice": 915000
+    }
+   ],
+   "communities": [
+    {
+     "name": "Waterdown",
+     "sales": 278,
+     "medianPrice": 920000,
+     "byType": {
+      "detached": 1130000,
+      "semiTown": 786000,
+      "condoApt": 425000,
+      "condoTown": 664000
+     }
+    },
+    {
+     "name": "Ancaster",
+     "sales": 254,
+     "medianPrice": 1025000,
+     "byType": {
+      "detached": 1180000,
+      "semiTown": 680000,
+      "condoApt": null,
+      "condoTown": 640000
+     }
+    },
+    {
+     "name": "Stoney Creek",
+     "sales": 243,
+     "medianPrice": 705000,
+     "byType": {
+      "detached": 799000,
+      "semiTown": 650000,
+      "condoApt": 400000,
+      "condoTown": 530000
+     }
+    },
+    {
+     "name": "Stoney Creek Mountain",
+     "sales": 198,
+     "medianPrice": 712000,
+     "byType": {
+      "detached": 835000,
+      "semiTown": 655000,
+      "condoApt": null,
+      "condoTown": 550000
+     }
+    },
+    {
+     "name": "Dundas",
+     "sales": 156,
+     "medianPrice": 836000,
+     "byType": {
+      "detached": 953000,
+      "semiTown": null,
+      "condoApt": 640000,
+      "condoTown": 575000
+     }
+    },
+    {
+     "name": "Binbrook",
+     "sales": 127,
+     "medianPrice": 700000,
+     "byType": {
+      "detached": 838000,
+      "semiTown": 623000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rural Glanbrook",
+     "sales": 116,
+     "medianPrice": 787000,
+     "byType": {
+      "detached": 885000,
+      "semiTown": 669000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Meadowlands",
+     "sales": 114,
+     "medianPrice": 925000,
+     "byType": {
+      "detached": 1105000,
+      "semiTown": 728000,
+      "condoApt": null,
+      "condoTown": 700000
+     }
+    },
+    {
+     "name": "Crown Point",
+     "sales": 113,
+     "medianPrice": 465000,
+     "byType": {
+      "detached": 467000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Lakeshore",
+     "sales": 76,
+     "medianPrice": 560000,
+     "byType": {
+      "detached": null,
+      "semiTown": 663000,
+      "condoApt": 393000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Homeside",
+     "sales": 72,
+     "medianPrice": 447000,
+     "byType": {
+      "detached": 447000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Ainslie Wood",
+     "sales": 68,
+     "medianPrice": 653000,
+     "byType": {
+      "detached": 700000,
+      "semiTown": null,
+      "condoApt": 328000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rural Flamborough",
+     "sales": 67,
+     "medianPrice": 1100000,
+     "byType": {
+      "detached": 1100000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Delta",
+     "sales": 63,
+     "medianPrice": 640000,
+     "byType": {
+      "detached": 640000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "McQuesten",
+     "sales": 59,
+     "medianPrice": 525000,
+     "byType": {
+      "detached": 535000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Westdale",
+     "sales": 56,
+     "medianPrice": 813000,
+     "byType": {
+      "detached": 815000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Kirkendall",
+     "sales": 54,
+     "medianPrice": 762000,
+     "byType": {
+      "detached": 827000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Vincent",
+     "sales": 52,
+     "medianPrice": 415000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 285000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Stipley",
+     "sales": 48,
+     "medianPrice": 498000,
+     "byType": {
+      "detached": 501000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Mount Hope",
+     "sales": 47,
+     "medianPrice": 775000,
+     "byType": {
+      "detached": 811000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Eastmount",
+     "sales": 46,
+     "medianPrice": 555000,
+     "byType": {
+      "detached": 555000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Inch Park",
+     "sales": 46,
+     "medianPrice": 585000,
+     "byType": {
+      "detached": 585000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Durand",
+     "sales": 45,
+     "medianPrice": 490000,
+     "byType": {
+      "detached": 1130000,
+      "semiTown": null,
+      "condoApt": 348000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Mountview",
+     "sales": 44,
+     "medianPrice": 730000,
+     "byType": {
+      "detached": 810000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Westcliffe",
+     "sales": 42,
+     "medianPrice": 687000,
+     "byType": {
+      "detached": 687000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Huntington",
+     "sales": 38,
+     "medianPrice": 650000,
+     "byType": {
+      "detached": 650000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Raleigh",
+     "sales": 38,
+     "medianPrice": 573000,
+     "byType": {
+      "detached": 577000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Normanhurst",
+     "sales": 37,
+     "medianPrice": 448000,
+     "byType": {
+      "detached": 448000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Rosedale",
+     "sales": 35,
+     "medianPrice": 625000,
+     "byType": {
+      "detached": 625000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Parkview",
+     "sales": 35,
+     "medianPrice": 485000,
+     "byType": {
+      "detached": 477000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Beasley",
+     "sales": 35,
+     "medianPrice": 390000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 327000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Winona Park",
+     "sales": 34,
+     "medianPrice": 888000,
+     "byType": {
+      "detached": 960000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Industrial Sector",
+     "sales": 32,
+     "medianPrice": 397000,
+     "byType": {
+      "detached": 395000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Strathcona",
+     "sales": 31,
+     "medianPrice": 500000,
+     "byType": {
+      "detached": 525000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Bartonville",
+     "sales": 31,
+     "medianPrice": 575000,
+     "byType": {
+      "detached": 578000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "St. Clair",
+     "sales": 30,
+     "medianPrice": 665000,
+     "byType": {
+      "detached": 665000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Corktown",
+     "sales": 30,
+     "medianPrice": 318000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 252000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Hill Park",
+     "sales": 29,
+     "medianPrice": 600000,
+     "byType": {
+      "detached": 591000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Gibson",
+     "sales": 28,
+     "medianPrice": 467000,
+     "byType": {
+      "detached": 475000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "North End",
+     "sales": 28,
+     "medianPrice": 600000,
+     "byType": {
+      "detached": 606000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Centremount",
+     "sales": 27,
+     "medianPrice": 630000,
+     "byType": {
+      "detached": 630000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Gourley",
+     "sales": 26,
+     "medianPrice": 788000,
+     "byType": {
+      "detached": 850000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Red Hill",
+     "sales": 26,
+     "medianPrice": 560000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Barnstown",
+     "sales": 25,
+     "medianPrice": 781000,
+     "byType": {
+      "detached": 792000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "Central",
+     "sales": 25,
+     "medianPrice": 435000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  },
+  {
+   "city": "Ottawa",
+   "slug": "ottawa",
+   "all": {
+    "sales": 9513,
+    "medianPrice": 639000,
+    "saleToAsk": 98.2,
+    "overAskShare": 13,
+    "medianDom": 23
+   },
+   "byType": {
+    "detached": {
+     "sales": 4497,
+     "medianPrice": 825000,
+     "saleToAsk": 98.1,
+     "overAskShare": 17,
+     "medianDom": 21
+    },
+    "semiTown": {
+     "sales": 2515,
+     "medianPrice": 598000,
+     "saleToAsk": 98.7,
+     "overAskShare": 12,
+     "medianDom": 22
+    },
+    "condoApt": {
+     "sales": 1442,
+     "medianPrice": 375000,
+     "saleToAsk": 97.4,
+     "overAskShare": 7,
+     "medianDom": 35
+    },
+    "condoTown": {
+     "sales": 1059,
+     "medianPrice": 393000,
+     "saleToAsk": 97.9,
+     "overAskShare": 10,
+     "medianDom": 28
+    }
+   },
+   "detachedByBeds": [
+    {
+     "beds": "2",
+     "sales": 401,
+     "medianPrice": 725000
+    },
+    {
+     "beds": "3",
+     "sales": 2090,
+     "medianPrice": 745000
+    },
+    {
+     "beds": "4",
+     "sales": 1710,
+     "medianPrice": 900000
+    },
+    {
+     "beds": "5+",
+     "sales": 265,
+     "medianPrice": 1115000
+    }
+   ],
+   "communities": [
+    {
+     "name": "9010 - Kanata - Emerald Meadows/Trailwest",
+     "sales": 415,
+     "medianPrice": 622000,
+     "byType": {
+      "detached": 863000,
+      "semiTown": 600000,
+      "condoApt": 400000,
+      "condoTown": 414000
+     }
+    },
+    {
+     "name": "7711 - Barrhaven - Half Moon Bay",
+     "sales": 332,
+     "medianPrice": 631000,
+     "byType": {
+      "detached": 828000,
+      "semiTown": 565000,
+      "condoApt": null,
+      "condoTown": 400000
+     }
+    },
+    {
+     "name": "2602 - Riverside South/Gloucester Glen",
+     "sales": 234,
+     "medianPrice": 691000,
+     "byType": {
+      "detached": 904000,
+      "semiTown": 648000,
+      "condoApt": null,
+      "condoTown": 429000
+     }
+    },
+    {
+     "name": "9008 - Kanata - Morgan's Grant/South March",
+     "sales": 194,
+     "medianPrice": 618000,
+     "byType": {
+      "detached": 900000,
+      "semiTown": 592000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7706 - Barrhaven - Longfields",
+     "sales": 181,
+     "medianPrice": 603000,
+     "byType": {
+      "detached": 779000,
+      "semiTown": 578000,
+      "condoApt": null,
+      "condoTown": 393000
+     }
+    },
+    {
+     "name": "1118 - Avalon East",
+     "sales": 175,
+     "medianPrice": 609000,
+     "byType": {
+      "detached": 875000,
+      "semiTown": 586000,
+      "condoApt": null,
+      "condoTown": 391000
+     }
+    },
+    {
+     "name": "2605 - Blossom Park/Kemp Park/Findlay Creek",
+     "sales": 174,
+     "medianPrice": 661000,
+     "byType": {
+      "detached": 913000,
+      "semiTown": 624000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "9007 - Kanata - Kanata Lakes/Heritage Hills",
+     "sales": 164,
+     "medianPrice": 772000,
+     "byType": {
+      "detached": 993000,
+      "semiTown": 648000,
+      "condoApt": 515000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1117 - Avalon West",
+     "sales": 155,
+     "medianPrice": 606000,
+     "byType": {
+      "detached": 805000,
+      "semiTown": 596000,
+      "condoApt": 320000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "8211 - Stittsville (North)",
+     "sales": 153,
+     "medianPrice": 648000,
+     "byType": {
+      "detached": 783000,
+      "semiTown": 588000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4102 - Ottawa Centre",
+     "sales": 149,
+     "medianPrice": 415000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 415000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "9004 - Kanata - Bridlewood",
+     "sales": 147,
+     "medianPrice": 740000,
+     "byType": {
+      "detached": 810000,
+      "semiTown": 590000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "8203 - Stittsville (South)",
+     "sales": 145,
+     "medianPrice": 785000,
+     "byType": {
+      "detached": 875000,
+      "semiTown": 646000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "8202 - Stittsville (Central)",
+     "sales": 123,
+     "medianPrice": 760000,
+     "byType": {
+      "detached": 897000,
+      "semiTown": 605000,
+      "condoApt": null,
+      "condoTown": 575000
+     }
+    },
+    {
+     "name": "9002 - Kanata - Katimavik",
+     "sales": 116,
+     "medianPrice": 548000,
+     "byType": {
+      "detached": 732000,
+      "semiTown": 550000,
+      "condoApt": null,
+      "condoTown": 390000
+     }
+    },
+    {
+     "name": "2013 - Mer Bleue/Bradley Estates/Anderson Park",
+     "sales": 114,
+     "medianPrice": 651000,
+     "byType": {
+      "detached": 890000,
+      "semiTown": 640000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7710 - Barrhaven East",
+     "sales": 112,
+     "medianPrice": 654000,
+     "byType": {
+      "detached": 808000,
+      "semiTown": 546000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3806 - Hunt Club Park/Greenboro",
+     "sales": 106,
+     "medianPrice": 535000,
+     "byType": {
+      "detached": 765000,
+      "semiTown": 560000,
+      "condoApt": null,
+      "condoTown": 425000
+     }
+    },
+    {
+     "name": "1105 - Fallingbrook/Pineridge",
+     "sales": 105,
+     "medianPrice": 605000,
+     "byType": {
+      "detached": 710000,
+      "semiTown": 539000,
+      "condoApt": null,
+      "condoTown": 430000
+     }
+    },
+    {
+     "name": "1106 - Fallingbrook/Gardenway South",
+     "sales": 105,
+     "medianPrice": 639000,
+     "byType": {
+      "detached": 744000,
+      "semiTown": 542000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1601 - Greely",
+     "sales": 102,
+     "medianPrice": 1015000,
+     "byType": {
+      "detached": 1045000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7708 - Barrhaven - Stonebridge",
+     "sales": 97,
+     "medianPrice": 644000,
+     "byType": {
+      "detached": 978000,
+      "semiTown": 589000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills",
+     "sales": 96,
+     "medianPrice": 562000,
+     "byType": {
+      "detached": 775000,
+      "semiTown": null,
+      "condoApt": 278000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3602 - Riverview Park",
+     "sales": 90,
+     "medianPrice": 628000,
+     "byType": {
+      "detached": 725000,
+      "semiTown": null,
+      "condoApt": 555000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1119 - Notting Hill/Summerside",
+     "sales": 88,
+     "medianPrice": 646000,
+     "byType": {
+      "detached": 834000,
+      "semiTown": 570000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7709 - Barrhaven - Strandherd",
+     "sales": 88,
+     "medianPrice": 595000,
+     "byType": {
+      "detached": 845000,
+      "semiTown": 596000,
+      "condoApt": null,
+      "condoTown": 395000
+     }
+    },
+    {
+     "name": "1102 - Bilberry Creek/Queenswood Heights",
+     "sales": 87,
+     "medianPrice": 597000,
+     "byType": {
+      "detached": 630000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4003 - Sandy Hill",
+     "sales": 84,
+     "medianPrice": 388000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 346000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7703 - Barrhaven - Cedargrove/Fraserdale",
+     "sales": 83,
+     "medianPrice": 612000,
+     "byType": {
+      "detached": 745000,
+      "semiTown": 550000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7704 - Barrhaven - Heritage Park",
+     "sales": 79,
+     "medianPrice": 588000,
+     "byType": {
+      "detached": 775000,
+      "semiTown": 560000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "9001 - Kanata - Beaverbrook",
+     "sales": 77,
+     "medianPrice": 524000,
+     "byType": {
+      "detached": 935000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 410000
+     }
+    },
+    {
+     "name": "2010 - Chateauneuf",
+     "sales": 67,
+     "medianPrice": 695000,
+     "byType": {
+      "detached": 733000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4103 - Ottawa Centre",
+     "sales": 67,
+     "medianPrice": 535000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 418000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3808 - Hunt Club Park",
+     "sales": 64,
+     "medianPrice": 616000,
+     "byType": {
+      "detached": 740000,
+      "semiTown": 555000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "8204 - Richmond",
+     "sales": 63,
+     "medianPrice": 670000,
+     "byType": {
+      "detached": 680000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "8209 - Goulbourn Twp From Franktown Rd/South To Rideau",
+     "sales": 62,
+     "medianPrice": 723000,
+     "byType": {
+      "detached": 750000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2005 - Convent Glen North",
+     "sales": 60,
+     "medianPrice": 422000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 409000
+     }
+    },
+    {
+     "name": "2204 - Pineview",
+     "sales": 59,
+     "medianPrice": 405000,
+     "byType": {
+      "detached": 705000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 378000
+     }
+    },
+    {
+     "name": "2012 - Chapel Hill South - Orleans Village",
+     "sales": 58,
+     "medianPrice": 765000,
+     "byType": {
+      "detached": 840000,
+      "semiTown": 583000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7701 - Barrhaven - Pheasant Run",
+     "sales": 58,
+     "medianPrice": 593000,
+     "byType": {
+      "detached": 660000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3103 - Viscount Alexander Park",
+     "sales": 56,
+     "medianPrice": 299000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 295000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1101 - Chatelaine Village",
+     "sales": 55,
+     "medianPrice": 575000,
+     "byType": {
+      "detached": 608000,
+      "semiTown": 542000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "5304 - Central Park",
+     "sales": 54,
+     "medianPrice": 550000,
+     "byType": {
+      "detached": null,
+      "semiTown": 567000,
+      "condoApt": 311000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1103 - Fallingbrook/Ridgemount",
+     "sales": 54,
+     "medianPrice": 721000,
+     "byType": {
+      "detached": 793000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1107 - Springridge/East Village",
+     "sales": 53,
+     "medianPrice": 690000,
+     "byType": {
+      "detached": 840000,
+      "semiTown": 613000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3402 - Vanier",
+     "sales": 53,
+     "medianPrice": 453000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 410000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3609 - Guildwood Estates - Urbandale Acres",
+     "sales": 52,
+     "medianPrice": 712000,
+     "byType": {
+      "detached": 802000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3104 - CFB Rockcliffe and Area",
+     "sales": 52,
+     "medianPrice": 518000,
+     "byType": {
+      "detached": null,
+      "semiTown": 576000,
+      "condoApt": null,
+      "condoTown": 435000
+     }
+    },
+    {
+     "name": "2009 - Chapel Hill",
+     "sales": 51,
+     "medianPrice": 631000,
+     "byType": {
+      "detached": 800000,
+      "semiTown": 626000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "5003 - Westboro/Hampton Park",
+     "sales": 51,
+     "medianPrice": 660000,
+     "byType": {
+      "detached": 1050000,
+      "semiTown": null,
+      "condoApt": 485000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4502 - West Centre Town",
+     "sales": 50,
+     "medianPrice": 483000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 430000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "9104 - Huntley Ward (South East)",
+     "sales": 50,
+     "medianPrice": 747000,
+     "byType": {
+      "detached": 1225000,
+      "semiTown": 619000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "9003 - Kanata - Glencairn/Hazeldean",
+     "sales": 49,
+     "medianPrice": 625000,
+     "byType": {
+      "detached": 645000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4101 - Ottawa Centre",
+     "sales": 49,
+     "medianPrice": 395000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 395000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7607 - Centrepointe",
+     "sales": 49,
+     "medianPrice": 570000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 505000
+     }
+    },
+    {
+     "name": "7802 - Westcliffe Estates",
+     "sales": 48,
+     "medianPrice": 407000,
+     "byType": {
+      "detached": null,
+      "semiTown": 498000,
+      "condoApt": null,
+      "condoTown": 340000
+     }
+    },
+    {
+     "name": "8003 - Mahogany Community",
+     "sales": 48,
+     "medianPrice": 1120000,
+     "byType": {
+      "detached": 1135000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2501 - Leitrim",
+     "sales": 48,
+     "medianPrice": 678000,
+     "byType": {
+      "detached": 940000,
+      "semiTown": 645000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "6001 - Woodroffe",
+     "sales": 47,
+     "medianPrice": 303000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 300000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1104 - Queenswood Heights South",
+     "sales": 45,
+     "medianPrice": 600000,
+     "byType": {
+      "detached": 695000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4001 - Lower Town/Byward Market",
+     "sales": 45,
+     "medianPrice": 360000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 358000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3502 - Overbrook/Castle Heights",
+     "sales": 45,
+     "medianPrice": 610000,
+     "byType": {
+      "detached": 624000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4104 - Ottawa Centre/Golden Triangle",
+     "sales": 43,
+     "medianPrice": 696000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 481000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3505 - Carson Meadows",
+     "sales": 43,
+     "medianPrice": 455000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3404 - Vanier",
+     "sales": 42,
+     "medianPrice": 307000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 260000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3302 - Lindenlea",
+     "sales": 41,
+     "medianPrice": 870000,
+     "byType": {
+      "detached": 1090000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2011 - Orleans/Sunridge",
+     "sales": 40,
+     "medianPrice": 705000,
+     "byType": {
+      "detached": 729000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4803 - Hunt Club/Western Community",
+     "sales": 40,
+     "medianPrice": 725000,
+     "byType": {
+      "detached": 804000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2008 - Chapel Hill",
+     "sales": 39,
+     "medianPrice": 717000,
+     "byType": {
+      "detached": 750000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2105 - Beaconwood",
+     "sales": 38,
+     "medianPrice": 395000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 399000
+     }
+    },
+    {
+     "name": "9009 - Kanata - Rural Kanata (Central)",
+     "sales": 38,
+     "medianPrice": 644000,
+     "byType": {
+      "detached": 1190000,
+      "semiTown": 560000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7601 - Leslie Park",
+     "sales": 37,
+     "medianPrice": 453000,
+     "byType": {
+      "detached": null,
+      "semiTown": 511000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "5104 - McKellar/Highland",
+     "sales": 37,
+     "medianPrice": 1415000,
+     "byType": {
+      "detached": 1500000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4302 - Ottawa West",
+     "sales": 36,
+     "medianPrice": 700000,
+     "byType": {
+      "detached": 879000,
+      "semiTown": null,
+      "condoApt": 389000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4401 - Glebe",
+     "sales": 35,
+     "medianPrice": 1500000,
+     "byType": {
+      "detached": 1525000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3805 - South Keys",
+     "sales": 35,
+     "medianPrice": 346000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 249000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "8207 - Remainder of Stittsville & Area",
+     "sales": 35,
+     "medianPrice": 890000,
+     "byType": {
+      "detached": 1100000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7302 - Meadowlands/Crestview",
+     "sales": 34,
+     "medianPrice": 650000,
+     "byType": {
+      "detached": 671000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "9301 - Constance Bay",
+     "sales": 34,
+     "medianPrice": 580000,
+     "byType": {
+      "detached": 580000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2202 - Carson Grove",
+     "sales": 34,
+     "medianPrice": 675000,
+     "byType": {
+      "detached": 710000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2107 - Beacon Hill South",
+     "sales": 34,
+     "medianPrice": 367000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4402 - Glebe",
+     "sales": 34,
+     "medianPrice": 1013000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2303 - Blackburn Hamlet (South)",
+     "sales": 34,
+     "medianPrice": 417000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 405000
+     }
+    },
+    {
+     "name": "1110 - Camelot",
+     "sales": 33,
+     "medianPrice": 708000,
+     "byType": {
+      "detached": null,
+      "semiTown": 657000,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7805 - Arbeatha Park",
+     "sales": 33,
+     "medianPrice": 430000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 388000
+     }
+    },
+    {
+     "name": "7301 - Meadowlands/St. Claire Gardens",
+     "sales": 33,
+     "medianPrice": 850000,
+     "byType": {
+      "detached": 850000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4403 - Old Ottawa South",
+     "sales": 33,
+     "medianPrice": 990000,
+     "byType": {
+      "detached": 1020000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3702 - Elmvale Acres",
+     "sales": 33,
+     "medianPrice": 684000,
+     "byType": {
+      "detached": 684000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2108 - Beacon Hill South",
+     "sales": 32,
+     "medianPrice": 230000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 218000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4201 - Mechanicsville",
+     "sales": 32,
+     "medianPrice": 466000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 377000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "6301 - Redwood Park",
+     "sales": 31,
+     "medianPrice": 440000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3804 - Heron Gate/Industrial Park",
+     "sales": 31,
+     "medianPrice": 350000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 350000
+     }
+    },
+    {
+     "name": "6102 - Britannia",
+     "sales": 30,
+     "medianPrice": 320000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 315000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4504 - Civic Hospital",
+     "sales": 30,
+     "medianPrice": 1084000,
+     "byType": {
+      "detached": 1245000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2001 - Convent Glen",
+     "sales": 30,
+     "medianPrice": 761000,
+     "byType": {
+      "detached": 761000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "5201 - McKellar Heights/Glabar Park",
+     "sales": 29,
+     "medianPrice": 775000,
+     "byType": {
+      "detached": 790000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2604 - Emerald Woods/Sawmill Creek",
+     "sales": 29,
+     "medianPrice": 570000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7201 - City View/Skyline/Fisher Heights/Parkwood Hills",
+     "sales": 29,
+     "medianPrice": 715000,
+     "byType": {
+      "detached": 715000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4604 - Mooneys Bay/Riverside Park",
+     "sales": 29,
+     "medianPrice": 597000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4702 - Carleton Square",
+     "sales": 28,
+     "medianPrice": 318000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 387000
+     }
+    },
+    {
+     "name": "5406 - Copeland Park",
+     "sales": 28,
+     "medianPrice": 343000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 325000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "8002 - Manotick Village & Manotick Estates",
+     "sales": 28,
+     "medianPrice": 1506000,
+     "byType": {
+      "detached": 1700000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7606 - Manordale",
+     "sales": 27,
+     "medianPrice": 760000,
+     "byType": {
+      "detached": 775000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4805 - Hunt Club",
+     "sales": 27,
+     "medianPrice": 367000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 331000
+     }
+    },
+    {
+     "name": "1603 - Osgoode",
+     "sales": 27,
+     "medianPrice": 653000,
+     "byType": {
+      "detached": 653000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4204 - West Centre Town",
+     "sales": 27,
+     "medianPrice": 665000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 530000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "6202 - Fairfield Heights",
+     "sales": 27,
+     "medianPrice": 500000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7501 - Tanglewood",
+     "sales": 26,
+     "medianPrice": 374000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": 370000
+     }
+    },
+    {
+     "name": "5002 - Westboro South",
+     "sales": 26,
+     "medianPrice": 514000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": 414000,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "3703 - Elmvale Acres/Urbandale",
+     "sales": 26,
+     "medianPrice": 675000,
+     "byType": {
+      "detached": 675000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "7605 - Arlington Woods",
+     "sales": 26,
+     "medianPrice": 699000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2301 - Blackburn Hamlet",
+     "sales": 25,
+     "medianPrice": 740000,
+     "byType": {
+      "detached": 758000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "4303 - Ottawa West",
+     "sales": 25,
+     "medianPrice": 1256000,
+     "byType": {
+      "detached": 1315000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "8001 - Manotick Long Island & Nicholls Island",
+     "sales": 25,
+     "medianPrice": 838000,
+     "byType": {
+      "detached": 838000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "2003 - Orleans Wood",
+     "sales": 25,
+     "medianPrice": 382000,
+     "byType": {
+      "detached": null,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "9105 - Huntley Ward (South West)",
+     "sales": 25,
+     "medianPrice": 830000,
+     "byType": {
+      "detached": 830000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    },
+    {
+     "name": "1605 - Osgoode Twp North of Reg Rd 6",
+     "sales": 25,
+     "medianPrice": 1000000,
+     "byType": {
+      "detached": 1000000,
+      "semiTown": null,
+      "condoApt": null,
+      "condoTown": null
+     }
+    }
+   ]
+  }
+ ]
+}

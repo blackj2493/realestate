@@ -9,6 +9,7 @@ import { priceChangePath } from "@/lib/data/priceChange";
 import { condoPricesPath } from "@/lib/data/condoPrices";
 import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
 import { schoolPricesPath } from "@/lib/data/schoolPrices";
+import { soldPricesPath } from "@/lib/data/soldPrices";
 
 describe("cityTopics", () => {
   it("each topic path matches its family helper", () => {
@@ -22,6 +23,8 @@ describe("cityTopics", () => {
     expect(by["home-value"].hub).toBe(homeValuePath());
     expect(by["basement-value"].path("markham")).toBe(basementValuePath("markham"));
     expect(by["basement-value"].hub).toBe(basementValuePath());
+    expect(by["sold-prices"].path("markham")).toBe(soldPricesPath("markham"));
+    expect(by["sold-prices"].hub).toBe(soldPricesPath());
     expect(by["school-catchment-prices"].path("markham")).toBe(schoolPricesPath("markham"));
     expect(by["school-catchment-prices"].hub).toBe(schoolPricesPath());
     expect(by["price-change"].path("markham")).toBe(priceChangePath("markham"));
