@@ -66,6 +66,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...getCityMarkets().cities.map((c) => ({ url: `${SITE_URL}${outlookPath(c.slug)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.8 })),
     // "How long does it take to sell a house in {city}" + best month (2026-11-10).
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${daysOnMarketPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.7 })),
+    ...getCityMarkets().cities.map((c) => ({ url: `${SITE_URL}${daysOnMarketPath(c.slug)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7 })),
     // "Does a finished basement add value in {city}?" (2026-11-24). Static, rebuilt monthly.
     { url: `${SITE_URL}${basementValuePath()}`, lastModified: new Date(getBasementData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
     ...getBasementData()
@@ -82,6 +83,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // "Is it a good time to buy a house in {city}?" measured signals (2026-11-25). Board-backed, daily.
     { url: `${SITE_URL}${goodTimeToBuyPath()}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 },
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${goodTimeToBuyPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 })),
+    ...getCityMarkets().cities.map((c) => ({ url: `${SITE_URL}${goodTimeToBuyPath(c.slug)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.8 })),
     // "Do better schools raise house prices in {city}?" + every catchment (2026-11-25). Static, monthly.
     { url: `${SITE_URL}${schoolPricesPath()}`, lastModified: new Date(getSchoolData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
     ...getSchoolData().cities.map((c) => ({ url: `${SITE_URL}${schoolPricesPath(c.slug)}`, lastModified: new Date(getSchoolData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 })),

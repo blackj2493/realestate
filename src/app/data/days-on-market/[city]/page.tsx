@@ -8,7 +8,9 @@
  * FAQ, cite box. Every figure is also in the HTML text.
  *
  * Aggregate statistics only (the public market board), same category as the /data
- * trackers. Static per covered city, hourly revalidate; unknown slugs 404.
+ * trackers. Static per covered city, hourly revalidate; unknown slugs 404. The extra study
+ * cities (London, Kitchener, ...) are not on the board: they read data/city-markets.json,
+ * built weekly with the same definitions. The speed rank covers every city.
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -16,7 +18,8 @@ import { notFound } from "next/navigation";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { boardRowFor, SOURCE_LINE } from "@/lib/data/cityFacts";
 import { buildSellingTime } from "@/lib/data/sellingTime";
-import { OUTLOOK_CITIES, outlookCityBySlug } from "@/lib/data/outlookCities";
+import { outlookCityBySlug } from "@/lib/data/outlookCities";
+import { cityMarketBySlug, coveredMarketCities, coveredMarketRows, getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import { daysOnMarketPath } from "@/lib/seo/cityTopics";
 import { Clock, Timer } from "lucide-react";
 import HubFaq from "@/components/seo/HubFaq";
@@ -31,18 +34,23 @@ export const revalidate = 3600;
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return OUTLOOK_CITIES.map((c) => ({ city: c.slug }));
+  return coveredMarketCities().map((c) => ({ city: c.slug }));
 }
 
 async function load(slug: string) {
-  const city = outlookCityBySlug(slug);
+  const extra = outlookCityBySlug(slug) ? null : cityMarketBySlug(slug);
+  const city = outlookCityBySlug(slug) ?? extra?.city;
   if (!city) return null;
   try {
     const board = await getMarketBoard();
-    return { city, data: buildSellingTime(city, boardRowFor(board.rows, city), board.rows, board.dataAsOf) };
+    const rows = coveredMarketRows(board.rows);
+    const data = extra
+      ? buildSellingTime(city, toMarketRow(extra), rows, getCityMarkets().generatedAt)
+      : buildSellingTime(city, boardRowFor(board.rows, city), rows, board.dataAsOf);
+    return { city, board: !extra, data };
   } catch (err) {
     console.error(`[days-on-market] board read failed for ${slug}:`, err);
-    return { city, data: null };
+    return { city, board: !extra, data: null };
   }
 }
 
@@ -53,7 +61,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   const { city, data } = loaded;
   const canonical = `${SITE_URL}${daysOnMarketPath(slug)}`;
   const title = data?.title ?? `How Long Does It Take to Sell a House in ${city}?`;
-  const description = data?.summary ?? `Days on market and the busiest months for home sales in ${city}, from MLS® data, updated nightly.`;
+  const description = data?.summary ?? `Days on market and the busiest months for home sales in ${city}, from MLS® data.`;
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
@@ -106,10 +114,10 @@ export default async function DaysOnMarketCityPage({ params }: { params: Promise
   const { city: slug } = await params;
   const loaded = await load(slug);
   if (!loaded) notFound();
-  const { city, data } = loaded;
+  const { city, board, data } = loaded;
   const canonical = `${SITE_URL}${daysOnMarketPath(slug)}`;
-  const others = OUTLOOK_CITIES.filter((c) => c.slug !== slug);
-  const slugFor = (name: string) => OUTLOOK_CITIES.find((c) => c.city.toLowerCase() === name.toLowerCase())?.slug ?? null;
+  const others = coveredMarketCities().filter((c) => c.slug !== slug);
+  const slugFor = (name: string) => coveredMarketCities().find((c) => c.city.toLowerCase() === name.toLowerCase())?.slug ?? null;
   const st = data?.stats;
   const buckets = st?.buckets ?? null;
   const bucketMax = buckets ? Math.max(...buckets.map((b) => b.count), 1) : 1;
@@ -174,7 +182,7 @@ export default async function DaysOnMarketCityPage({ params }: { params: Promise
                 <>
                   <p>{data.summary}</p>
                   <p className="mt-2 text-sm">
-                    Updated <time dateTime={data.updatedIso}>{data.updatedLabel}</time> · MLS® sales and listings, refreshed nightly
+                    Updated <time dateTime={data.updatedIso}>{data.updatedLabel}</time> · MLS® sales and listings, refreshed {board ? "nightly" : "weekly"}
                   </p>
                 </>
               }
@@ -255,11 +263,16 @@ export default async function DaysOnMarketCityPage({ params }: { params: Promise
                   })}
                 </ul>
                 <p className="mt-4 text-xs text-muted-foreground">
-                  A home listed for more than 90 days is often priced above what buyers will pay.{" "}
-                  <Link href={`/house-not-selling/${slug}`} className="underline hover:text-foreground">
-                    Why homes do not sell in {city}
-                  </Link>
-                  .
+                  A home listed for more than 90 days is often priced above what buyers will pay.
+                  {board && (
+                    <>
+                      {" "}
+                      <Link href={`/house-not-selling/${slug}`} className="underline hover:text-foreground">
+                        Why homes do not sell in {city}
+                      </Link>
+                      .
+                    </>
+                  )}
                 </p>
               </section>
             )}

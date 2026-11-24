@@ -19,6 +19,14 @@ export interface CityMarket {
   soldToListPct: number | null;
   pctOverAsking: number | null;
   soldCount12m: number;
+  /** Days to sell, homes sold in the last 12 months (region_sold_dynamics). */
+  soldMedianDom: number | null;
+  soldP25Dom: number | null;
+  soldP75Dom: number | null;
+  /** Homes for sale now: relists joined, and the listing's own clock (region_dom_distribution). */
+  trueDom: number | null;
+  medianNaiveDom: number | null;
+  domBuckets: MarketRow["domBuckets"];
   underAskShare: number | null;
   askGapMedian: number | null;
   activeCount: number;
@@ -46,11 +54,11 @@ export function toMarketRow(c: CityMarket): MarketRow {
     activeCount: c.activeCount,
     monthsOfSupply: c.monthsOfSupply,
     soldToListPct: c.soldToListPct,
-    trueDom: null,
-    medianNaiveDom: null,
-    soldMedianDom: null,
-    soldP25Dom: null,
-    soldP75Dom: null,
+    trueDom: c.trueDom,
+    medianNaiveDom: c.medianNaiveDom,
+    soldMedianDom: c.soldMedianDom,
+    soldP25Dom: c.soldP25Dom,
+    soldP75Dom: c.soldP75Dom,
     sellThroughPct: null,
     stalePct: null,
     temperature: c.temperature,
@@ -60,7 +68,7 @@ export function toMarketRow(c: CityMarket): MarketRow {
     cutActive: c.activeCount,
     medianCutPct: c.medianCutPct,
     medianCutAmt: c.medianCutAmt,
-    domBuckets: null,
+    domBuckets: c.domBuckets,
     rentalRows: [],
     underAskShare: c.underAskShare,
     askGapMedian: c.askGapMedian,

@@ -48,11 +48,11 @@ export function nightlyPaths(): string[] {
   const homeValue = [homeValuePath(), ...HOME_VALUE_CITIES.map((c) => homeValuePath(c.slug))];
   const pos = ["/power-of-sale", ...OUTLOOK_CITIES.map((c) => `/power-of-sale/${c.slug}`)];
   const notSelling = ["/house-not-selling", ...OUTLOOK_CITIES.map((c) => `/house-not-selling/${c.slug}`)];
-  const dom = OUTLOOK_CITIES.map((c) => `/data/days-on-market/${c.slug}`);
+  const dom = [...OUTLOOK_CITIES, ...getCityMarkets().cities].map((c) => `/data/days-on-market/${c.slug}`);
   const basement = ["/data/basement-value", ...getBasementData().cities.filter((c) => c.modelA).map((c) => `/data/basement-value/${c.slug}`)];
   const priceChange = ["/data/price-change", ...getPriceChangeData().cities.filter((c) => c.all).map((c) => `/data/price-change/${c.slug}`)];
   const condo = ["/data/condo-prices", ...getCondoData().cities.map((c) => `/data/condo-prices/${c.slug}`)];
-  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling, ...dom, ...basement, ...priceChange, ...condo, "/data/good-time-to-buy", ...OUTLOOK_CITIES.map((c) => `/data/good-time-to-buy/${c.slug}`), "/data/school-catchment-prices", ...getSchoolData().cities.map((c) => `/data/school-catchment-prices/${c.slug}`), "/data/sold-prices", ...getSoldData().cities.map((c) => `/data/sold-prices/${c.slug}`), "/data/best-time-to-sell", ...getBestTimeData().cities.map((c) => `/data/best-time-to-sell/${c.slug}`)])];
+  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling, ...dom, ...basement, ...priceChange, ...condo, "/data/good-time-to-buy", ...[...OUTLOOK_CITIES, ...getCityMarkets().cities].map((c) => `/data/good-time-to-buy/${c.slug}`), "/data/school-catchment-prices", ...getSchoolData().cities.map((c) => `/data/school-catchment-prices/${c.slug}`), "/data/sold-prices", ...getSoldData().cities.map((c) => `/data/sold-prices/${c.slug}`), "/data/best-time-to-sell", ...getBestTimeData().cities.map((c) => `/data/best-time-to-sell/${c.slug}`)])];
 }
 
 /** The listing page path: the stored canonical, else the legacy key path (same fallback as the sitemap). */
