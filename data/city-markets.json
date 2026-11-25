@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-25T01:27:45.714Z",
+ "generatedAt": "2026-11-25T21:40:54.179Z",
  "cities": [
   {
    "city": "London",
@@ -150,28 +150,28 @@
      "soldToList": 96.5
     }
    ],
-   "sales90": 1062,
+   "sales90": 1079,
    "soldToListPct": 96.7,
-   "pctOverAsking": 10.5,
-   "soldCount12m": 4168,
+   "pctOverAsking": 10.4,
+   "soldCount12m": 4185,
    "soldMedianDom": 26,
    "soldP25Dom": 13,
    "soldP75Dom": 52,
    "trueDom": 76,
    "medianNaiveDom": 49,
    "domBuckets": {
-    "d0_14": 198,
-    "d15_30": 213,
-    "d31_60": 363,
-    "d61_90": 280,
-    "d90plus": 839
+    "d0_14": 190,
+    "d15_30": 233,
+    "d31_60": 348,
+    "d61_90": 284,
+    "d90plus": 845
    },
    "underAskShare": 0.817,
    "askGapMedian": -3.3,
-   "activeCount": 1892,
-   "cutCount": 618,
+   "activeCount": 1900,
+   "cutCount": 627,
    "medianCutPct": 8,
-   "medianCutAmt": 49950,
+   "medianCutAmt": 50000,
    "monthsOfSupply": 4.8,
    "temperature": "cold",
    "rentalRows": [
@@ -189,23 +189,23 @@
      "medianPrice": 465000,
      "grossYieldPct": 5.37,
      "rentSample": 509,
-     "priceSample": 914
+     "priceSample": 920
     },
     {
      "beds": 3,
      "typicalRent": 2546,
-     "medianPrice": 536000,
-     "grossYieldPct": 5.7,
+     "medianPrice": 535000,
+     "grossYieldPct": 5.71,
      "rentSample": 752,
-     "priceSample": 2196
+     "priceSample": 2204
     },
     {
      "beds": 4,
      "typicalRent": 3039,
-     "medianPrice": 790009,
+     "medianPrice": 790000,
      "grossYieldPct": 4.62,
      "rentSample": 219,
-     "priceSample": 749
+     "priceSample": 752
     },
     {
      "beds": 5,
@@ -366,29 +366,29 @@
      "soldToList": 100.3
     }
    ],
-   "sales90": 443,
+   "sales90": 445,
    "soldToListPct": 100.1,
    "pctOverAsking": 36.9,
-   "soldCount12m": 1697,
+   "soldCount12m": 1699,
    "soldMedianDom": 20,
    "soldP25Dom": 11,
    "soldP75Dom": 38,
-   "trueDom": 61,
-   "medianNaiveDom": 40,
+   "trueDom": 62,
+   "medianNaiveDom": 41,
    "domBuckets": {
-    "d0_14": 73,
-    "d15_30": 86,
-    "d31_60": 141,
-    "d61_90": 92,
-    "d90plus": 221
+    "d0_14": 69,
+    "d15_30": 94,
+    "d31_60": 138,
+    "d61_90": 90,
+    "d90plus": 225
    },
    "underAskShare": 0.569,
    "askGapMedian": -1.3,
-   "activeCount": 612,
+   "activeCount": 616,
    "cutCount": 184,
    "medianCutPct": 7.9,
    "medianCutAmt": 55050,
-   "monthsOfSupply": 3.6,
+   "monthsOfSupply": 3.7,
    "temperature": "hot",
    "rentalRows": [
     {
@@ -413,7 +413,7 @@
      "medianPrice": 670000,
      "grossYieldPct": 4.93,
      "rentSample": 365,
-     "priceSample": 983
+     "priceSample": 984
     },
     {
      "beds": 4,
@@ -426,10 +426,10 @@
     {
      "beds": 5,
      "typicalRent": 3750,
-     "medianPrice": 1120000,
-     "grossYieldPct": 4.02,
+     "medianPrice": 1105000,
+     "grossYieldPct": 4.07,
      "rentSample": 3,
-     "priceSample": 29
+     "priceSample": 30
     }
    ]
   },
@@ -582,26 +582,26 @@
      "soldToList": 97.1
     }
    ],
-   "sales90": 405,
+   "sales90": 407,
    "soldToListPct": 97.4,
-   "pctOverAsking": 8.4,
-   "soldCount12m": 1693,
+   "pctOverAsking": 8.6,
+   "soldCount12m": 1695,
    "soldMedianDom": 26,
    "soldP25Dom": 14,
    "soldP75Dom": 49,
    "trueDom": 68,
-   "medianNaiveDom": 40,
+   "medianNaiveDom": 41,
    "domBuckets": {
-    "d0_14": 93,
-    "d15_30": 112,
-    "d31_60": 211,
-    "d61_90": 150,
-    "d90plus": 351
+    "d0_14": 91,
+    "d15_30": 122,
+    "d31_60": 201,
+    "d61_90": 158,
+    "d90plus": 354
    },
-   "underAskShare": 0.867,
+   "underAskShare": 0.866,
    "askGapMedian": -3.3,
-   "activeCount": 917,
-   "cutCount": 368,
+   "activeCount": 926,
+   "cutCount": 372,
    "medianCutPct": 7.1,
    "medianCutAmt": 50000,
    "monthsOfSupply": 5.6,
@@ -629,7 +629,7 @@
      "medianPrice": 630000,
      "grossYieldPct": 5.01,
      "rentSample": 537,
-     "priceSample": 882
+     "priceSample": 884
     },
     {
      "beds": 4,
@@ -808,19 +808,19 @@
    "trueDom": 64,
    "medianNaiveDom": 41,
    "domBuckets": {
-    "d0_14": 62,
-    "d15_30": 61,
-    "d31_60": 129,
-    "d61_90": 82,
-    "d90plus": 200
+    "d0_14": 67,
+    "d15_30": 68,
+    "d31_60": 126,
+    "d61_90": 81,
+    "d90plus": 203
    },
    "underAskShare": 0.807,
    "askGapMedian": -3,
-   "activeCount": 533,
-   "cutCount": 182,
+   "activeCount": 544,
+   "cutCount": 185,
    "medianCutPct": 6.7,
    "medianCutAmt": 50000,
-   "monthsOfSupply": 3.8,
+   "monthsOfSupply": 3.9,
    "temperature": "balanced",
    "rentalRows": [
     {
@@ -1014,29 +1014,29 @@
      "soldToList": 96.6
     }
    ],
-   "sales90": 318,
-   "soldToListPct": 96.4,
-   "pctOverAsking": 8.5,
-   "soldCount12m": 1444,
+   "sales90": 321,
+   "soldToListPct": 96.5,
+   "pctOverAsking": 8.7,
+   "soldCount12m": 1447,
    "soldMedianDom": 23,
    "soldP25Dom": 13,
    "soldP75Dom": 47,
-   "trueDom": 72,
-   "medianNaiveDom": 50,
+   "trueDom": 71,
+   "medianNaiveDom": 51,
    "domBuckets": {
-    "d0_14": 64,
-    "d15_30": 69,
-    "d31_60": 120,
-    "d61_90": 88,
-    "d90plus": 253
+    "d0_14": 66,
+    "d15_30": 73,
+    "d31_60": 117,
+    "d61_90": 91,
+    "d90plus": 252
    },
-   "underAskShare": 0.845,
+   "underAskShare": 0.844,
    "askGapMedian": -3,
-   "activeCount": 594,
-   "cutCount": 200,
-   "medianCutPct": 7.6,
-   "medianCutAmt": 43000,
-   "monthsOfSupply": 4.4,
+   "activeCount": 600,
+   "cutCount": 201,
+   "medianCutPct": 7.7,
+   "medianCutAmt": 44000,
+   "monthsOfSupply": 4.5,
    "temperature": "cold",
    "rentalRows": [
     {
@@ -1061,7 +1061,7 @@
      "medianPrice": 570000,
      "grossYieldPct": 5.77,
      "rentSample": 58,
-     "priceSample": 794
+     "priceSample": 796
     },
     {
      "beds": 4,
@@ -1222,26 +1222,26 @@
      "soldToList": 95.4
     }
    ],
-   "sales90": 337,
+   "sales90": 342,
    "soldToListPct": 95.5,
-   "pctOverAsking": 6.5,
-   "soldCount12m": 1424,
+   "pctOverAsking": 6.7,
+   "soldCount12m": 1429,
    "soldMedianDom": 27,
    "soldP25Dom": 14,
    "soldP75Dom": 52,
    "trueDom": 72,
    "medianNaiveDom": 50,
    "domBuckets": {
-    "d0_14": 61,
-    "d15_30": 78,
-    "d31_60": 132,
-    "d61_90": 108,
-    "d90plus": 248
+    "d0_14": 60,
+    "d15_30": 83,
+    "d31_60": 127,
+    "d61_90": 112,
+    "d90plus": 250
    },
    "underAskShare": 0.87,
    "askGapMedian": -3.9,
-   "activeCount": 627,
-   "cutCount": 194,
+   "activeCount": 631,
+   "cutCount": 198,
    "medianCutPct": 7.9,
    "medianCutAmt": 50000,
    "monthsOfSupply": 4.9,
@@ -1261,7 +1261,7 @@
      "medianPrice": 445000,
      "grossYieldPct": 6.02,
      "rentSample": 218,
-     "priceSample": 401
+     "priceSample": 404
     },
     {
      "beds": 3,
@@ -1269,7 +1269,7 @@
      "medianPrice": 555000,
      "grossYieldPct": 5.42,
      "rentSample": 213,
-     "priceSample": 792
+     "priceSample": 793
     },
     {
      "beds": 4,
@@ -1438,25 +1438,25 @@
      "soldToList": 98.8
     }
    ],
-   "sales90": 267,
+   "sales90": 274,
    "soldToListPct": 99.3,
-   "pctOverAsking": 24.4,
-   "soldCount12m": 1069,
+   "pctOverAsking": 24.2,
+   "soldCount12m": 1076,
    "soldMedianDom": 21,
    "soldP25Dom": 12,
    "soldP75Dom": 41,
    "trueDom": 63,
-   "medianNaiveDom": 42,
+   "medianNaiveDom": 43,
    "domBuckets": {
     "d0_14": 45,
-    "d15_30": 49,
-    "d31_60": 68,
-    "d61_90": 57,
+    "d15_30": 52,
+    "d31_60": 63,
+    "d61_90": 61,
     "d90plus": 125
    },
-   "underAskShare": 0.617,
+   "underAskShare": 0.616,
    "askGapMedian": -1.5,
-   "activeCount": 343,
+   "activeCount": 345,
    "cutCount": 95,
    "medianCutPct": 8.2,
    "medianCutAmt": 53983,
@@ -1474,18 +1474,18 @@
     {
      "beds": 2,
      "typicalRent": 2168,
-     "medianPrice": 565000,
-     "grossYieldPct": 4.6,
+     "medianPrice": 562500,
+     "grossYieldPct": 4.63,
      "rentSample": 95,
-     "priceSample": 174
+     "priceSample": 176
     },
     {
      "beds": 3,
      "typicalRent": 2667,
-     "medianPrice": 669000,
+     "medianPrice": 669700,
      "grossYieldPct": 4.78,
      "rentSample": 265,
-     "priceSample": 637
+     "priceSample": 641
     },
     {
      "beds": 4,
@@ -1498,10 +1498,10 @@
     {
      "beds": 5,
      "typicalRent": 3700,
-     "medianPrice": 1020000,
-     "grossYieldPct": 4.35,
+     "medianPrice": 997500,
+     "grossYieldPct": 4.45,
      "rentSample": 3,
-     "priceSample": 29
+     "priceSample": 30
     }
    ]
   },
@@ -1654,28 +1654,28 @@
      "soldToList": 100.9
     }
    ],
-   "sales90": 199,
+   "sales90": 202,
    "soldToListPct": 100,
    "pctOverAsking": 34.7,
-   "soldCount12m": 893,
+   "soldCount12m": 896,
    "soldMedianDom": 21,
    "soldP25Dom": 11,
    "soldP75Dom": 44,
-   "trueDom": 66,
+   "trueDom": 65,
    "medianNaiveDom": 49,
    "domBuckets": {
     "d0_14": 35,
-    "d15_30": 41,
-    "d31_60": 68,
-    "d61_90": 60,
-    "d90plus": 113
+    "d15_30": 43,
+    "d31_60": 65,
+    "d61_90": 63,
+    "d90plus": 112
    },
    "underAskShare": 0.596,
    "askGapMedian": -1.6,
-   "activeCount": 318,
-   "cutCount": 73,
+   "activeCount": 319,
+   "cutCount": 74,
    "medianCutPct": 9.2,
-   "medianCutAmt": 55000,
+   "medianCutAmt": 53000,
    "monthsOfSupply": 3.5,
    "temperature": "hot",
    "rentalRows": [
@@ -1698,10 +1698,10 @@
     {
      "beds": 3,
      "typicalRent": 2814,
-     "medianPrice": 718250,
-     "grossYieldPct": 4.7,
+     "medianPrice": 716500,
+     "grossYieldPct": 4.71,
      "rentSample": 163,
-     "priceSample": 410
+     "priceSample": 411
     },
     {
      "beds": 4,
@@ -1709,7 +1709,7 @@
      "medianPrice": 995000,
      "grossYieldPct": 3.72,
      "rentSample": 32,
-     "priceSample": 158
+     "priceSample": 160
     },
     {
      "beds": 5,
@@ -1870,26 +1870,26 @@
      "soldToList": 96.9
     }
    ],
-   "sales90": 232,
+   "sales90": 236,
    "soldToListPct": 96.7,
-   "pctOverAsking": 10.3,
-   "soldCount12m": 932,
+   "pctOverAsking": 10.6,
+   "soldCount12m": 936,
    "soldMedianDom": 25,
    "soldP25Dom": 13,
    "soldP75Dom": 49,
    "trueDom": 77,
-   "medianNaiveDom": 48,
+   "medianNaiveDom": 49,
    "domBuckets": {
-    "d0_14": 33,
-    "d15_30": 37,
+    "d0_14": 39,
+    "d15_30": 36,
     "d31_60": 64,
-    "d61_90": 58,
-    "d90plus": 151
+    "d61_90": 59,
+    "d90plus": 149
    },
    "underAskShare": 0.845,
    "askGapMedian": -3.3,
-   "activeCount": 343,
-   "cutCount": 142,
+   "activeCount": 347,
+   "cutCount": 144,
    "medianCutPct": 8.1,
    "medianCutAmt": 50050,
    "monthsOfSupply": 4.3,
@@ -1909,7 +1909,7 @@
      "medianPrice": 520000,
      "grossYieldPct": 5.3,
      "rentSample": 87,
-     "priceSample": 324
+     "priceSample": 326
     },
     {
      "beds": 3,
@@ -1917,7 +1917,7 @@
      "medianPrice": 550000,
      "grossYieldPct": 5.85,
      "rentSample": 55,
-     "priceSample": 420
+     "priceSample": 421
     },
     {
      "beds": 4,
@@ -1925,7 +1925,7 @@
      "medianPrice": 675000,
      "grossYieldPct": 5.82,
      "rentSample": 34,
-     "priceSample": 119
+     "priceSample": 120
     },
     {
      "beds": 5,
@@ -2086,25 +2086,25 @@
      "soldToList": 95.7
     }
    ],
-   "sales90": 269,
+   "sales90": 273,
    "soldToListPct": 95.7,
    "pctOverAsking": 4.8,
-   "soldCount12m": 998,
+   "soldCount12m": 1002,
    "soldMedianDom": 31,
    "soldP25Dom": 15,
    "soldP75Dom": 60,
-   "trueDom": 79,
-   "medianNaiveDom": 53,
+   "trueDom": 77,
+   "medianNaiveDom": 54,
    "domBuckets": {
-    "d0_14": 73,
-    "d15_30": 55,
-    "d31_60": 114,
-    "d61_90": 75,
-    "d90plus": 283
+    "d0_14": 69,
+    "d15_30": 63,
+    "d31_60": 110,
+    "d61_90": 78,
+    "d90plus": 282
    },
    "underAskShare": 0.878,
    "askGapMedian": -4.5,
-   "activeCount": 600,
+   "activeCount": 602,
    "cutCount": 174,
    "medianCutPct": 7.5,
    "medianCutAmt": 50000,
@@ -2125,7 +2125,7 @@
      "medianPrice": 455000,
      "grossYieldPct": 5.43,
      "rentSample": 176,
-     "priceSample": 208
+     "priceSample": 209
     },
     {
      "beds": 3,
@@ -2133,15 +2133,15 @@
      "medianPrice": 554500,
      "grossYieldPct": 5.35,
      "rentSample": 234,
-     "priceSample": 570
+     "priceSample": 572
     },
     {
      "beds": 4,
      "typicalRent": 2948,
-     "medianPrice": 735000,
-     "grossYieldPct": 4.81,
+     "medianPrice": 740000,
+     "grossYieldPct": 4.78,
      "rentSample": 116,
-     "priceSample": 165
+     "priceSample": 166
     },
     {
      "beds": 5,
@@ -2302,23 +2302,23 @@
      "soldToList": 96.7
     }
    ],
-   "sales90": 207,
+   "sales90": 208,
    "soldToListPct": 96.5,
-   "pctOverAsking": 9.7,
-   "soldCount12m": 768,
+   "pctOverAsking": 10.1,
+   "soldCount12m": 769,
    "soldMedianDom": 25,
    "soldP25Dom": 14,
    "soldP75Dom": 52,
    "trueDom": 68,
-   "medianNaiveDom": 40,
+   "medianNaiveDom": 41,
    "domBuckets": {
-    "d0_14": 36,
-    "d15_30": 45,
-    "d31_60": 61,
-    "d61_90": 53,
+    "d0_14": 29,
+    "d15_30": 50,
+    "d31_60": 62,
+    "d61_90": 54,
     "d90plus": 113
    },
-   "underAskShare": 0.813,
+   "underAskShare": 0.811,
    "askGapMedian": -3.2,
    "activeCount": 308,
    "cutCount": 89,
@@ -2357,7 +2357,7 @@
      "medianPrice": 725000,
      "grossYieldPct": 4.66,
      "rentSample": 85,
-     "priceSample": 146
+     "priceSample": 147
     },
     {
      "beds": 5,
@@ -2366,6 +2366,1710 @@
      "grossYieldPct": 5.14,
      "rentSample": 6,
      "priceSample": 22
+    }
+   ]
+  },
+  {
+   "city": "Clarington",
+   "slug": "clarington",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 810000,
+     "sales": 92,
+     "soldToList": 101.5
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 801000,
+     "sales": 45,
+     "soldToList": 100.5
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 845000,
+     "sales": 54,
+     "soldToList": 99.5
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 812500,
+     "sales": 80,
+     "soldToList": 102.9
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 830000,
+     "sales": 101,
+     "soldToList": 101.7
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 830000,
+     "sales": 97,
+     "soldToList": 102.6
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 797450,
+     "sales": 120,
+     "soldToList": 100.9
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 780000,
+     "sales": 133,
+     "soldToList": 100.3
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 790000,
+     "sales": 161,
+     "soldToList": 99.5
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 782500,
+     "sales": 104,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 778000,
+     "sales": 115,
+     "soldToList": 98.6
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 733500,
+     "sales": 86,
+     "soldToList": 98.7
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 725000,
+     "sales": 96,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 744000,
+     "sales": 79,
+     "soldToList": 98.2
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 687500,
+     "sales": 56,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 715000,
+     "sales": 51,
+     "soldToList": 99.8
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 750500,
+     "sales": 93,
+     "soldToList": 100.3
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 765000,
+     "sales": 121,
+     "soldToList": 99.8
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 782500,
+     "sales": 141,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 730000,
+     "sales": 154,
+     "soldToList": 98.7
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 746000,
+     "sales": 131,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 731250,
+     "sales": 102,
+     "soldToList": 99.1
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 755000,
+     "sales": 119,
+     "soldToList": 99.4
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 690000,
+     "sales": 119,
+     "soldToList": 99.1
+    }
+   ],
+   "sales90": 313,
+   "soldToListPct": 98.9,
+   "pctOverAsking": 20.1,
+   "soldCount12m": 1248,
+   "soldMedianDom": 18,
+   "soldP25Dom": 9,
+   "soldP75Dom": 34,
+   "trueDom": 64,
+   "medianNaiveDom": 42,
+   "domBuckets": {
+    "d0_14": 59,
+    "d15_30": 56,
+    "d31_60": 106,
+    "d61_90": 80,
+    "d90plus": 189
+   },
+   "underAskShare": 0.712,
+   "askGapMedian": -2.1,
+   "activeCount": 490,
+   "cutCount": 189,
+   "medianCutPct": 8,
+   "medianCutAmt": 80000,
+   "monthsOfSupply": 4.2,
+   "temperature": "balanced",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1898,
+     "medianPrice": 421000,
+     "grossYieldPct": 5.41,
+     "rentSample": 225,
+     "priceSample": 58
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2391,
+     "medianPrice": 560000,
+     "grossYieldPct": 5.12,
+     "rentSample": 155,
+     "priceSample": 233
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2880,
+     "medianPrice": 718500,
+     "grossYieldPct": 4.81,
+     "rentSample": 179,
+     "priceSample": 623
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3414,
+     "medianPrice": 900000,
+     "grossYieldPct": 4.55,
+     "rentSample": 107,
+     "priceSample": 290
+    },
+    {
+     "beds": 5,
+     "typicalRent": 4014,
+     "medianPrice": 1070000,
+     "grossYieldPct": 4.5,
+     "rentSample": 7,
+     "priceSample": 22
+    }
+   ]
+  },
+  {
+   "city": "Kawartha Lakes",
+   "slug": "kawartha-lakes",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 659200,
+     "sales": 90,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 610000,
+     "sales": 65,
+     "soldToList": 95.3
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 665000,
+     "sales": 53,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 675000,
+     "sales": 49,
+     "soldToList": 96.3
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 615000,
+     "sales": 64,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 675000,
+     "sales": 69,
+     "soldToList": 96.5
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 675000,
+     "sales": 91,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 650000,
+     "sales": 99,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 607500,
+     "sales": 112,
+     "soldToList": 96
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 583500,
+     "sales": 102,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 640000,
+     "sales": 106,
+     "soldToList": 94.7
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 620000,
+     "sales": 91,
+     "soldToList": 94.9
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 621850,
+     "sales": 78,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 580000,
+     "sales": 43,
+     "soldToList": 95.8
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 553500,
+     "sales": 53,
+     "soldToList": 94.2
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 570000,
+     "sales": 41,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 640000,
+     "sales": 79,
+     "soldToList": 95
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 650000,
+     "sales": 87,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 597000,
+     "sales": 119,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 630000,
+     "sales": 127,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 595000,
+     "sales": 141,
+     "soldToList": 96.2
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 571250,
+     "sales": 126,
+     "soldToList": 96.5
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 594500,
+     "sales": 116,
+     "soldToList": 95.1
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 555000,
+     "sales": 99,
+     "soldToList": 95.6
+    }
+   ],
+   "sales90": 309,
+   "soldToListPct": 95.1,
+   "pctOverAsking": 5.5,
+   "soldCount12m": 1115,
+   "soldMedianDom": 35,
+   "soldP25Dom": 17,
+   "soldP75Dom": 68,
+   "trueDom": 99,
+   "medianNaiveDom": 63,
+   "domBuckets": {
+    "d0_14": 51,
+    "d15_30": 77,
+    "d31_60": 117,
+    "d61_90": 101,
+    "d90plus": 408
+   },
+   "underAskShare": 0.881,
+   "askGapMedian": -5,
+   "activeCount": 752,
+   "cutCount": 228,
+   "medianCutPct": 10,
+   "medianCutAmt": 75000,
+   "monthsOfSupply": 5.9,
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1700,
+     "medianPrice": 450000,
+     "grossYieldPct": 4.53,
+     "rentSample": 7,
+     "priceSample": 50
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2461,
+     "medianPrice": 575000,
+     "grossYieldPct": 5.14,
+     "rentSample": 57,
+     "priceSample": 354
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2530,
+     "medianPrice": 620000,
+     "grossYieldPct": 4.9,
+     "rentSample": 110,
+     "priceSample": 505
+    },
+    {
+     "beds": 4,
+     "typicalRent": 2940,
+     "medianPrice": 715000,
+     "grossYieldPct": 4.93,
+     "rentSample": 49,
+     "priceSample": 121
+    }
+   ]
+  },
+  {
+   "city": "Newmarket",
+   "slug": "newmarket",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 967750,
+     "sales": 76,
+     "soldToList": 99.3
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 1011750,
+     "sales": 44,
+     "soldToList": 101.2
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 1090000,
+     "sales": 35,
+     "soldToList": 100.8
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 1095000,
+     "sales": 47,
+     "soldToList": 100.4
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 1000000,
+     "sales": 45,
+     "soldToList": 99.9
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 1044000,
+     "sales": 48,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 1010000,
+     "sales": 78,
+     "soldToList": 100.5
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 1027500,
+     "sales": 68,
+     "soldToList": 99.6
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 945000,
+     "sales": 69,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 960000,
+     "sales": 67,
+     "soldToList": 98.2
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 899000,
+     "sales": 73,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 919500,
+     "sales": 54,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 898000,
+     "sales": 47,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 870000,
+     "sales": 43,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 938000,
+     "sales": 39,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 891500,
+     "sales": 37,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 940000,
+     "sales": 61,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 970000,
+     "sales": 78,
+     "soldToList": 99.2
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 967500,
+     "sales": 98,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 938500,
+     "sales": 83,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 929369,
+     "sales": 81,
+     "soldToList": 98.2
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 962500,
+     "sales": 80,
+     "soldToList": 99.7
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 872500,
+     "sales": 68,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 875000,
+     "sales": 98,
+     "soldToList": 97.7
+    }
+   ],
+   "sales90": 230,
+   "soldToListPct": 97.5,
+   "pctOverAsking": 17.5,
+   "soldCount12m": 825,
+   "soldMedianDom": 21,
+   "soldP25Dom": 12,
+   "soldP75Dom": 39,
+   "trueDom": 65,
+   "medianNaiveDom": 40,
+   "domBuckets": {
+    "d0_14": 36,
+    "d15_30": 46,
+    "d31_60": 62,
+    "d61_90": 46,
+    "d90plus": 125
+   },
+   "underAskShare": 0.775,
+   "askGapMedian": -3.3,
+   "activeCount": 315,
+   "cutCount": 107,
+   "medianCutPct": 7.5,
+   "medianCutAmt": 90999,
+   "monthsOfSupply": 4.1,
+   "temperature": "balanced",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1954,
+     "medianPrice": 462000,
+     "grossYieldPct": 5.08,
+     "rentSample": 249,
+     "priceSample": 21
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2441,
+     "medianPrice": 642500,
+     "grossYieldPct": 4.56,
+     "rentSample": 168,
+     "priceSample": 74
+    },
+    {
+     "beds": 3,
+     "typicalRent": 3101,
+     "medianPrice": 847000,
+     "grossYieldPct": 4.39,
+     "rentSample": 250,
+     "priceSample": 400
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3610,
+     "medianPrice": 1150000,
+     "grossYieldPct": 3.77,
+     "rentSample": 134,
+     "priceSample": 308
+    },
+    {
+     "beds": 5,
+     "typicalRent": 4082,
+     "medianPrice": 1598000,
+     "grossYieldPct": 3.07,
+     "rentSample": 11,
+     "priceSample": 19
+    }
+   ]
+  },
+  {
+   "city": "Caledon",
+   "slug": "caledon",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 1225000,
+     "sales": 61,
+     "soldToList": 96.7
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 1200000,
+     "sales": 42,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 1125000,
+     "sales": 40,
+     "soldToList": 95.4
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 1078486,
+     "sales": 44,
+     "soldToList": 96.5
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 1250000,
+     "sales": 51,
+     "soldToList": 95.6
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 1263275,
+     "sales": 47,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 1200000,
+     "sales": 63,
+     "soldToList": 97
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 1091250,
+     "sales": 68,
+     "soldToList": 96.2
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 1171375,
+     "sales": 44,
+     "soldToList": 96.5
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 1060000,
+     "sales": 59,
+     "soldToList": 96.7
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 1065050,
+     "sales": 42,
+     "soldToList": 97
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 1012000,
+     "sales": 51,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 1200000,
+     "sales": 44,
+     "soldToList": 95.7
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 995000,
+     "sales": 32,
+     "soldToList": 94.2
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 1035000,
+     "sales": 33,
+     "soldToList": 95.7
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 930000,
+     "sales": 42,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 1155211,
+     "sales": 47,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 1042500,
+     "sales": 76,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 1130000,
+     "sales": 75,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 1054000,
+     "sales": 66,
+     "soldToList": 97
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 1161000,
+     "sales": 62,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 980000,
+     "sales": 59,
+     "soldToList": 96.4
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 951000,
+     "sales": 67,
+     "soldToList": 95.5
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 1000000,
+     "sales": 81,
+     "soldToList": 95.5
+    }
+   ],
+   "sales90": 203,
+   "soldToListPct": 95.3,
+   "pctOverAsking": 5.9,
+   "soldCount12m": 692,
+   "soldMedianDom": 27,
+   "soldP25Dom": 14,
+   "soldP75Dom": 55,
+   "trueDom": 90,
+   "medianNaiveDom": 54,
+   "domBuckets": {
+    "d0_14": 47,
+    "d15_30": 45,
+    "d31_60": 71,
+    "d61_90": 73,
+    "d90plus": 233
+   },
+   "underAskShare": 0.88,
+   "askGapMedian": -4.2,
+   "activeCount": 470,
+   "cutCount": 158,
+   "medianCutPct": 9.1,
+   "medianCutAmt": 132500,
+   "monthsOfSupply": 7.5,
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1838,
+     "medianPrice": 835000,
+     "grossYieldPct": null,
+     "rentSample": 21,
+     "priceSample": 3
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2171,
+     "medianPrice": 785000,
+     "grossYieldPct": 3.32,
+     "rentSample": 31,
+     "priceSample": 45
+    },
+    {
+     "beds": 3,
+     "typicalRent": 3065,
+     "medianPrice": 900000,
+     "grossYieldPct": 4.09,
+     "rentSample": 164,
+     "priceSample": 326
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3616,
+     "medianPrice": 1200000,
+     "grossYieldPct": 3.62,
+     "rentSample": 85,
+     "priceSample": 261
+    },
+    {
+     "beds": 5,
+     "typicalRent": 4300,
+     "medianPrice": 1500000,
+     "grossYieldPct": 3.44,
+     "rentSample": 14,
+     "priceSample": 39
+    }
+   ]
+  },
+  {
+   "city": "Welland",
+   "slug": "welland",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 562500,
+     "sales": 40,
+     "soldToList": 96.3
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 570000,
+     "sales": 43,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 625000,
+     "sales": 39,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 630000,
+     "sales": 45,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 607000,
+     "sales": 41,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 552500,
+     "sales": 70,
+     "soldToList": 97
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 582500,
+     "sales": 72,
+     "soldToList": 99.8
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 559900,
+     "sales": 61,
+     "soldToList": 96
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 510000,
+     "sales": 64,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 575000,
+     "sales": 53,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 527500,
+     "sales": 60,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 577500,
+     "sales": 42,
+     "soldToList": 95.8
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 494000,
+     "sales": 44,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 523000,
+     "sales": 44,
+     "soldToList": 95.5
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 520500,
+     "sales": 38,
+     "soldToList": 95.8
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 500000,
+     "sales": 34,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 545000,
+     "sales": 63,
+     "soldToList": 96
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 547000,
+     "sales": 67,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 547500,
+     "sales": 66,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 532500,
+     "sales": 74,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 501500,
+     "sales": 64,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 530000,
+     "sales": 50,
+     "soldToList": 96.5
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 515000,
+     "sales": 69,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 531250,
+     "sales": 76,
+     "soldToList": 96.7
+    }
+   ],
+   "sales90": 189,
+   "soldToListPct": 96.2,
+   "pctOverAsking": 7.4,
+   "soldCount12m": 701,
+   "soldMedianDom": 32,
+   "soldP25Dom": 14,
+   "soldP75Dom": 63,
+   "trueDom": 82,
+   "medianNaiveDom": 62,
+   "domBuckets": {
+    "d0_14": 30,
+    "d15_30": 37,
+    "d31_60": 76,
+    "d61_90": 61,
+    "d90plus": 177
+   },
+   "underAskShare": 0.914,
+   "askGapMedian": -4.5,
+   "activeCount": 381,
+   "cutCount": 107,
+   "medianCutPct": 10.3,
+   "medianCutAmt": 60001,
+   "monthsOfSupply": 6.2,
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1519,
+     "medianPrice": 319000,
+     "grossYieldPct": 5.71,
+     "rentSample": 38,
+     "priceSample": 7
+    },
+    {
+     "beds": 2,
+     "typicalRent": 1953,
+     "medianPrice": 500000,
+     "grossYieldPct": 4.69,
+     "rentSample": 69,
+     "priceSample": 161
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2271,
+     "medianPrice": 511250,
+     "grossYieldPct": 5.33,
+     "rentSample": 163,
+     "priceSample": 400
+    },
+    {
+     "beds": 4,
+     "typicalRent": 2561,
+     "medianPrice": 590000,
+     "grossYieldPct": 5.21,
+     "rentSample": 77,
+     "priceSample": 90
+    }
+   ]
+  },
+  {
+   "city": "Belleville",
+   "slug": "belleville",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 537500,
+     "sales": 50,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 505000,
+     "sales": 29,
+     "soldToList": 95.2
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 490000,
+     "sales": 31,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 490000,
+     "sales": 34,
+     "soldToList": 98
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 570000,
+     "sales": 48,
+     "soldToList": 97.7
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 545000,
+     "sales": 77,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 549900,
+     "sales": 69,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 529900,
+     "sales": 73,
+     "soldToList": 98.7
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 531000,
+     "sales": 66,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 477500,
+     "sales": 44,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 552500,
+     "sales": 52,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 450000,
+     "sales": 37,
+     "soldToList": 98.9
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 502500,
+     "sales": 32,
+     "soldToList": 94.5
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 438500,
+     "sales": 36,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 459000,
+     "sales": 32,
+     "soldToList": 96.1
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 521500,
+     "sales": 43,
+     "soldToList": 95.9
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 507000,
+     "sales": 39,
+     "soldToList": 98.2
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 522450,
+     "sales": 64,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 507000,
+     "sales": 78,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 520000,
+     "sales": 86,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 499900,
+     "sales": 81,
+     "soldToList": 97.4
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 505250,
+     "sales": 68,
+     "soldToList": 97
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 501000,
+     "sales": 58,
+     "soldToList": 98
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 486250,
+     "sales": 72,
+     "soldToList": 96.4
+    }
+   ],
+   "sales90": 180,
+   "soldToListPct": 96.7,
+   "pctOverAsking": 7.8,
+   "soldCount12m": 714,
+   "soldMedianDom": 30,
+   "soldP25Dom": 15,
+   "soldP75Dom": 57,
+   "trueDom": 78,
+   "medianNaiveDom": 54,
+   "domBuckets": {
+    "d0_14": 39,
+    "d15_30": 38,
+    "d31_60": 55,
+    "d61_90": 47,
+    "d90plus": 154
+   },
+   "underAskShare": 0.833,
+   "askGapMedian": -3.4,
+   "activeCount": 332,
+   "cutCount": 103,
+   "medianCutPct": 9.4,
+   "medianCutAmt": 50000,
+   "monthsOfSupply": 4.8,
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1682,
+     "medianPrice": 490000,
+     "grossYieldPct": 4.12,
+     "rentSample": 31,
+     "priceSample": 35
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2320,
+     "medianPrice": 483750,
+     "grossYieldPct": 5.76,
+     "rentSample": 66,
+     "priceSample": 204
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2628,
+     "medianPrice": 500000,
+     "grossYieldPct": 6.31,
+     "rentSample": 95,
+     "priceSample": 365
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3055,
+     "medianPrice": 640000,
+     "grossYieldPct": 5.73,
+     "rentSample": 22,
+     "priceSample": 83
+    }
+   ]
+  },
+  {
+   "city": "Woodstock",
+   "slug": "woodstock",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 600000,
+     "sales": 54,
+     "soldToList": 98.2
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 573500,
+     "sales": 40,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 578111,
+     "sales": 31,
+     "soldToList": 100.1
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 600000,
+     "sales": 45,
+     "soldToList": 98.7
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 585000,
+     "sales": 38,
+     "soldToList": 99
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 645000,
+     "sales": 51,
+     "soldToList": 98.7
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 592500,
+     "sales": 62,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 590000,
+     "sales": 48,
+     "soldToList": 98
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 576750,
+     "sales": 56,
+     "soldToList": 98.6
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 584000,
+     "sales": 53,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 590000,
+     "sales": 41,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 580000,
+     "sales": 38,
+     "soldToList": 96.7
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 588725,
+     "sales": 48,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 540000,
+     "sales": 43,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 572500,
+     "sales": 30,
+     "soldToList": 96.8
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 618750,
+     "sales": 34,
+     "soldToList": 97.2
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 615000,
+     "sales": 55,
+     "soldToList": 98
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 545000,
+     "sales": 65,
+     "soldToList": 98.5
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 545000,
+     "sales": 79,
+     "soldToList": 98.4
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 555000,
+     "sales": 65,
+     "soldToList": 97.3
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 590500,
+     "sales": 68,
+     "soldToList": 97.8
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 555000,
+     "sales": 42,
+     "soldToList": 96.9
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 560750,
+     "sales": 52,
+     "soldToList": 97.5
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 560000,
+     "sales": 49,
+     "soldToList": 96.8
+    }
+   ],
+   "sales90": 140,
+   "soldToListPct": 96.9,
+   "pctOverAsking": 11.4,
+   "soldCount12m": 622,
+   "soldMedianDom": 27,
+   "soldP25Dom": 14,
+   "soldP75Dom": 55,
+   "trueDom": 65,
+   "medianNaiveDom": 48,
+   "domBuckets": {
+    "d0_14": 24,
+    "d15_30": 31,
+    "d31_60": 43,
+    "d61_90": 34,
+    "d90plus": 84
+   },
+   "underAskShare": 0.829,
+   "askGapMedian": -3.1,
+   "activeCount": 216,
+   "cutCount": 59,
+   "medianCutPct": 8.2,
+   "medianCutAmt": 50000,
+   "monthsOfSupply": 4,
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1548,
+     "medianPrice": 448000,
+     "grossYieldPct": 4.15,
+     "rentSample": 13,
+     "priceSample": 11
+    },
+    {
+     "beds": 2,
+     "typicalRent": 1954,
+     "medianPrice": 530000,
+     "grossYieldPct": 4.42,
+     "rentSample": 39,
+     "priceSample": 120
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2513,
+     "medianPrice": 545000,
+     "grossYieldPct": 5.53,
+     "rentSample": 65,
+     "priceSample": 361
+    },
+    {
+     "beds": 4,
+     "typicalRent": 2824,
+     "medianPrice": 722500,
+     "grossYieldPct": 4.69,
+     "rentSample": 54,
+     "priceSample": 113
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3000,
+     "medianPrice": 864950,
+     "grossYieldPct": 4.16,
+     "rentSample": 3,
+     "priceSample": 14
+    }
+   ]
+  },
+  {
+   "city": "Aurora",
+   "slug": "aurora",
+   "monthly": [
+    {
+     "month": "2024-11",
+     "medianPrice": 1270000,
+     "sales": 68,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2024-12",
+     "medianPrice": 1250000,
+     "sales": 29,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2025-01",
+     "medianPrice": 1260000,
+     "sales": 21,
+     "soldToList": 100.8
+    },
+    {
+     "month": "2025-02",
+     "medianPrice": 1065000,
+     "sales": 30,
+     "soldToList": 100.8
+    },
+    {
+     "month": "2025-03",
+     "medianPrice": 1132300,
+     "sales": 34,
+     "soldToList": 101.2
+    },
+    {
+     "month": "2025-04",
+     "medianPrice": 1200000,
+     "sales": 51,
+     "soldToList": 99.1
+    },
+    {
+     "month": "2025-05",
+     "medianPrice": 1135000,
+     "sales": 58,
+     "soldToList": 97.6
+    },
+    {
+     "month": "2025-06",
+     "medianPrice": 1145500,
+     "sales": 46,
+     "soldToList": 98.9
+    },
+    {
+     "month": "2025-07",
+     "medianPrice": 1119000,
+     "sales": 33,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2025-08",
+     "medianPrice": 1294444,
+     "sales": 44,
+     "soldToList": 96.5
+    },
+    {
+     "month": "2025-09",
+     "medianPrice": 978000,
+     "sales": 58,
+     "soldToList": 96.7
+    },
+    {
+     "month": "2025-10",
+     "medianPrice": 1125000,
+     "sales": 51,
+     "soldToList": 96.6
+    },
+    {
+     "month": "2025-11",
+     "medianPrice": 1130000,
+     "sales": 41,
+     "soldToList": 95.8
+    },
+    {
+     "month": "2025-12",
+     "medianPrice": 1205000,
+     "sales": 30,
+     "soldToList": 98.2
+    },
+    {
+     "month": "2026-01",
+     "medianPrice": 1048000,
+     "sales": 23,
+     "soldToList": 94.1
+    },
+    {
+     "month": "2026-02",
+     "medianPrice": 1165944,
+     "sales": 32,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2026-03",
+     "medianPrice": 1050000,
+     "sales": 47,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2026-04",
+     "medianPrice": 1025000,
+     "sales": 65,
+     "soldToList": 97.9
+    },
+    {
+     "month": "2026-05",
+     "medianPrice": 1160000,
+     "sales": 65,
+     "soldToList": 99.2
+    },
+    {
+     "month": "2026-06",
+     "medianPrice": 1220000,
+     "sales": 69,
+     "soldToList": 98.3
+    },
+    {
+     "month": "2026-07",
+     "medianPrice": 1220000,
+     "sales": 61,
+     "soldToList": 96.2
+    },
+    {
+     "month": "2026-08",
+     "medianPrice": 881000,
+     "sales": 49,
+     "soldToList": 97.1
+    },
+    {
+     "month": "2026-09",
+     "medianPrice": 960000,
+     "sales": 59,
+     "soldToList": 98.1
+    },
+    {
+     "month": "2026-10",
+     "medianPrice": 1152444,
+     "sales": 48,
+     "soldToList": 98.1
+    }
+   ],
+   "sales90": 150,
+   "soldToListPct": 97.8,
+   "pctOverAsking": 14.7,
+   "soldCount12m": 590,
+   "soldMedianDom": 24,
+   "soldP25Dom": 12,
+   "soldP75Dom": 47,
+   "trueDom": 64,
+   "medianNaiveDom": 42,
+   "domBuckets": {
+    "d0_14": 30,
+    "d15_30": 34,
+    "d31_60": 80,
+    "d61_90": 45,
+    "d90plus": 115
+   },
+   "underAskShare": 0.759,
+   "askGapMedian": -3.2,
+   "activeCount": 305,
+   "cutCount": 105,
+   "medianCutPct": 10.2,
+   "medianCutAmt": 130000,
+   "monthsOfSupply": 5.4,
+   "temperature": "balanced",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1968,
+     "medianPrice": 470000,
+     "grossYieldPct": 5.02,
+     "rentSample": 45,
+     "priceSample": 25
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2310,
+     "medianPrice": 725000,
+     "grossYieldPct": 3.82,
+     "rentSample": 97,
+     "priceSample": 43
+    },
+    {
+     "beds": 3,
+     "typicalRent": 3137,
+     "medianPrice": 920000,
+     "grossYieldPct": 4.09,
+     "rentSample": 183,
+     "priceSample": 251
+    },
+    {
+     "beds": 4,
+     "typicalRent": 4072,
+     "medianPrice": 1426500,
+     "grossYieldPct": 3.43,
+     "rentSample": 124,
+     "priceSample": 242
+    },
+    {
+     "beds": 5,
+     "typicalRent": 4757,
+     "medianPrice": 1735900,
+     "grossYieldPct": 3.29,
+     "rentSample": 14,
+     "priceSample": 26
     }
    ]
   }

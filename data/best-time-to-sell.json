@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-24T20:49:01.097Z",
+ "generatedAt": "2026-11-25T21:36:16.402Z",
  "from": "2024-11-01",
  "to": "2026-11-01",
  "cities": [
@@ -17,7 +17,7 @@
      "price": {
       "pct": 0,
       "lo": -0.6,
-      "hi": 0.6,
+      "hi": 0.7,
       "significant": false
      }
     },
@@ -223,8 +223,8 @@
      "medianDom": 32,
      "price": {
       "pct": -0.8,
-      "lo": -2.4,
-      "hi": 0.6,
+      "lo": -2.1,
+      "hi": 0.8,
       "significant": false
      }
     },
@@ -237,7 +237,7 @@
      "price": {
       "pct": 1.9,
       "lo": 0.7,
-      "hi": 3.2,
+      "hi": 3,
       "significant": true
      }
     },
@@ -249,8 +249,8 @@
      "medianDom": 21,
      "price": {
       "pct": 0.5,
-      "lo": -0.7,
-      "hi": 1.8,
+      "lo": -0.8,
+      "hi": 1.9,
       "significant": false
      }
     },
@@ -263,7 +263,7 @@
      "price": {
       "pct": 1.1,
       "lo": 0.1,
-      "hi": 2.2,
+      "hi": 2,
       "significant": true
      }
     },
@@ -275,8 +275,8 @@
      "medianDom": 20,
      "price": {
       "pct": 2,
-      "lo": 0.9,
-      "hi": 2.9,
+      "lo": 1.1,
+      "hi": 3,
       "significant": true
      }
     },
@@ -301,7 +301,7 @@
      "medianDom": 27,
      "price": {
       "pct": -0.3,
-      "lo": -1.4,
+      "lo": -1.3,
       "hi": 0.7,
       "significant": false
      }
@@ -314,7 +314,7 @@
      "medianDom": 28,
      "price": {
       "pct": 0.1,
-      "lo": -1.2,
+      "lo": -1.1,
       "hi": 1.5,
       "significant": false
      }
@@ -340,8 +340,8 @@
      "medianDom": 24,
      "price": {
       "pct": -1.1,
-      "lo": -2,
-      "hi": -0.1,
+      "lo": -1.9,
+      "hi": -0.2,
       "significant": true
      }
     },
@@ -431,7 +431,7 @@
      "price": {
       "pct": 0,
       "lo": -1,
-      "hi": 1.2,
+      "hi": 1.1,
       "significant": false
      }
     },
@@ -443,8 +443,8 @@
      "medianDom": 21,
      "price": {
       "pct": -1.7,
-      "lo": -2.7,
-      "hi": -0.7,
+      "lo": -2.6,
+      "hi": -0.8,
       "significant": true
      }
     },
@@ -456,8 +456,8 @@
      "medianDom": 20,
      "price": {
       "pct": -0.5,
-      "lo": -1.3,
-      "hi": 0.3,
+      "lo": -1.4,
+      "hi": 0.4,
       "significant": false
      }
     },
@@ -470,7 +470,7 @@
      "price": {
       "pct": 1.2,
       "lo": 0.4,
-      "hi": 2.1,
+      "hi": 2,
       "significant": true
      }
     },
@@ -482,8 +482,8 @@
      "medianDom": 19,
      "price": {
       "pct": 1.6,
-      "lo": 0.7,
-      "hi": 2.6,
+      "lo": 0.6,
+      "hi": 2.5,
       "significant": true
      }
     },
@@ -496,7 +496,7 @@
      "price": {
       "pct": 1.1,
       "lo": 0.4,
-      "hi": 1.8,
+      "hi": 1.9,
       "significant": true
      }
     },
@@ -509,7 +509,7 @@
      "price": {
       "pct": 0.2,
       "lo": -0.6,
-      "hi": 1.2,
+      "hi": 1.1,
       "significant": false
      }
     },
@@ -521,8 +521,8 @@
      "medianDom": 24,
      "price": {
       "pct": -0.2,
-      "lo": -0.8,
-      "hi": 0.6,
+      "lo": -0.9,
+      "hi": 0.5,
       "significant": false
      }
     },
@@ -535,7 +535,7 @@
      "price": {
       "pct": -0.3,
       "lo": -1,
-      "hi": 0.4,
+      "hi": 0.5,
       "significant": false
      }
     },
@@ -547,8 +547,8 @@
      "medianDom": 23,
      "price": {
       "pct": -0.6,
-      "lo": -1.5,
-      "hi": 0.2,
+      "lo": -1.4,
+      "hi": 0.4,
       "significant": false
      }
     },
@@ -560,8 +560,8 @@
      "medianDom": 22,
      "price": {
       "pct": -0.6,
-      "lo": -1.5,
-      "hi": 0.4,
+      "lo": -1.4,
+      "hi": 0.3,
       "significant": false
      }
     },
@@ -573,8 +573,8 @@
      "medianDom": 24,
      "price": {
       "pct": -0.4,
-      "lo": -1.5,
-      "hi": 0.7,
+      "lo": -1.4,
+      "hi": 0.6,
       "significant": false
      }
     }
@@ -637,7 +637,7 @@
      "medianDom": 28,
      "price": {
       "pct": -0.5,
-      "lo": -1.7,
+      "lo": -1.6,
       "hi": 0.5,
       "significant": false
      }
@@ -650,7 +650,7 @@
      "medianDom": 20,
      "price": {
       "pct": 0.1,
-      "lo": -1.2,
+      "lo": -1.3,
       "hi": 1.4,
       "significant": false
      }
@@ -663,8 +663,8 @@
      "medianDom": 18,
      "price": {
       "pct": 0.6,
-      "lo": -0.7,
-      "hi": 1.9,
+      "lo": -0.5,
+      "hi": 1.8,
       "significant": false
      }
     },
@@ -676,7 +676,7 @@
      "medianDom": 17,
      "price": {
       "pct": 0.4,
-      "lo": -0.6,
+      "lo": -0.4,
       "hi": 1.3,
       "significant": false
      }
@@ -689,7 +689,7 @@
      "medianDom": 19,
      "price": {
       "pct": 1.2,
-      "lo": 0.3,
+      "lo": 0.2,
       "hi": 2.3,
       "significant": true
      }
@@ -702,7 +702,7 @@
      "medianDom": 20,
      "price": {
       "pct": 0.5,
-      "lo": -0.4,
+      "lo": -0.7,
       "hi": 1.5,
       "significant": false
      }
@@ -715,8 +715,8 @@
      "medianDom": 23,
      "price": {
       "pct": -0.7,
-      "lo": -1.8,
-      "hi": 0.4,
+      "lo": -2.1,
+      "hi": 0.5,
       "significant": false
      }
     },
@@ -728,8 +728,8 @@
      "medianDom": 25,
      "price": {
       "pct": 0.7,
-      "lo": -0.6,
-      "hi": 2.3,
+      "lo": -0.7,
+      "hi": 2,
       "significant": false
      }
     },
@@ -741,8 +741,8 @@
      "medianDom": 25,
      "price": {
       "pct": -0.4,
-      "lo": -1.4,
-      "hi": 0.5,
+      "lo": -1.3,
+      "hi": 0.7,
       "significant": false
      }
     },
@@ -754,8 +754,8 @@
      "medianDom": 22,
      "price": {
       "pct": -0.3,
-      "lo": -1.2,
-      "hi": 0.8,
+      "lo": -1.3,
+      "hi": 0.6,
       "significant": false
      }
     },
@@ -767,8 +767,8 @@
      "medianDom": 23,
      "price": {
       "pct": -1.4,
-      "lo": -2.7,
-      "hi": -0.2,
+      "lo": -2.4,
+      "hi": -0.1,
       "significant": true
      }
     },
@@ -780,8 +780,8 @@
      "medianDom": 28,
      "price": {
       "pct": -0.2,
-      "lo": -1.4,
-      "hi": 1.2,
+      "lo": -1.5,
+      "hi": 1.3,
       "significant": false
      }
     }
@@ -844,8 +844,8 @@
      "medianDom": 32,
      "price": {
       "pct": -2,
-      "lo": -3.6,
-      "hi": -0.6,
+      "lo": -3.4,
+      "hi": -0.4,
       "significant": true
      }
     },
@@ -857,8 +857,8 @@
      "medianDom": 20,
      "price": {
       "pct": -0.1,
-      "lo": -1.7,
-      "hi": 1.5,
+      "lo": -1.6,
+      "hi": 1.6,
       "significant": false
      }
     },
@@ -870,8 +870,8 @@
      "medianDom": 18,
      "price": {
       "pct": -0.1,
-      "lo": -1.3,
-      "hi": 1.2,
+      "lo": -1.2,
+      "hi": 1.1,
       "significant": false
      }
     },
@@ -883,8 +883,8 @@
      "medianDom": 18,
      "price": {
       "pct": 1.7,
-      "lo": 0.8,
-      "hi": 2.9,
+      "lo": 0.6,
+      "hi": 3,
       "significant": true
      }
     },
@@ -896,9 +896,9 @@
      "medianDom": 19,
      "price": {
       "pct": 1,
-      "lo": 0,
-      "hi": 2.1,
-      "significant": false
+      "lo": 0.1,
+      "hi": 2,
+      "significant": true
      }
     },
     {
@@ -909,8 +909,8 @@
      "medianDom": 22,
      "price": {
       "pct": 1.6,
-      "lo": 0.8,
-      "hi": 2.4,
+      "lo": 0.9,
+      "hi": 2.6,
       "significant": true
      }
     },
@@ -922,8 +922,8 @@
      "medianDom": 26,
      "price": {
       "pct": 0.1,
-      "lo": -1.2,
-      "hi": 1.3,
+      "lo": -1,
+      "hi": 1.4,
       "significant": false
      }
     },
@@ -935,8 +935,8 @@
      "medianDom": 22,
      "price": {
       "pct": 0.4,
-      "lo": -0.8,
-      "hi": 1.5,
+      "lo": -1,
+      "hi": 1.9,
       "significant": false
      }
     },
@@ -987,8 +987,8 @@
      "medianDom": 29,
      "price": {
       "pct": -0.5,
-      "lo": -2.2,
-      "hi": 1.5,
+      "lo": -2.4,
+      "hi": 1.4,
       "significant": false
      }
     }
@@ -1052,7 +1052,7 @@
      "price": {
       "pct": 1.3,
       "lo": -0.1,
-      "hi": 2.9,
+      "hi": 2.6,
       "significant": false
      }
     },
@@ -1064,8 +1064,8 @@
      "medianDom": 21,
      "price": {
       "pct": -0.4,
-      "lo": -1.9,
-      "hi": 1,
+      "lo": -1.8,
+      "hi": 0.9,
       "significant": false
      }
     },
@@ -1078,7 +1078,7 @@
      "price": {
       "pct": 0.3,
       "lo": -1.3,
-      "hi": 1.9,
+      "hi": 2.1,
       "significant": false
      }
     },
@@ -1090,8 +1090,8 @@
      "medianDom": 21,
      "price": {
       "pct": 0.4,
-      "lo": -1,
-      "hi": 1.8,
+      "lo": -1.2,
+      "hi": 1.6,
       "significant": false
      }
     },
@@ -1103,8 +1103,8 @@
      "medianDom": 22,
      "price": {
       "pct": -0.4,
-      "lo": -1.6,
-      "hi": 1.1,
+      "lo": -1.8,
+      "hi": 1,
       "significant": false
      }
     },
@@ -1116,8 +1116,8 @@
      "medianDom": 22,
      "price": {
       "pct": 1.8,
-      "lo": 0.2,
-      "hi": 3.5,
+      "lo": 0.1,
+      "hi": 3.7,
       "significant": true
      }
     },
@@ -1130,7 +1130,7 @@
      "price": {
       "pct": 1.1,
       "lo": -0.4,
-      "hi": 2.8,
+      "hi": 2.6,
       "significant": false
      }
     },
@@ -1155,8 +1155,8 @@
      "medianDom": 24,
      "price": {
       "pct": -0.1,
-      "lo": -1.6,
-      "hi": 1.8,
+      "lo": -1.4,
+      "hi": 1.5,
       "significant": false
      }
     },
@@ -1168,7 +1168,7 @@
      "medianDom": 25,
      "price": {
       "pct": 0.2,
-      "lo": -1.5,
+      "lo": -1.3,
       "hi": 1.9,
       "significant": false
      }
@@ -1181,9 +1181,9 @@
      "medianDom": 21,
      "price": {
       "pct": -2,
-      "lo": -3.9,
-      "hi": -0.3,
-      "significant": true
+      "lo": -3.7,
+      "hi": 0,
+      "significant": false
      }
     },
     {
@@ -1194,9 +1194,9 @@
      "medianDom": 32,
      "price": {
       "pct": -1.7,
-      "lo": -3.4,
-      "hi": -0.2,
-      "significant": true
+      "lo": -3.3,
+      "hi": 0,
+      "significant": false
      }
     }
    ],
@@ -1242,7 +1242,7 @@
   {
    "city": "Oshawa",
    "slug": "oshawa",
-   "sales": 3057,
+   "sales": 3056,
    "months": [
     {
      "month": 1,
@@ -1252,8 +1252,8 @@
      "medianDom": 19,
      "price": {
       "pct": 1.6,
-      "lo": -0.6,
-      "hi": 3.4,
+      "lo": -0.3,
+      "hi": 3.1,
       "significant": false
      }
     },
@@ -1266,7 +1266,7 @@
      "price": {
       "pct": 1.4,
       "lo": 0,
-      "hi": 2.9,
+      "hi": 3,
       "significant": false
      }
     },
@@ -1278,8 +1278,8 @@
      "medianDom": 13,
      "price": {
       "pct": 1.4,
-      "lo": -1,
-      "hi": 3.7,
+      "lo": -0.8,
+      "hi": 3.3,
       "significant": false
      }
     },
@@ -1291,9 +1291,9 @@
      "medianDom": 14,
      "price": {
       "pct": 1.7,
-      "lo": 0.3,
-      "hi": 3.1,
-      "significant": true
+      "lo": 0,
+      "hi": 3.2,
+      "significant": false
      }
     },
     {
@@ -1304,8 +1304,8 @@
      "medianDom": 15,
      "price": {
       "pct": 0.3,
-      "lo": -1.1,
-      "hi": 1.5,
+      "lo": -1,
+      "hi": 1.7,
       "significant": false
      }
     },
@@ -1317,21 +1317,21 @@
      "medianDom": 16,
      "price": {
       "pct": 0.2,
-      "lo": -1.1,
-      "hi": 1.9,
+      "lo": -1.2,
+      "hi": 1.6,
       "significant": false
      }
     },
     {
      "month": 7,
-     "sales": 321,
+     "sales": 320,
      "saleToAsk": 98.5,
      "overAskShare": 30,
      "medianDom": 17,
      "price": {
       "pct": -0.6,
-      "lo": -2.2,
-      "hi": 1.1,
+      "lo": -2.1,
+      "hi": 0.7,
       "significant": false
      }
     },
@@ -1344,7 +1344,7 @@
      "price": {
       "pct": -2,
       "lo": -3.5,
-      "hi": -0.5,
+      "hi": -0.3,
       "significant": true
      }
     },
@@ -1369,8 +1369,8 @@
      "medianDom": 20,
      "price": {
       "pct": -0.7,
-      "lo": -2.5,
-      "hi": 1.1,
+      "lo": -2.3,
+      "hi": 1.2,
       "significant": false
      }
     },
@@ -1383,7 +1383,7 @@
      "price": {
       "pct": -2.4,
       "lo": -3.5,
-      "hi": -1.1,
+      "hi": -1,
       "significant": true
      }
     },
@@ -1396,7 +1396,7 @@
      "price": {
       "pct": -0.7,
       "lo": -2.4,
-      "hi": 1.2,
+      "hi": 1.3,
       "significant": false
      }
     }
@@ -1404,7 +1404,7 @@
    "weekdays": [
     {
      "day": 1,
-     "sales": 426,
+     "sales": 425,
      "overAskShare": 28,
      "medianDom": 20
     },
@@ -1453,8 +1453,8 @@
      "medianDom": 19,
      "price": {
       "pct": 0,
-      "lo": -2.7,
-      "hi": 2,
+      "lo": -2.4,
+      "hi": 2.2,
       "significant": false
      }
     },
@@ -1466,7 +1466,7 @@
      "medianDom": 12,
      "price": {
       "pct": 1.6,
-      "lo": -0.2,
+      "lo": -0.5,
       "hi": 3.8,
       "significant": false
      }
@@ -1479,8 +1479,8 @@
      "medianDom": 12,
      "price": {
       "pct": 0,
-      "lo": -1.6,
-      "hi": 1.7,
+      "lo": -1.5,
+      "hi": 1.5,
       "significant": false
      }
     },
@@ -1492,8 +1492,8 @@
      "medianDom": 13,
      "price": {
       "pct": 1.9,
-      "lo": 0.3,
-      "hi": 3.8,
+      "lo": 0.4,
+      "hi": 4.1,
       "significant": true
      }
     },
@@ -1505,8 +1505,8 @@
      "medianDom": 13,
      "price": {
       "pct": 1.9,
-      "lo": 0.6,
-      "hi": 3.5,
+      "lo": 0.4,
+      "hi": 3.4,
       "significant": true
      }
     },
@@ -1519,7 +1519,7 @@
      "price": {
       "pct": 0.7,
       "lo": -0.4,
-      "hi": 2.1,
+      "hi": 1.9,
       "significant": false
      }
     },
@@ -1531,8 +1531,8 @@
      "medianDom": 20,
      "price": {
       "pct": 0,
-      "lo": -1.3,
-      "hi": 1.4,
+      "lo": -1.5,
+      "hi": 1.5,
       "significant": false
      }
     },
@@ -1545,7 +1545,7 @@
      "price": {
       "pct": -0.5,
       "lo": -2.1,
-      "hi": 1.4,
+      "hi": 1.2,
       "significant": false
      }
     },
@@ -1557,8 +1557,8 @@
      "medianDom": 16,
      "price": {
       "pct": 0.4,
-      "lo": -1.1,
-      "hi": 1.9,
+      "lo": -1,
+      "hi": 1.8,
       "significant": false
      }
     },
@@ -1570,8 +1570,8 @@
      "medianDom": 17,
      "price": {
       "pct": -2.5,
-      "lo": -4.2,
-      "hi": -1,
+      "lo": -4,
+      "hi": -0.5,
       "significant": true
      }
     },
@@ -1584,7 +1584,7 @@
      "price": {
       "pct": -2,
       "lo": -3.6,
-      "hi": -0.1,
+      "hi": -0.3,
       "significant": true
      }
     },
@@ -1596,7 +1596,7 @@
      "medianDom": 17,
      "price": {
       "pct": -1.5,
-      "lo": -3.8,
+      "lo": -3.3,
       "hi": 0.4,
       "significant": false
      }
@@ -1649,7 +1649,7 @@
      "price": {
       "pct": -0.8,
       "lo": -2.9,
-      "hi": 1.4,
+      "hi": 1.5,
       "significant": false
      }
     },
@@ -1662,7 +1662,7 @@
      "price": {
       "pct": 0.3,
       "lo": -1.5,
-      "hi": 1.9,
+      "hi": 2.1,
       "significant": false
      }
     },
@@ -1674,7 +1674,7 @@
      "medianDom": 13,
      "price": {
       "pct": 1.4,
-      "lo": -0.3,
+      "lo": -0.1,
       "hi": 3.5,
       "significant": false
      }
@@ -1687,8 +1687,8 @@
      "medianDom": 14,
      "price": {
       "pct": -0.2,
-      "lo": -1.9,
-      "hi": 1.4,
+      "lo": -2,
+      "hi": 1.5,
       "significant": false
      }
     },
@@ -1713,8 +1713,8 @@
      "medianDom": 15,
      "price": {
       "pct": 1.5,
-      "lo": -0.4,
-      "hi": 3,
+      "lo": -0.2,
+      "hi": 3.1,
       "significant": false
      }
     },
@@ -1726,8 +1726,8 @@
      "medianDom": 18,
      "price": {
       "pct": 0.2,
-      "lo": -1.7,
-      "hi": 1.9,
+      "lo": -1.9,
+      "hi": 2,
       "significant": false
      }
     },
@@ -1739,7 +1739,7 @@
      "medianDom": 19,
      "price": {
       "pct": -0.3,
-      "lo": -1.7,
+      "lo": -1.8,
       "hi": 1.1,
       "significant": false
      }
@@ -1752,8 +1752,8 @@
      "medianDom": 20,
      "price": {
       "pct": 0,
-      "lo": -1.6,
-      "hi": 1.7,
+      "lo": -1.7,
+      "hi": 1.8,
       "significant": false
      }
     },
@@ -1778,8 +1778,8 @@
      "medianDom": 21,
      "price": {
       "pct": -1.3,
-      "lo": -3.9,
-      "hi": 1.5,
+      "lo": -3.7,
+      "hi": 1.8,
       "significant": false
      }
     },
@@ -1791,8 +1791,8 @@
      "medianDom": 27,
      "price": {
       "pct": -1.2,
-      "lo": -3.7,
-      "hi": 1.2,
+      "lo": -3.1,
+      "hi": 0.9,
       "significant": false
      }
     }
@@ -1843,8 +1843,8 @@
      "medianDom": 22,
      "price": {
       "pct": 0.2,
-      "lo": -2.1,
-      "hi": 2.3,
+      "lo": -2.3,
+      "hi": 2.4,
       "significant": false
      }
     },
@@ -1856,8 +1856,8 @@
      "medianDom": 13,
      "price": {
       "pct": 1.1,
-      "lo": -0.9,
-      "hi": 2.5,
+      "lo": -1,
+      "hi": 2.7,
       "significant": false
      }
     },
@@ -1869,8 +1869,8 @@
      "medianDom": 14,
      "price": {
       "pct": -0.7,
-      "lo": -2.3,
-      "hi": 0.9,
+      "lo": -2.1,
+      "hi": 1,
       "significant": false
      }
     },
@@ -1882,8 +1882,8 @@
      "medianDom": 15,
      "price": {
       "pct": 1.3,
-      "lo": -0.2,
-      "hi": 3.1,
+      "lo": -0.1,
+      "hi": 2.9,
       "significant": false
      }
     },
@@ -1895,7 +1895,7 @@
      "medianDom": 16,
      "price": {
       "pct": 3.7,
-      "lo": 1.7,
+      "lo": 1.4,
       "hi": 6,
       "significant": true
      }
@@ -1908,8 +1908,8 @@
      "medianDom": 17,
      "price": {
       "pct": 1.3,
-      "lo": -0.5,
-      "hi": 3.2,
+      "lo": -0.4,
+      "hi": 3.1,
       "significant": false
      }
     },
@@ -1921,8 +1921,8 @@
      "medianDom": 21,
      "price": {
       "pct": 1.2,
-      "lo": -0.7,
-      "hi": 3.7,
+      "lo": -0.8,
+      "hi": 3.1,
       "significant": false
      }
     },
@@ -1934,8 +1934,8 @@
      "medianDom": 24,
      "price": {
       "pct": -2.3,
-      "lo": -4,
-      "hi": -0.8,
+      "lo": -3.8,
+      "hi": -0.6,
       "significant": true
      }
     },
@@ -1947,8 +1947,8 @@
      "medianDom": 22,
      "price": {
       "pct": -0.2,
-      "lo": -2,
-      "hi": 2.2,
+      "lo": -2.2,
+      "hi": 1.9,
       "significant": false
      }
     },
@@ -1960,8 +1960,8 @@
      "medianDom": 23,
      "price": {
       "pct": -2.1,
-      "lo": -3.7,
-      "hi": -0.4,
+      "lo": -3.6,
+      "hi": -0.5,
       "significant": true
      }
     },
@@ -1974,7 +1974,7 @@
      "price": {
       "pct": -0.7,
       "lo": -2.5,
-      "hi": 1,
+      "hi": 1.1,
       "significant": false
      }
     },
@@ -1986,8 +1986,8 @@
      "medianDom": 28,
      "price": {
       "pct": -2.6,
-      "lo": -4.7,
-      "hi": -0.3,
+      "lo": -5.1,
+      "hi": -0.5,
       "significant": true
      }
     }
@@ -2038,8 +2038,8 @@
      "medianDom": 25,
      "price": {
       "pct": -1,
-      "lo": -3.4,
-      "hi": 0.9,
+      "lo": -3.2,
+      "hi": 1,
       "significant": false
      }
     },
@@ -2051,8 +2051,8 @@
      "medianDom": 19,
      "price": {
       "pct": 0.9,
-      "lo": -1.1,
-      "hi": 2.6,
+      "lo": -0.9,
+      "hi": 2.8,
       "significant": false
      }
     },
@@ -2065,7 +2065,7 @@
      "price": {
       "pct": 0.2,
       "lo": -1.7,
-      "hi": 1.9,
+      "hi": 2,
       "significant": false
      }
     },
@@ -2077,7 +2077,7 @@
      "medianDom": 21,
      "price": {
       "pct": 2.1,
-      "lo": 0.7,
+      "lo": 0.9,
       "hi": 3.8,
       "significant": true
      }
@@ -2090,8 +2090,8 @@
      "medianDom": 20,
      "price": {
       "pct": 3.5,
-      "lo": 2,
-      "hi": 5.2,
+      "lo": 1.8,
+      "hi": 5.6,
       "significant": true
      }
     },
@@ -2117,7 +2117,7 @@
      "price": {
       "pct": -0.9,
       "lo": -2,
-      "hi": 0.4,
+      "hi": 0.3,
       "significant": false
      }
     },
@@ -2129,8 +2129,8 @@
      "medianDom": 29,
      "price": {
       "pct": -1.3,
-      "lo": -2.5,
-      "hi": 0.3,
+      "lo": -2.9,
+      "hi": 0.4,
       "significant": false
      }
     },
@@ -2143,7 +2143,7 @@
      "price": {
       "pct": -0.6,
       "lo": -2.3,
-      "hi": 1.1,
+      "hi": 1.6,
       "significant": false
      }
     },
@@ -2155,8 +2155,8 @@
      "medianDom": 26,
      "price": {
       "pct": -0.2,
-      "lo": -1.9,
-      "hi": 1.4,
+      "lo": -2,
+      "hi": 1.6,
       "significant": false
      }
     },
@@ -2168,7 +2168,7 @@
      "medianDom": 28,
      "price": {
       "pct": -2.4,
-      "lo": -3.9,
+      "lo": -4,
       "hi": -0.9,
       "significant": true
      }
@@ -2181,8 +2181,8 @@
      "medianDom": 34,
      "price": {
       "pct": -1.4,
-      "lo": -3.6,
-      "hi": 0.5,
+      "lo": -3.7,
+      "hi": 0.6,
       "significant": false
      }
     }
@@ -2239,8 +2239,8 @@
      "medianDom": 34,
      "price": {
       "pct": 0.5,
-      "lo": -2.3,
-      "hi": 3.1,
+      "lo": -1.8,
+      "hi": 3.2,
       "significant": false
      }
     },
@@ -2252,8 +2252,8 @@
      "medianDom": 20,
      "price": {
       "pct": 0.6,
-      "lo": -1.6,
-      "hi": 2.9,
+      "lo": -1.7,
+      "hi": 3.1,
       "significant": false
      }
     },
@@ -2265,8 +2265,8 @@
      "medianDom": 21,
      "price": {
       "pct": 1.8,
-      "lo": -0.4,
-      "hi": 3.9,
+      "lo": -0.3,
+      "hi": 3.7,
       "significant": false
      }
     },
@@ -2278,8 +2278,8 @@
      "medianDom": 17,
      "price": {
       "pct": 1.7,
-      "lo": -0.4,
-      "hi": 3.8,
+      "lo": -0.3,
+      "hi": 4,
       "significant": false
      }
     },
@@ -2291,8 +2291,8 @@
      "medianDom": 18,
      "price": {
       "pct": 2.5,
-      "lo": 0.8,
-      "hi": 4.3,
+      "lo": 0.9,
+      "hi": 4.1,
       "significant": true
      }
     },
@@ -2305,7 +2305,7 @@
      "price": {
       "pct": 2.6,
       "lo": 1.1,
-      "hi": 4.4,
+      "hi": 4.3,
       "significant": true
      }
     },
@@ -2317,8 +2317,8 @@
      "medianDom": 26,
      "price": {
       "pct": 0.9,
-      "lo": -1,
-      "hi": 2.7,
+      "lo": -0.8,
+      "hi": 3,
       "significant": false
      }
     },
@@ -2330,8 +2330,8 @@
      "medianDom": 27,
      "price": {
       "pct": 0,
-      "lo": -1.6,
-      "hi": 2,
+      "lo": -1.7,
+      "hi": 1.7,
       "significant": false
      }
     },
@@ -2343,8 +2343,8 @@
      "medianDom": 21,
      "price": {
       "pct": -1,
-      "lo": -3,
-      "hi": 0.8,
+      "lo": -2.7,
+      "hi": 0.7,
       "significant": false
      }
     },
@@ -2356,8 +2356,8 @@
      "medianDom": 22,
      "price": {
       "pct": -3.3,
-      "lo": -5.3,
-      "hi": -1.2,
+      "lo": -5.1,
+      "hi": -1.5,
       "significant": true
      }
     },
@@ -2369,9 +2369,9 @@
      "medianDom": 29,
      "price": {
       "pct": -2.4,
-      "lo": -4.9,
-      "hi": 0.2,
-      "significant": false
+      "lo": -4.8,
+      "hi": -0.2,
+      "significant": true
      }
     },
     {
@@ -2382,8 +2382,8 @@
      "medianDom": 32,
      "price": {
       "pct": -3.7,
-      "lo": -6.4,
-      "hi": -1.2,
+      "lo": -6,
+      "hi": -1.7,
       "significant": true
      }
     }
@@ -2440,8 +2440,8 @@
      "medianDom": 15,
      "price": {
       "pct": -0.1,
-      "lo": -1.8,
-      "hi": 1.5,
+      "lo": -1.6,
+      "hi": 2,
       "significant": false
      }
     },
@@ -2453,8 +2453,8 @@
      "medianDom": 17,
      "price": {
       "pct": -0.6,
-      "lo": -2.3,
-      "hi": 0.7,
+      "lo": -2.2,
+      "hi": 0.5,
       "significant": false
      }
     },
@@ -2492,7 +2492,7 @@
      "medianDom": 19,
      "price": {
       "pct": 0.6,
-      "lo": -0.4,
+      "lo": -0.5,
       "hi": 1.7,
       "significant": false
      }
@@ -2505,8 +2505,8 @@
      "medianDom": 21,
      "price": {
       "pct": 0.7,
-      "lo": -0.7,
-      "hi": 2.2,
+      "lo": -0.8,
+      "hi": 2.4,
       "significant": false
      }
     },
@@ -2519,7 +2519,7 @@
      "price": {
       "pct": 0.8,
       "lo": -0.2,
-      "hi": 1.9,
+      "hi": 2,
       "significant": false
      }
     },
@@ -2531,8 +2531,8 @@
      "medianDom": 21,
      "price": {
       "pct": 0.3,
-      "lo": -0.8,
-      "hi": 1.5,
+      "lo": -1,
+      "hi": 1.6,
       "significant": false
      }
     },
@@ -2544,8 +2544,8 @@
      "medianDom": 23,
      "price": {
       "pct": -0.3,
-      "lo": -1.5,
-      "hi": 0.8,
+      "lo": -1.4,
+      "hi": 0.7,
       "significant": false
      }
     },
@@ -2558,8 +2558,8 @@
      "price": {
       "pct": -1.6,
       "lo": -3.1,
-      "hi": 0.1,
-      "significant": false
+      "hi": 0,
+      "significant": true
      }
     },
     {
@@ -2571,7 +2571,7 @@
      "price": {
       "pct": -2.4,
       "lo": -3.6,
-      "hi": -1.3,
+      "hi": -1.2,
       "significant": true
      }
     },
@@ -2583,8 +2583,8 @@
      "medianDom": 25,
      "price": {
       "pct": 0.7,
-      "lo": -0.7,
-      "hi": 2,
+      "lo": -0.6,
+      "hi": 2.2,
       "significant": false
      }
     }
@@ -2641,8 +2641,8 @@
      "medianDom": 44,
      "price": {
       "pct": -1.1,
-      "lo": -2.5,
-      "hi": 0.5,
+      "lo": -2.6,
+      "hi": 0.7,
       "significant": false
      }
     },
@@ -2654,8 +2654,8 @@
      "medianDom": 23,
      "price": {
       "pct": -2.1,
-      "lo": -4,
-      "hi": -0.6,
+      "lo": -3.9,
+      "hi": -0.3,
       "significant": true
      }
     },
@@ -2667,8 +2667,8 @@
      "medianDom": 22,
      "price": {
       "pct": 0.4,
-      "lo": -1,
-      "hi": 2.1,
+      "lo": -1.1,
+      "hi": 1.8,
       "significant": false
      }
     },
@@ -2680,8 +2680,8 @@
      "medianDom": 21,
      "price": {
       "pct": 2.4,
-      "lo": 0.7,
-      "hi": 4,
+      "lo": 0.6,
+      "hi": 3.9,
       "significant": true
      }
     },
@@ -2694,7 +2694,7 @@
      "price": {
       "pct": 1.5,
       "lo": 0.3,
-      "hi": 2.6,
+      "hi": 2.7,
       "significant": true
      }
     },
@@ -2706,7 +2706,7 @@
      "medianDom": 24,
      "price": {
       "pct": 2.3,
-      "lo": 1.1,
+      "lo": 0.8,
       "hi": 3.7,
       "significant": true
      }
@@ -2719,8 +2719,8 @@
      "medianDom": 28,
      "price": {
       "pct": -0.1,
-      "lo": -1.3,
-      "hi": 1.4,
+      "lo": -1.4,
+      "hi": 1.3,
       "significant": false
      }
     },
@@ -2733,7 +2733,7 @@
      "price": {
       "pct": 0.9,
       "lo": -0.6,
-      "hi": 2.1,
+      "hi": 2.4,
       "significant": false
      }
     },
@@ -2746,7 +2746,7 @@
      "price": {
       "pct": 0.4,
       "lo": -1,
-      "hi": 1.8,
+      "hi": 1.7,
       "significant": false
      }
     },
@@ -2758,8 +2758,8 @@
      "medianDom": 26,
      "price": {
       "pct": 0.1,
-      "lo": -1.2,
-      "hi": 1.5,
+      "lo": -1.3,
+      "hi": 1.4,
       "significant": false
      }
     },
@@ -2771,8 +2771,8 @@
      "medianDom": 29,
      "price": {
       "pct": -1.2,
-      "lo": -2.9,
-      "hi": 0.3,
+      "lo": -2.8,
+      "hi": 0.5,
       "significant": false
      }
     },
@@ -2784,8 +2784,8 @@
      "medianDom": 37,
      "price": {
       "pct": -3.5,
-      "lo": -5.1,
-      "hi": -1.4,
+      "lo": -5.2,
+      "hi": -1.9,
       "significant": true
      }
     }
@@ -2842,7 +2842,7 @@
      "medianDom": 43,
      "price": {
       "pct": -1.4,
-      "lo": -2.4,
+      "lo": -2.5,
       "hi": -0.4,
       "significant": true
      }
@@ -2855,7 +2855,7 @@
      "medianDom": 20,
      "price": {
       "pct": -0.2,
-      "lo": -1.1,
+      "lo": -1,
       "hi": 0.7,
       "significant": false
      }
@@ -2868,8 +2868,8 @@
      "medianDom": 19,
      "price": {
       "pct": 1.5,
-      "lo": 0.8,
-      "hi": 2.2,
+      "lo": 0.6,
+      "hi": 2.1,
       "significant": true
      }
     },
@@ -2881,8 +2881,8 @@
      "medianDom": 19,
      "price": {
       "pct": 1.7,
-      "lo": 1,
-      "hi": 2.5,
+      "lo": 1.1,
+      "hi": 2.4,
       "significant": true
      }
     },
@@ -2894,7 +2894,7 @@
      "medianDom": 17,
      "price": {
       "pct": 2,
-      "lo": 1.4,
+      "lo": 1.3,
       "hi": 2.6,
       "significant": true
      }
@@ -2920,8 +2920,8 @@
      "medianDom": 25,
      "price": {
       "pct": 0.2,
-      "lo": -0.5,
-      "hi": 0.8,
+      "lo": -0.4,
+      "hi": 0.9,
       "significant": false
      }
     },
@@ -2933,7 +2933,7 @@
      "medianDom": 27,
      "price": {
       "pct": -0.1,
-      "lo": -0.9,
+      "lo": -0.7,
       "hi": 0.6,
       "significant": false
      }
@@ -2959,7 +2959,7 @@
      "medianDom": 24,
      "price": {
       "pct": -0.6,
-      "lo": -1.4,
+      "lo": -1.5,
       "hi": 0.2,
       "significant": false
      }
@@ -2972,8 +2972,8 @@
      "medianDom": 25,
      "price": {
       "pct": -1.9,
-      "lo": -3.2,
-      "hi": -0.9,
+      "lo": -3,
+      "hi": -0.7,
       "significant": true
      }
     },
@@ -2985,8 +2985,8 @@
      "medianDom": 34,
      "price": {
       "pct": -2.6,
-      "lo": -3.6,
-      "hi": -1.3,
+      "lo": -3.8,
+      "hi": -1.5,
       "significant": true
      }
     }
@@ -3050,7 +3050,7 @@
      "price": {
       "pct": -1.6,
       "lo": -3.2,
-      "hi": 0.4,
+      "hi": 0.2,
       "significant": false
      }
     },
@@ -3062,8 +3062,8 @@
      "medianDom": 21,
      "price": {
       "pct": 0.7,
-      "lo": -0.7,
-      "hi": 2.1,
+      "lo": -0.8,
+      "hi": 2.3,
       "significant": false
      }
     },
@@ -3075,8 +3075,8 @@
      "medianDom": 20,
      "price": {
       "pct": 0.8,
-      "lo": -0.4,
-      "hi": 2.3,
+      "lo": -0.3,
+      "hi": 2,
       "significant": false
      }
     },
@@ -3088,8 +3088,8 @@
      "medianDom": 19,
      "price": {
       "pct": 2.5,
-      "lo": 1.5,
-      "hi": 3.5,
+      "lo": 1.2,
+      "hi": 3.4,
       "significant": true
      }
     },
@@ -3101,7 +3101,7 @@
      "medianDom": 20,
      "price": {
       "pct": 1.3,
-      "lo": 0,
+      "lo": -0.1,
       "hi": 2.5,
       "significant": false
      }
@@ -3114,8 +3114,8 @@
      "medianDom": 22,
      "price": {
       "pct": 3.7,
-      "lo": 2.1,
-      "hi": 5,
+      "lo": 2.4,
+      "hi": 4.9,
       "significant": true
      }
     },
@@ -3127,8 +3127,8 @@
      "medianDom": 27,
      "price": {
       "pct": 0.2,
-      "lo": -1,
-      "hi": 1.4,
+      "lo": -0.9,
+      "hi": 1.3,
       "significant": false
      }
     },
@@ -3140,8 +3140,8 @@
      "medianDom": 25,
      "price": {
       "pct": 0.5,
-      "lo": -0.8,
-      "hi": 1.8,
+      "lo": -1.1,
+      "hi": 1.7,
       "significant": false
      }
     },
@@ -3153,8 +3153,8 @@
      "medianDom": 27,
      "price": {
       "pct": -2.3,
-      "lo": -3.4,
-      "hi": -1,
+      "lo": -3.6,
+      "hi": -0.9,
       "significant": true
      }
     },
@@ -3166,8 +3166,8 @@
      "medianDom": 27,
      "price": {
       "pct": -0.1,
-      "lo": -1.5,
-      "hi": 1.2,
+      "lo": -1.4,
+      "hi": 1.6,
       "significant": false
      }
     },
@@ -3179,8 +3179,8 @@
      "medianDom": 25,
      "price": {
       "pct": -2.6,
-      "lo": -3.9,
-      "hi": -1.1,
+      "lo": -3.8,
+      "hi": -1.2,
       "significant": true
      }
     },
@@ -3192,8 +3192,8 @@
      "medianDom": 35,
      "price": {
       "pct": -2.8,
-      "lo": -4.8,
-      "hi": -0.8,
+      "lo": -4.6,
+      "hi": -0.9,
       "significant": true
      }
     }
@@ -3256,8 +3256,8 @@
      "medianDom": 20,
      "price": {
       "pct": 1.5,
-      "lo": -0.9,
-      "hi": 4.5,
+      "lo": -0.7,
+      "hi": 3.9,
       "significant": false
      }
     },
@@ -3270,7 +3270,7 @@
      "price": {
       "pct": 1.8,
       "lo": -0.2,
-      "hi": 4.4,
+      "hi": 4.3,
       "significant": false
      }
     },
@@ -3282,7 +3282,7 @@
      "medianDom": 16,
      "price": {
       "pct": 1,
-      "lo": -1,
+      "lo": -0.6,
       "hi": 2.7,
       "significant": false
      }
@@ -3295,8 +3295,8 @@
      "medianDom": 15,
      "price": {
       "pct": 1.8,
-      "lo": 0.3,
-      "hi": 3.4,
+      "lo": 0.2,
+      "hi": 3.6,
       "significant": true
      }
     },
@@ -3308,8 +3308,8 @@
      "medianDom": 16,
      "price": {
       "pct": 1.2,
-      "lo": -0.3,
-      "hi": 2.9,
+      "lo": -0.6,
+      "hi": 2.8,
       "significant": false
      }
     },
@@ -3321,7 +3321,7 @@
      "medianDom": 19,
      "price": {
       "pct": 2.1,
-      "lo": 0.6,
+      "lo": 0.5,
       "hi": 3.6,
       "significant": true
      }
@@ -3334,8 +3334,8 @@
      "medianDom": 21,
      "price": {
       "pct": -0.2,
-      "lo": -1.6,
-      "hi": 1,
+      "lo": -1.4,
+      "hi": 1.1,
       "significant": false
      }
     },
@@ -3347,8 +3347,8 @@
      "medianDom": 21,
      "price": {
       "pct": -0.2,
-      "lo": -2.5,
-      "hi": 2,
+      "lo": -2.3,
+      "hi": 2.5,
       "significant": false
      }
     },
@@ -3360,8 +3360,8 @@
      "medianDom": 21,
      "price": {
       "pct": -2.3,
-      "lo": -4.6,
-      "hi": -0.3,
+      "lo": -4.9,
+      "hi": 0,
       "significant": true
      }
     },
@@ -3373,8 +3373,8 @@
      "medianDom": 21,
      "price": {
       "pct": -1.7,
-      "lo": -3.6,
-      "hi": 0.4,
+      "lo": -3.7,
+      "hi": 0.2,
       "significant": false
      }
     },
@@ -3386,8 +3386,8 @@
      "medianDom": 21,
      "price": {
       "pct": -1.5,
-      "lo": -3.7,
-      "hi": 1,
+      "lo": -3.6,
+      "hi": 1.2,
       "significant": false
      }
     },
@@ -3399,8 +3399,8 @@
      "medianDom": 31,
      "price": {
       "pct": -3.3,
-      "lo": -6.1,
-      "hi": -0.8,
+      "lo": -6.3,
+      "hi": -0.7,
       "significant": true
      }
     }
@@ -3457,8 +3457,8 @@
      "medianDom": 42,
      "price": {
       "pct": 1.3,
-      "lo": -0.6,
-      "hi": 2.9,
+      "lo": -0.9,
+      "hi": 3.7,
       "significant": false
      }
     },
@@ -3470,8 +3470,8 @@
      "medianDom": 20,
      "price": {
       "pct": -0.4,
-      "lo": -2.3,
-      "hi": 1.4,
+      "lo": -2.4,
+      "hi": 1.3,
       "significant": false
      }
     },
@@ -3483,8 +3483,8 @@
      "medianDom": 21,
      "price": {
       "pct": 0,
-      "lo": -1.7,
-      "hi": 2,
+      "lo": -1.9,
+      "hi": 1.7,
       "significant": false
      }
     },
@@ -3497,7 +3497,7 @@
      "price": {
       "pct": 1.6,
       "lo": 0.3,
-      "hi": 2.7,
+      "hi": 2.9,
       "significant": true
      }
     },
@@ -3509,7 +3509,7 @@
      "medianDom": 22,
      "price": {
       "pct": 1.8,
-      "lo": 0.5,
+      "lo": 0.6,
       "hi": 3.1,
       "significant": true
      }
@@ -3522,8 +3522,8 @@
      "medianDom": 22,
      "price": {
       "pct": 2.6,
-      "lo": 1.1,
-      "hi": 4.2,
+      "lo": 0.9,
+      "hi": 4.1,
       "significant": true
      }
     },
@@ -3536,7 +3536,7 @@
      "price": {
       "pct": 1.1,
       "lo": -0.1,
-      "hi": 2.3,
+      "hi": 2.4,
       "significant": false
      }
     },
@@ -3548,8 +3548,8 @@
      "medianDom": 27,
      "price": {
       "pct": -1,
-      "lo": -2.9,
-      "hi": 0.6,
+      "lo": -2.6,
+      "hi": 0.5,
       "significant": false
      }
     },
@@ -3561,8 +3561,8 @@
      "medianDom": 27,
      "price": {
       "pct": -0.5,
-      "lo": -2.3,
-      "hi": 1.4,
+      "lo": -2,
+      "hi": 1.6,
       "significant": false
      }
     },
@@ -3574,8 +3574,8 @@
      "medianDom": 24,
      "price": {
       "pct": 0.1,
-      "lo": -1.6,
-      "hi": 2,
+      "lo": -1.8,
+      "hi": 1.8,
       "significant": false
      }
     },
@@ -3588,7 +3588,7 @@
      "price": {
       "pct": -3.3,
       "lo": -5.6,
-      "hi": -1.1,
+      "hi": -1.4,
       "significant": true
      }
     },
@@ -3600,8 +3600,8 @@
      "medianDom": 34,
      "price": {
       "pct": -3,
-      "lo": -5.1,
-      "hi": -0.3,
+      "lo": -5,
+      "hi": -0.5,
       "significant": true
      }
     }
@@ -3658,7 +3658,7 @@
      "medianDom": 31,
      "price": {
       "pct": 0,
-      "lo": -1.6,
+      "lo": -1.8,
       "hi": 1.7,
       "significant": false
      }
@@ -3671,7 +3671,7 @@
      "medianDom": 18,
      "price": {
       "pct": 0.1,
-      "lo": -2.3,
+      "lo": -1.9,
       "hi": 2.4,
       "significant": false
      }
@@ -3684,8 +3684,8 @@
      "medianDom": 22,
      "price": {
       "pct": 2,
-      "lo": 0.4,
-      "hi": 3.9,
+      "lo": 0.2,
+      "hi": 3.8,
       "significant": true
      }
     },
@@ -3697,7 +3697,7 @@
      "medianDom": 19,
      "price": {
       "pct": 0.6,
-      "lo": -1.2,
+      "lo": -1,
       "hi": 2.3,
       "significant": false
      }
@@ -3710,8 +3710,8 @@
      "medianDom": 18,
      "price": {
       "pct": 2.2,
-      "lo": 0.5,
-      "hi": 3.9,
+      "lo": 0.1,
+      "hi": 4,
       "significant": true
      }
     },
@@ -3723,8 +3723,8 @@
      "medianDom": 21,
      "price": {
       "pct": 2.7,
-      "lo": 1.1,
-      "hi": 4.3,
+      "lo": 1,
+      "hi": 4.4,
       "significant": true
      }
     },
@@ -3737,7 +3737,7 @@
      "price": {
       "pct": 1,
       "lo": -0.6,
-      "hi": 2.8,
+      "hi": 3,
       "significant": false
      }
     },
@@ -3749,7 +3749,7 @@
      "medianDom": 29,
      "price": {
       "pct": 0,
-      "lo": -1.8,
+      "lo": -1.6,
       "hi": 1.6,
       "significant": false
      }
@@ -3762,7 +3762,7 @@
      "medianDom": 22,
      "price": {
       "pct": 0.2,
-      "lo": -1.5,
+      "lo": -1.7,
       "hi": 1.9,
       "significant": false
      }
@@ -3775,9 +3775,9 @@
      "medianDom": 24,
      "price": {
       "pct": -1.9,
-      "lo": -4.1,
-      "hi": 0,
-      "significant": false
+      "lo": -4,
+      "hi": -0.1,
+      "significant": true
      }
     },
     {
@@ -3788,8 +3788,8 @@
      "medianDom": 21,
      "price": {
       "pct": -3.9,
-      "lo": -5.4,
-      "hi": -2,
+      "lo": -5.6,
+      "hi": -1.9,
       "significant": true
      }
     },
@@ -3801,7 +3801,7 @@
      "medianDom": 32,
      "price": {
       "pct": -2.9,
-      "lo": -5.1,
+      "lo": -4.9,
       "hi": -0.5,
       "significant": true
      }
@@ -3853,7 +3853,7 @@
      "medianDom": 42,
      "price": {
       "pct": -1.5,
-      "lo": -3.5,
+      "lo": -3.9,
       "hi": 0.6,
       "significant": false
      }
@@ -3866,8 +3866,8 @@
      "medianDom": 23,
      "price": {
       "pct": -3,
-      "lo": -6.2,
-      "hi": 0.7,
+      "lo": -6.3,
+      "hi": 0,
       "significant": false
      }
     },
@@ -3879,8 +3879,8 @@
      "medianDom": 23,
      "price": {
       "pct": -2.5,
-      "lo": -6.2,
-      "hi": 0.6,
+      "lo": -5.3,
+      "hi": 0.8,
       "significant": false
      }
     },
@@ -3893,7 +3893,7 @@
      "price": {
       "pct": 2.8,
       "lo": 0.4,
-      "hi": 5.6,
+      "hi": 5.3,
       "significant": true
      }
     },
@@ -3906,7 +3906,7 @@
      "price": {
       "pct": 1.7,
       "lo": -0.4,
-      "hi": 3.8,
+      "hi": 4,
       "significant": false
      }
     },
@@ -3919,7 +3919,7 @@
      "price": {
       "pct": 3.6,
       "lo": 1.5,
-      "hi": 5.9,
+      "hi": 6.1,
       "significant": true
      }
     },
@@ -3931,7 +3931,7 @@
      "medianDom": 25,
      "price": {
       "pct": 3.2,
-      "lo": 0.8,
+      "lo": 1,
       "hi": 5.7,
       "significant": true
      }
@@ -3944,8 +3944,8 @@
      "medianDom": 27,
      "price": {
       "pct": -0.2,
-      "lo": -2.9,
-      "hi": 2.8,
+      "lo": -3.1,
+      "hi": 2.2,
       "significant": false
      }
     },
@@ -3957,7 +3957,7 @@
      "medianDom": 28,
      "price": {
       "pct": -0.1,
-      "lo": -2.5,
+      "lo": -2.1,
       "hi": 2.1,
       "significant": false
      }
@@ -3970,8 +3970,8 @@
      "medianDom": 25,
      "price": {
       "pct": -1.3,
-      "lo": -3.7,
-      "hi": 1.5,
+      "lo": -4,
+      "hi": 0.9,
       "significant": false
      }
     },
@@ -3984,7 +3984,7 @@
      "price": {
       "pct": -0.3,
       "lo": -4,
-      "hi": 3.4,
+      "hi": 3.5,
       "significant": false
      }
     },
@@ -3996,8 +3996,8 @@
      "medianDom": 30,
      "price": {
       "pct": -2.1,
-      "lo": -6.2,
-      "hi": 1.9,
+      "lo": -5.3,
+      "hi": 2.1,
       "significant": false
      }
     }
@@ -4048,7 +4048,7 @@
      "medianDom": 51,
      "price": {
       "pct": -2.2,
-      "lo": -5.4,
+      "lo": -5.7,
       "hi": 1,
       "significant": false
      }
@@ -4074,8 +4074,8 @@
      "medianDom": 26,
      "price": {
       "pct": 1,
-      "lo": -1.2,
-      "hi": 3.3,
+      "lo": -1.5,
+      "hi": 3.6,
       "significant": false
      }
     },
@@ -4087,8 +4087,8 @@
      "medianDom": 23,
      "price": {
       "pct": -0.7,
-      "lo": -2.9,
-      "hi": 1.6,
+      "lo": -2.5,
+      "hi": 1.1,
       "significant": false
      }
     },
@@ -4100,9 +4100,9 @@
      "medianDom": 22,
      "price": {
       "pct": 3.2,
-      "lo": -0.3,
-      "hi": 7,
-      "significant": false
+      "lo": 0.1,
+      "hi": 6.4,
+      "significant": true
      }
     },
     {
@@ -4113,8 +4113,8 @@
      "medianDom": 21,
      "price": {
       "pct": 1.8,
-      "lo": -0.7,
-      "hi": 3.9,
+      "lo": 0,
+      "hi": 4.2,
       "significant": false
      }
     },
@@ -4126,8 +4126,8 @@
      "medianDom": 28,
      "price": {
       "pct": 2,
-      "lo": -0.9,
-      "hi": 5.6,
+      "lo": -1.1,
+      "hi": 5.1,
       "significant": false
      }
     },
@@ -4139,8 +4139,8 @@
      "medianDom": 29,
      "price": {
       "pct": 1.6,
-      "lo": -0.9,
-      "hi": 4.1,
+      "lo": -1,
+      "hi": 4.4,
       "significant": false
      }
     },
@@ -4153,7 +4153,7 @@
      "price": {
       "pct": 0.7,
       "lo": -2.3,
-      "hi": 3.1,
+      "hi": 3.5,
       "significant": false
      }
     },
@@ -4165,8 +4165,8 @@
      "medianDom": 30,
      "price": {
       "pct": -1.3,
-      "lo": -4.7,
-      "hi": 1.5,
+      "lo": -4.5,
+      "hi": 1.8,
       "significant": false
      }
     },
@@ -4178,8 +4178,8 @@
      "medianDom": 26,
      "price": {
       "pct": -3.8,
-      "lo": -6.9,
-      "hi": -0.6,
+      "lo": -6.8,
+      "hi": -0.8,
       "significant": true
      }
     },
@@ -4191,8 +4191,8 @@
      "medianDom": 35,
      "price": {
       "pct": -2.7,
-      "lo": -5.9,
-      "hi": 0.3,
+      "lo": -6.1,
+      "hi": 0.5,
       "significant": false
      }
     }
@@ -4243,8 +4243,8 @@
      "medianDom": 21,
      "price": {
       "pct": 1.7,
-      "lo": -1.1,
-      "hi": 4.7,
+      "lo": -1.5,
+      "hi": 5.3,
       "significant": false
      }
     },
@@ -4256,8 +4256,8 @@
      "medianDom": 16,
      "price": {
       "pct": -0.2,
-      "lo": -3.5,
-      "hi": 2.8,
+      "lo": -3.1,
+      "hi": 2.7,
       "significant": false
      }
     },
@@ -4269,8 +4269,8 @@
      "medianDom": 17,
      "price": {
       "pct": 0.5,
-      "lo": -2.2,
-      "hi": 3,
+      "lo": -1.7,
+      "hi": 3.1,
       "significant": false
      }
     },
@@ -4282,7 +4282,7 @@
      "medianDom": 15,
      "price": {
       "pct": 0.3,
-      "lo": -1.4,
+      "lo": -1.5,
       "hi": 2.3,
       "significant": false
      }
@@ -4295,8 +4295,8 @@
      "medianDom": 17,
      "price": {
       "pct": -0.1,
-      "lo": -2,
-      "hi": 1.8,
+      "lo": -2.5,
+      "hi": 1.9,
       "significant": false
      }
     },
@@ -4308,8 +4308,8 @@
      "medianDom": 18,
      "price": {
       "pct": 0.8,
-      "lo": -1.2,
-      "hi": 2.9,
+      "lo": -1.3,
+      "hi": 3.4,
       "significant": false
      }
     },
@@ -4321,8 +4321,8 @@
      "medianDom": 19,
      "price": {
       "pct": -0.8,
-      "lo": -2.9,
-      "hi": 1.3,
+      "lo": -2.7,
+      "hi": 1,
       "significant": false
      }
     },
@@ -4334,8 +4334,8 @@
      "medianDom": 23,
      "price": {
       "pct": 0.2,
-      "lo": -2.3,
-      "hi": 2.7,
+      "lo": -2.5,
+      "hi": 3,
       "significant": false
      }
     },
@@ -4347,8 +4347,8 @@
      "medianDom": 21,
      "price": {
       "pct": 0.7,
-      "lo": -2.4,
-      "hi": 4,
+      "lo": -2.5,
+      "hi": 4.2,
       "significant": false
      }
     },
@@ -4360,8 +4360,8 @@
      "medianDom": 21,
      "price": {
       "pct": -0.4,
-      "lo": -3.5,
-      "hi": 2.7,
+      "lo": -3.1,
+      "hi": 2.8,
       "significant": false
      }
     },
@@ -4373,8 +4373,8 @@
      "medianDom": 18,
      "price": {
       "pct": -0.5,
-      "lo": -3.1,
-      "hi": 2.6,
+      "lo": -3.6,
+      "hi": 3,
       "significant": false
      }
     },
@@ -4386,8 +4386,8 @@
      "medianDom": 21,
      "price": {
       "pct": -2.2,
-      "lo": -5.1,
-      "hi": 0.8,
+      "lo": -5.3,
+      "hi": 0.5,
       "significant": false
      }
     }
@@ -4438,8 +4438,8 @@
      "medianDom": 39,
      "price": {
       "pct": -0.8,
-      "lo": -4.3,
-      "hi": 3.1,
+      "lo": -4.1,
+      "hi": 3.3,
       "significant": false
      }
     },
@@ -4451,8 +4451,8 @@
      "medianDom": 22,
      "price": {
       "pct": -0.2,
-      "lo": -3.6,
-      "hi": 3.3,
+      "lo": -3.5,
+      "hi": 3.5,
       "significant": false
      }
     },
@@ -4464,8 +4464,8 @@
      "medianDom": 17,
      "price": {
       "pct": 0.8,
-      "lo": -3.4,
-      "hi": 4.8,
+      "lo": -2.8,
+      "hi": 5,
       "significant": false
      }
     },
@@ -4477,8 +4477,8 @@
      "medianDom": 15,
      "price": {
       "pct": 0.9,
-      "lo": -2.7,
-      "hi": 4.1,
+      "lo": -2.5,
+      "hi": 4.4,
       "significant": false
      }
     },
@@ -4490,9 +4490,9 @@
      "medianDom": 14,
      "price": {
       "pct": 3,
-      "lo": -0.5,
-      "hi": 6.9,
-      "significant": false
+      "lo": 0.1,
+      "hi": 6.7,
+      "significant": true
      }
     },
     {
@@ -4503,8 +4503,8 @@
      "medianDom": 22,
      "price": {
       "pct": -1.5,
-      "lo": -3.6,
-      "hi": 1,
+      "lo": -3.5,
+      "hi": 0.7,
       "significant": false
      }
     },
@@ -4516,8 +4516,8 @@
      "medianDom": 24,
      "price": {
       "pct": -1.5,
-      "lo": -3.4,
-      "hi": 0.2,
+      "lo": -3.7,
+      "hi": 0.3,
       "significant": false
      }
     },
@@ -4529,7 +4529,7 @@
      "medianDom": 23,
      "price": {
       "pct": 0.2,
-      "lo": -2.4,
+      "lo": -2.5,
       "hi": 3.3,
       "significant": false
      }
@@ -4542,8 +4542,8 @@
      "medianDom": 20,
      "price": {
       "pct": 1.8,
-      "lo": -0.7,
-      "hi": 4.7,
+      "lo": -1,
+      "hi": 4.6,
       "significant": false
      }
     },
@@ -4555,8 +4555,8 @@
      "medianDom": 21,
      "price": {
       "pct": 0.5,
-      "lo": -2.8,
-      "hi": 4.5,
+      "lo": -2.4,
+      "hi": 4.3,
       "significant": false
      }
     },
@@ -4569,7 +4569,7 @@
      "price": {
       "pct": -3.5,
       "lo": -6.6,
-      "hi": -0.6,
+      "hi": -0.8,
       "significant": true
      }
     },
@@ -4582,7 +4582,7 @@
      "price": {
       "pct": 0.4,
       "lo": -4.4,
-      "hi": 4.6,
+      "hi": 4,
       "significant": false
      }
     }
@@ -4633,8 +4633,8 @@
      "medianDom": 42,
      "price": {
       "pct": -1.7,
-      "lo": -4.7,
-      "hi": 0.8,
+      "lo": -4.8,
+      "hi": 1.2,
       "significant": false
      }
     },
@@ -4646,8 +4646,8 @@
      "medianDom": 15,
      "price": {
       "pct": 2.4,
-      "lo": -1,
-      "hi": 5.4,
+      "lo": -0.8,
+      "hi": 5.7,
       "significant": false
      }
     },
@@ -4659,8 +4659,8 @@
      "medianDom": 22,
      "price": {
       "pct": 2.9,
-      "lo": 0.8,
-      "hi": 5.2,
+      "lo": 0.7,
+      "hi": 5.5,
       "significant": true
      }
     },
@@ -4673,7 +4673,7 @@
      "price": {
       "pct": 1.6,
       "lo": -0.8,
-      "hi": 4.1,
+      "hi": 4,
       "significant": false
      }
     },
@@ -4685,8 +4685,8 @@
      "medianDom": 17,
      "price": {
       "pct": 3,
-      "lo": 0.7,
-      "hi": 6,
+      "lo": 0.3,
+      "hi": 5.4,
       "significant": true
      }
     },
@@ -4698,8 +4698,8 @@
      "medianDom": 21,
      "price": {
       "pct": 3.9,
-      "lo": 0.4,
-      "hi": 7.2,
+      "lo": 1,
+      "hi": 7.1,
       "significant": true
      }
     },
@@ -4711,8 +4711,8 @@
      "medianDom": 20,
      "price": {
       "pct": 3.3,
-      "lo": 0.5,
-      "hi": 6.5,
+      "lo": 0.3,
+      "hi": 6.3,
       "significant": true
      }
     },
@@ -4724,8 +4724,8 @@
      "medianDom": 21,
      "price": {
       "pct": 1.5,
-      "lo": -1.4,
-      "hi": 4.7,
+      "lo": -1.8,
+      "hi": 4.8,
       "significant": false
      }
     },
@@ -4737,8 +4737,8 @@
      "medianDom": 26,
      "price": {
       "pct": -2,
-      "lo": -5.7,
-      "hi": 2.2,
+      "lo": -6,
+      "hi": 2,
       "significant": false
      }
     },
@@ -4750,9 +4750,9 @@
      "medianDom": 25,
      "price": {
       "pct": -3.3,
-      "lo": -6,
-      "hi": 0.3,
-      "significant": false
+      "lo": -6.3,
+      "hi": -0.2,
+      "significant": true
      }
     },
     {
@@ -4763,8 +4763,8 @@
      "medianDom": 23,
      "price": {
       "pct": -5.6,
-      "lo": -10.8,
-      "hi": -2,
+      "lo": -9.9,
+      "hi": -2.1,
       "significant": true
      }
     },
@@ -4776,8 +4776,8 @@
      "medianDom": 29,
      "price": {
       "pct": -5.2,
-      "lo": -9.1,
-      "hi": -1.6,
+      "lo": -8.6,
+      "hi": -1.3,
       "significant": true
      }
     }
@@ -4829,7 +4829,7 @@
      "price": {
       "pct": 0.6,
       "lo": -2.5,
-      "hi": 4,
+      "hi": 4.3,
       "significant": false
      }
     },
@@ -4841,8 +4841,8 @@
      "medianDom": 29,
      "price": {
       "pct": 1.1,
-      "lo": -3.1,
-      "hi": 5.4,
+      "lo": -3.2,
+      "hi": 5.7,
       "significant": false
      }
     },
@@ -4854,8 +4854,8 @@
      "medianDom": 25,
      "price": {
       "pct": -2.3,
-      "lo": -4.8,
-      "hi": 0.9,
+      "lo": -5.1,
+      "hi": 0.2,
       "significant": false
      }
     },
@@ -4867,8 +4867,8 @@
      "medianDom": 30,
      "price": {
       "pct": -0.6,
-      "lo": -3.9,
-      "hi": 2.4,
+      "lo": -3.7,
+      "hi": 2.1,
       "significant": false
      }
     },
@@ -4880,8 +4880,8 @@
      "medianDom": 26,
      "price": {
       "pct": 3.3,
-      "lo": -0.1,
-      "hi": 7.2,
+      "lo": -1,
+      "hi": 7.9,
       "significant": false
      }
     },
@@ -4893,8 +4893,8 @@
      "medianDom": 28,
      "price": {
       "pct": 1.3,
-      "lo": -1.5,
-      "hi": 3.9,
+      "lo": -1.6,
+      "hi": 4,
       "significant": false
      }
     },
@@ -4907,7 +4907,7 @@
      "price": {
       "pct": -0.2,
       "lo": -3.1,
-      "hi": 2.3,
+      "hi": 2.5,
       "significant": false
      }
     },
@@ -4919,8 +4919,8 @@
      "medianDom": 35,
      "price": {
       "pct": 1.1,
-      "lo": -1.8,
-      "hi": 3.9,
+      "lo": -2,
+      "hi": 4.3,
       "significant": false
      }
     },
@@ -4932,8 +4932,8 @@
      "medianDom": 29,
      "price": {
       "pct": 1.6,
-      "lo": -1.3,
-      "hi": 4.8,
+      "lo": -1.2,
+      "hi": 4.3,
       "significant": false
      }
     },
@@ -4945,8 +4945,8 @@
      "medianDom": 31,
      "price": {
       "pct": 0.8,
-      "lo": -2,
-      "hi": 4.2,
+      "lo": -2.5,
+      "hi": 4.1,
       "significant": false
      }
     },
@@ -4958,9 +4958,9 @@
      "medianDom": 34,
      "price": {
       "pct": -3.9,
-      "lo": -7.2,
-      "hi": -0.5,
-      "significant": true
+      "lo": -6.7,
+      "hi": 0,
+      "significant": false
      }
     },
     {
@@ -4972,7 +4972,7 @@
      "price": {
       "pct": -2.6,
       "lo": -7.3,
-      "hi": 1.9,
+      "hi": 1.5,
       "significant": false
      }
     }
@@ -5023,9 +5023,9 @@
      "medianDom": 39,
      "price": {
       "pct": -3.5,
-      "lo": -7.3,
-      "hi": 0,
-      "significant": true
+      "lo": -7.5,
+      "hi": 0.3,
+      "significant": false
      }
     },
     {
@@ -5036,8 +5036,8 @@
      "medianDom": 16,
      "price": {
       "pct": 0.1,
-      "lo": -2.6,
-      "hi": 3.4,
+      "lo": -3.3,
+      "hi": 2.6,
       "significant": false
      }
     },
@@ -5049,7 +5049,7 @@
      "medianDom": 17,
      "price": {
       "pct": -0.5,
-      "lo": -2.6,
+      "lo": -3.1,
       "hi": 2.5,
       "significant": false
      }
@@ -5062,8 +5062,8 @@
      "medianDom": 20,
      "price": {
       "pct": 5.1,
-      "lo": 1.7,
-      "hi": 9,
+      "lo": 1.1,
+      "hi": 8.9,
       "significant": true
      }
     },
@@ -5075,8 +5075,8 @@
      "medianDom": 19,
      "price": {
       "pct": 2.4,
-      "lo": -0.7,
-      "hi": 4.9,
+      "lo": -0.5,
+      "hi": 5.4,
       "significant": false
      }
     },
@@ -5101,8 +5101,8 @@
      "medianDom": 26,
      "price": {
       "pct": 2.1,
-      "lo": -1.8,
-      "hi": 6,
+      "lo": -1.6,
+      "hi": 7,
       "significant": false
      }
     },
@@ -5114,8 +5114,8 @@
      "medianDom": 32,
      "price": {
       "pct": 1.2,
-      "lo": -2.9,
-      "hi": 5,
+      "lo": -2.3,
+      "hi": 5.7,
       "significant": false
      }
     },
@@ -5127,7 +5127,7 @@
      "medianDom": 33,
      "price": {
       "pct": -0.3,
-      "lo": -3.3,
+      "lo": -3.4,
       "hi": 2.7,
       "significant": false
      }
@@ -5140,8 +5140,8 @@
      "medianDom": 24,
      "price": {
       "pct": -2.5,
-      "lo": -5,
-      "hi": 0.4,
+      "lo": -5.1,
+      "hi": 0.6,
       "significant": false
      }
     },
@@ -5153,8 +5153,8 @@
      "medianDom": 29,
      "price": {
       "pct": -1,
-      "lo": -6.9,
-      "hi": 3.1,
+      "lo": -6.3,
+      "hi": 3.4,
       "significant": false
      }
     },
@@ -5166,7 +5166,7 @@
      "medianDom": 30,
      "price": {
       "pct": -4.2,
-      "lo": -8.3,
+      "lo": -7.6,
       "hi": -0.1,
       "significant": true
      }
@@ -5202,6 +5202,981 @@
      "sales": 246,
      "overAskShare": 18,
      "medianDom": 26
+    }
+   ]
+  },
+  {
+   "city": "Clarington",
+   "slug": "clarington",
+   "sales": 2313,
+   "months": [
+    {
+     "month": 1,
+     "sales": 103,
+     "saleToAsk": 98,
+     "overAskShare": 20,
+     "medianDom": 28,
+     "price": {
+      "pct": -0.2,
+      "lo": -3.2,
+      "hi": 2.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 122,
+     "saleToAsk": 99.3,
+     "overAskShare": 42,
+     "medianDom": 12,
+     "price": {
+      "pct": 3,
+      "lo": -0.4,
+      "hi": 6.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 177,
+     "saleToAsk": 99.4,
+     "overAskShare": 38,
+     "medianDom": 13,
+     "price": {
+      "pct": 1.5,
+      "lo": -1.8,
+      "hi": 4.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 204,
+     "saleToAsk": 99,
+     "overAskShare": 36,
+     "medianDom": 11,
+     "price": {
+      "pct": 2,
+      "lo": 0.4,
+      "hi": 3.9,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 247,
+     "saleToAsk": 98.6,
+     "overAskShare": 29,
+     "medianDom": 13,
+     "price": {
+      "pct": 3,
+      "lo": 1.2,
+      "hi": 4.6,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 273,
+     "saleToAsk": 98.5,
+     "overAskShare": 26,
+     "medianDom": 13,
+     "price": {
+      "pct": 1.5,
+      "lo": -0.2,
+      "hi": 3.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 284,
+     "saleToAsk": 98.2,
+     "overAskShare": 24,
+     "medianDom": 17,
+     "price": {
+      "pct": -0.5,
+      "lo": -2.2,
+      "hi": 1.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 192,
+     "saleToAsk": 98.3,
+     "overAskShare": 21,
+     "medianDom": 18,
+     "price": {
+      "pct": -1.3,
+      "lo": -2.9,
+      "hi": 0.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 223,
+     "saleToAsk": 98.3,
+     "overAskShare": 27,
+     "medianDom": 15,
+     "price": {
+      "pct": -0.7,
+      "lo": -2.8,
+      "hi": 1.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 197,
+     "saleToAsk": 98,
+     "overAskShare": 17,
+     "medianDom": 20,
+     "price": {
+      "pct": -3.7,
+      "lo": -5.9,
+      "hi": -1.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 11,
+     "sales": 177,
+     "saleToAsk": 98.5,
+     "overAskShare": 32,
+     "medianDom": 14,
+     "price": {
+      "pct": -3.5,
+      "lo": -5.4,
+      "hi": -1.2,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 114,
+     "saleToAsk": 98.2,
+     "overAskShare": 21,
+     "medianDom": 25,
+     "price": {
+      "pct": -0.9,
+      "lo": -4.1,
+      "hi": 2.6,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 289,
+     "overAskShare": 25,
+     "medianDom": 18
+    },
+    {
+     "day": 2,
+     "sales": 391,
+     "overAskShare": 28,
+     "medianDom": 14
+    },
+    {
+     "day": 3,
+     "sales": 538,
+     "overAskShare": 28,
+     "medianDom": 15
+    },
+    {
+     "day": 4,
+     "sales": 619,
+     "overAskShare": 31,
+     "medianDom": 14
+    },
+    {
+     "day": 5,
+     "sales": 383,
+     "overAskShare": 24,
+     "medianDom": 15
+    }
+   ]
+  },
+  {
+   "city": "Kawartha Lakes",
+   "slug": "kawartha-lakes",
+   "sales": 1861,
+   "months": [
+    {
+     "month": 1,
+     "sales": 90,
+     "saleToAsk": 96.6,
+     "overAskShare": 9,
+     "medianDom": 59,
+     "price": {
+      "pct": -0.8,
+      "lo": -5.3,
+      "hi": 3.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 83,
+     "saleToAsk": 96.9,
+     "overAskShare": 11,
+     "medianDom": 41,
+     "price": {
+      "pct": 1.1,
+      "lo": -6.4,
+      "hi": 10.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 123,
+     "saleToAsk": 97.2,
+     "overAskShare": 10,
+     "medianDom": 27,
+     "price": {
+      "pct": 1.9,
+      "lo": -3,
+      "hi": 7.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 136,
+     "saleToAsk": 96.7,
+     "overAskShare": 11,
+     "medianDom": 25,
+     "price": {
+      "pct": 0,
+      "lo": -4.9,
+      "hi": 4.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 5,
+     "sales": 192,
+     "saleToAsk": 97.6,
+     "overAskShare": 15,
+     "medianDom": 21,
+     "price": {
+      "pct": 7.1,
+      "lo": 2.3,
+      "hi": 12,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 203,
+     "saleToAsk": 97.3,
+     "overAskShare": 14,
+     "medianDom": 24,
+     "price": {
+      "pct": 3.5,
+      "lo": -1.5,
+      "hi": 8,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 224,
+     "saleToAsk": 96.5,
+     "overAskShare": 9,
+     "medianDom": 32,
+     "price": {
+      "pct": -0.1,
+      "lo": -4.2,
+      "hi": 3.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 197,
+     "saleToAsk": 96.5,
+     "overAskShare": 10,
+     "medianDom": 35,
+     "price": {
+      "pct": -1.5,
+      "lo": -6,
+      "hi": 3.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 195,
+     "saleToAsk": 96,
+     "overAskShare": 9,
+     "medianDom": 37,
+     "price": {
+      "pct": 3.4,
+      "lo": -0.4,
+      "hi": 7.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 167,
+     "saleToAsk": 96.3,
+     "overAskShare": 5,
+     "medianDom": 36,
+     "price": {
+      "pct": -2.7,
+      "lo": -8.2,
+      "hi": 3.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 154,
+     "saleToAsk": 97.1,
+     "overAskShare": 15,
+     "medianDom": 40,
+     "price": {
+      "pct": -7.1,
+      "lo": -12.8,
+      "hi": -0.6,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 97,
+     "saleToAsk": 96.9,
+     "overAskShare": 9,
+     "medianDom": 36,
+     "price": {
+      "pct": -3.9,
+      "lo": -8.9,
+      "hi": 1.6,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 343,
+     "overAskShare": 12,
+     "medianDom": 31
+    },
+    {
+     "day": 2,
+     "sales": 324,
+     "overAskShare": 10,
+     "medianDom": 29
+    },
+    {
+     "day": 3,
+     "sales": 349,
+     "overAskShare": 9,
+     "medianDom": 33
+    },
+    {
+     "day": 4,
+     "sales": 431,
+     "overAskShare": 11,
+     "medianDom": 33
+    },
+    {
+     "day": 5,
+     "sales": 326,
+     "overAskShare": 11,
+     "medianDom": 33
+    }
+   ]
+  },
+  {
+   "city": "Newmarket",
+   "slug": "newmarket",
+   "sales": 1324,
+   "months": [
+    {
+     "month": 1,
+     "sales": 63,
+     "saleToAsk": 97.7,
+     "overAskShare": 24,
+     "medianDom": 19,
+     "price": {
+      "pct": -0.5,
+      "lo": -3.3,
+      "hi": 1.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 71,
+     "saleToAsk": 98.6,
+     "overAskShare": 30,
+     "medianDom": 22,
+     "price": {
+      "pct": 2.2,
+      "lo": -0.7,
+      "hi": 5.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 90,
+     "saleToAsk": 97.9,
+     "overAskShare": 16,
+     "medianDom": 16,
+     "price": {
+      "pct": -1.5,
+      "lo": -4,
+      "hi": 0.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 108,
+     "saleToAsk": 97.7,
+     "overAskShare": 16,
+     "medianDom": 17,
+     "price": {
+      "pct": 1.8,
+      "lo": -0.4,
+      "hi": 4.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 5,
+     "sales": 159,
+     "saleToAsk": 97.4,
+     "overAskShare": 16,
+     "medianDom": 19,
+     "price": {
+      "pct": 0.4,
+      "lo": -1.3,
+      "hi": 1.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 6,
+     "sales": 138,
+     "saleToAsk": 97.3,
+     "overAskShare": 18,
+     "medianDom": 16,
+     "price": {
+      "pct": 1.1,
+      "lo": -1.4,
+      "hi": 3.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 129,
+     "saleToAsk": 97.1,
+     "overAskShare": 15,
+     "medianDom": 22,
+     "price": {
+      "pct": -1.2,
+      "lo": -4.7,
+      "hi": 1.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 129,
+     "saleToAsk": 97.3,
+     "overAskShare": 18,
+     "medianDom": 27,
+     "price": {
+      "pct": 1.5,
+      "lo": -0.8,
+      "hi": 3.9,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 121,
+     "saleToAsk": 96.9,
+     "overAskShare": 15,
+     "medianDom": 25,
+     "price": {
+      "pct": 0.4,
+      "lo": -1.4,
+      "hi": 2.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 128,
+     "saleToAsk": 97.5,
+     "overAskShare": 14,
+     "medianDom": 19,
+     "price": {
+      "pct": -1.6,
+      "lo": -4,
+      "hi": 1.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 107,
+     "saleToAsk": 97.2,
+     "overAskShare": 18,
+     "medianDom": 24,
+     "price": {
+      "pct": -0.8,
+      "lo": -3.5,
+      "hi": 2.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 12,
+     "sales": 81,
+     "saleToAsk": 96.9,
+     "overAskShare": 23,
+     "medianDom": 36,
+     "price": {
+      "pct": -1.7,
+      "lo": -4.6,
+      "hi": 1.3,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 231,
+     "overAskShare": 17,
+     "medianDom": 21
+    },
+    {
+     "day": 2,
+     "sales": 217,
+     "overAskShare": 18,
+     "medianDom": 22
+    },
+    {
+     "day": 3,
+     "sales": 254,
+     "overAskShare": 18,
+     "medianDom": 20
+    },
+    {
+     "day": 4,
+     "sales": 334,
+     "overAskShare": 16,
+     "medianDom": 20
+    },
+    {
+     "day": 5,
+     "sales": 202,
+     "overAskShare": 18,
+     "medianDom": 20
+    }
+   ]
+  },
+  {
+   "city": "Caledon",
+   "slug": "caledon",
+   "sales": 1148,
+   "months": [
+    {
+     "month": 1,
+     "sales": 67,
+     "saleToAsk": 96.5,
+     "overAskShare": 5,
+     "medianDom": 37,
+     "price": {
+      "pct": -1.9,
+      "lo": -6.8,
+      "hi": 2.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 74,
+     "saleToAsk": 96.4,
+     "overAskShare": 8,
+     "medianDom": 27,
+     "price": {
+      "pct": -7.1,
+      "lo": -13.9,
+      "hi": -2.5,
+      "significant": true
+     }
+    },
+    {
+     "month": 3,
+     "sales": 91,
+     "saleToAsk": 96.8,
+     "overAskShare": 4,
+     "medianDom": 22,
+     "price": {
+      "pct": 0.3,
+      "lo": -2.5,
+      "hi": 3.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 110,
+     "saleToAsk": 96.6,
+     "overAskShare": 11,
+     "medianDom": 22,
+     "price": {
+      "pct": 4.8,
+      "lo": -0.1,
+      "hi": 11.2,
+      "significant": false
+     }
+    },
+    {
+     "month": 5,
+     "sales": 118,
+     "saleToAsk": 96.7,
+     "overAskShare": 12,
+     "medianDom": 19,
+     "price": {
+      "pct": 6.3,
+      "lo": 3.2,
+      "hi": 9.8,
+      "significant": true
+     }
+    },
+    {
+     "month": 6,
+     "sales": 120,
+     "saleToAsk": 96.3,
+     "overAskShare": 12,
+     "medianDom": 21,
+     "price": {
+      "pct": 0.7,
+      "lo": -3,
+      "hi": 4.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 93,
+     "saleToAsk": 96.3,
+     "overAskShare": 9,
+     "medianDom": 28,
+     "price": {
+      "pct": 1.4,
+      "lo": -2.2,
+      "hi": 5.7,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 105,
+     "saleToAsk": 96.3,
+     "overAskShare": 10,
+     "medianDom": 29,
+     "price": {
+      "pct": -1.1,
+      "lo": -3.9,
+      "hi": 1.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 96,
+     "saleToAsk": 96.4,
+     "overAskShare": 10,
+     "medianDom": 28,
+     "price": {
+      "pct": -1.2,
+      "lo": -4.6,
+      "hi": 1.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 115,
+     "saleToAsk": 95.9,
+     "overAskShare": 8,
+     "medianDom": 27,
+     "price": {
+      "pct": -1.1,
+      "lo": -4.7,
+      "hi": 2.6,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 94,
+     "saleToAsk": 96.2,
+     "overAskShare": 7,
+     "medianDom": 27,
+     "price": {
+      "pct": 5.2,
+      "lo": 0.7,
+      "hi": 11,
+      "significant": true
+     }
+    },
+    {
+     "month": 12,
+     "sales": 65,
+     "saleToAsk": 95.5,
+     "overAskShare": 8,
+     "medianDom": 32,
+     "price": {
+      "pct": -5.3,
+      "lo": -10.7,
+      "hi": 0.2,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 190,
+     "overAskShare": 9,
+     "medianDom": 25
+    },
+    {
+     "day": 2,
+     "sales": 163,
+     "overAskShare": 10,
+     "medianDom": 23
+    },
+    {
+     "day": 3,
+     "sales": 227,
+     "overAskShare": 12,
+     "medianDom": 26
+    },
+    {
+     "day": 4,
+     "sales": 239,
+     "overAskShare": 8,
+     "medianDom": 25
+    },
+    {
+     "day": 5,
+     "sales": 231,
+     "overAskShare": 7,
+     "medianDom": 27
+    }
+   ]
+  },
+  {
+   "city": "Welland",
+   "slug": "welland",
+   "sales": 1137,
+   "months": [
+    {
+     "month": 1,
+     "sales": 66,
+     "saleToAsk": 97,
+     "overAskShare": 6,
+     "medianDom": 37,
+     "price": {
+      "pct": -1.2,
+      "lo": -5.3,
+      "hi": 3.1,
+      "significant": false
+     }
+    },
+    {
+     "month": 2,
+     "sales": 68,
+     "saleToAsk": 96.5,
+     "overAskShare": 9,
+     "medianDom": 35,
+     "price": {
+      "pct": 2.9,
+      "lo": -1.6,
+      "hi": 6.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 3,
+     "sales": 92,
+     "saleToAsk": 96.7,
+     "overAskShare": 9,
+     "medianDom": 25,
+     "price": {
+      "pct": 0.5,
+      "lo": -2.6,
+      "hi": 2.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 4,
+     "sales": 116,
+     "saleToAsk": 96.9,
+     "overAskShare": 12,
+     "medianDom": 32,
+     "price": {
+      "pct": 3.1,
+      "lo": 0.3,
+      "hi": 6.4,
+      "significant": true
+     }
+    },
+    {
+     "month": 5,
+     "sales": 115,
+     "saleToAsk": 97.3,
+     "overAskShare": 14,
+     "medianDom": 28,
+     "price": {
+      "pct": 0.9,
+      "lo": -2.5,
+      "hi": 4.4,
+      "significant": false
+     }
+    },
+    {
+     "month": 6,
+     "sales": 111,
+     "saleToAsk": 97,
+     "overAskShare": 9,
+     "medianDom": 32,
+     "price": {
+      "pct": -0.4,
+      "lo": -5.6,
+      "hi": 4.3,
+      "significant": false
+     }
+    },
+    {
+     "month": 7,
+     "sales": 114,
+     "saleToAsk": 97.1,
+     "overAskShare": 10,
+     "medianDom": 23,
+     "price": {
+      "pct": -1.9,
+      "lo": -4.9,
+      "hi": 2,
+      "significant": false
+     }
+    },
+    {
+     "month": 8,
+     "sales": 90,
+     "saleToAsk": 97.2,
+     "overAskShare": 9,
+     "medianDom": 34,
+     "price": {
+      "pct": 2.6,
+      "lo": -1.7,
+      "hi": 6.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 9,
+     "sales": 110,
+     "saleToAsk": 96.6,
+     "overAskShare": 10,
+     "medianDom": 25,
+     "price": {
+      "pct": 1,
+      "lo": -3,
+      "hi": 5.8,
+      "significant": false
+     }
+    },
+    {
+     "month": 10,
+     "sales": 107,
+     "saleToAsk": 96.8,
+     "overAskShare": 7,
+     "medianDom": 35,
+     "price": {
+      "pct": -2.8,
+      "lo": -8.5,
+      "hi": 2.5,
+      "significant": false
+     }
+    },
+    {
+     "month": 11,
+     "sales": 73,
+     "saleToAsk": 96.3,
+     "overAskShare": 8,
+     "medianDom": 42,
+     "price": {
+      "pct": -2.6,
+      "lo": -7.2,
+      "hi": 2,
+      "significant": false
+     }
+    },
+    {
+     "month": 12,
+     "sales": 75,
+     "saleToAsk": 97.4,
+     "overAskShare": 16,
+     "medianDom": 43,
+     "price": {
+      "pct": -1.7,
+      "lo": -5.9,
+      "hi": 3.5,
+      "significant": false
+     }
+    }
+   ],
+   "weekdays": [
+    {
+     "day": 1,
+     "sales": 206,
+     "overAskShare": 9,
+     "medianDom": 34
+    },
+    {
+     "day": 2,
+     "sales": 200,
+     "overAskShare": 9,
+     "medianDom": 30
+    },
+    {
+     "day": 3,
+     "sales": 190,
+     "overAskShare": 13,
+     "medianDom": 35
+    },
+    {
+     "day": 4,
+     "sales": 235,
+     "overAskShare": 11,
+     "medianDom": 29
+    },
+    {
+     "day": 5,
+     "sales": 221,
+     "overAskShare": 10,
+     "medianDom": 30
     }
    ]
   }

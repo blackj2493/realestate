@@ -4,6 +4,8 @@
  * for and that have enough sales in the feed. Chosen on 2026-11-24 from Google Trends
  * ("{city} real estate", Ontario, 12 months) and 2-year sales counts: each extra city has
  * 1,500+ sales. Windsor, Sudbury and Thunder Bay have the demand but too few sales.
+ * 2026-11-25: 8 more cities with 1,100+ sales (North Bay left out: too few leases);
+ * each build's own sample gates drop a section whose sample is too small.
  *
  * The live pages (housing market, days on market, good time to buy, not selling) read the
  * nightly region_metrics precompute, which covers only the board markets, so they keep
@@ -30,6 +32,15 @@ export const EXTRA_STUDY_CITIES: string[] = [
   "Peterborough",
   "Niagara Falls",
   "Brantford",
+  // 2026-11-25: the next cities by 2-year sales (1,100+), so the study pages reach 34.
+  "Clarington",
+  "Kawartha Lakes",
+  "Newmarket",
+  "Caledon",
+  "Welland",
+  "Belleville",
+  "Woodstock",
+  "Aurora",
 ];
 
 export const STUDY_CITIES: { city: string; slug: string }[] = [

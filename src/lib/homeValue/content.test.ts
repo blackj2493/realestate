@@ -15,8 +15,9 @@ const facts = {
 } as CityFacts;
 
 describe("home value content", () => {
-  it("covers the 15 board cities and the 11 extra cities with hub-style slugs", () => {
-    expect(HOME_VALUE_CITIES).toHaveLength(26);
+  it("covers the 15 board cities and the 19 extra cities with hub-style slugs", () => {
+    expect(HOME_VALUE_CITIES).toHaveLength(34);
+    expect(homeValueCityBySlug("kawartha-lakes")).toBe("Kawartha Lakes");
     expect(homeValueCityBySlug("richmond-hill")).toBe("Richmond Hill");
     expect(homeValueCityBySlug("st-catharines")).toBe("St. Catharines");
     expect(homeValueCityBySlug("nowhere")).toBeNull();
