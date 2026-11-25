@@ -1,5 +1,6 @@
 import { searchListings } from "@/lib/typesense/client";
 import { cityHubSlug, slugify } from "./listingPath";
+import { ttlMemo } from "@/lib/cache/memo";
 
 /**
  * City-hub resolution (Phase 2b-ii). A hub URL slug (e.g. "toronto") maps to ONE OR MORE
@@ -30,6 +31,19 @@ const FACET_CAP = 250;
  */
 export async function getCityFacet(extraFilter = "", baseFilter = ACTIVE_FILTER): Promise<Record<string, number>> {
   try {
+    return await cityFacetMemo(extraFilter, baseFilter);
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * One facet over every active listing, shared by every caller for 10 minutes. Each
+ * /address render asked it (via cityHrefOrMap) for one link; ~213K crawler renders on
+ * 2026-11-24 made it the most repeated Typesense search. Errors are not kept.
+ */
+const cityFacetMemo = ttlMemo(
+  async (extraFilter: string, baseFilter: string) => {
     const res = await searchListings({
       query: "*",
       rawFilterBy: extraFilter ? `${baseFilter} && ${extraFilter}` : baseFilter,
@@ -38,10 +52,10 @@ export async function getCityFacet(extraFilter = "", baseFilter = ACTIVE_FILTER)
       maxFacetValues: FACET_CAP,
     });
     return (res.facetDistribution?.City ?? {}) as Record<string, number>;
-  } catch {
-    return {};
-  }
-}
+  },
+  (extraFilter, baseFilter) => `${baseFilter}|${extraFilter}`,
+  { ttlMs: 10 * 60_000, max: 20 },
+);
 
 /** Raw City values that normalize to this hub slug, plus their summed active count. */
 export async function citiesForHubSlug(

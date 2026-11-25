@@ -22,6 +22,7 @@ import { loadPostalCodes, getCoordinates } from "@/lib/postalCodes";
 import { primaryImageFromPhotos } from "@/lib/etl/selectPrimaryImage";
 import { bedSplit } from "@/lib/listings/bedSplit";
 import { cityFilterClause } from "@/lib/listings/cityHubs";
+import { ttlMemo } from "@/lib/cache/memo";
 
 const TYPESENSE_HOST = "9uyapwh6e5qmvl34p-1.a1.typesense.net";
 const TYPESENSE_PORT = 443;
@@ -258,7 +259,15 @@ async function getSoldArchivePublicByAddress(
  * Address + geo for a sold/off-market listing key, or null if there's no such sold record
  * (e.g. the key is an active listing, or unknown). VOW fields are not requested.
  */
-export async function getSoldPublicByKey(key: string): Promise<SoldPublic | null> {
+/**
+ * Memoized per instance for 1 hour (src/lib/cache/memo.ts). generateMetadata and the page
+ * both ask for the same key in one render; the memo joins them into one search. PUBLIC
+ * fields only (the gate above), so the value is the same for every visitor. A null is
+ * not kept.
+ */
+export const getSoldPublicByKey = ttlMemo(searchSoldPublicByKey, (key) => key, { ttlMs: 60 * 60_000, max: 5000, keep: (v) => v != null });
+
+async function searchSoldPublicByKey(key: string): Promise<SoldPublic | null> {
   try {
     const res = await getSoldClient()
       .collections(SOLD_LISTINGS_COLLECTION)
@@ -697,7 +706,13 @@ export function getRecentSoldPublicForCity(cities: string[], max = 24): Promise<
  * Needs the subject's geo; records whose postal code never resolved have no `location`
  * and simply don't match.
  */
-export async function getRecentSoldPublicNearPoint(
+export const getRecentSoldPublicNearPoint = ttlMemo(searchRecentSoldPublicNearPoint, (lat, lng, radiusKm, excludeKey, max = 8) => `${lat},${lng},${radiusKm},${excludeKey},${max}`, {
+  ttlMs: 30 * 60_000,
+  max: 2000,
+  keep: (v) => (v as SoldPublicLink[]).length > 0,
+});
+
+async function searchRecentSoldPublicNearPoint(
   lat: number,
   lng: number,
   radiusKm: number,

@@ -21,6 +21,7 @@ import { bedSplit, bedKey, bedKeyOrder, BED_ABOVE_CAP, type BedCountsRaw } from 
 import { isPartialUnitRental, IN_HOME_UNIT_LABEL } from "@/lib/listings/inHomeUnit";
 import { MONTHLY_RENT_BAND } from "@/lib/metrics/sanityBand";
 import { shownCut } from "@/lib/listings/plausibleCuts";
+import { ttlMemo } from "@/lib/cache/memo";
 
 /** Sub-types with no dwelling to rent — excluded from the lease queries. A land lease
  *  is quoted per year or as a price, which is how $238,000/mo reached a rent tile. */
@@ -525,7 +526,19 @@ function toListing(d: Record<string, unknown>, dist: number | undefined): Nearby
   };
 }
 
-export async function getNearbyForSale(
+/**
+ * Memoized per instance for 15 minutes (src/lib/cache/memo.ts): public IDX data, the same
+ * for every visitor. A crawler that renders an address page twice, and the anon grids that
+ * repeat the 2 km query, reuse one Typesense search. A null (no geo hits, or a caught
+ * error) is not kept.
+ */
+export const getNearbyForSale = ttlMemo(searchNearbyForSale, (lat, lng, opts = {}) => `${lat},${lng},${opts.radiusKm ?? 2},${opts.limit ?? 12},${opts.transactionType ?? "sale"}`, {
+  ttlMs: 15 * 60_000,
+  max: 2000,
+  keep: (v) => v != null,
+});
+
+async function searchNearbyForSale(
   lat: number,
   lng: number,
   opts: { radiusKm?: number; limit?: number; transactionType?: "sale" | "lease" } = {}
