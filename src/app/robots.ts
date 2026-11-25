@@ -4,21 +4,32 @@ import { LISTING_SITEMAP_SHARDS } from "@/lib/listings/listingSitemapShards";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
+const DISALLOW = ["/api/", "/dashboard", "/login", "/register", "/apply", "/share/"];
+
+/**
+ * Bulk AI-training crawlers, slowed — not blocked.
+ *
+ * On 2026-11-24 ClaudeBot alone made 269K requests in 12 hours (GPTBot 45K,
+ * meta-webindexer 32K), mostly to /address/... pages. Those pages are
+ * force-dynamic and each one runs Typesense searches, so the crawl held the
+ * Typesense cluster at 100% CPU (search p95 1.7s for real users) and drove
+ * ~5 Vercel function invocations a second.
+ *
+ * Crawl-delay is non-standard: Anthropic documents that ClaudeBot honours it;
+ * the others may ignore it. The AI *search/assistant* agents (Claude-SearchBot,
+ * OAI-SearchBot, ChatGPT-User, PerplexityBot) are deliberately NOT listed, so
+ * AI-search citation keeps working at full speed.
+ *
+ * A named group REPLACES the "*" group for that bot, so it repeats DISALLOW.
+ */
+export const SLOWED_CRAWLERS = ["ClaudeBot", "GPTBot", "meta-webindexer", "meta-externalagent"];
+export const CRAWL_DELAY_SECONDS = 2;
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
-      {
-        userAgent: "*",
-        allow: "/",
-        disallow: [
-          "/api/",
-          "/dashboard",
-          "/login",
-          "/register",
-          "/apply",
-          "/share/",
-        ],
-      },
+      { userAgent: "*", allow: "/", disallow: DISALLOW },
+      { userAgent: SLOWED_CRAWLERS, allow: "/", disallow: DISALLOW, crawlDelay: CRAWL_DELAY_SECONDS },
     ],
     // The /address tree is sharded (generateSitemaps in app/addresses/sitemap.ts) —
     // the protocol caps one file at 50,000 URLs. Every shard has to be named here or
