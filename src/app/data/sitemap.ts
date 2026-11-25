@@ -4,6 +4,7 @@ import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { getCityMarkets } from "@/lib/data/cityMarkets";
 import { daysOnMarketPath } from "@/lib/seo/cityTopics";
 import { basementValuePath, getBasementData } from "@/lib/data/basementValue";
+import { CHILD_CARE_PATH, getChildCareData } from "@/lib/childcare/childCarePage";
 import { LIVE_FINDINGS } from "@/lib/data/findings";
 import { getPriceChangeData, priceChangePath } from "@/lib/data/priceChange";
 import { condoPricesPath, getCondoData } from "@/lib/data/condoPrices";
@@ -73,6 +74,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...getBasementData()
       .cities.filter((c) => c.modelA)
       .map((c) => ({ url: `${SITE_URL}${basementValuePath(c.slug)}`, lastModified: new Date(getBasementData().generatedAt), changeFrequency: "monthly" as const, priority: 0.7 })),
+    // Toronto child care spaces per child, by neighbourhood (2026-11-25). Static, rebuilt weekly.
+    { url: `${SITE_URL}${CHILD_CARE_PATH}`, lastModified: new Date(`${getChildCareData().updated}T12:00:00Z`), changeFrequency: "weekly" as const, priority: 0.7 },
     // "Are home prices dropping in {city}?" same-home change (2026-11-25). Static, rebuilt monthly.
     { url: `${SITE_URL}${priceChangePath()}`, lastModified: new Date(getPriceChangeData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
     ...getPriceChangeData()
