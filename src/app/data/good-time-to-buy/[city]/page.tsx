@@ -17,7 +17,7 @@ import { CiteBox, HeaderCard, RequestCards } from "@/components/dataPage/parts";
 import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { getMarketBoard } from "@/lib/data/marketBoard";
-import { SOURCE_LINE, boardRowFor } from "@/lib/data/cityFacts";
+import { boardRowFor, sourceLine } from "@/lib/data/cityFacts";
 import { outlookCityBySlug } from "@/lib/data/outlookCities";
 import { cityMarketBySlug, coveredMarketCities, coveredMarketRows, getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import { buildBuyVerdict, buyFaqs, goodTimeToBuyPath, type Lean } from "@/lib/data/goodTimeToBuy";
@@ -182,7 +182,7 @@ export default async function GoodTimeToBuyCityPage({ params }: { params: Promis
               </div>
 
               <CiteBox citation={citation} />
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{SOURCE_LINE}</p>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{sourceLine(!board)}</p>
             </div>
           </>
         )}

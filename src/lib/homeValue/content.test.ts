@@ -15,9 +15,10 @@ const facts = {
 } as CityFacts;
 
 describe("home value content", () => {
-  it("covers the 15 board cities with hub-style slugs", () => {
-    expect(HOME_VALUE_CITIES).toHaveLength(15);
+  it("covers the 15 board cities and the 11 extra cities with hub-style slugs", () => {
+    expect(HOME_VALUE_CITIES).toHaveLength(26);
     expect(homeValueCityBySlug("richmond-hill")).toBe("Richmond Hill");
+    expect(homeValueCityBySlug("st-catharines")).toBe("St. Catharines");
     expect(homeValueCityBySlug("nowhere")).toBeNull();
     expect(homeValuePath("markham")).toBe("/home-value/markham");
     expect(homeValuePath()).toBe("/home-value");

@@ -48,9 +48,9 @@ export const TOPIC_HUBS: { href: string; label: string }[] = [
 ];
 
 /** The topics with a page for every board market and no other city (live board data).
- *  "market", "days-on-market" and "good-time-to-buy" are not: the extra cities have them
+ *  "market", "days-on-market", "good-time-to-buy" and "home-value" are not: the extra cities have them
  *  from data/city-markets.json. */
-export const BOARD_ONLY_TOPICS: ReadonlySet<CityTopic> = new Set(["power-of-sale", "not-selling", "home-value"]);
+export const BOARD_ONLY_TOPICS: ReadonlySet<CityTopic> = new Set(["power-of-sale", "not-selling"]);
 
 /** The covered city for a hub slug (e.g. "markham" or "Markham"), else null. */
 export function topicCity(slug: string | null | undefined): { city: string; slug: string; board: boolean } | null {

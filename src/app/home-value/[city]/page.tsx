@@ -1,5 +1,6 @@
 /**
- * /home-value/{city} — "How much is my house worth in {City}?" for the 15 board cities.
+ * /home-value/{city} — "How much is my house worth in {City}?" for the 15 board cities and
+ * the extra study cities (their facts from data/city-markets.json, built weekly).
  * The request form, the city's market facts (public aggregates), how a price is worked
  * out, and FAQ answers. No per-home valuation is rendered (see src/lib/homeValue/content.ts).
  * Static per city, hourly revalidate; unknown slugs 404.
@@ -10,6 +11,7 @@ import { notFound } from "next/navigation";
 import HomeValueView from "@/components/homeValue/HomeValueView";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { boardRowFor, buildCityFacts } from "@/lib/data/cityFacts";
+import { cityMarketBySlug, getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import { HOME_VALUE_CITIES, homeValueCityBySlug, homeValuePath } from "@/lib/homeValue/content";
 import { titleYear } from "@/lib/seo/titleYear";
 
@@ -24,12 +26,14 @@ export function generateStaticParams() {
 const load = cache(async (slug: string) => {
   const city = homeValueCityBySlug(slug);
   if (!city) return null;
+  const extra = cityMarketBySlug(slug);
+  if (extra) return { city, weekly: true, facts: buildCityFacts(city, toMarketRow(extra), getCityMarkets().generatedAt) };
   try {
     const board = await getMarketBoard();
-    return { city, facts: buildCityFacts(city, boardRowFor(board.rows, city), board.dataAsOf) };
+    return { city, weekly: false, facts: buildCityFacts(city, boardRowFor(board.rows, city), board.dataAsOf) };
   } catch (err) {
     console.error(`[home-value] board read failed for ${slug}:`, err);
-    return { city, facts: null };
+    return { city, weekly: false, facts: null };
   }
 });
 
@@ -54,5 +58,5 @@ export default async function HomeValueCityPage({ params }: { params: Promise<{ 
   const { city: slug } = await params;
   const data = await load(slug);
   if (!data) notFound();
-  return <HomeValueView city={data.city} slug={slug} facts={data.facts} canonical={`${SITE_URL}${homeValuePath(slug)}`} />;
+  return <HomeValueView city={data.city} slug={slug} facts={data.facts} weekly={data.weekly} canonical={`${SITE_URL}${homeValuePath(slug)}`} />;
 }

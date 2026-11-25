@@ -10,9 +10,20 @@
  * Aggregate statistics only (no listing rows), same category as the /data trackers.
  */
 import Link from "next/link";
-import { SOURCE_LINE, type CityFacts } from "@/lib/data/cityFacts";
+import { sourceLine, type CityFacts } from "@/lib/data/cityFacts";
 
-export default function CityMarketFacts({ facts, canonical, outlookHref }: { facts: CityFacts; canonical: string; outlookHref?: string }) {
+export default function CityMarketFacts({
+  facts,
+  canonical,
+  outlookHref,
+  weekly = false,
+}: {
+  facts: CityFacts;
+  canonical: string;
+  outlookHref?: string;
+  /** The facts come from the weekly extra-city build (data/city-markets.json). */
+  weekly?: boolean;
+}) {
   const title = `${facts.city} housing market facts`;
   const dataset = {
     "@context": "https://schema.org",
@@ -24,7 +35,7 @@ export default function CityMarketFacts({ facts, canonical, outlookHref }: { fac
     isAccessibleForFree: true,
     creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
     spatialCoverage: { "@type": "Place", name: `${facts.city}, Ontario, Canada` },
-    measurementTechnique: SOURCE_LINE,
+    measurementTechnique: sourceLine(weekly),
     variableMeasured: facts.facts.map((f) => ({ "@type": "PropertyValue", ...f.measure })),
   };
   const host = canonical.replace(/^https?:\/\/(www\.)?/, "");
@@ -52,7 +63,7 @@ export default function CityMarketFacts({ facts, canonical, outlookHref }: { fac
         </p>
       )}
       <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-        {SOURCE_LINE} How each figure is measured:{" "}
+        {sourceLine(weekly)} How each figure is measured:{" "}
         <Link href="/data/days-on-market" className="underline hover:text-foreground">days on market</Link>,{" "}
         <Link href="/data/price-cuts" className="underline hover:text-foreground">price cuts</Link>,{" "}
         <Link href="/data/over-asking" className="underline hover:text-foreground">sale vs asking price</Link>.
