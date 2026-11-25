@@ -31,6 +31,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { GraduationCap, Footprints, Lock, MapPin, Images } from "lucide-react";
 import { extractListingKey, deslugCity, cityHubSlug } from "@/lib/listings/listingPath";
+import CityTopicLinks from "@/components/seo/CityTopicLinks";
+import { studyCitySlugForFeedCity } from "@/lib/data/studyCities";
 import { cityHrefOrMap } from "@/lib/listings/cityHubs";
 import { getSoldPublicByKey, getSoldGatedByKey, getSoldMediaByKey, hasFullListingRow, getRecentSoldPublicNearPoint, type SoldPublic } from "@/lib/sold/soldByKey";
 import SoldAddressLinks from "@/components/address/SoldAddressLinks";
@@ -470,6 +472,10 @@ export default async function AddressPage({
             </>
           )}
         </section>
+
+        {/* The city's data pages (market, sold prices, price change, ...). Address pages are
+            the most-crawled pages on the site; these links are how crawlers reach /data. */}
+        <CityTopicLinks citySlug={studyCitySlugForFeedCity(pub.city) ?? ""} showCityHub={false} className="mb-8" />
 
         <SoldAddressLinks
           items={nearbySold}

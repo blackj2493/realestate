@@ -54,6 +54,8 @@ import ForceAppreciationCard from "@/components/Property/ForceAppreciationCard";
 import Disclaimers from "@/components/hiddenEquity/Disclaimers";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import MarketDataLinks from "@/components/data/MarketDataLinks";
+import CityTopicLinks from "@/components/seo/CityTopicLinks";
+import { studyCitySlugForFeedCity } from "@/lib/data/studyCities";
 import CondoFeeStabilityCard from "@/components/Property/CondoFeeStabilityCard";
 import SaleHistorySection from "@/components/Property/SaleHistorySection";
 import CampaignHistoryChart from "@/components/CommandCenter/CampaignHistoryChart";
@@ -1798,6 +1800,7 @@ export default async function PropertyPage({
               mind — and because a body link with descriptive anchor text is the only
               internal signal that moved /data at all (see MarketDataLinks' header). */}
           <MarketDataLinks city={marketName} isLease={isLease} />
+          <CityTopicLinks citySlug={studyCitySlugForFeedCity(typeof p.City === "string" ? p.City : null) ?? ""} className="mt-6" />
           </div>
 
         {/* ── Recently Sold (or Leased) comps — moved ABOVE the history (2026-10-27) so

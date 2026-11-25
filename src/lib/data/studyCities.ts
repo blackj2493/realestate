@@ -71,3 +71,18 @@ export function studyCityFilter(city: string, param: number): { sql: string; par
  * read city_region itself.
  */
 export const MODEL_HOOD_SQL = `coalesce(nullif(city_region,''), 'FSA ' || nullif(left(postal_code,3),''), '')`;
+
+/**
+ * The study city (its slug) that a feed City value belongs to, else null: "Toronto C01" ->
+ * toronto, an Ottawa area -> ottawa, "London North" -> london, "Kawartha Lakes" ->
+ * kawartha-lakes. For the "More about {city}" links on address and listing pages.
+ */
+export function studyCitySlugForFeedCity(feedCity: string | null | undefined): string | null {
+  const v = feedCity?.trim();
+  if (!v) return null;
+  if (v === "Toronto" || v.startsWith("Toronto ")) return "toronto";
+  if (OTTAWA_AREAS.includes(v)) return "ottawa";
+  const area = Object.entries(CITY_AREAS).find(([, values]) => values.includes(v));
+  const name = (area ? area[0] : v).toLowerCase();
+  return STUDY_CITIES.find((c) => c.city.toLowerCase() === name)?.slug ?? null;
+}
