@@ -2,11 +2,14 @@
  * Build data/city-markets.json — the market-board figures (monthly median sale price, sales
  * and sale-to-asking; sold below the first asking price; price cuts on homes for sale now;
  * market type) for the extra study cities, which the nightly region_metrics precompute does
- * not cover. Feeds /data/housing-market/{city} for those cities.
+ * not cover. Feeds /data/housing-market, /data/days-on-market, /data/good-time-to-buy,
+ * /data/rent-vs-buy and /home-value for those cities.
  *
  * DEFINITIONS. Each query copies its region RPC: region_price_trend (migration 109) for the
  * monthly points and the 90-day summary, region_sold_dynamics (153) for the 12-month gap to
- * the first asking price, region_price_cuts (153) for the cuts, and monthlyVelocity /
+ * the first asking price and the days to sell, region_dom_distribution (153) for the time on
+ * the market of homes for sale now, region_price_cuts (153) for the cuts, region_rental_yield
+ * (153, as live in the database) for rent against price by bedroom count, and monthlyVelocity /
  * temperatureOf (src/lib/market/aggregates.ts, src/lib/dashboard/marketAggregates.ts) for
  * the market type. One change: the city filter is studyCityFilter, with no CountyOrParish
  * match (county "Waterloo" holds Kitchener and Cambridge; "Peterborough" its townships).
@@ -164,6 +167,52 @@ async function main() {
       const c = cuts.rows[0];
       const activeCount = Number(c.active);
 
+      // region_rental_yield: rent per bedroom count (rental_market_index, city tier, one row
+      // per cohort by basis priority) against the 12-month median sale price.
+      const rental = await client.query(
+        `with region_rows as (
+           select match_tier, city, city_region, county, property_sub_type, sub_type_family,
+                  bedrooms_total, bedrooms_above, den, bathrooms, basis, avg_rent, sample_count
+             from rental_market_index
+            where match_tier = 'city' and ${f.sql}
+              and bedrooms_above is not null and bedrooms_above between 1 and 5),
+         one_per_cohort as (
+           select distinct on (match_tier, city, city_region, county, property_sub_type, sub_type_family,
+                               bedrooms_total, bedrooms_above, den, bathrooms)
+                  bedrooms_above, avg_rent, sample_count
+             from region_rows
+            order by match_tier, city, city_region, county, property_sub_type, sub_type_family,
+                     bedrooms_total, bedrooms_above, den, bathrooms,
+                     case basis when 'closed_12' then 1 when 'closed_24' then 2 else 3 end),
+         rent as (
+           select bedrooms_above beds,
+                  round(sum(avg_rent * greatest(sample_count, 1)) / sum(greatest(sample_count, 1)))::int rent,
+                  sum(coalesce(sample_count, 0))::int rent_n
+             from one_per_cohort where avg_rent > 0 group by 1),
+         price as (
+           select bedrooms_above_grade beds,
+                  percentile_cont(0.5) within group (order by close_price)::bigint price,
+                  count(*)::int price_n
+             from raw_vow_sold
+            where ${f.sql} and transaction_type = 'For Sale' and close_price >= 50000
+              and purchase_contract_date >= current_date - interval '12 months'
+              and bedrooms_above_grade between 1 and 5
+            group by 1)
+         select r.beds, r.rent, r.rent_n, p.price, coalesce(p.price_n, 0) price_n,
+                case when p.price > 50000 and p.price_n >= 5 then round((r.rent * 12.0) / p.price * 100, 2) end yield
+           from rent r left join price p on p.beds = r.beds
+          where r.rent_n > 0 order by r.beds`,
+        f.params,
+      );
+      const rentalRows = rental.rows.map((r) => ({
+        beds: Number(r.beds),
+        typicalRent: num(r.rent),
+        medianPrice: num(r.price),
+        grossYieldPct: num(r.yield),
+        rentSample: Number(r.rent_n),
+        priceSample: Number(r.price_n),
+      }));
+
       // monthlyVelocity: the 3 settled months 2..4 back; months of supply gated on sales90 >= 10.
       const byMonth = new Map(monthly.map((m) => [m.month, m.sales]));
       let vel = 0;
@@ -196,13 +245,15 @@ async function main() {
         medianCutAmt: num(c.cut_amt),
         monthsOfSupply,
         temperature: temperatureOf(monthsOfSupply, soldToListPct),
+        rentalRows,
       };
       out.push(row);
       const last = monthly[monthly.length - 1];
       console.log(
         `${city.padEnd(14)} months=${monthly.length} last=${last?.month} $${last?.medianPrice} n=${last?.sales} | s90=${sales90} s2l=${soldToListPct} over=${pctOverAsking}% | ` +
           `12m=${row.soldCount12m} under=${row.underAskShare} gap=${row.askGapMedian} dom=${row.soldMedianDom} (${row.soldP25Dom}-${row.soldP75Dom}) | ` +
-          `true=${row.trueDom} naive=${row.medianNaiveDom} 90+=${row.domBuckets?.d90plus}/${domActive} | active=${activeCount} cut=${row.cutCount} (${row.medianCutPct}%) | mos=${monthsOfSupply} ${row.temperature}`,
+          `true=${row.trueDom} naive=${row.medianNaiveDom} 90+=${row.domBuckets?.d90plus}/${domActive} | ` +
+          `rent ${rentalRows.map((r) => `${r.beds}b $${r.typicalRent} n=${r.rentSample} y=${r.grossYieldPct}`).join(" ")} | active=${activeCount} cut=${row.cutCount} (${row.medianCutPct}%) | mos=${monthsOfSupply} ${row.temperature}`,
       );
     }
     await client.query("ROLLBACK");

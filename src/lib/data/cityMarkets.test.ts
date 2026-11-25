@@ -3,6 +3,8 @@ import { cityMarketBySlug, coveredMarketCities, coveredMarketRows, getCityMarket
 import { buildOutlook } from "./marketOutlook";
 import { buildSellingTime } from "./sellingTime";
 import { buildBuyVerdict } from "./goodTimeToBuy";
+import { buildRentVsBuy } from "./rentVsBuy";
+import { MIN_RENT_SAMPLE } from "./cityMarketsModel";
 import { EXTRA_STUDY_CITIES } from "./studyCities";
 import { outlookCityBySlug } from "./outlookCities";
 
@@ -35,6 +37,19 @@ describe("city markets", () => {
       expect(st?.stats.stale90Pct).not.toBeNull();
       const v = buildBuyVerdict(c.city, row, rows, null);
       expect(v?.signals.map((s) => s.id)).toEqual(expect.arrayContaining(["temperature", "saleToList", "cuts", "stale"]));
+    }
+  });
+
+  it("feeds the rent-vs-buy page, without thin rent rows", () => {
+    const f = getCityMarkets();
+    const rows = coveredMarketRows([]);
+    for (const c of f.cities) {
+      const row = toMarketRow(c);
+      const thin = c.rentalRows.filter((r) => r.rentSample < MIN_RENT_SAMPLE).map((r) => r.beds);
+      for (const b of thin) expect(row.rentalRows.find((r) => r.beds === b)).toBeUndefined();
+      const v = buildRentVsBuy(c.city, row, rows, f.generatedAt, 2026);
+      expect(v?.lead.beds).toBe(2);
+      expect(v?.rank?.of).toBe(f.cities.length);
     }
   });
 
