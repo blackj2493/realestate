@@ -15,7 +15,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMarketBoard } from "@/lib/data/marketBoard";
-import { boardRowFor, SOURCE_LINE } from "@/lib/data/cityFacts";
+import { boardRowFor, sourceLine } from "@/lib/data/cityFacts";
 import { buildOutlook } from "@/lib/data/marketOutlook";
 import { OUTLOOK_CITIES, outlookCityBySlug, outlookPath } from "@/lib/data/outlookCities";
 import { cityMarketBySlug, getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
@@ -119,7 +119,7 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
         isAccessibleForFree: true,
         creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
         spatialCoverage: { "@type": "Place", name: `${city}, Ontario, Canada` },
-        measurementTechnique: SOURCE_LINE,
+        measurementTechnique: sourceLine(!board),
         variableMeasured: outlook.facts.map((f) => ({ "@type": "PropertyValue", ...f.measure })),
       }
     : null;
@@ -279,7 +279,7 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
                 <HubFaq faqs={outlook.faqs} heading={`${city} housing market: common questions`} />
               </div>
               <CiteBox citation={citation} />
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{SOURCE_LINE}</p>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{sourceLine(!board)}</p>
             </div>
           </>
         )}

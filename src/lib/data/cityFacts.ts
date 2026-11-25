@@ -35,6 +35,9 @@ export interface CityFacts {
 export const SOURCE_LINE =
   "Source: PureProperty analysis of MLS® sales and listings from the MLS® VOW feed (comprehensive but not exhaustive). Totals and medians only, refreshed nightly.";
 
+/** SOURCE_LINE for the extra study cities (data/city-markets.json, built weekly). */
+export const sourceLine = (weekly: boolean) => (weekly ? SOURCE_LINE.replace("refreshed nightly", "refreshed weekly") : SOURCE_LINE);
+
 const MIN_MONTH_SALES = 30;
 const MIN_12M_SALES = 50;
 const MIN_90D_SALES = 20;

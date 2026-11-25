@@ -11,13 +11,15 @@
  */
 import { REGION_TO_CITIES, citiesFromRegions } from "@/lib/dashboard/config";
 import { cityHubSlug } from "@/lib/listings/listingPath";
+import { getCityMarkets } from "@/lib/data/cityMarkets";
 import type { CityFacts } from "@/lib/data/cityFacts";
 
-/** The 15 board markets (same list as the market board), slugged like the city hubs. */
-export const HOME_VALUE_CITIES: { city: string; slug: string }[] = citiesFromRegions(Object.keys(REGION_TO_CITIES)).map((city) => ({
-  city,
-  slug: cityHubSlug(city),
-}));
+/** The 15 board markets (same list as the market board), slugged like the city hubs, then
+ *  the extra study cities (London, Kitchener, ...) from data/city-markets.json. */
+export const HOME_VALUE_CITIES: { city: string; slug: string }[] = [
+  ...citiesFromRegions(Object.keys(REGION_TO_CITIES)).map((city) => ({ city, slug: cityHubSlug(city) })),
+  ...getCityMarkets().cities.map((c) => ({ city: c.city, slug: c.slug })),
+];
 
 export function homeValueCityBySlug(slug: string): string | null {
   return HOME_VALUE_CITIES.find((c) => c.slug === slug.toLowerCase())?.city ?? null;

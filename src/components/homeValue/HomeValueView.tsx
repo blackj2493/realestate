@@ -1,5 +1,5 @@
 /**
- * The /home-value page body, shared by the Ontario page (city = null) and the 15 city
+ * The /home-value page body, shared by the Ontario page (city = null) and the city
  * pages. Server component: the only client part is the request form (OfferRequestCard).
  *
  * Renders NO per-home valuation (see src/lib/homeValue/content.ts). The brokerage is
@@ -23,11 +23,14 @@ export default function HomeValueView({
   city,
   slug,
   facts,
+  weekly = false,
   canonical,
 }: {
   city: string | null;
   slug: string | null;
   facts: CityFacts | null;
+  /** The facts come from the weekly extra-city build, not the nightly board. */
+  weekly?: boolean;
   canonical: string;
 }) {
   const place = city ?? "Ontario";
@@ -104,7 +107,7 @@ export default function HomeValueView({
 
         {facts && (
           <div className="mt-10">
-            <CityMarketFacts facts={facts} canonical={canonical} />
+            <CityMarketFacts facts={facts} canonical={canonical} weekly={weekly} />
           </div>
         )}
 

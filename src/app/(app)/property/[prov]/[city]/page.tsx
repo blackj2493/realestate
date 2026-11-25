@@ -31,7 +31,7 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 import HubFaq from "@/components/seo/HubFaq";
 import SoldAddressLinks from "@/components/address/SoldAddressLinks";
 import { getRecentSoldPublicForCity } from "@/lib/sold/soldByKey";
-import { deslugCity } from "@/lib/listings/listingPath";
+import { cityHubSlug, deslugCity } from "@/lib/listings/listingPath";
 import {
   citiesForHubSlug,
   cityFilterClause,
@@ -43,7 +43,7 @@ import { getMarketBoard } from "@/lib/data/marketBoard";
 import { buildCityFacts, boardRowFor } from "@/lib/data/cityFacts";
 import CityMarketFacts from "@/components/seo/CityMarketFacts";
 import { outlookCityBySlug, outlookPath } from "@/lib/data/outlookCities";
-import { cityMarketBySlug } from "@/lib/data/cityMarkets";
+import { cityMarketBySlug, getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import { PRICE_BANDS, priceBandPath } from "@/lib/listings/priceBands";
 
@@ -78,8 +78,11 @@ const getCityHub = cache(async (slug: string) => {
   }
 });
 
-/** Citable market facts for the 15 board markets; null elsewhere or on any failure. */
+/** Citable market facts for the 15 board markets and the extra study cities (weekly file);
+ *  null elsewhere or on any failure. */
 const getCityFacts = cache(async (cityName: string) => {
+  const extra = cityMarketBySlug(cityHubSlug(cityName));
+  if (extra) return buildCityFacts(extra.city, toMarketRow(extra), getCityMarkets().generatedAt);
   try {
     const board = await getMarketBoard();
     return buildCityFacts(cityName, boardRowFor(board.rows, cityName), board.dataAsOf);
@@ -253,6 +256,7 @@ export default async function CityHubPage({
             facts={facts}
             canonical={canonical}
             outlookHref={outlookCityBySlug(city) || cityMarketBySlug(city) ? outlookPath(city.toLowerCase()) : undefined}
+            weekly={!!cityMarketBySlug(city)}
           />
         )}
         <CityTopicLinks citySlug={city} showCityHub={false} className="mb-8" />

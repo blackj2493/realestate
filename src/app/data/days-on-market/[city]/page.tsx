@@ -16,7 +16,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMarketBoard } from "@/lib/data/marketBoard";
-import { boardRowFor, SOURCE_LINE } from "@/lib/data/cityFacts";
+import { boardRowFor, sourceLine } from "@/lib/data/cityFacts";
 import { buildSellingTime } from "@/lib/data/sellingTime";
 import { outlookCityBySlug } from "@/lib/data/outlookCities";
 import { cityMarketBySlug, coveredMarketCities, coveredMarketRows, getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
@@ -146,7 +146,7 @@ export default async function DaysOnMarketCityPage({ params }: { params: Promise
         isAccessibleForFree: true,
         creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
         spatialCoverage: { "@type": "Place", name: `${city}, Ontario, Canada` },
-        measurementTechnique: SOURCE_LINE,
+        measurementTechnique: sourceLine(!board),
         variableMeasured: data.facts.map((f) => ({ "@type": "PropertyValue", ...f.measure })),
       }
     : null;
@@ -362,7 +362,7 @@ export default async function DaysOnMarketCityPage({ params }: { params: Promise
               </div>
 
               <CiteBox citation={citation} />
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{SOURCE_LINE}</p>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{sourceLine(!board)}</p>
             </div>
           </>
         )}
