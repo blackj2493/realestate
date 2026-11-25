@@ -3,6 +3,7 @@ import { getServiceRoleClient } from "@/lib/supabase/client";
 import { makeRateLimiter, clientIpFrom } from "@/lib/rateLimit";
 import { sendLeadFollowUp, fetchLeadLane, type LeadIntent } from "@/lib/alerts/leadFollowUpEmail";
 import { sendTransactionalEmail } from "@/lib/alerts/sendEmail";
+import { notifyLeadTelegram } from "@/lib/alerts/leadTelegram";
 import { TIMELINE_OPTIONS, AGENT_OPTIONS } from "@/components/Property/leadIntents";
 
 export const dynamic = "force-dynamic";
@@ -122,6 +123,21 @@ export async function POST(req: NextRequest) {
         hasAgent && `Working with an agent: ${hasAgent}`,
         message && `Message: ${message}`,
       ].filter(Boolean).join("\n"),
+    });
+
+    // The same lead to the founder's Telegram: the email can land in Promotions unseen
+    // (lead 35, 2026-11-22: three days). Best-effort; a no-op until the env is set.
+    await notifyLeadTelegram({
+      label: leadLabel,
+      listingKey,
+      address,
+      name,
+      email,
+      phone,
+      preferredTime,
+      timeline,
+      hasAgent,
+      message,
     });
 
     // Tier-0 speed-to-lead: instant auto-acknowledgement TO the lead (best-effort). The
