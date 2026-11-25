@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { extractListingKey } from '@/lib/listings/listingPath';
 import { decideHost, parseAllowedHosts } from '@/lib/security/allowedHosts';
+import { SHED_RETRY_AFTER_S, shouldShedCrawler } from '@/lib/seo/trainingCrawlers';
 
 // NOTE: this file MUST live at src/middleware.ts (NOT the project root). The app is
 // under src/, so Next.js only picks up middleware from src/ — a root middleware.ts is
@@ -33,6 +34,19 @@ export async function middleware(request: NextRequest) {
     res.headers.set('x-host-gate', allowlist.length ? 'enforced' : 'off');
     return res;
   };
+
+  // Bulk AI-training crawlers on the Typesense-heavy pages (address tree, listing detail):
+  // 503 + Retry-After, no render, no search. On 2026-11-24 their crawl pinned the
+  // Typesense cluster for every real user; robots.txt Crawl-delay takes up to a day to
+  // reach them. The AI search agents and every other visitor pass (trainingCrawlers.ts).
+  if (shouldShedCrawler(request.nextUrl.pathname, request.headers.get('user-agent'))) {
+    return stamp(
+      new NextResponse('Crawling of this section is paused. Please retry later.', {
+        status: 503,
+        headers: { 'Retry-After': String(SHED_RETRY_AFTER_S), 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' },
+      }),
+    );
+  }
 
   // API routes get the host gate and nothing else — they read cookies directly and must
   // not go through updateSession or the listing-URL rewrites below.

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SLOWED_CRAWLERS } from "@/lib/seo/trainingCrawlers";
 import { ADDRESS_SITEMAP_SHARDS } from "@/lib/sold/addressSitemapShards";
 import { LISTING_SITEMAP_SHARDS } from "@/lib/listings/listingSitemapShards";
 
@@ -7,22 +8,13 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.
 const DISALLOW = ["/api/", "/dashboard", "/login", "/register", "/apply", "/share/"];
 
 /**
- * Bulk AI-training crawlers, slowed — not blocked.
- *
- * On 2026-11-24 ClaudeBot alone made 269K requests in 12 hours (GPTBot 45K,
- * meta-webindexer 32K), mostly to /address/... pages. Those pages are
- * force-dynamic and each one runs Typesense searches, so the crawl held the
- * Typesense cluster at 100% CPU (search p95 1.7s for real users) and drove
- * ~5 Vercel function invocations a second.
- *
- * Crawl-delay is non-standard: Anthropic documents that ClaudeBot honours it;
- * the others may ignore it. The AI *search/assistant* agents (Claude-SearchBot,
- * OAI-SearchBot, ChatGPT-User, PerplexityBot) are deliberately NOT listed, so
- * AI-search citation keeps working at full speed.
- *
- * A named group REPLACES the "*" group for that bot, so it repeats DISALLOW.
+ * Bulk AI-training crawlers, slowed — not blocked (src/lib/seo/trainingCrawlers.ts has the
+ * 2026-11-24 incident). Crawl-delay is non-standard: Anthropic documents that ClaudeBot
+ * honours it; the others may ignore it, and middleware.ts also sheds them on the
+ * Typesense-heavy pages. A named group REPLACES the "*" group for that bot, so it repeats
+ * DISALLOW.
  */
-export const SLOWED_CRAWLERS = ["ClaudeBot", "GPTBot", "meta-webindexer", "meta-externalagent"];
+export { SLOWED_CRAWLERS };
 export const CRAWL_DELAY_SECONDS = 2;
 
 export default function robots(): MetadataRoute.Robots {
