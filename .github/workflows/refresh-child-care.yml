@@ -1,0 +1,59 @@
+name: Refresh Toronto Child Care
+
+# Rebuilds data/toronto-child-care.json — every licensed child care centre in Toronto with
+# its spaces by age group, and spaces per 100 children for each of the 158 neighbourhoods —
+# and commits it to main. /api/childcare/nearby reads that file (the "Child care nearby"
+# block on Toronto listings), so the commit and the deploy it triggers are the refresh.
+# Public City of Toronto data only: no database, no secrets.
+#
+# CADENCE: weekly, Monday. The City updates the feed daily, but spaces change slowly.
+#
+# NEW-WORKFLOW GOTCHA: workflow_dispatch only activates once this file is on main. Seed the
+# first run with the Actions "Run workflow" button, or: gh workflow run refresh-child-care.yml
+on:
+  # NOT scheduled by GitHub (it drops `schedule` runs under load). Supabase pg_cron POSTs a
+  # workflow_dispatch at 09:47 UTC every Monday — supabase/migrations/174_pg_cron_child_care.sql.
+  # Change the time in cron.job, NOT here.
+  workflow_dispatch:
+
+permissions:
+  contents: write # commits the data file back to main
+
+concurrency:
+  group: refresh-child-care
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build child care data
+        timeout-minutes: 10
+        # pipefail: `tsx … | tee` otherwise returns tee's 0 and a Fatal goes green.
+        run: |
+          set -o pipefail
+          npx tsx scripts/data/buildTorontoChildCare.ts --write 2>&1 | tee child-care-run.log
+
+      - name: Commit data to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/toronto-child-care.json
+          if git diff --cached --quiet; then
+            echo "No change to the child care data."
+          else
+            git commit -m "chore(data): weekly Toronto child care refresh ($(date -u +%Y-%m-%d))"
+            git push
+          fi

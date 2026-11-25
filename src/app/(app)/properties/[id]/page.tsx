@@ -95,6 +95,7 @@ import NearbySchools from "./NearbySchools";
 import AreaCard from "@/components/Property/AreaCard";
 import { areaSummary } from "@/lib/census/plainFacts";
 import NearbyAmenities from "./NearbyAmenities";
+import NearbyChildCare from "./NearbyChildCare";
 import TypicalRents from "./TypicalRents";
 import PropertyNotFound from "./PropertyNotFound";
 import DetailMobileNav from "./DetailMobileNav";
@@ -1747,6 +1748,13 @@ export default async function PropertyPage({
               <MobileCollapse id="area-nearby" title="Nearby" sub="Groceries, parks and recreation">
                 <NearbyAmenities listingId={id} />
               </MobileCollapse>
+
+              {/* Licensed child care — Toronto only (the one city that publishes spaces by age). */}
+              {!isCommercial && isToronto && (
+                <MobileCollapse id="area-childcare" title="Child care" sub="Licensed centres within 1 km">
+                  <NearbyChildCare listingId={id} />
+                </MobileCollapse>
+              )}
 
               {/* Neighbourhood — Census 2021 facts as plain sentences, plus the rent check
                   (owner call 2026-10-29 removed the Numbers-panel tile). Desktop only here;
