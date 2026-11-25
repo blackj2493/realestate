@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import robots from "./robots";
+import robots, { SLOWED_CRAWLERS } from "./robots";
 import { ADDRESS_SITEMAP_SHARDS } from "@/lib/sold/addressSitemapShards";
 import { LISTING_SITEMAP_SHARDS } from "@/lib/listings/listingSitemapShards";
 
@@ -35,5 +35,21 @@ describe("robots.txt", () => {
     const { sitemap } = robots();
     expect(sitemap as string[]).not.toContain("https://www.pureproperty.ca/addresses/sitemap.xml");
     expect(sitemap as string[]).toContain("https://www.pureproperty.ca/sitemap.xml");
+  });
+
+  it("slows the bulk AI-training crawlers but keeps the same disallow list", () => {
+    const rules = robots().rules as { userAgent: string | string[]; disallow?: string[]; crawlDelay?: number }[];
+    const star = rules.find((r) => r.userAgent === "*")!;
+    const slowed = rules.find((r) => Array.isArray(r.userAgent) && r.userAgent.includes("ClaudeBot"))!;
+    expect(slowed.crawlDelay).toBeGreaterThan(0);
+    // A named group replaces "*" for that bot: a missing entry would open /api/ to it.
+    expect(slowed.disallow).toEqual(star.disallow);
+    expect(star.crawlDelay).toBeUndefined();
+  });
+
+  it("leaves the AI search/assistant agents at full speed (they drive citations)", () => {
+    for (const ua of ["Claude-SearchBot", "Claude-User", "OAI-SearchBot", "ChatGPT-User", "PerplexityBot", "Googlebot"]) {
+      expect(SLOWED_CRAWLERS).not.toContain(ua);
+    }
   });
 });
