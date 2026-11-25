@@ -6,7 +6,7 @@
  *
  * Why in-flow: the map's overlay banners collide on phones — the select-mode
  * toast rendered under the legend HUD (both absolute, top of map, z-10), and
- * lens tools (Schools/Commute/Walkable/Color/Draw/Zoning) had NO on-map exit at
+ * lens tools (Schools/Child care/Commute/Groceries & rec/Color/Draw/Zoning) had NO on-map exit at
  * all beyond the count badge on the Tools launcher — the "stuck in a mode"
  * complaint. A document-flow bar cannot be covered by map chrome, and the map
  * simply shrinks beneath it. Desktop keeps the rail's active dots + panels.
@@ -19,6 +19,7 @@ import Link from "next/link";
 import {
   Navigation,
   GraduationCap,
+  Baby,
   ShoppingCart,
   Palette,
   Lasso,
@@ -32,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import { getMapMetric } from "@/lib/personas/mapMetrics";
+import { CHILD_CARE_KIND_LABEL, formatChildCareKm } from "@/lib/childcare/childCareFilterClause";
 
 export default function ActiveLensBar() {
   const isSelectMode = useCommandCenterStore((s) => s.isSelectMode);
@@ -48,6 +50,8 @@ export default function ActiveLensBar() {
   const resetSchool = useCommandCenterStore((s) => s.resetSchool);
   const amenityEnabled = useCommandCenterStore((s) => s.amenity.enabled);
   const resetAmenity = useCommandCenterStore((s) => s.resetAmenity);
+  const childCare = useCommandCenterStore((s) => s.childCare);
+  const resetChildCare = useCommandCenterStore((s) => s.resetChildCare);
   const colorMetricId = useCommandCenterStore((s) => s.colorMetricId);
   const setColorMetricId = useCommandCenterStore((s) => s.setColorMetricId);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
@@ -102,7 +106,15 @@ export default function ActiveLensBar() {
   if (schoolEnabled)
     chips.push({ key: "school", label: "Schools", icon: GraduationCap, onExit: resetSchool, aria: "Turn off the school lens" });
   if (amenityEnabled)
-    chips.push({ key: "amenity", label: "Walkable", icon: ShoppingCart, onExit: resetAmenity, aria: "Turn off the walkability filter" });
+    chips.push({ key: "amenity", label: "Groceries & rec", icon: ShoppingCart, onExit: resetAmenity, aria: "Turn off the groceries and recreation filter" });
+  if (childCare.enabled)
+    chips.push({
+      key: "childcare",
+      label: `${CHILD_CARE_KIND_LABEL[childCare.kind]} ≤ ${formatChildCareKm(childCare.maxKm)}`,
+      icon: Baby,
+      onExit: resetChildCare,
+      aria: "Turn off the child care filter",
+    });
   if (colorMetricId)
     chips.push({
       key: "color",

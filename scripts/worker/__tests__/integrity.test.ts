@@ -50,6 +50,13 @@ vi.mock('@/lib/amenities/nearestAmenities', () => ({
     NearestRecCentreName: '',
   })),
 }));
+vi.mock('@/lib/childcare/nearestChildCare', () => ({
+  assignChildCare: vi.fn(() => ({
+    NearestChildCareKm: 99,
+    NearestInfantCareKm: 99,
+    NearestCwelccKm: 99,
+  })),
+}));
 vi.mock('@/lib/schools/nearestSchools', () => ({
   // Realistic shape: cargo strings + numeric scores + ids array. Optional
   // fields per schema, but the transformer copies every key through.

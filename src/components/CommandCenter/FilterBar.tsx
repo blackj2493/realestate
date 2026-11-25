@@ -30,6 +30,7 @@ import { formatResultNudge } from "./filterNudge";
 import { anyControlActive, isControlActive } from "./investorControls";
 import { SCHOOL_LEVEL_LABEL } from "@/lib/schools/schoolLens";
 import { buildSchoolFilterClause } from "@/lib/schools/schoolFilterClause";
+import { CHILD_CARE_KIND_LABEL, formatChildCareKm } from "@/lib/childcare/childCareFilterClause";
 
 const LABEL = "text-[10px] font-semibold uppercase tracking-wider";
 
@@ -66,6 +67,8 @@ export default function FilterBar() {
     resetCommute,
     amenity,
     resetAmenity,
+    childCare,
+    resetChildCare,
   } = useCommandCenterStore();
 
   // Global map lenses (school / commute / walkability) — not universal filters, so they
@@ -94,6 +97,12 @@ export default function FilterBar() {
       active: amenity.enabled,
       label: `${amenity.kind === "grocery" ? "Grocery" : amenity.kind === "recreation" ? "Recreation" : "Amenity"} ≤ ${amenity.maxKm}km`,
       onRemove: resetAmenity,
+    },
+    {
+      id: "childcare",
+      active: childCare.enabled,
+      label: `${CHILD_CARE_KIND_LABEL[childCare.kind]} ≤ ${formatChildCareKm(childCare.maxKm)}`,
+      onRemove: resetChildCare,
     },
   ];
 
@@ -183,6 +192,7 @@ export default function FilterBar() {
     resetSchool();
     resetCommute();
     resetAmenity();
+    resetChildCare();
   };
 
   // Mobile (<md): the inline chip row scrolls its controls off the right edge,

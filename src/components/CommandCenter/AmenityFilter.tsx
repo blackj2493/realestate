@@ -1,5 +1,5 @@
 /**
- * AmenityFilter — walkability lens, rendered directly inside the "Walkable To" drawer
+ * AmenityFilter — walkability lens, rendered directly inside the "Groceries & rec" drawer
  * of the Instrument Deck rail (no chip / popover wrapper — the drawer already provides
  * the panel, header, and close button).
  *
@@ -42,7 +42,7 @@ export default function AmenityFilter() {
     <div>
       {/* Amenity kind */}
       <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        Walkable to
+        Near
       </label>
       <div className="flex gap-1.5">
         {KINDS.map((k) => {

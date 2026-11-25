@@ -337,6 +337,12 @@ export interface ListingDocument {
   NearestGroceryName?: string;
   NearestRecCentreKm?: number;
   NearestRecCentreName?: string;
+
+  // Licensed child care proximity (City of Toronto, Toronto only). NO_CHILD_CARE_KM (99)
+  // when none within 5 km; missing outside Toronto.
+  NearestChildCareKm?: number;
+  NearestInfantCareKm?: number;
+  NearestCwelccKm?: number;
 }
 
 export interface SearchFilters {

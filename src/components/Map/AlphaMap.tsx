@@ -36,6 +36,7 @@ import {
   type CatchmentProgramGap,
 } from "./useSchoolCatchmentLayers";
 import { useZoningLayers, type ZoningHover } from "./useZoningLayers";
+import { useChildCareCentreLayers, MIN_CENTRE_ZOOM, type ChildCareHover } from "./useChildCareCentreLayers";
 import { ZONING_SOURCES } from "@/lib/zoning/attribution";
 
 interface AlphaMapProps {
@@ -131,6 +132,9 @@ export default function AlphaMap({
   const [hexHover, setHexHover] = useState<{ x: number; y: number; count: number; metric?: string } | null>(null);
   // Floating tooltip for a hovered zoning-overlay polygon (municipal open data).
   const [zoningHover, setZoningHover] = useState<ZoningHover | null>(null);
+  // Floating tooltip for a hovered / tapped licensed child care centre pin (Toronto).
+  const [childCareHover, setChildCareHover] = useState<ChildCareHover | null>(null);
+  const childCarePinsOn = useCommandCenterStore((s) => s.childCare.enabled && s.childCare.showCentres);
 
   // Render mode is lifted to the store so the Mode dock / rail can drive it.
   const mapMode = useCommandCenterStore((s) => s.mapMode);
@@ -950,6 +954,12 @@ export default function AlphaMap({
     onHover: setZoningHover,
   });
 
+  // Licensed child care centre pins (Toronto, zoom >= MIN_CENTRE_ZOOM). Under the listing pins.
+  const childCareLayers = useChildCareCentreLayers({
+    zoom: viewState.zoom,
+    onHover: setChildCareHover,
+  });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleViewStateChange = useCallback((params: any) => {
     if (!params.viewState) return;
@@ -1044,10 +1054,10 @@ export default function AlphaMap({
           // mobile List/Map toggle, where the pane goes display:none and back.
           syncBasemapSize();
         }}
-        onDragStart={() => { setPopup(null); setCatchmentHover(null); setHexHover(null); setZoningHover(null); }}
+        onDragStart={() => { setPopup(null); setCatchmentHover(null); setHexHover(null); setZoningHover(null); setChildCareHover(null); }}
         onDragEnd={handleDragEnd}
         controller={true}
-        layers={[...catchmentLayers, ...zoningLayers, ...layers, ...drawLayers, ...searchPinLayer]}
+        layers={[...catchmentLayers, ...zoningLayers, ...childCareLayers, ...layers, ...drawLayers, ...searchPinLayer]}
         onClick={(info) => {
           if (isDrawing) {
             if (!info.coordinate) return;
@@ -1204,6 +1214,28 @@ export default function AlphaMap({
         >
           <div className="font-mono text-xs font-semibold text-amber-700 dark:text-amber-200">{zoningHover.code}</div>
           <div className="text-[10px] leading-tight text-foreground">{zoningHover.category}</div>
+        </div>
+      )}
+
+      {/* Hovered / tapped child care centre — City of Toronto licensed data. Violet, to
+          match the $10-a-day pin colour. Spaces are capacity, not vacancies. */}
+      {childCarePinsOn && childCareHover && (
+        <div
+          className="pointer-events-none absolute z-20 max-w-[260px] -translate-x-1/2 -translate-y-full border border-violet-500/50 bg-card/95 px-2.5 py-1.5 backdrop-blur-md"
+          style={{ left: childCareHover.x, top: childCareHover.y - 10 }}
+        >
+          <div className="text-xs font-medium text-foreground">{childCareHover.name}</div>
+          <div className="text-[10px] leading-tight text-muted-foreground">Licensed spaces: {childCareHover.ages}</div>
+          {childCareHover.cwelcc && (
+            <div className="text-[10px] leading-tight text-violet-700 dark:text-violet-300">$10-a-day centre</div>
+          )}
+        </div>
+      )}
+
+      {/* Child care pins are hidden when zoomed out — say so, or the tick looks broken. */}
+      {childCarePinsOn && viewState.zoom < MIN_CENTRE_ZOOM && (
+        <div className="pointer-events-none absolute bottom-3 right-3 z-10 border border-violet-500/30 bg-card/90 px-2.5 py-1.5 text-[10px] text-muted-foreground backdrop-blur-md">
+          Zoom in to see child care centres.
         </div>
       )}
 

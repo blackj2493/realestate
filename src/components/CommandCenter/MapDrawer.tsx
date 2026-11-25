@@ -11,13 +11,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { X, Navigation, GraduationCap, ShoppingCart, Palette, Lasso, Scale, Bookmark, History, type LucideIcon } from "lucide-react";
+import { X, Navigation, GraduationCap, Baby, ShoppingCart, Palette, Lasso, Scale, Bookmark, History, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 import CommuteFilter from "./CommuteFilter";
 import SchoolFilter from "./SchoolFilter";
 import AmenityFilter from "./AmenityFilter";
+import ChildCareFilter from "./ChildCareFilter";
 import MapColorPanel from "./MapColorPanel";
 import MapDrawPanel from "./MapDrawPanel";
 import MapComparePanel from "./MapComparePanel";
@@ -26,7 +27,8 @@ import MapLensesPanel from "./MapLensesPanel";
 export const TITLES: Record<RailModule, string> = {
   commute: "Commute",
   school: "Schools",
-  amenity: "Walkable To",
+  childcare: "Child care",
+  amenity: "Groceries & rec",
   color: "Color By",
   draw: "Draw Area",
   compare: "Compare",
@@ -37,6 +39,7 @@ export const TITLES: Record<RailModule, string> = {
 export const ICONS: Record<RailModule, LucideIcon> = {
   commute: Navigation,
   school: GraduationCap,
+  childcare: Baby,
   amenity: ShoppingCart,
   color: Palette,
   draw: Lasso,
@@ -79,6 +82,12 @@ export function renderModulePanel(module: RailModule) {
       return (
         <div className="p-3">
           <SchoolFilter />
+        </div>
+      );
+    case "childcare":
+      return (
+        <div className="p-3">
+          <ChildCareFilter />
         </div>
       );
     case "amenity":

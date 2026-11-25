@@ -38,7 +38,16 @@ export type CommuteMode = "driving" | "walking" | "cycling";
  * Instrument Deck — which rail module's drawer is open (null = none). Only one
  * drawer is open at a time so the map is never buried under stacked panels.
  */
-export type RailModule = "commute" | "school" | "amenity" | "color" | "draw" | "compare" | "time" | "lenses";
+export type RailModule =
+  | "commute"
+  | "school"
+  | "childcare"
+  | "amenity"
+  | "color"
+  | "draw"
+  | "compare"
+  | "time"
+  | "lenses";
 
 /** Current map viewport extent, used to scope the search to what's on screen. */
 export interface MapBounds {
@@ -128,6 +137,28 @@ const defaultAmenity: AmenityState = {
   enabled: false,
   kind: "grocery",
   maxKm: 1,
+};
+
+export type ChildCareKind = "infant" | "any" | "cwelcc";
+
+/**
+ * Licensed child care filter (global, Toronto only). Narrows the list + map to homes within
+ * `maxKm` straight-line of a centre with infant spaces, any infant/toddler/preschool space,
+ * or in the $10-a-day program, via the precomputed NearestInfantCareKm / NearestChildCareKm
+ * / NearestCwelccKm Typesense fields. `showCentres` draws the centres as map pins.
+ */
+export interface ChildCareState {
+  enabled: boolean;
+  kind: ChildCareKind;
+  maxKm: number; // straight-line distance ceiling
+  showCentres: boolean;
+}
+
+export const defaultChildCare: ChildCareState = {
+  enabled: false,
+  kind: "infant",
+  maxKm: 1,
+  showCentres: true,
 };
 
 export interface CommandCenterState {
@@ -263,6 +294,11 @@ export interface CommandCenterState {
   amenity: AmenityState;
   setAmenity: (patch: Partial<AmenityState>) => void;
   resetAmenity: () => void;
+
+  // Licensed child care filter — Toronto only (global)
+  childCare: ChildCareState;
+  setChildCare: (patch: Partial<ChildCareState>) => void;
+  resetChildCare: () => void;
 
   // Total found (full count, independent of the ≤100 render cap)
   totalCount: number;
@@ -406,6 +442,7 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
       commute: { ...defaultCommute },
       school: { ...defaultSchool },
       amenity: { ...defaultAmenity },
+      childCare: { ...defaultChildCare },
     }),
 
   universalFilters: makeDefaultUniversalFilters(),
@@ -551,6 +588,11 @@ export const useCommandCenterStore = create<CommandCenterState>((set) => ({
   setAmenity: (patch) =>
     set((state) => ({ amenity: { ...state.amenity, ...patch } })),
   resetAmenity: () => set({ amenity: { ...defaultAmenity } }),
+
+  childCare: { ...defaultChildCare },
+  setChildCare: (patch) =>
+    set((state) => ({ childCare: { ...state.childCare, ...patch } })),
+  resetChildCare: () => set({ childCare: { ...defaultChildCare } }),
 
   totalCount: 0,
   setTotalCount: (count) => set({ totalCount: count }),
