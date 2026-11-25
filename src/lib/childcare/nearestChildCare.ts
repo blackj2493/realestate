@@ -76,9 +76,11 @@ export function assignChildCare(
   for (const c of list) {
     if (Math.abs(c.lat - lat) > PREFILTER_LAT || Math.abs(c.lng - lng) > PREFILTER_LNG) continue;
     const young = c.infant > 0 || c.toddler > 0 || c.preschool > 0;
-    if (!young && !c.cwelcc) continue;
+    // Every filter is for children under school age: a centre with only kindergarten or
+    // school-age spaces counts for none of them, even when it is in the $10-a-day program.
+    if (!young) continue;
     const d = haversineKm(lat, lng, c.lat, c.lng);
-    if (young && d < anyKm) anyKm = d;
+    if (d < anyKm) anyKm = d;
     if (c.infant > 0 && d < infantKm) infantKm = d;
     if (c.cwelcc && d < cwelccKm) cwelccKm = d;
   }

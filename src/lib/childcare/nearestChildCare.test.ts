@@ -71,4 +71,11 @@ describe('inTorontoBbox', () => {
     expect(inTorontoBbox([43.4675, -79.6877])).toBe(false);
     expect(inTorontoBbox(null)).toBe(false);
   });
+
+  it("does not count a $10-a-day centre that has only school-age spaces", () => {
+    const only = [centre({ id: 9, lat: 43.6532, lng: -79.3832, schoolAge: 60, kindergarten: 30, cwelcc: true })];
+    const r = assignChildCare([43.6532, -79.3832], only);
+    expect(r.NearestCwelccKm).toBe(NO_CHILD_CARE_KM);
+    expect(r.NearestChildCareKm).toBe(NO_CHILD_CARE_KM);
+  });
 });

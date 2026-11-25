@@ -29,7 +29,9 @@ export function buildCentresGeoJson(file: ChildCareFile): ChildCareCentresGeoJso
     type: "FeatureCollection",
     updated: file.updated,
     features: file.centres
-      .filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lng))
+      // Same rule as assignChildCare: the tool is for children under school age, so a
+      // centre with only kindergarten or school-age spaces is not a pin.
+      .filter((c) => Number.isFinite(c.lat) && Number.isFinite(c.lng) && c.infant + c.toddler + c.preschool > 0)
       .map((c) => ({
         type: "Feature" as const,
         geometry: { type: "Point" as const, coordinates: [c.lng, c.lat] as [number, number] },
