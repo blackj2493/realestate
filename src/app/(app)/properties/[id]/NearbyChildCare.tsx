@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Baby, ChevronDown } from "lucide-react";
+import { CHILD_CARE_PATH } from "@/lib/childcare/paths";
 import { searchListings } from "@/lib/typesense/client";
 import type { ChildCareResponse } from "@/app/api/childcare/nearby/route";
 import type { NearbyChildCare as Nearby } from "@/lib/childcare/torontoChildCare";
@@ -69,7 +71,10 @@ export default function NearbyChildCare({ listingId }: { listingId: string }) {
             {data.neighbourhood && (
               <p className="mt-1 text-muted-foreground">
                 {data.neighbourhood.name}: <span className="font-semibold text-foreground">{Math.round(data.neighbourhood.per100)}</span> spaces
-                per 100 children under 5. Toronto: {Math.round(data.cityPer100)}.
+                per 100 children under 5. Toronto: {Math.round(data.cityPer100)}.{" "}
+                <Link href={CHILD_CARE_PATH} className="text-teal-700 underline hover:text-foreground dark:text-teal-400">
+                  See the Toronto map
+                </Link>
               </p>
             )}
           </div>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CHILD_CARE_PATH } from "@/lib/childcare/paths";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
@@ -261,6 +262,12 @@ export default async function DataHubPage() {
                 </Link>
               </li>
             ))}
+            {/* Toronto only (the one city that publishes child care spaces by age), so not a CITY_TOPIC. */}
+            <li>
+              <Link href={CHILD_CARE_PATH} className="font-medium underline hover:text-foreground">
+                Child care spaces per child, by Toronto neighbourhood
+              </Link>
+            </li>
           </ul>
           <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
             {OUTLOOK_CITIES.map((c) => (
