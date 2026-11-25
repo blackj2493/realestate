@@ -13,7 +13,7 @@
 "use client";
 
 import React from "react";
-import { Navigation, GraduationCap, ShoppingCart, Palette, Lasso, Landmark, Scale, Bookmark, History, Zap, type LucideIcon } from "lucide-react";
+import { Navigation, GraduationCap, Baby, ShoppingCart, Palette, Lasso, Landmark, Scale, Bookmark, History, Zap, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type RailModule } from "@/lib/stores/commandCenterStore";
 import { useIsMac, formatShortcut } from "@/hooks/useIsMac";
@@ -93,6 +93,7 @@ export default function MapControlRail() {
   const commuteEnabled = useCommandCenterStore((s) => s.commute.enabled);
   const schoolEnabled = useCommandCenterStore((s) => s.school.enabled);
   const amenityEnabled = useCommandCenterStore((s) => s.amenity.enabled);
+  const childCareEnabled = useCommandCenterStore((s) => s.childCare.enabled);
   const selectedCount = useCommandCenterStore((s) => s.selectedIds.size);
   const colorMetricId = useCommandCenterStore((s) => s.colorMetricId);
   const isDrawing = useCommandCenterStore((s) => s.isDrawing);
@@ -130,8 +131,16 @@ export default function MapControlRail() {
     },
     {
       kind: "drawer",
+      module: "childcare",
+      label: "Child care",
+      description: "Show only Toronto homes near infant care, any licensed centre or a $10-a-day centre",
+      icon: Baby,
+      dataActive: childCareEnabled,
+    },
+    {
+      kind: "drawer",
       module: "amenity",
-      label: "Walkable",
+      label: "Groceries & rec",
       description: "Filter to homes within walking distance of a grocery store or recreation centre",
       icon: ShoppingCart,
       dataActive: amenityEnabled,

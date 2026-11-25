@@ -91,3 +91,25 @@ describe("setFilters", () => {
     expect(useCommandCenterStore.getState().filters.interestRatePct).toBe(defaultTerminalFilters.interestRatePct);
   });
 });
+
+describe("commandCenterStore — child care filter", () => {
+  beforeEach(() => get().resetChildCare());
+
+  it("defaults to off, infant care, 1 km, centres shown", () => {
+    expect(get().childCare).toEqual({ enabled: false, kind: "infant", maxKm: 1, showCentres: true });
+  });
+
+  it("merges a patch and resets to the default", () => {
+    get().setChildCare({ enabled: true, kind: "cwelcc" });
+    expect(get().childCare).toEqual({ enabled: true, kind: "cwelcc", maxKm: 1, showCentres: true });
+    get().resetChildCare();
+    expect(get().childCare.enabled).toBe(false);
+    expect(get().childCare.kind).toBe("infant");
+  });
+
+  it("is cleared by resetFilters", () => {
+    get().setChildCare({ enabled: true, maxKm: 2, showCentres: false });
+    get().resetFilters();
+    expect(get().childCare).toEqual({ enabled: false, kind: "infant", maxKm: 1, showCentres: true });
+  });
+});

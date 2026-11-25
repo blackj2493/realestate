@@ -30,6 +30,7 @@ import { buildListingPath } from '@/lib/listings/listingPath';
 import { assignSchools } from '@/lib/schools/nearestSchools';
 import { catchmentsForPoint, isCatchmentIndexPrimed } from '@/lib/schools/catchmentIndex';
 import { assignAmenities } from '@/lib/amenities/nearestAmenities';
+import { assignChildCare } from '@/lib/childcare/nearestChildCare';
 import { selectPrimaryImage, collectMediaUrls } from '@/lib/etl/selectPrimaryImage';
 import { deriveBasementTier } from '@/lib/avm/conditionScoring';
 import { normalizeDirectionFaces } from '@/lib/listings/directionFaces';
@@ -864,6 +865,10 @@ export interface TransformResult {
     NearestGroceryName?: string;
     NearestRecCentreKm?: number;
     NearestRecCentreName?: string;
+    // Licensed child care proximity (Toronto only); NO_CHILD_CARE_KM sentinel.
+    NearestChildCareKm?: number;
+    NearestInfantCareKm?: number;
+    NearestCwelccKm?: number;
   };
 }
 
@@ -1347,6 +1352,14 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   typesensePayload.NearestGroceryName = amenities.NearestGroceryName;
   typesensePayload.NearestRecCentreKm = amenities.NearestRecCentreKm;
   typesensePayload.NearestRecCentreName = amenities.NearestRecCentreName;
+
+  // Licensed child care proximity (City of Toronto data, deterministic, §4/§6). Same
+  // NO_CHILD_CARE_KM sentinel idea: a listing outside Toronto gets 99, never 0, so the
+  // map's NearestInfantCareKm:<=X filter cannot false-match it.
+  const childCare = assignChildCare(geo.location);
+  typesensePayload.NearestChildCareKm = childCare.NearestChildCareKm;
+  typesensePayload.NearestInfantCareKm = childCare.NearestInfantCareKm;
+  typesensePayload.NearestCwelccKm = childCare.NearestCwelccKm;
 
   return { supabasePayload, typesensePayload };
 }

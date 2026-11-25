@@ -61,6 +61,7 @@ import { useIsAuthed } from "@/hooks/useIsAuthed";
 import { passesDealGrade } from "@/lib/dealScore/gradeFilter";
 import { hydrateTerminalPersona } from "@/lib/personas/personaStore";
 import { isDescriptionSignalId } from "@/lib/listings/descriptionSignals";
+import { childCareFilterClause } from "@/lib/childcare/childCareFilterClause";
 
 /**
  * Reverse map: raw PropertySubType spelling → dashboard key used by the sold route.
@@ -176,6 +177,7 @@ function CommandCenterContent() {
     commute,
     school,
     amenity,
+    childCare,
     mapBounds,
     setMapBounds,
     selectedIds,
@@ -460,6 +462,12 @@ function CommandCenterContent() {
       else if (amenity.kind === "recreation") amenityParts.push(r);
       else amenityParts.push(`(${g} || ${r})`);
     }
+    // Licensed child care (Toronto only): nearest infant / any / $10-a-day centre within maxKm.
+    const childCareClause = childCareFilterClause({
+      enabled: childCare.enabled,
+      kind: childCare.kind,
+      maxKm: childCare.maxKm,
+    });
     const bandDef = colorBand ? getMapMetric(colorBand.metricId) : null;
     const bandClause = bandDef ? bandFilterClause(bandDef, colorBand!.index) : null;
     const drawClause =
@@ -472,7 +480,7 @@ function CommandCenterContent() {
     const descriptionQuery =
       DESCRIPTION_SEARCH_ENABLED && transactionMode === "sale" ? descriptionTextQuery(universalFilters) : null;
     const placeClause = descriptionQuery ? locationFilterClause(location) : null;
-    const rawFilterBy = [...coreClauses, ...schoolParts, ...amenityParts, bandClause, drawClause, placeClause].filter(Boolean).join(" && ");
+    const rawFilterBy = [...coreClauses, ...schoolParts, ...amenityParts, childCareClause, bandClause, drawClause, placeClause].filter(Boolean).join(" && ");
     const geoPolygon =
       commute.enabled && commute.polygon && commute.polygon.length >= 3
         ? commute.polygon.map(([lng, lat]) => [lat, lng] as [number, number])
@@ -496,7 +504,7 @@ function CommandCenterContent() {
       sortOrder: "desc",
       descriptionQuery,
     };
-  }, [activePersona, transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, school.program, amenity.enabled, amenity.kind, amenity.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds, descriptionCountsWanted]);
+  }, [activePersona, transactionMode, propertyClass, universalFilters, filters, persona, school.enabled, school.level, school.system, school.minScore, school.targetSchool, school.program, amenity.enabled, amenity.kind, amenity.maxKm, childCare.enabled, childCare.kind, childCare.maxKm, colorBand, drawPolygon, commute.enabled, commute.polygon, location, mapBounds, descriptionCountsWanted]);
   const runActiveSearch = useCallback(
     (): Promise<SearchResult> => searchListings(activeSearchOptions()),
     [activeSearchOptions]
@@ -681,7 +689,7 @@ function CommandCenterContent() {
       return;
     }
     setMapBounds(null);
-  }, [location, activePersona, transactionMode, propertyClass, activeLayers, commute.enabled, commute.polygon, school.enabled, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, setMapBounds]);
+  }, [location, activePersona, transactionMode, propertyClass, activeLayers, commute.enabled, commute.polygon, school.enabled, school.targetSchool, amenity.enabled, amenity.kind, amenity.maxKm, childCare.enabled, childCare.kind, childCare.maxKm, setMapBounds]);
 
   // Debounced re-search on persona/filter/location change
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

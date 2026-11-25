@@ -3,7 +3,7 @@
  *
  * On desktop the rail (MapControlRail) + drawer (MapDrawer) live on the left edge
  * of the map. Those are md-only, so on phones this is how you reach Schools,
- * Compare, Commute, Walkable, Color By, Draw Area and Saved Views: a "Tools"
+ * Child care, Compare, Commute, Groceries & rec, Color By, Draw Area and Saved Views: a "Tools"
  * button on the map opens a bottom sheet — a grid of the same tools, each opening
  * its EXACT same panel (renderModulePanel) so the behaviour can't drift from
  * desktop. Zoning is the exception: like the desktop rail's ZONING tile it's an
@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   Navigation,
   GraduationCap,
+  Baby,
   ShoppingCart,
   Palette,
   Lasso,
@@ -34,7 +35,8 @@ import { renderModulePanel, TITLES } from "./MapDrawer";
 const TOOLS: { module: RailModule; label: string; icon: LucideIcon }[] = [
   { module: "commute", label: "Commute", icon: Navigation },
   { module: "school", label: "Schools", icon: GraduationCap },
-  { module: "amenity", label: "Walkable", icon: ShoppingCart },
+  { module: "childcare", label: "Child care", icon: Baby },
+  { module: "amenity", label: "Groceries & rec", icon: ShoppingCart },
   { module: "color", label: "Color By", icon: Palette },
   { module: "draw", label: "Draw Area", icon: Lasso },
   { module: "compare", label: "Compare", icon: Scale },
@@ -50,6 +52,7 @@ export default function MobileMapTools() {
   const commuteEnabled = useCommandCenterStore((s) => s.commute.enabled);
   const schoolEnabled = useCommandCenterStore((s) => s.school.enabled);
   const amenityEnabled = useCommandCenterStore((s) => s.amenity.enabled);
+  const childCareEnabled = useCommandCenterStore((s) => s.childCare.enabled);
   const colorMetricId = useCommandCenterStore((s) => s.colorMetricId);
   const drawPolygon = useCommandCenterStore((s) => s.drawPolygon);
   const startDrawing = useCommandCenterStore((s) => s.startDrawing);
@@ -61,6 +64,7 @@ export default function MobileMapTools() {
   const dataActive: Record<RailModule, boolean> = {
     commute: commuteEnabled,
     school: schoolEnabled,
+    childcare: childCareEnabled,
     amenity: amenityEnabled,
     color: colorMetricId !== null,
     draw: drawPolygon !== null,

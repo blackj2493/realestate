@@ -195,6 +195,15 @@ export const indexedFields: IndexedField[] = [
   // cargo (see ListingDocument), not indexed. Source: Overture Maps (CDLA-Permissive).
   { name: 'NearestGroceryKm', type: 'float', facet: false, sort: true, optional: true },
   { name: 'NearestRecCentreKm', type: 'float', facet: false, sort: true, optional: true },
+
+  // ─── Licensed child care proximity (City of Toronto, Toronto only) ─────────
+  // Straight-line km to the nearest centre with infant/toddler/preschool spaces, with
+  // infant spaces, and in the $10-a-day program. NO_CHILD_CARE_KM (99) sentinel when none
+  // within 5 km; outside Toronto the backfill leaves them missing. Either way `<=X` never
+  // false-matches. optional: backfilled in place on existing documents.
+  { name: 'NearestChildCareKm', type: 'float', facet: false, sort: true, optional: true },
+  { name: 'NearestInfantCareKm', type: 'float', facet: false, sort: true, optional: true },
+  { name: 'NearestCwelccKm', type: 'float', facet: false, sort: true, optional: true },
 ];
 
 /**
@@ -387,6 +396,11 @@ export const typesenseSchema = {
     // ─── Amenity proximity — walkability distance sliders (NO_AMENITY_KM sentinel) ──
     { name: 'NearestGroceryKm', type: 'float' as const, facet: false, sort: true, optional: true },
     { name: 'NearestRecCentreKm', type: 'float' as const, facet: false, sort: true, optional: true },
+
+    // ─── Licensed child care proximity — Toronto only (NO_CHILD_CARE_KM sentinel) ──
+    { name: 'NearestChildCareKm', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'NearestInfantCareKm', type: 'float' as const, facet: false, sort: true, optional: true },
+    { name: 'NearestCwelccKm', type: 'float' as const, facet: false, sort: true, optional: true },
 
     // Investor-filter fields — written by transformer.ts since Phase 2 but undeclared
     // until 2026-06-10 (audit HIGH-5): every filter_by/sort_by on them was HTTP 400.
@@ -647,6 +661,14 @@ export interface TypesensePropertyDocument {
   NearestGroceryName?: string;
   NearestRecCentreKm?: number;
   NearestRecCentreName?: string;
+
+  // ─── Licensed child care proximity (City of Toronto) ──────────────────────
+  /** Straight-line km to the nearest centre with infant/toddler/preschool spaces, with
+   *  infant spaces, and in the $10-a-day program. NO_CHILD_CARE_KM (99) when none within
+   *  5 km; missing outside Toronto. */
+  NearestChildCareKm?: number;
+  NearestInfantCareKm?: number;
+  NearestCwelccKm?: number;
 }
 
 /**

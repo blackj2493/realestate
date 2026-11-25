@@ -112,6 +112,8 @@ export default function MapCommandPalette() {
     ([
       ["commute", "Commute"],
       ["school", "Schools"],
+      ["childcare", "Child care"],
+      ["amenity", "Groceries & rec"],
       ["color", "Color By"],
       ["draw", "Draw Area"],
       ["compare", "Compare"],
