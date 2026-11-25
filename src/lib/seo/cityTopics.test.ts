@@ -8,6 +8,7 @@ import { basementValuePath } from "@/lib/data/basementValue";
 import { priceChangePath } from "@/lib/data/priceChange";
 import { condoPricesPath } from "@/lib/data/condoPrices";
 import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
+import { rentVsBuyPath } from "@/lib/data/rentVsBuy";
 import { schoolPricesPath } from "@/lib/data/schoolPrices";
 import { soldPricesPath } from "@/lib/data/soldPrices";
 import { bestTimeToSellPath } from "@/lib/data/bestTimeToSell";
@@ -36,6 +37,8 @@ describe("cityTopics", () => {
     expect(by["condo-prices"].hub).toBe(condoPricesPath());
     expect(by["good-time-to-buy"].path("markham")).toBe(goodTimeToBuyPath("markham"));
     expect(by["good-time-to-buy"].hub).toBe(goodTimeToBuyPath());
+    expect(by["rent-vs-buy"].path("london")).toBe(rentVsBuyPath("london"));
+    expect(by["rent-vs-buy"].hub).toBe(rentVsBuyPath());
   });
 
   it("hub list covers every topic hub", () => {

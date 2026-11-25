@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { coveredMarketCities } from "@/lib/data/cityMarkets";
+import { rentVsBuyPath } from "@/lib/data/rentVsBuy";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { TrackerShell } from "@/components/data/TrackerShell";
 import { trackerBySlug } from "@/lib/data/trackers";
@@ -82,7 +85,7 @@ export default async function RentVsBuyPage() {
         },
         {
           q: "Which markets are covered?",
-          a: "Toronto and Ottawa plus the GTA municipalities — Mississauga, Brampton, Markham, Vaughan, Richmond Hill, Oakville, Burlington, Milton, Oshawa, Whitby, Ajax, Pickering and Hamilton — for one- to four-bedroom homes.",
+          a: "Toronto and Ottawa plus the GTA municipalities — Mississauga, Brampton, Markham, Vaughan, Richmond Hill, Oakville, Burlington, Milton, Oshawa, Whitby, Ajax, Pickering and Hamilton — for one- to four-bedroom homes. Every covered city, including London, Kitchener, Barrie, Guelph, Kingston, St. Catharines, Cambridge, Waterloo, Peterborough, Niagara Falls and Brantford, also has its own rent-or-buy page.",
         },
       ]}
     >
@@ -93,6 +96,18 @@ export default async function RentVsBuyPage() {
           Rental data is refreshing — please check back shortly.
         </p>
       )}
+      <section className="mt-8" aria-labelledby="rvb-cities">
+        <h2 id="rvb-cities" className="text-sm font-semibold text-muted-foreground">
+          Is it cheaper to rent or buy? By city
+        </h2>
+        <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+          {coveredMarketCities().map((c) => (
+            <Link key={c.slug} href={rentVsBuyPath(c.slug)} className="underline hover:text-foreground">
+              {c.city}
+            </Link>
+          ))}
+        </p>
+      </section>
     </TrackerShell>
   );
 }

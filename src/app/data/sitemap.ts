@@ -8,6 +8,7 @@ import { LIVE_FINDINGS } from "@/lib/data/findings";
 import { getPriceChangeData, priceChangePath } from "@/lib/data/priceChange";
 import { condoPricesPath, getCondoData } from "@/lib/data/condoPrices";
 import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
+import { rentVsBuyPath } from "@/lib/data/rentVsBuy";
 import { getSchoolData, schoolPricesPath } from "@/lib/data/schoolPrices";
 import { getSoldData, soldPricesPath } from "@/lib/data/soldPrices";
 import { getBestTimeData, bestTimeToSellPath } from "@/lib/data/bestTimeToSell";
@@ -84,6 +85,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}${goodTimeToBuyPath()}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 },
     ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${goodTimeToBuyPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 })),
     ...getCityMarkets().cities.map((c) => ({ url: `${SITE_URL}${goodTimeToBuyPath(c.slug)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.8 })),
+    ...OUTLOOK_CITIES.map((c) => ({ url: `${SITE_URL}${rentVsBuyPath(c.slug)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.7 })),
+    ...getCityMarkets().cities.map((c) => ({ url: `${SITE_URL}${rentVsBuyPath(c.slug)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7 })),
     // "Do better schools raise house prices in {city}?" + every catchment (2026-11-25). Static, monthly.
     { url: `${SITE_URL}${schoolPricesPath()}`, lastModified: new Date(getSchoolData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 },
     ...getSchoolData().cities.map((c) => ({ url: `${SITE_URL}${schoolPricesPath(c.slug)}`, lastModified: new Date(getSchoolData().generatedAt), changeFrequency: "monthly" as const, priority: 0.8 })),

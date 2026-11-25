@@ -2,13 +2,14 @@
  * Types for data/city-markets.json: the market-board figures for the extra study cities
  * (EXTRA_STUDY_CITIES), which the nightly region_metrics precompute does not cover. Built
  * weekly by scripts/data/buildCityMarkets.ts with the same definitions as the region RPCs
- * (region_price_trend 109, region_sold_dynamics and region_price_cuts 153), but with the
- * city filter of the study pages and no CountyOrParish match: county "Waterloo" holds
- * Kitchener and Cambridge, and county "Peterborough" its townships.
+ * (region_price_trend 109; region_sold_dynamics, region_dom_distribution, region_price_cuts
+ * and region_rental_yield 153), but with the city filter of the study pages and no
+ * CountyOrParish match: county "Waterloo" holds Kitchener and Cambridge, and county
+ * "Peterborough" its townships.
  *
  * Kept apart from cityMarkets.ts so the build script never imports the file it writes.
  */
-import type { MarketRow } from "@/lib/data/marketBoard";
+import type { MarketRow, RentalRow } from "@/lib/data/marketBoard";
 
 export interface CityMarket {
   city: string;
@@ -35,12 +36,19 @@ export interface CityMarket {
   medianCutAmt: number | null;
   monthsOfSupply: number | null;
   temperature: MarketRow["temperature"];
+  /** Rent against the 12-month median sale price, by bedroom count (region_rental_yield),
+   *  with the sample sizes. */
+  rentalRows: (RentalRow & { rentSample: number; priceSample: number })[];
 }
 
 export interface CityMarketsFile {
   generatedAt: string;
   cities: CityMarket[];
 }
+
+/** A bedroom row of rent needs this many rents. The board's rows carry no sample size; its
+ *  15 markets have hundreds per row. The extra cities go down to single digits (Kingston). */
+export const MIN_RENT_SAMPLE = 10;
 
 /** The board row shape buildOutlook reads; fields this file does not measure are null. */
 export function toMarketRow(c: CityMarket): MarketRow {
@@ -69,7 +77,9 @@ export function toMarketRow(c: CityMarket): MarketRow {
     medianCutPct: c.medianCutPct,
     medianCutAmt: c.medianCutAmt,
     domBuckets: c.domBuckets,
-    rentalRows: [],
+    rentalRows: c.rentalRows
+      .filter((r) => r.rentSample >= MIN_RENT_SAMPLE)
+      .map(({ beds, typicalRent, medianPrice, grossYieldPct }) => ({ beds, typicalRent, medianPrice, grossYieldPct })),
     underAskShare: c.underAskShare,
     askGapMedian: c.askGapMedian,
     soldCount12m: c.soldCount12m,

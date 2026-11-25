@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-24T22:56:39.463Z",
+ "generatedAt": "2026-11-25T01:27:45.714Z",
  "cities": [
   {
    "city": "London",
@@ -150,20 +150,20 @@
      "soldToList": 96.5
     }
    ],
-   "sales90": 1074,
+   "sales90": 1062,
    "soldToListPct": 96.7,
-   "pctOverAsking": 10.4,
-   "soldCount12m": 4181,
+   "pctOverAsking": 10.5,
+   "soldCount12m": 4168,
    "soldMedianDom": 26,
    "soldP25Dom": 13,
-   "soldP75Dom": 51,
+   "soldP75Dom": 52,
    "trueDom": 76,
    "medianNaiveDom": 49,
    "domBuckets": {
-    "d0_14": 200,
-    "d15_30": 211,
-    "d31_60": 364,
-    "d61_90": 279,
+    "d0_14": 198,
+    "d15_30": 213,
+    "d31_60": 363,
+    "d61_90": 280,
     "d90plus": 839
    },
    "underAskShare": 0.817,
@@ -173,7 +173,49 @@
    "medianCutPct": 8,
    "medianCutAmt": 49950,
    "monthsOfSupply": 4.8,
-   "temperature": "cold"
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1596,
+     "medianPrice": 242000,
+     "grossYieldPct": 7.91,
+     "rentSample": 250,
+     "priceSample": 133
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2080,
+     "medianPrice": 465000,
+     "grossYieldPct": 5.37,
+     "rentSample": 509,
+     "priceSample": 914
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2546,
+     "medianPrice": 536000,
+     "grossYieldPct": 5.7,
+     "rentSample": 752,
+     "priceSample": 2196
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3039,
+     "medianPrice": 790009,
+     "grossYieldPct": 4.62,
+     "rentSample": 219,
+     "priceSample": 749
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3785,
+     "medianPrice": 809500,
+     "grossYieldPct": 5.61,
+     "rentSample": 24,
+     "priceSample": 116
+    }
+   ]
   },
   {
    "city": "Kitchener",
@@ -324,30 +366,72 @@
      "soldToList": 100.3
     }
    ],
-   "sales90": 447,
+   "sales90": 443,
    "soldToListPct": 100.1,
-   "pctOverAsking": 36.8,
-   "soldCount12m": 1700,
+   "pctOverAsking": 36.9,
+   "soldCount12m": 1697,
    "soldMedianDom": 20,
    "soldP25Dom": 11,
    "soldP75Dom": 38,
    "trueDom": 61,
    "medianNaiveDom": 40,
    "domBuckets": {
-    "d0_14": 74,
-    "d15_30": 85,
+    "d0_14": 73,
+    "d15_30": 86,
     "d31_60": 141,
     "d61_90": 92,
     "d90plus": 221
    },
-   "underAskShare": 0.57,
+   "underAskShare": 0.569,
    "askGapMedian": -1.3,
    "activeCount": 612,
    "cutCount": 184,
    "medianCutPct": 7.9,
    "medianCutAmt": 55050,
    "monthsOfSupply": 3.6,
-   "temperature": "hot"
+   "temperature": "hot",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1724,
+     "medianPrice": 323500,
+     "grossYieldPct": 6.4,
+     "rentSample": 526,
+     "priceSample": 98
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2167,
+     "medianPrice": 469000,
+     "grossYieldPct": 5.54,
+     "rentSample": 362,
+     "priceSample": 277
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2750,
+     "medianPrice": 670000,
+     "grossYieldPct": 4.93,
+     "rentSample": 365,
+     "priceSample": 983
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3247,
+     "medianPrice": 863400,
+     "grossYieldPct": 4.51,
+     "rentSample": 109,
+     "priceSample": 291
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3750,
+     "medianPrice": 1120000,
+     "grossYieldPct": 4.02,
+     "rentSample": 3,
+     "priceSample": 29
+    }
+   ]
   },
   {
    "city": "Barrie",
@@ -498,10 +582,10 @@
      "soldToList": 97.1
     }
    ],
-   "sales90": 412,
+   "sales90": 405,
    "soldToListPct": 97.4,
-   "pctOverAsking": 8.5,
-   "soldCount12m": 1700,
+   "pctOverAsking": 8.4,
+   "soldCount12m": 1693,
    "soldMedianDom": 26,
    "soldP25Dom": 14,
    "soldP75Dom": 49,
@@ -511,8 +595,8 @@
     "d0_14": 93,
     "d15_30": 112,
     "d31_60": 211,
-    "d61_90": 151,
-    "d90plus": 350
+    "d61_90": 150,
+    "d90plus": 351
    },
    "underAskShare": 0.867,
    "askGapMedian": -3.3,
@@ -521,7 +605,49 @@
    "medianCutPct": 7.1,
    "medianCutAmt": 50000,
    "monthsOfSupply": 5.6,
-   "temperature": "balanced"
+   "temperature": "balanced",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1941,
+     "medianPrice": 389000,
+     "grossYieldPct": 5.99,
+     "rentSample": 293,
+     "priceSample": 72
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2272,
+     "medianPrice": 585000,
+     "grossYieldPct": 4.66,
+     "rentSample": 375,
+     "priceSample": 361
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2632,
+     "medianPrice": 630000,
+     "grossYieldPct": 5.01,
+     "rentSample": 537,
+     "priceSample": 882
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3014,
+     "medianPrice": 802500,
+     "grossYieldPct": 4.51,
+     "rentSample": 208,
+     "priceSample": 339
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3415,
+     "medianPrice": 896300,
+     "grossYieldPct": 4.57,
+     "rentSample": 13,
+     "priceSample": 24
+    }
+   ]
   },
   {
    "city": "Guelph",
@@ -672,10 +798,10 @@
      "soldToList": 97.2
     }
    ],
-   "sales90": 367,
+   "sales90": 359,
    "soldToListPct": 97.3,
-   "pctOverAsking": 8.7,
-   "soldCount12m": 1398,
+   "pctOverAsking": 8.9,
+   "soldCount12m": 1396,
    "soldMedianDom": 25,
    "soldP25Dom": 13,
    "soldP75Dom": 50,
@@ -695,7 +821,49 @@
    "medianCutPct": 6.7,
    "medianCutAmt": 50000,
    "monthsOfSupply": 3.8,
-   "temperature": "balanced"
+   "temperature": "balanced",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 2053,
+     "medianPrice": 430000,
+     "grossYieldPct": 5.73,
+     "rentSample": 168,
+     "priceSample": 75
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2428,
+     "medianPrice": 580000,
+     "grossYieldPct": 5.02,
+     "rentSample": 238,
+     "priceSample": 280
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2998,
+     "medianPrice": 737500,
+     "grossYieldPct": 4.88,
+     "rentSample": 199,
+     "priceSample": 791
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3435,
+     "medianPrice": 987500,
+     "grossYieldPct": 4.17,
+     "rentSample": 23,
+     "priceSample": 202
+    },
+    {
+     "beds": 5,
+     "typicalRent": 4000,
+     "medianPrice": 990000,
+     "grossYieldPct": 4.85,
+     "rentSample": 3,
+     "priceSample": 32
+    }
+   ]
   },
   {
    "city": "Kingston",
@@ -846,10 +1014,10 @@
      "soldToList": 96.6
     }
    ],
-   "sales90": 321,
+   "sales90": 318,
    "soldToListPct": 96.4,
-   "pctOverAsking": 8.4,
-   "soldCount12m": 1447,
+   "pctOverAsking": 8.5,
+   "soldCount12m": 1444,
    "soldMedianDom": 23,
    "soldP25Dom": 13,
    "soldP75Dom": 47,
@@ -862,14 +1030,48 @@
     "d61_90": 88,
     "d90plus": 253
    },
-   "underAskShare": 0.844,
+   "underAskShare": 0.845,
    "askGapMedian": -3,
    "activeCount": 594,
    "cutCount": 200,
    "medianCutPct": 7.6,
    "medianCutAmt": 43000,
    "monthsOfSupply": 4.4,
-   "temperature": "cold"
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1814,
+     "medianPrice": 285000,
+     "grossYieldPct": 7.64,
+     "rentSample": 42,
+     "priceSample": 47
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2205,
+     "medianPrice": 500000,
+     "grossYieldPct": 5.29,
+     "rentSample": 29,
+     "priceSample": 291
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2740,
+     "medianPrice": 570000,
+     "grossYieldPct": 5.77,
+     "rentSample": 58,
+     "priceSample": 794
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3300,
+     "medianPrice": 775000,
+     "grossYieldPct": 5.11,
+     "rentSample": 8,
+     "priceSample": 237
+    }
+   ]
   },
   {
    "city": "St. Catharines",
@@ -1020,18 +1222,18 @@
      "soldToList": 95.4
     }
    ],
-   "sales90": 345,
-   "soldToListPct": 95.6,
-   "pctOverAsking": 6.4,
-   "soldCount12m": 1427,
+   "sales90": 337,
+   "soldToListPct": 95.5,
+   "pctOverAsking": 6.5,
+   "soldCount12m": 1424,
    "soldMedianDom": 27,
    "soldP25Dom": 14,
    "soldP75Dom": 52,
    "trueDom": 72,
    "medianNaiveDom": 50,
    "domBuckets": {
-    "d0_14": 63,
-    "d15_30": 76,
+    "d0_14": 61,
+    "d15_30": 78,
     "d31_60": 132,
     "d61_90": 108,
     "d90plus": 248
@@ -1043,7 +1245,49 @@
    "medianCutPct": 7.9,
    "medianCutAmt": 50000,
    "monthsOfSupply": 4.9,
-   "temperature": "cold"
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1738,
+     "medianPrice": 308500,
+     "grossYieldPct": 6.76,
+     "rentSample": 130,
+     "priceSample": 50
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2232,
+     "medianPrice": 445000,
+     "grossYieldPct": 6.02,
+     "rentSample": 218,
+     "priceSample": 401
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2505,
+     "medianPrice": 555000,
+     "grossYieldPct": 5.42,
+     "rentSample": 213,
+     "priceSample": 792
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3498,
+     "medianPrice": 715000,
+     "grossYieldPct": 5.87,
+     "rentSample": 19,
+     "priceSample": 137
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3150,
+     "medianPrice": 658150,
+     "grossYieldPct": 5.74,
+     "rentSample": 3,
+     "priceSample": 28
+    }
+   ]
   },
   {
    "city": "Cambridge",
@@ -1194,18 +1438,18 @@
      "soldToList": 98.8
     }
    ],
-   "sales90": 271,
+   "sales90": 267,
    "soldToListPct": 99.3,
-   "pctOverAsking": 25.2,
-   "soldCount12m": 1070,
+   "pctOverAsking": 24.4,
+   "soldCount12m": 1069,
    "soldMedianDom": 21,
    "soldP25Dom": 12,
    "soldP75Dom": 41,
-   "trueDom": 62,
+   "trueDom": 63,
    "medianNaiveDom": 42,
    "domBuckets": {
-    "d0_14": 46,
-    "d15_30": 48,
+    "d0_14": 45,
+    "d15_30": 49,
     "d31_60": 68,
     "d61_90": 57,
     "d90plus": 125
@@ -1217,7 +1461,49 @@
    "medianCutPct": 8.2,
    "medianCutAmt": 53983,
    "monthsOfSupply": 3.5,
-   "temperature": "balanced"
+   "temperature": "balanced",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1902,
+     "medianPrice": 420000,
+     "grossYieldPct": 5.43,
+     "rentSample": 46,
+     "priceSample": 27
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2168,
+     "medianPrice": 565000,
+     "grossYieldPct": 4.6,
+     "rentSample": 95,
+     "priceSample": 174
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2667,
+     "medianPrice": 669000,
+     "grossYieldPct": 4.78,
+     "rentSample": 265,
+     "priceSample": 637
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3043,
+     "medianPrice": 862500,
+     "grossYieldPct": 4.23,
+     "rentSample": 65,
+     "priceSample": 188
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3700,
+     "medianPrice": 1020000,
+     "grossYieldPct": 4.35,
+     "rentSample": 3,
+     "priceSample": 29
+    }
+   ]
   },
   {
    "city": "Waterloo",
@@ -1368,30 +1654,72 @@
      "soldToList": 100.9
     }
    ],
-   "sales90": 207,
+   "sales90": 199,
    "soldToListPct": 100,
-   "pctOverAsking": 34.8,
-   "soldCount12m": 896,
+   "pctOverAsking": 34.7,
+   "soldCount12m": 893,
    "soldMedianDom": 21,
    "soldP25Dom": 11,
    "soldP75Dom": 44,
    "trueDom": 66,
    "medianNaiveDom": 49,
    "domBuckets": {
-    "d0_14": 36,
-    "d15_30": 40,
+    "d0_14": 35,
+    "d15_30": 41,
     "d31_60": 68,
     "d61_90": 60,
     "d90plus": 113
    },
-   "underAskShare": 0.595,
+   "underAskShare": 0.596,
    "askGapMedian": -1.6,
    "activeCount": 318,
    "cutCount": 73,
    "medianCutPct": 9.2,
    "medianCutAmt": 55000,
    "monthsOfSupply": 3.5,
-   "temperature": "hot"
+   "temperature": "hot",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1787,
+     "medianPrice": 330000,
+     "grossYieldPct": 6.5,
+     "rentSample": 214,
+     "priceSample": 91
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2225,
+     "medianPrice": 482000,
+     "grossYieldPct": 5.54,
+     "rentSample": 168,
+     "priceSample": 184
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2814,
+     "medianPrice": 718250,
+     "grossYieldPct": 4.7,
+     "rentSample": 163,
+     "priceSample": 410
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3085,
+     "medianPrice": 995000,
+     "grossYieldPct": 3.72,
+     "rentSample": 32,
+     "priceSample": 158
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3790,
+     "medianPrice": 1059000,
+     "grossYieldPct": 4.29,
+     "rentSample": 8,
+     "priceSample": 32
+    }
+   ]
   },
   {
    "city": "Peterborough",
@@ -1542,10 +1870,10 @@
      "soldToList": 96.9
     }
    ],
-   "sales90": 235,
+   "sales90": 232,
    "soldToListPct": 96.7,
-   "pctOverAsking": 10.2,
-   "soldCount12m": 939,
+   "pctOverAsking": 10.3,
+   "soldCount12m": 932,
    "soldMedianDom": 25,
    "soldP25Dom": 13,
    "soldP75Dom": 49,
@@ -1558,14 +1886,56 @@
     "d61_90": 58,
     "d90plus": 151
    },
-   "underAskShare": 0.846,
+   "underAskShare": 0.845,
    "askGapMedian": -3.3,
    "activeCount": 343,
    "cutCount": 142,
    "medianCutPct": 8.1,
    "medianCutAmt": 50050,
    "monthsOfSupply": 4.3,
-   "temperature": "cold"
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1631,
+     "medianPrice": 535000,
+     "grossYieldPct": 3.66,
+     "rentSample": 42,
+     "priceSample": 39
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2298,
+     "medianPrice": 520000,
+     "grossYieldPct": 5.3,
+     "rentSample": 87,
+     "priceSample": 324
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2681,
+     "medianPrice": 550000,
+     "grossYieldPct": 5.85,
+     "rentSample": 55,
+     "priceSample": 420
+    },
+    {
+     "beds": 4,
+     "typicalRent": 3276,
+     "medianPrice": 675000,
+     "grossYieldPct": 5.82,
+     "rentSample": 34,
+     "priceSample": 119
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3525,
+     "medianPrice": 608500,
+     "grossYieldPct": 6.95,
+     "rentSample": 4,
+     "priceSample": 12
+    }
+   ]
   },
   {
    "city": "Niagara Falls",
@@ -1716,21 +2086,21 @@
      "soldToList": 95.7
     }
    ],
-   "sales90": 275,
+   "sales90": 269,
    "soldToListPct": 95.7,
-   "pctOverAsking": 4.7,
-   "soldCount12m": 1000,
+   "pctOverAsking": 4.8,
+   "soldCount12m": 998,
    "soldMedianDom": 31,
    "soldP25Dom": 15,
    "soldP75Dom": 60,
-   "trueDom": 78,
+   "trueDom": 79,
    "medianNaiveDom": 53,
    "domBuckets": {
-    "d0_14": 75,
-    "d15_30": 53,
-    "d31_60": 115,
+    "d0_14": 73,
+    "d15_30": 55,
+    "d31_60": 114,
     "d61_90": 75,
-    "d90plus": 282
+    "d90plus": 283
    },
    "underAskShare": 0.878,
    "askGapMedian": -4.5,
@@ -1739,7 +2109,49 @@
    "medianCutPct": 7.5,
    "medianCutAmt": 50000,
    "monthsOfSupply": 5.6,
-   "temperature": "cold"
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1739,
+     "medianPrice": 380000,
+     "grossYieldPct": 5.49,
+     "rentSample": 52,
+     "priceSample": 17
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2057,
+     "medianPrice": 455000,
+     "grossYieldPct": 5.43,
+     "rentSample": 176,
+     "priceSample": 208
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2471,
+     "medianPrice": 554500,
+     "grossYieldPct": 5.35,
+     "rentSample": 234,
+     "priceSample": 570
+    },
+    {
+     "beds": 4,
+     "typicalRent": 2948,
+     "medianPrice": 735000,
+     "grossYieldPct": 4.81,
+     "rentSample": 116,
+     "priceSample": 165
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3497,
+     "medianPrice": 714500,
+     "grossYieldPct": 5.87,
+     "rentSample": 10,
+     "priceSample": 18
+    }
+   ]
   },
   {
    "city": "Brantford",
@@ -1890,10 +2302,10 @@
      "soldToList": 96.7
     }
    ],
-   "sales90": 212,
+   "sales90": 207,
    "soldToListPct": 96.5,
-   "pctOverAsking": 9.4,
-   "soldCount12m": 769,
+   "pctOverAsking": 9.7,
+   "soldCount12m": 768,
    "soldMedianDom": 25,
    "soldP25Dom": 14,
    "soldP75Dom": 52,
@@ -1903,8 +2315,8 @@
     "d0_14": 36,
     "d15_30": 45,
     "d31_60": 61,
-    "d61_90": 54,
-    "d90plus": 112
+    "d61_90": 53,
+    "d90plus": 113
    },
    "underAskShare": 0.813,
    "askGapMedian": -3.2,
@@ -1913,7 +2325,49 @@
    "medianCutPct": 8,
    "medianCutAmt": 50000,
    "monthsOfSupply": 4.1,
-   "temperature": "cold"
+   "temperature": "cold",
+   "rentalRows": [
+    {
+     "beds": 1,
+     "typicalRent": 1638,
+     "medianPrice": 349900,
+     "grossYieldPct": 5.62,
+     "rentSample": 106,
+     "priceSample": 19
+    },
+    {
+     "beds": 2,
+     "typicalRent": 2007,
+     "medianPrice": 539200,
+     "grossYieldPct": 4.47,
+     "rentSample": 116,
+     "priceSample": 163
+    },
+    {
+     "beds": 3,
+     "typicalRent": 2373,
+     "medianPrice": 575000,
+     "grossYieldPct": 4.95,
+     "rentSample": 243,
+     "priceSample": 403
+    },
+    {
+     "beds": 4,
+     "typicalRent": 2813,
+     "medianPrice": 725000,
+     "grossYieldPct": 4.66,
+     "rentSample": 85,
+     "priceSample": 146
+    },
+    {
+     "beds": 5,
+     "typicalRent": 3000,
+     "medianPrice": 700000,
+     "grossYieldPct": 5.14,
+     "rentSample": 6,
+     "priceSample": 22
+    }
+   ]
   }
  ]
 }
