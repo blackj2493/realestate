@@ -16,7 +16,7 @@ import { useCommandCenterStore } from "@/lib/stores/commandCenterStore";
 import type { ChildCareCentreProps, ChildCareCentresGeoJson } from "@/lib/childcare/centresGeoJson";
 
 /** Below this zoom the pins are hidden (about a neighbourhood across the screen). */
-export const MIN_CENTRE_ZOOM = 13;
+export const MIN_CENTRE_ZOOM = 12;
 
 export interface ChildCareHover {
   x: number;
