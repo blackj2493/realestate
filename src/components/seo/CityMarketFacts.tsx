@@ -11,6 +11,7 @@
  */
 import Link from "next/link";
 import { sourceLine, type CityFacts } from "@/lib/data/cityFacts";
+import { DATA_PUBLISHER } from "@/lib/seo/publisher";
 
 export default function CityMarketFacts({
   facts,
@@ -33,7 +34,8 @@ export default function CityMarketFacts({
     url: `${canonical}#market-facts`,
     dateModified: facts.updatedIso,
     isAccessibleForFree: true,
-    creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
+    creator: DATA_PUBLISHER,
+    publisher: DATA_PUBLISHER,
     spatialCoverage: { "@type": "Place", name: `${facts.city}, Ontario, Canada` },
     measurementTechnique: sourceLine(weekly),
     variableMeasured: facts.facts.map((f) => ({ "@type": "PropertyValue", ...f.measure })),

@@ -23,6 +23,7 @@ import { buildRentVsBuy, PTR_BUY, PTR_RENT, rentVsBuyPath, type RentBuyLean } fr
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
+import { DATA_PUBLISHER } from "@/lib/seo/publisher";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -113,7 +114,8 @@ export default async function RentVsBuyCityPage({ params }: { params: Promise<{ 
         url: canonical,
         dateModified: data.updatedIso,
         isAccessibleForFree: true,
-        creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
+        creator: DATA_PUBLISHER,
+        publisher: DATA_PUBLISHER,
         spatialCoverage: { "@type": "Place", name: `${city}, Ontario, Canada` },
         measurementTechnique: sourceLine(!board),
         variableMeasured: data.beds.flatMap((b) => [

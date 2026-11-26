@@ -223,7 +223,9 @@ export default function ForJournalistsPage() {
         <section className={SECTION}>
           <h2 className={H2}>Methodology, and what we won&apos;t claim</h2>
           <p className={P}>
-            Each tracker page carries its own method note. Two things are worth knowing before you quote
+            Each tracker page carries its own method note, and the{" "}
+            <Link href="/data/methodology" className="underline underline-offset-4">full methodology</Link> covers the source, the
+            rules and the definitions. Two things are worth knowing before you quote
             anything from us, and we&apos;d rather you heard them here than found them later.
           </p>
 

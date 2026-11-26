@@ -57,6 +57,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // The press desk. Rarely changes, but it is the page every outreach email points at,
     // so it must be indexable and discoverable rather than a hidden landing page.
     { url: `${SITE_URL}/data/for-journalists`, changeFrequency: "monthly", priority: 0.6 },
+    // How every data page is built; the cite box on each page links here.
+    { url: `${SITE_URL}/data/methodology`, changeFrequency: "monthly", priority: 0.6 },
     ...LIVE_TRACKERS.map((t) => ({
       url: `${SITE_URL}/data/${t.slug}`,
       lastModified: now,

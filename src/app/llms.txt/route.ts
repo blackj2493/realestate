@@ -97,7 +97,7 @@ ${markets}## Housing market by city (for "is it a good time to buy or sell", "wi
 - [Price cuts](${SITE_URL}/data/price-cuts): share of homes for sale with a price cut, and the median cut.
 - [Condo fees](${SITE_URL}/data/condo-fees): monthly condo fees and their yearly change.
 - [What homes rent for](${SITE_URL}/data/rents) · [Rent vs buy](${SITE_URL}/data/rent-vs-buy) · [Market temperature](${SITE_URL}/data/market-temperature) · [Price rankings](${SITE_URL}/data/price-rankings)
-- [Findings](${SITE_URL}/data/findings): dated research notes. [For journalists](${SITE_URL}/data/for-journalists): sources and contact.
+- [Findings](${SITE_URL}/data/findings): dated research notes. [For journalists](${SITE_URL}/data/for-journalists): sources and contact. [Methodology](${SITE_URL}/data/methodology): the source, rules, definitions and limits behind every figure.
 
 ## Places
 - [Ontario cities](${SITE_URL}/property): each board city page has its market facts and links to its neighbourhoods. Neighbourhood pages (/property/on/{city}/{neighbourhood}) state the same market facts for the neighbourhood when it has enough sales, plus 2021 Census facts (Statistics Canada).
