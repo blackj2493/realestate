@@ -24,6 +24,7 @@ import {
 } from "@/lib/data/basementValue";
 import type { Effect } from "@/lib/data/basementValueModel";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const TITLE = "Does a Finished Basement Add Value in Ontario?";
@@ -52,11 +53,11 @@ export function generateMetadata(): Metadata {
   return {
     metadataBase: new URL(SITE_URL),
     title: `${TITLE} City by City | PureProperty`,
-    description: summary,
+    description: metaDescription(summary),
     alternates: { canonical },
     openGraph: {
       title: TITLE,
-      description: summary,
+      description: metaDescription(summary),
       url: canonical,
       siteName: "PureProperty",
       type: "article",

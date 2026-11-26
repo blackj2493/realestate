@@ -14,6 +14,7 @@ import { FINDINGS, LIVE_FINDINGS, findingBySlug } from "@/lib/data/findings";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import OntarioOverAskingConvergence from "../_content/ontario-over-asking-convergence";
 import OntarioPowerOfSaleDiscount from "../_content/ontario-power-of-sale-discount";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -41,11 +42,11 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title: `${finding.seoTitle} | PureProperty`,
-    description: finding.description,
+    description: metaDescription(finding.description),
     alternates: { canonical: url },
     openGraph: {
       title: finding.seoTitle,
-      description: finding.description,
+      description: metaDescription(finding.description),
       url,
       siteName: "PureProperty",
       // "article" so the published date and author travel with the share card — this

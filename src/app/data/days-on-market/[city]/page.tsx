@@ -28,6 +28,7 @@ import MonthColumns from "@/components/dataPage/MonthColumns";
 import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -65,11 +66,11 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description,
+    description: metaDescription(description),
     alternates: { canonical },
     openGraph: {
       title,
-      description,
+      description: metaDescription(description),
       url: canonical,
       siteName: "PureProperty",
       type: "article",

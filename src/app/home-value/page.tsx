@@ -6,6 +6,7 @@
 import type { Metadata } from "next";
 import HomeValueView from "@/components/homeValue/HomeValueView";
 import { titleYear } from "@/lib/seo/titleYear";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -17,7 +18,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: `${TITLE} | PureProperty`,
-  description: DESCRIPTION,
+  description: metaDescription(DESCRIPTION),
   alternates: { canonical: `${SITE_URL}/home-value` },
   openGraph: { title: TITLE, description: DESCRIPTION, url: `${SITE_URL}/home-value`, siteName: "PureProperty", type: "website" },
 };

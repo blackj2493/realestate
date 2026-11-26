@@ -22,6 +22,7 @@ import { deslugCity } from "@/lib/listings/listingPath";
 import { citiesForHubSlug, cityFilterClause } from "@/lib/listings/cityHubs";
 import { PRICE_BANDS, groupSubTypes, priceBandBySlug, priceBandFilter, priceBandPath } from "@/lib/listings/priceBands";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -69,12 +70,12 @@ export async function generateMetadata({ params }: { params: Promise<{ prov: str
   return {
     metadataBase: new URL(SITE_URL),
     title,
-    description,
+    description: metaDescription(description),
     alternates: { canonical },
     robots: data.totalFound >= MIN_INDEXABLE ? undefined : { index: false, follow: true },
     openGraph: {
       title,
-      description,
+      description: metaDescription(description),
       url: canonical,
       siteName: "PureProperty",
       type: "website",

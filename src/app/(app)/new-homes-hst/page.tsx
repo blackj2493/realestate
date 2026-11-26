@@ -16,6 +16,7 @@ import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import HstCalculator from "./HstCalculator";
 import CityLinks from "./CityLinks";
 import NewVsResaleCard from "./NewVsResaleCard";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const PATH = "/new-homes-hst";
@@ -28,11 +29,11 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: `${TITLE} | PureProperty`,
-  description: DESCRIPTION,
+  description: metaDescription(DESCRIPTION),
   alternates: { canonical: `${SITE_URL}${PATH}` },
   openGraph: {
     title: TITLE,
-    description: DESCRIPTION,
+    description: metaDescription(DESCRIPTION),
     url: `${SITE_URL}${PATH}`,
     siteName: "PureProperty",
     type: "article",

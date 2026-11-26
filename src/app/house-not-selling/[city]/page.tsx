@@ -11,6 +11,7 @@ import NotSellingView, { notSellingPath } from "@/components/notSelling/NotSelli
 import { buildNotSellingFacts, getOutcomeStats } from "@/lib/data/notSelling";
 import { OUTLOOK_CITIES, outlookCityBySlug } from "@/lib/data/outlookCities";
 import { titleYear } from "@/lib/seo/titleYear";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description: data.facts.summary.slice(0, 300),
+    description: metaDescription(data.facts.summary.slice(0, 300)),
     alternates: { canonical },
     openGraph: { title, description: data.facts.summary.slice(0, 300), url: canonical, siteName: "PureProperty", type: "website" },
   };

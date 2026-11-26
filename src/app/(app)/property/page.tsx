@@ -19,6 +19,7 @@ import { cityHubsWithInventory } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { deslugCity } from "@/lib/listings/listingPath";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 export const revalidate = 3600;
 
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/property` },
   openGraph: {
     title: "Homes for Sale by City in Ontario | PureProperty",
-    description: "Browse active real estate listings by city across Ontario.",
+    description: metaDescription("Browse active real estate listings by city across Ontario."),
     url: `${SITE_URL}/property`,
     siteName: "PureProperty",
     type: "website",

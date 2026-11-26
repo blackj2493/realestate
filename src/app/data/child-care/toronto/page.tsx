@@ -23,6 +23,7 @@ import {
   mapShapes,
 } from "@/lib/childcare/childCarePage";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const CANONICAL = `${SITE_URL}${CHILD_CARE_PATH}`;
@@ -32,11 +33,11 @@ export function generateMetadata(): Metadata {
   return {
     metadataBase: new URL(SITE_URL),
     title: `${facts.title} | PureProperty`,
-    description: facts.summary,
+    description: metaDescription(facts.summary),
     alternates: { canonical: CANONICAL },
     openGraph: {
       title: facts.title,
-      description: facts.summary,
+      description: metaDescription(facts.summary),
       url: CANONICAL,
       siteName: "PureProperty",
       type: "article",

@@ -16,6 +16,7 @@ import { citiesForHubSlug } from "@/lib/listings/cityHubs";
 import { deslugCity } from "@/lib/listings/listingPath";
 import { OUTLOOK_CITIES, outlookCityBySlug } from "@/lib/data/outlookCities";
 import { titleYear } from "@/lib/seo/titleYear";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -50,7 +51,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description: data.facts.summary.slice(0, 300),
+    description: metaDescription(data.facts.summary.slice(0, 300)),
     alternates: { canonical },
     // Thin non-board pages are not indexed (same floor as the city hubs).
     robots: data.board || data.totalFound >= MIN_POS_CITY ? undefined : { index: false, follow: true },

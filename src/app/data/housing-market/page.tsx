@@ -10,6 +10,7 @@ import { buildOutlook, outlookYear } from "@/lib/data/marketOutlook";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -40,7 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description,
+    description: metaDescription(description),
     alternates: { canonical: `${SITE_URL}/data/housing-market` },
     openGraph: { title, description, url: `${SITE_URL}/data/housing-market`, siteName: "PureProperty", type: "website" },
   };

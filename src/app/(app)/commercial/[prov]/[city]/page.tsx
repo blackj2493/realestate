@@ -32,6 +32,7 @@ import {
   COMMERCIAL_ACTIVE_FILTER,
 } from "@/lib/listings/cityHubs";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 export const revalidate = 3600; // hourly — public category page, no auth gating
 export const dynamicParams = true;
@@ -91,13 +92,13 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title,
-    description,
+    description: metaDescription(description),
     alternates: { canonical },
     // Thin hubs must not be indexed (Google doorway/thin-content policy).
     robots: totalFound >= MIN_INDEXABLE ? undefined : { index: false, follow: true },
     openGraph: {
       title,
-      description,
+      description: metaDescription(description),
       url: canonical,
       siteName: "PureProperty",
       type: "website",

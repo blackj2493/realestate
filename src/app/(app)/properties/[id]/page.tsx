@@ -106,6 +106,7 @@ import { buildQuickFacts } from "@/lib/property/quickFacts";
 import { getCommunityFacts } from "@/lib/data/communityFacts";
 import ClampText from "./ClampText";
 import { conditionalNotice } from "@/lib/listings/statusBadge";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 export const dynamic = "force-dynamic";
 
@@ -311,12 +312,12 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title,
-    description,
+    description: metaDescription(description),
     alternates: { canonical },
     robots: isActive ? undefined : { index: false, follow: true },
     openGraph: {
       title,
-      description,
+      description: metaDescription(description),
       url: canonical,
       siteName: "PureProperty",
       type: "website",
@@ -325,7 +326,7 @@ export async function generateMetadata({
     twitter: {
       card: ogImage ? "summary_large_image" : "summary",
       title,
-      description,
+      description: metaDescription(description),
       ...(ogImage ? { images: [ogImage] } : {}),
     },
   };

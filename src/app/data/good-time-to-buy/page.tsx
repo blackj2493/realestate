@@ -17,6 +17,7 @@ import { buildBuyVerdict, goodTimeToBuyPath, SALE_TO_LIST_BUYER } from "@/lib/da
 import { priceChangeAreaBySlug } from "@/lib/data/priceChange";
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -53,11 +54,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description,
+    description: metaDescription(description),
     alternates: { canonical },
     openGraph: {
       title,
-      description,
+      description: metaDescription(description),
       url: canonical,
       siteName: "PureProperty",
       type: "article",
