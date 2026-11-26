@@ -14,6 +14,7 @@ import { boardRowFor, buildCityFacts } from "@/lib/data/cityFacts";
 import { cityMarketBySlug, getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import { HOME_VALUE_CITIES, homeValueCityBySlug, homeValuePath } from "@/lib/homeValue/content";
 import { titleYear } from "@/lib/seo/titleYear";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -48,7 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description,
+    description: metaDescription(description),
     alternates: { canonical },
     openGraph: { title, description, url: canonical, siteName: "PureProperty", type: "website" },
   };

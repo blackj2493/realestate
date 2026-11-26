@@ -13,6 +13,7 @@ import { notFound } from "next/navigation";
 import { getServiceRoleClient } from "@/lib/supabase/client";
 import { resolveSqft } from "@/lib/condo/feeStability";
 import { PropertyCard, type PropertyCardData } from "@/components/PropertyCard";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 export const dynamic = "force-dynamic";
 
@@ -117,17 +118,17 @@ export async function generateMetadata({
 
   return {
     title,
-    description,
+    description: metaDescription(description),
     openGraph: {
       title,
-      description,
+      description: metaDescription(description),
       type: "website",
       images: firstImage ? [{ url: firstImage }] : [],
     },
     twitter: {
       card: "summary_large_image",
       title,
-      description,
+      description: metaDescription(description),
       images: firstImage ? [firstImage] : [],
     },
   };

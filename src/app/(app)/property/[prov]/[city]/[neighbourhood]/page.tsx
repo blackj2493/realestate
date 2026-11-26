@@ -33,6 +33,7 @@ import { getCommunityCensus } from "@/lib/census/getCommunityCensus";
 import NeighbourhoodCensus from "@/components/neighbourhood/NeighbourhoodCensus";
 import CityMarketFacts from "@/components/seo/CityMarketFacts";
 import { buildCommunityFacts, getCommunityFacts } from "@/lib/data/communityFacts";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -98,7 +99,7 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title,
-    description,
+    description: metaDescription(description),
     alternates: { canonical },
     // Thin neighbourhoods must not be indexed (Google doorway/thin-content policy). A hub
     // with market facts is not thin: it states the neighbourhood's own numbers, even with
@@ -106,7 +107,7 @@ export async function generateMetadata({
     robots: totalFound >= MIN_INDEXABLE || facts ? undefined : { index: false, follow: true },
     openGraph: {
       title,
-      description,
+      description: metaDescription(description),
       url: canonical,
       siteName: "PureProperty",
       type: "website",

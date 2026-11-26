@@ -12,6 +12,7 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 import { CONDO_SOURCE_LINE, condoPricesPath, fee2, getCondoData, money, rankedCondoCities } from "@/lib/data/condoPrices";
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -40,11 +41,11 @@ export function generateMetadata(): Metadata {
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description: summary,
+    description: metaDescription(summary),
     alternates: { canonical },
     openGraph: {
       title,
-      description: summary,
+      description: metaDescription(summary),
       url: canonical,
       siteName: "PureProperty",
       type: "article",

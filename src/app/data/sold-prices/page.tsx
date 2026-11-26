@@ -13,6 +13,7 @@ import { SOLD_SOURCE_LINE, getSoldData, money, rankedSoldCities, soldPricesPath 
 import { TYPE_GROUPS } from "@/lib/data/priceChangeModel";
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const SHORT: Record<string, string> = { detached: "Detached", semiTown: "Semi & town", condoApt: "Condo apt", condoTown: "Condo town" };
@@ -35,11 +36,11 @@ export function generateMetadata(): Metadata {
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description: summary,
+    description: metaDescription(summary),
     alternates: { canonical },
     openGraph: {
       title,
-      description: summary,
+      description: metaDescription(summary),
       url: canonical,
       siteName: "PureProperty",
       type: "article",

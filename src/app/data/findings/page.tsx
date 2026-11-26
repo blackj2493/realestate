@@ -14,6 +14,7 @@ import { LIVE_FINDINGS } from "@/lib/data/findings";
 import { trackerBySlug } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { DESK_EMAIL } from "@/components/data/FindingShell";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -25,11 +26,11 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: `${TITLE} | PureProperty`,
-  description: DESCRIPTION,
+  description: metaDescription(DESCRIPTION),
   alternates: { canonical: `${SITE_URL}/data/findings` },
   openGraph: {
     title: TITLE,
-    description: DESCRIPTION,
+    description: metaDescription(DESCRIPTION),
     url: `${SITE_URL}/data/findings`,
     siteName: "PureProperty",
     type: "website",

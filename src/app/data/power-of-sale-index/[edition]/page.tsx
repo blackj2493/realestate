@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import PosIndexView, { posIndexJsonLd } from "@/components/powerOfSale/PosIndexView";
 import { availableEditions, buildPosIndex, getPosMonthly, posIndexPath } from "@/lib/data/posIndex";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -30,11 +31,11 @@ export async function generateMetadata({ params }: { params: Promise<{ edition: 
   return {
     metadataBase: new URL(SITE_URL),
     title: `${d.title} | PureProperty`,
-    description: d.headline.slice(0, 300),
+    description: metaDescription(d.headline.slice(0, 300)),
     alternates: { canonical },
     openGraph: {
       title: d.title,
-      description: d.headline.slice(0, 300),
+      description: metaDescription(d.headline.slice(0, 300)),
       url: canonical,
       siteName: "PureProperty",
       type: "article",

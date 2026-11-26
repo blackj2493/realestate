@@ -12,6 +12,7 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 import { SCHOOL_SOURCE_LINE, gapCell, getSchoolData, premiumKind, rankedSchoolCities, schoolPricesPath, signedPct } from "@/lib/data/schoolPrices";
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -37,11 +38,11 @@ export function generateMetadata(): Metadata {
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description: summary,
+    description: metaDescription(summary),
     alternates: { canonical },
     openGraph: {
       title,
-      description: summary,
+      description: metaDescription(summary),
       url: canonical,
       siteName: "PureProperty",
       type: "article",

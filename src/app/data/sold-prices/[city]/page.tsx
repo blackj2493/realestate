@@ -17,6 +17,7 @@ import { SOLD_SOURCE_LINE, buildSoldFacts, getSoldData, money, rankedSoldCities,
 import { TYPE_GROUPS, TYPE_LABEL } from "@/lib/data/priceChangeModel";
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const dynamicParams = false;
@@ -44,11 +45,11 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   return {
     metadataBase: new URL(SITE_URL),
     title: `${facts.title} | PureProperty`,
-    description: facts.summary,
+    description: metaDescription(facts.summary),
     alternates: { canonical },
     openGraph: {
       title: facts.title,
-      description: facts.summary,
+      description: metaDescription(facts.summary),
       url: canonical,
       siteName: "PureProperty",
       type: "article",

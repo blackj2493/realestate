@@ -3,6 +3,7 @@ import RenovationFunnel from '@/components/reno/RenovationFunnel';
 import { loadCohortTreeSafe } from '@/lib/avm/loadCohortTree';
 import { resolveCommunitySlug, deslugifyCommunity } from '@/lib/reno/communitySlug';
 import AppHeader from '@/components/layout/AppHeader';
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 export const dynamic = 'force-dynamic';
 
@@ -26,10 +27,10 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title,
-    description,
+    description: metaDescription(description),
     openGraph: {
       title,
-      description,
+      description: metaDescription(description),
       url: `/whats-my-home-hiding${slug ? `?community=${encodeURIComponent(slug)}` : ''}`,
       images: [{ url: ogImage, width: 1200, height: 630 }],
     },

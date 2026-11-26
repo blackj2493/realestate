@@ -52,6 +52,7 @@ import { assignSchools } from "@/lib/schools/nearestSchools";
 import { assignAmenities, NO_AMENITY_KM } from "@/lib/amenities/nearestAmenities";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { sanitizeOriginalListPrice } from "@/lib/listing/originalListPrice";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 export const dynamic = "force-dynamic"; // render depends on auth (anon vs consumer)
 
@@ -96,7 +97,7 @@ export async function generateMetadata({
       return {
         metadataBase: new URL(SITE_URL),
         title: `${p.address} | PureProperty`,
-        description: `${p.address}${p.city ? `, ${p.city}` : ""} — homes for sale nearby, neighbourhood schools and walkability. Track this address free on PureProperty.`,
+        description: metaDescription(`${p.address}${p.city ? `, ${p.city}` : ""} — homes for sale nearby, neighbourhood schools and walkability. Track this address free on PureProperty.`),
         alternates: { canonical },
         robots: { index: false, follow: true },
       };
@@ -111,7 +112,7 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title,
-    description,
+    description: metaDescription(description),
     alternates: { canonical },
     openGraph: { title: pub.address, description, url: canonical, siteName: "PureProperty", type: "website" },
   };

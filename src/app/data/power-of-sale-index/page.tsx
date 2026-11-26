@@ -7,6 +7,7 @@ import Link from "next/link";
 import PosIndexView, { posIndexJsonLd } from "@/components/powerOfSale/PosIndexView";
 import { availableEditions, buildPosIndex, getPosMonthly, posIndexPath } from "@/lib/data/posIndex";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -26,11 +27,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(SITE_URL),
     title,
-    description,
+    description: metaDescription(description),
     alternates: { canonical },
     openGraph: {
       title: d?.title ?? "Ontario Power of Sale Index",
-      description,
+      description: metaDescription(description),
       url: canonical,
       siteName: "PureProperty",
       type: "article",

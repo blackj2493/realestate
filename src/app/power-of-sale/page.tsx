@@ -10,6 +10,7 @@ import { posCityHubs, powerOfSaleListings } from "@/lib/data/powerOfSaleListings
 import { outlookCityBySlug } from "@/lib/data/outlookCities";
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
 import { titleYear } from "@/lib/seo/titleYear";
+import { metaDescription } from "@/lib/seo/metaDescription";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -31,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
-    description: facts.summary.slice(0, 300),
+    description: metaDescription(facts.summary.slice(0, 300)),
     alternates: { canonical: `${SITE_URL}/power-of-sale` },
     openGraph: { title, description: facts.summary.slice(0, 300), url: `${SITE_URL}/power-of-sale`, siteName: "PureProperty", type: "website" },
   };
