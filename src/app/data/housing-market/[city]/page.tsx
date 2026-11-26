@@ -25,6 +25,7 @@ import { Change, CiteBox, HeaderCard, LinkCard, PriceOpinionCard, StatCard } fro
 import { daysOnMarketPath } from "@/lib/seo/cityTopics";
 import CityTopicLinks from "@/components/seo/CityTopicLinks";
 import MonthlyMarketCharts from "@/components/data/MonthlyMarketCharts";
+import BankForecasts from "@/components/data/BankForecasts";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
@@ -212,6 +213,8 @@ export default async function HousingMarketCityPage({ params }: { params: Promis
                 )}
               </ul>
             </section>
+
+            <BankForecasts year={outlook.year} city={city} />
 
             <MonthlyMarketCharts city={city} points={outlook.series} />
 

@@ -79,6 +79,10 @@ describe("buildOutlook", () => {
     const drop = o.faqs.find((f) => f.q === "Will house prices drop in Toronto in 2027?")!;
     expect(drop.a.startsWith("No one can know future prices, and PureProperty does not forecast them.")).toBe(true);
     expect(o.faqs.map((f) => f.q)).toContain("Is the Toronto housing market crashing?");
+    // The published bank forecasts answer the forecast question first, then our own figure.
+    expect(o.faqs[0].q).toBe("What is the Toronto housing market forecast for 2027?");
+    expect(o.faqs[0].a).toMatch(/^PureProperty does not forecast prices\. The \d forecasts for Ontario/);
+    expect(o.faqs[0].a).toContain("None of them publishes a forecast for Toronto alone.");
     expect(o.marketType).toBe("balanced market");
   });
 

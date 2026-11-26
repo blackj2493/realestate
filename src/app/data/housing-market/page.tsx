@@ -9,6 +9,7 @@ import { boardRowFor } from "@/lib/data/cityFacts";
 import { buildOutlook, outlookTitle, outlookYear } from "@/lib/data/marketOutlook";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
+import BankForecasts from "@/components/data/BankForecasts";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
 import { metaDescription } from "@/lib/seo/metaDescription";
 
@@ -66,6 +67,7 @@ export default async function HousingMarketIndex() {
           PureProperty does not forecast prices. Each city page shows the measures that forecasts are built from: prices and sales against a year
           earlier, how close homes sell to asking, and how many sellers cut. From MLS® data, refreshed nightly.
         </p>
+        {year && <BankForecasts year={year} />}
         <ul className="mt-6 divide-y divide-border">
           {items.map((c) => (
             <li key={c.slug} className="py-4">

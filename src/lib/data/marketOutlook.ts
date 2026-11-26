@@ -14,6 +14,7 @@
  */
 import type { MarketRow } from "./marketBoard";
 import { salesByCalendarMonth, seasonSentence } from "./seasonality";
+import { forecastAnswer, forecastRange } from "./bankForecasts";
 
 
 const MIN_3M_SALES = 90; // ~30 a month, the city-facts monthly floor
@@ -238,6 +239,8 @@ export function buildOutlook(city: string, row: MarketRow | null, dataAsOf: stri
   const year = outlookYear(dataAsOf);
   const join = (...xs: (string | null)[]) => xs.filter(Boolean).join(" ");
   const faqs: { q: string; a: string }[] = [];
+  const forecasts = forecastRange(year);
+  if (forecasts) faqs.push({ q: `What is the ${city} housing market forecast for ${year}?`, a: forecastAnswer(city, forecasts, priceText) });
   faqs.push({
     q: `Will house prices drop in ${city} in ${year}?`,
     a: join("No one can know future prices, and PureProperty does not forecast them. The measures that forecasts watch show this:", priceText, s2lText, underText),
