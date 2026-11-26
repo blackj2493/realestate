@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
 import { HOME_VALUE_CITIES, homeValuePath } from "@/lib/homeValue/content";
+import { STUDY_CITIES } from "@/lib/data/studyCities";
+import { openHousesPath } from "@/lib/openHouses/paths";
 import { PRICE_BANDS, priceBandFilter, priceBandPath } from "@/lib/listings/priceBands";
 import { posCityHubs } from "@/lib/data/powerOfSaleListings";
 import {
@@ -113,6 +115,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Seller pages: "how much is my house worth in {city}" (2026-11). Their facts change nightly.
     { url: `${SITE_URL}${homeValuePath()}`, changeFrequency: "daily", priority: 0.9 },
     ...HOME_VALUE_CITIES.map((c) => ({ url: `${SITE_URL}${homeValuePath(c.slug)}`, changeFrequency: "daily" as const, priority: 0.8 })),
+    // "open houses {city} this week" (2026-11-26): one stable URL per city, new homes every day.
+    { url: `${SITE_URL}${openHousesPath()}`, changeFrequency: "daily", priority: 0.8 },
+    ...STUDY_CITIES.map((c) => ({ url: `${SITE_URL}${openHousesPath(c.slug)}`, changeFrequency: "daily" as const, priority: 0.7 })),
     // /new-homes-hst was in no sitemap at all (found 2026-11-08).
     { url: `${SITE_URL}/new-homes-hst`, changeFrequency: "weekly", priority: 0.8 },
     // In no sitemap until 2026-11-09. Static text, so no lastmod (see withLastmod).

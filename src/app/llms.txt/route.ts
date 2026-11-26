@@ -69,6 +69,8 @@ ${markets}## Housing market by city (for "is it a good time to buy or sell", "wi
 
 ## Land transfer tax (for "land transfer tax calculator {city}" / "first time home buyer land transfer tax ontario")
 - [Ontario land transfer tax calculator](${SITE_URL}/data/land-transfer-tax): Ontario and City of Toronto land transfer tax for any price, with the first-time buyer refunds (up to $4,000 Ontario, $4,475 Toronto) and Toronto's higher rates over $3 million from April 1, 2026; rates from ontario.ca and toronto.ca. City pages apply the tax to the city's median sold price by home type: ${SITE_URL}/data/land-transfer-tax/{city}.
+## Open houses (for "open houses {city}" / "open houses this weekend")
+- [Open houses in Ontario this week](${SITE_URL}/open-houses): homes for sale with a public open house in the next 7 days, by city. City pages list the homes by day with the times, from the MLS® (read every 6 hours, page refreshed hourly): ${SITE_URL}/open-houses/{city}.
 
 ## Good time to buy? (for "is it a good time to buy a house in {city}")
 - [Is it a good time to buy a house in Ontario?](${SITE_URL}/data/good-time-to-buy): for each covered city, the measured buyer's-market signals — market temperature (sale-to-list and months of supply), same-home price change, sale to asking, share of listings with a price cut, share listed over 90 days — and how many favour buyers. Measures the market, not a buyer's own situation. City pages: ${SITE_URL}/data/good-time-to-buy/{city}. Refreshed nightly (weekly for London, Kitchener and the other added cities).

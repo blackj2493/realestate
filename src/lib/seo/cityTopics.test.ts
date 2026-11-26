@@ -8,6 +8,7 @@ import { basementValuePath } from "@/lib/data/basementValue";
 import { priceChangePath } from "@/lib/data/priceChange";
 import { condoPricesPath } from "@/lib/data/condoPrices";
 import { landTransferTaxPath } from "@/lib/data/landTransferTaxPages";
+import { openHousesPath } from "@/lib/openHouses/paths";
 import { propertyTaxPath } from "@/lib/data/propertyTax";
 import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
 import { rentVsBuyPath } from "@/lib/data/rentVsBuy";
@@ -39,6 +40,8 @@ describe("cityTopics", () => {
     expect(by["condo-prices"].hub).toBe(condoPricesPath());
     expect(by["land-transfer-tax"].path("markham")).toBe(landTransferTaxPath("markham"));
     expect(by["land-transfer-tax"].hub).toBe(landTransferTaxPath());
+    expect(by["open-houses"].path("markham")).toBe(openHousesPath("markham"));
+    expect(by["open-houses"].hub).toBe(openHousesPath());
     expect(by["property-tax"].path("markham")).toBe(propertyTaxPath("markham"));
     expect(by["property-tax"].hub).toBe(propertyTaxPath());
     expect(by["good-time-to-buy"].path("markham")).toBe(goodTimeToBuyPath("markham"));
