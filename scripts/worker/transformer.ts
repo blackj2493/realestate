@@ -865,7 +865,7 @@ export interface TransformResult {
     NearestGroceryName?: string;
     NearestRecCentreKm?: number;
     NearestRecCentreName?: string;
-    // Licensed child care proximity (Toronto only); NO_CHILD_CARE_KM sentinel.
+    // Licensed child care proximity (any: Toronto + Ontario; infant / $10-a-day: Toronto only); NO_CHILD_CARE_KM sentinel.
     NearestChildCareKm?: number;
     NearestInfantCareKm?: number;
     NearestCwelccKm?: number;
@@ -1353,9 +1353,10 @@ export async function transformListing(raw: any): Promise<TransformResult> {
   typesensePayload.NearestRecCentreKm = amenities.NearestRecCentreKm;
   typesensePayload.NearestRecCentreName = amenities.NearestRecCentreName;
 
-  // Licensed child care proximity (City of Toronto data, deterministic, §4/§6). Same
-  // NO_CHILD_CARE_KM sentinel idea: a listing outside Toronto gets 99, never 0, so the
-  // map's NearestInfantCareKm:<=X filter cannot false-match it.
+  // Licensed child care proximity (City of Toronto data + the Ontario ministry list for
+  // NearestChildCareKm; deterministic, §4/§6). Same NO_CHILD_CARE_KM sentinel idea: a
+  // listing with no centre within 5 km gets 99, never 0 — and outside Toronto the infant /
+  // $10-a-day fields are always 99 — so the map's `<=X` filters cannot false-match it.
   const childCare = assignChildCare(geo.location);
   typesensePayload.NearestChildCareKm = childCare.NearestChildCareKm;
   typesensePayload.NearestInfantCareKm = childCare.NearestInfantCareKm;

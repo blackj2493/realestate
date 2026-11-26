@@ -7,11 +7,13 @@
  *      /collections/properties — additive, optional, no reindex; same mechanism as
  *      backfill-amenity-fields.ts and add-typesense-field.ts). The definitions come from
  *      typesenseSchema.ts so the code and the collection cannot disagree.
- *   2. EXPORTs every doc's id + location, keeps ONLY docs inside the Toronto bounding box
- *      (the data is City of Toronto only), recomputes the 3 distances locally from
- *      data/toronto-child-care.json (assignChildCare — deterministic, §4/§6), and patches
- *      them back with import(action:'update'). Docs outside the box keep the fields
- *      MISSING, which a `<=X` filter never matches either.
+ *   2. EXPORTs every doc's id + location, keeps every doc WITH a location inside the
+ *      Ontario bounding box, recomputes the 3 distances locally from
+ *      data/toronto-child-care.json + data/ontario-child-care.json (assignChildCare —
+ *      deterministic, §4/§6), and patches them back with import(action:'update').
+ *      Toronto-box docs are recomputed too: a home near the city line now also sees the
+ *      Ontario centres across it. Docs without a location, or outside Ontario, are NOT
+ *      touched (their fields stay missing, which a `<=X` filter never matches).
  *
  * PARTIAL UPDATE, NOT A REINDEX: only the 3 fields are sent, nothing else on a doc moves.
  * GENTLE ON THE CLUSTER: small batches (default 200) with a pause between them (default
@@ -32,7 +34,13 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import Typesense from 'typesense';
-import { assignChildCare, inTorontoBbox, NO_CHILD_CARE_KM } from '@/lib/childcare/nearestChildCare';
+import {
+  assignChildCare,
+  inOntarioBbox,
+  inTorontoBbox,
+  NO_CHILD_CARE_KM,
+  TORONTO_BBOX,
+} from '@/lib/childcare/nearestChildCare';
 import { typesenseSchema } from '@/lib/typesense/typesenseSchema';
 
 function arg(name: string): string | undefined {
@@ -54,7 +62,7 @@ const VERIFY = process.argv.includes('--verify');
 const APPLY = process.argv.includes('--apply') && !process.argv.includes('--dry-run') && !VERIFY;
 const BATCH = Math.max(1, intArg('batch', 200));
 const PAUSE_MS = intArg('pause-ms', 1000);
-const LIMIT = intArg('limit', 0); // 0 = all Toronto docs
+const LIMIT = intArg('limit', 0); // 0 = all Ontario docs with a location
 
 const TYPESENSE_HOST = '9uyapwh6e5qmvl34p-1.a1.typesense.net';
 const COLLECTION = 'properties';
@@ -113,18 +121,32 @@ async function count(filter?: string): Promise<number> {
 
 async function verify(): Promise<void> {
   const pct = (n: number, d: number) => (d ? `${((100 * n) / d).toFixed(1)}%` : '—');
+  const b = TORONTO_BBOX;
+  const box = `location:(${b.minLat}, ${b.minLng}, ${b.minLat}, ${b.maxLng}, ${b.maxLat}, ${b.maxLng}, ${b.maxLat}, ${b.minLng})`;
+  // Typesense has no NOT for a geo polygon, so "outside" = all minus inside.
   const total = await count();
-  const toronto = await count('location:(43.58, -79.64, 43.58, -79.11, 43.86, -79.11, 43.86, -79.64)');
+  const toronto = await count(box);
+  const outside = total - toronto;
   console.log('\n📊 Child care backfill verification (properties collection)');
-  console.log('='.repeat(56));
+  console.log('='.repeat(64));
   console.log(`Total docs                   : ${total.toLocaleString()}`);
   console.log(`In the Toronto bounding box  : ${toronto.toLocaleString()}`);
+  console.log(`Outside it                   : ${outside.toLocaleString()}`);
   for (const f of CHILD_CARE_FIELDS) {
+    const withField = await count(`${f}:>=0`);
     const present = await count(`${f}:<${NO_CHILD_CARE_KM}`);
+    const presentT = await count(`${f}:<${NO_CHILD_CARE_KM} && ${box}`);
     const k1 = await count(`${f}:<=1`);
+    const k1T = await count(`${f}:<=1 && ${box}`);
     const k05 = await count(`${f}:<=0.5`);
-    console.log(`${f.padEnd(20)} present: ${present.toLocaleString()} (${pct(present, toronto)} of Toronto box)`);
-    console.log(`${''.padEnd(20)} ≤1 km  : ${k1.toLocaleString()}   ≤0.5 km: ${k05.toLocaleString()}`);
+    console.log(`${f} — field set on ${withField.toLocaleString()} docs (${pct(withField, total)})`);
+    console.log(
+      `  within 5 km : Toronto box ${presentT.toLocaleString()} (${pct(presentT, toronto)}) · ` +
+        `outside ${(present - presentT).toLocaleString()} (${pct(present - presentT, outside)})`
+    );
+    console.log(
+      `  ≤1 km       : Toronto box ${k1T.toLocaleString()} · outside ${(k1 - k1T).toLocaleString()}   ≤0.5 km (all): ${k05.toLocaleString()}`
+    );
   }
   const sample = (await ts
     .collections(COLLECTION)
@@ -132,7 +154,7 @@ async function verify(): Promise<void> {
     .search({
       q: '*',
       query_by: 'UnparsedAddress',
-      filter_by: `NearestInfantCareKm:<${NO_CHILD_CARE_KM}`,
+      filter_by: `NearestChildCareKm:<${NO_CHILD_CARE_KM}`,
       include_fields: `id,UnparsedAddress,${CHILD_CARE_FIELDS.join(',')}`,
       per_page: 3,
     } as never)) as { hits?: Array<{ document: Record<string, unknown> }> };
@@ -172,6 +194,8 @@ async function main(): Promise<void> {
   const updates: Record<string, unknown>[] = [];
   let noLoc = 0;
   let outside = 0;
+  let inToronto = 0;
+  let withAny = 0;
   let withInfant = 0;
   for (const line of lines) {
     const doc = JSON.parse(line) as { id: string; location?: [number, number] };
@@ -180,19 +204,22 @@ async function main(): Promise<void> {
       noLoc++;
       continue;
     }
-    if (!inTorontoBbox(loc)) {
+    if (!inOntarioBbox(loc)) {
       outside++;
       continue;
     }
+    if (inTorontoBbox(loc)) inToronto++;
     const c = assignChildCare(loc);
+    if (c.NearestChildCareKm < NO_CHILD_CARE_KM) withAny++;
     if (c.NearestInfantCareKm < NO_CHILD_CARE_KM) withInfant++;
     updates.push({ id: doc.id, ...c });
     if (LIMIT && updates.length >= LIMIT) break;
   }
   console.log(
-    `Computed ${updates.length.toLocaleString()} patches inside the Toronto box ` +
-      `(${withInfant.toLocaleString()} with infant care within 5 km; ` +
-      `${outside.toLocaleString()} outside the box and ${noLoc} without a location left untouched` +
+    `Computed ${updates.length.toLocaleString()} patches inside the Ontario box ` +
+      `(${inToronto.toLocaleString()} in the Toronto box, ${(updates.length - inToronto).toLocaleString()} outside it; ` +
+      `${withAny.toLocaleString()} with a licensed centre within 5 km, ${withInfant.toLocaleString()} with infant care; ` +
+      `${outside.toLocaleString()} outside Ontario and ${noLoc.toLocaleString()} without a location left untouched` +
       `${LIMIT ? `; stopped at --limit=${LIMIT}` : ''}).`
   );
 

@@ -1225,7 +1225,12 @@ export default function AlphaMap({
           style={{ left: childCareHover.x, top: childCareHover.y - 10 }}
         >
           <div className="text-xs font-medium text-foreground">{childCareHover.name}</div>
-          <div className="text-[10px] leading-tight text-muted-foreground">Licensed spaces: {childCareHover.ages}</div>
+          <div className="text-[10px] leading-tight text-muted-foreground">
+            {childCareHover.detail ? `Licensed spaces: ${childCareHover.ages}` : childCareHover.ages}
+          </div>
+          {!childCareHover.detail && (
+            <div className="text-[10px] leading-tight text-muted-foreground">Approximate location</div>
+          )}
           {childCareHover.cwelcc && (
             <div className="text-[10px] leading-tight text-violet-700 dark:text-violet-300">$10-a-day centre</div>
           )}

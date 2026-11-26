@@ -1,8 +1,9 @@
 /**
  * Typesense filter clause for the map's "Child care" tool (browser-safe, no fs).
  *
- * Each kind reads one precomputed field (see nearestChildCare.ts). A listing outside
- * Toronto has the field missing or at the 99 sentinel, so `<=X` never matches it.
+ * Each kind reads one precomputed field (see nearestChildCare.ts). "any" covers Toronto and
+ * the rest of Ontario; "infant" and "cwelcc" are Toronto only. A listing with no matching
+ * centre within 5 km has the field missing or at the 99 sentinel, so `<=X` never matches it.
  */
 import type { ChildCareKind, ChildCareState } from "@/lib/stores/commandCenterStore";
 
@@ -27,6 +28,6 @@ export function formatChildCareKm(km: number): string {
 export function childCareFilterClause(state: Pick<ChildCareState, "enabled" | "kind" | "maxKm">): string | null {
   if (!state.enabled) return null;
   if (!Number.isFinite(state.maxKm) || state.maxKm <= 0) return null;
-  const field = CHILD_CARE_FIELD[state.kind] ?? CHILD_CARE_FIELD.infant;
+  const field = CHILD_CARE_FIELD[state.kind] ?? CHILD_CARE_FIELD.any;
   return `${field}:<=${state.maxKm}`;
 }
