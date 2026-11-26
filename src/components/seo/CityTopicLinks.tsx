@@ -8,6 +8,7 @@ import { BOARD_ONLY_TOPICS, CITY_TOPICS, topicCity, type CityTopic } from "@/lib
 import { basementCityBySlug } from "@/lib/data/basementValue";
 import { priceChangeAreaBySlug } from "@/lib/data/priceChange";
 import { condoAreaBySlug } from "@/lib/data/condoPrices";
+import { lttCityBySlug } from "@/lib/data/landTransferTaxPages";
 import { taxAreaBySlug } from "@/lib/data/propertyTax";
 import { schoolCityBySlug } from "@/lib/data/schoolPrices";
 import { soldCityBySlug } from "@/lib/data/soldPrices";
@@ -33,7 +34,7 @@ export default function CityTopicLinks({
   // market, days-on-market, good-time-to-buy, rent-vs-buy and home-value pages read data/city-markets.json.
   // The basement study publishes a city only when it has enough sales in each group, so its
   // link follows the data file rather than the city list (a dropped city would 404).
-  const links = CITY_TOPICS.filter((t) => t.id !== current && (c.board || !BOARD_ONLY_TOPICS.has(t.id)) && (!["market", "days-on-market", "good-time-to-buy", "rent-vs-buy", "home-value"].includes(t.id) || c.board || cityMarketBySlug(c.slug)) && (t.id !== "basement-value" || basementCityBySlug(c.slug)?.modelA) && (t.id !== "price-change" || priceChangeAreaBySlug(c.slug)?.all) && (t.id !== "condo-prices" || condoAreaBySlug(c.slug)) && (t.id !== "property-tax" || taxAreaBySlug(c.slug)) && (t.id !== "school-catchment-prices" || schoolCityBySlug(c.slug)) && (t.id !== "sold-prices" || soldCityBySlug(c.slug)) && (t.id !== "best-time-to-sell" || bestTimeCityBySlug(c.slug))).map((t) => ({ href: t.path(c.slug), label: t.label(c.city) }));
+  const links = CITY_TOPICS.filter((t) => t.id !== current && (c.board || !BOARD_ONLY_TOPICS.has(t.id)) && (!["market", "days-on-market", "good-time-to-buy", "rent-vs-buy", "home-value"].includes(t.id) || c.board || cityMarketBySlug(c.slug)) && (t.id !== "basement-value" || basementCityBySlug(c.slug)?.modelA) && (t.id !== "price-change" || priceChangeAreaBySlug(c.slug)?.all) && (t.id !== "condo-prices" || condoAreaBySlug(c.slug)) && (t.id !== "land-transfer-tax" || lttCityBySlug(c.slug)) && (t.id !== "property-tax" || taxAreaBySlug(c.slug)) && (t.id !== "school-catchment-prices" || schoolCityBySlug(c.slug)) && (t.id !== "sold-prices" || soldCityBySlug(c.slug)) && (t.id !== "best-time-to-sell" || bestTimeCityBySlug(c.slug))).map((t) => ({ href: t.path(c.slug), label: t.label(c.city) }));
   if (showCityHub) links.push({ href: `/property/on/${c.slug}`, label: `Homes for sale and neighbourhoods in ${c.city}` });
   const headingId = `more-${c.slug}`;
   return (
