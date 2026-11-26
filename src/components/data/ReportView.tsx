@@ -189,7 +189,7 @@ export default function ReportView({ d, editions, isLatest }: { d: ReportEdition
         {/* ── Stat cards ───────────────────────────────────────────────────────── */}
         <section className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Key figures">
           {c && (
-            <StatCard label={`Sales, ${d.span.replace(/ \d{4}$/, "")}`} value={signedPct(c.salesYoYPct, 0)} sub={`${count(c.sales3m)} homes sold in ${c.cities} cities, against ${count(c.salesBefore)} a year earlier.`} />
+            <StatCard label={`Sales, ${d.span.replace(/ \d{4}$/, "")}`} value={signedPct(c.salesYoYPct, 0)} sub={`Change in sales in ${c.cities} cities against the same months a year earlier. Our MLS® data is a large share of the market, not all of it.`} />
           )}
           {c?.underAskPct != null && <StatCard label="Sold under first asking" value={`${Math.round(c.underAskPct)}%`} sub={`Of homes sold in the ${c.cities} cities in the last 12 months.`} />}
           {c?.cutPct != null && <StatCard label="Price cut, for sale now" value={`${Math.round(c.cutPct)}%`} sub={`Of the ${count(c.forSale ?? 0)} homes for sale in the ${c.cities} cities on ${dateLabel(d.dataAsOf)}.`} />}
@@ -232,7 +232,7 @@ export default function ReportView({ d, editions, isLatest }: { d: ReportEdition
                   <th className="px-3 py-2 font-medium">City</th>
                   <th className="px-3 py-2 text-right font-medium">Median price</th>
                   <th className="px-3 py-2 text-right font-medium">vs year earlier</th>
-                  <th className="px-3 py-2 text-right font-medium">Sales</th>
+                  <th className="px-3 py-2 text-right font-medium">Sales in our data</th>
                   <th className="px-3 py-2 text-right font-medium">vs year earlier</th>
                   <th className="px-3 py-2 text-right font-medium">Sale to asking</th>
                   <th className="px-3 py-2 text-right font-medium">Days to sell</th>

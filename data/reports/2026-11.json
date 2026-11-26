@@ -18,13 +18,13 @@
    "id": "room",
    "audience": "Buyers",
    "title": "Buyers have room to negotiate",
-   "text": "In the last 12 months, 76% of homes sold in the 15 cities in this report sold for less than their first asking price. Of the 27,933 homes for sale there now, 29% have cut their price."
+   "text": "In the last 12 months, 76% of homes sold in the 15 cities in this report sold for less than their first asking price. Of the homes for sale there now, 29% have cut their price."
   },
   {
    "id": "sales",
    "audience": "Sellers",
    "title": "More homes are selling",
-   "text": "17,385 homes sold in the 15 cities in this report from August to October 2026, 14% more than in the same months a year earlier. The change ranged from +24% in Markham to −5% in Ajax."
+   "text": "Home sales in the 15 cities in this report were 14% higher from August to October 2026 than in the same months a year earlier. The change ranged from +24% in Markham to −5% in Ajax."
   },
   {
    "id": "city_prices",
@@ -36,7 +36,7 @@
    "id": "power_of_sale",
    "audience": "Owners",
    "title": "More sales are power of sale",
-   "text": "From August to October 2026, 158 of 36,125 Ontario home sales (0.44%) were power of sale, up from 0.29% a year earlier. That is still a small share of the market."
+   "text": "From August to October 2026, 0.44% of Ontario home sales were power of sale, up from 0.29% a year earlier. That is still a small share of the market."
   }
  ],
  "sameHome": {

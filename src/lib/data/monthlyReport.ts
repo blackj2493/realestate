@@ -108,7 +108,6 @@ export interface ReportEdition {
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const pct1 = (n: number) => `${Math.abs(n).toFixed(1)}%`;
 const pct0 = (n: number) => `${Math.round(Math.abs(n))}%`;
-const count = (n: number) => Math.round(n).toLocaleString("en-CA");
 /** Prices in the report are rounded to the nearest $1,000. */
 export const usdK = (n: number) => `$${(Math.round(n / 1000) * 1000).toLocaleString("en-CA")}`;
 /** "−6.8%" / "+1.7%" with a true minus sign. */
@@ -247,7 +246,7 @@ export function buildReportEdition(inp: ReportInputs): ReportEdition | null {
       title: "Buyers have room to negotiate",
       text:
         `In the last 12 months, ${pct0(combined.underAskPct)} of homes sold in the ${combined.cities} cities in this report sold for less than their first asking price.` +
-        (combined.cutPct != null && combined.forSale ? ` Of the ${count(combined.forSale)} homes for sale there now, ${pct0(combined.cutPct)} have cut their price.` : ""),
+        (combined.cutPct != null && combined.forSale ? ` Of the homes for sale there now, ${pct0(combined.cutPct)} have cut their price.` : ""),
     });
   }
   if (combined) {
@@ -259,7 +258,7 @@ export function buildReportEdition(inp: ReportInputs): ReportEdition | null {
       audience: "Sellers",
       title: combined.salesYoYPct >= 0 ? "More homes are selling" : "Fewer homes are selling",
       text:
-        `${count(combined.sales3m)} homes sold in the ${combined.cities} cities in this report from ${span}, ${pct0(combined.salesYoYPct)} ${combined.salesYoYPct >= 0 ? "more" : "fewer"} than in the same months a year earlier.` +
+        `Home sales in the ${combined.cities} cities in this report were ${pct0(combined.salesYoYPct)} ${combined.salesYoYPct >= 0 ? "higher" : "lower"} from ${span} than in the same months a year earlier.` +
         (top && low && top !== low ? ` The change ranged from ${signedPct(top.salesYoYPct!, 0)} in ${top.city} to ${signedPct(low.salesYoYPct!, 0)} in ${low.city}.` : ""),
     });
   }
@@ -286,7 +285,7 @@ export function buildReportEdition(inp: ReportInputs): ReportEdition | null {
       id: "power_of_sale",
       audience: "Owners",
       title: pos.sharePct >= pos.prevSharePct ? "More sales are power of sale" : "Fewer sales are power of sale",
-      text: `From ${pos.from} to ${pos.to}, ${count(pos.pos)} of ${count(pos.sales)} Ontario home sales (${pos.sharePct.toFixed(2)}%) were power of sale, ${pos.sharePct >= pos.prevSharePct ? "up" : "down"} from ${pos.prevSharePct.toFixed(2)}% a year earlier. That is still a small share of the market.`,
+      text: `From ${pos.from} to ${pos.to}, ${pos.sharePct.toFixed(2)}% of Ontario home sales were power of sale, ${pos.sharePct >= pos.prevSharePct ? "up" : "down"} from ${pos.prevSharePct.toFixed(2)}% a year earlier. That is still a small share of the market.`,
     });
   }
   if (findings.length < 3) return null;
