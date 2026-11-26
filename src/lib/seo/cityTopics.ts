@@ -13,7 +13,7 @@
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
 import { STUDY_CITIES } from "@/lib/data/studyCities";
 
-export type CityTopic = "market" | "days-on-market" | "power-of-sale" | "not-selling" | "home-value" | "basement-value" | "price-change" | "condo-prices" | "good-time-to-buy" | "rent-vs-buy" | "school-catchment-prices" | "sold-prices" | "best-time-to-sell";
+export type CityTopic = "market" | "days-on-market" | "power-of-sale" | "not-selling" | "home-value" | "basement-value" | "price-change" | "condo-prices" | "good-time-to-buy" | "rent-vs-buy" | "school-catchment-prices" | "sold-prices" | "best-time-to-sell" | "property-tax";
 
 export const daysOnMarketPath = (slug?: string) => (slug ? `/data/days-on-market/${slug}` : "/data/days-on-market");
 
@@ -30,6 +30,7 @@ export const CITY_TOPICS: { id: CityTopic; hub: string; path: (slug: string) => 
   { id: "school-catchment-prices", hub: "/data/school-catchment-prices", path: (s) => `/data/school-catchment-prices/${s}`, label: (c) => `House prices by school catchment in ${c}` },
   { id: "sold-prices", hub: "/data/sold-prices", path: (s) => `/data/sold-prices/${s}`, label: (c) => `${c} sold prices by neighbourhood` },
   { id: "best-time-to-sell", hub: "/data/best-time-to-sell", path: (s) => `/data/best-time-to-sell/${s}`, label: (c) => `Best time to sell a house in ${c}` },
+  { id: "property-tax", hub: "/data/property-tax", path: (s) => `/data/property-tax/${s}`, label: (c) => `How much is property tax in ${c}?` },
   { id: "basement-value", hub: "/data/basement-value", path: (s) => `/data/basement-value/${s}`, label: (c) => `Does a finished basement add value in ${c}?` },
 ];
 
@@ -46,6 +47,7 @@ export const TOPIC_HUBS: { href: string; label: string }[] = [
   { href: "/data/school-catchment-prices", label: "House prices by school catchment" },
   { href: "/data/sold-prices", label: "Sold prices by city and neighbourhood" },
   { href: "/data/best-time-to-sell", label: "Best time to sell, by month" },
+  { href: "/data/property-tax", label: "Property tax by city" },
   { href: "/data/basement-value", label: "What a finished basement adds" },
 ];
 
