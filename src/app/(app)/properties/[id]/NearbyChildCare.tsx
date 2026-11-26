@@ -7,14 +7,24 @@ import { CHILD_CARE_PATH } from "@/lib/childcare/paths";
 import { searchListings } from "@/lib/typesense/client";
 import type { ChildCareResponse, OntarioChildCareResponse, TorontoChildCareResponse } from "@/app/api/childcare/nearby/route";
 
-const LIST_LIMIT = 8;
+/** Centres shown before "Show all". */
+const PREVIEW = 3;
+/** Centres shown after "Show all" (a dense 1 km circle downtown can hold 40+). */
+const LIST_MAX = 15;
+
+type Row = { id: string | number; name: string; distanceKm: number; tags: { label: string; className: string }[] };
+
+const INFANT_TAG = "bg-rose-500/10 text-rose-700 dark:text-rose-300";
+const CWELCC_TAG = "bg-amber-500/10 text-amber-700 dark:text-amber-300";
+const MUTED_TAG = "bg-muted text-muted-foreground";
 
 /**
- * Licensed child care within 1 km of a home. Compact by default: one summary card with the
- * list of centres behind a "Show" toggle so the block stays short. Two scopes from the API:
- *   - Toronto (City data): centres, infant spaces, $10-a-day, the neighbourhood vs the city;
- *   - elsewhere in Ontario (ministry list): a count of centres and how many run a full day,
- *     with approximate (postal code) locations — no spaces, no $10-a-day flag.
+ * Licensed child care within 1 km of a home. Short by design (owner call 2026-11-25: "all
+ * this text isn't going to be read"): one headline line, the nearest three centres, a
+ * "Show all" toggle for the rest, and a one-line source. Two scopes from the API:
+ *   - Toronto (City data): infant and $10-a-day tags, the neighbourhood vs the city;
+ *   - elsewhere in Ontario (ministry list): a count and a half-day tag; locations are
+ *     approximate (postal code).
  * Like NearbyAmenities, the home's coordinates come from the search index. Renders nothing
  * when the API says `covered: false` or on any error.
  */
@@ -46,158 +56,139 @@ export default function NearbyChildCare({ listingId }: { listingId: string }) {
 }
 
 function TorontoCard({ data }: { data: TorontoChildCareResponse }) {
-  const [open, setOpen] = useState(false);
-  const km = `${data.radiusKm} km`;
-  const shown = data.centres.slice(0, LIST_LIMIT);
+  const rows: Row[] = data.centres.map((c) => ({
+    id: c.id,
+    name: c.name,
+    distanceKm: c.distanceKm,
+    tags: [
+      ...(c.infant > 0 ? [{ label: "Infant", className: INFANT_TAG }] : []),
+      ...(c.cwelcc ? [{ label: "$10/day", className: CWELCC_TAG }] : []),
+    ],
+  }));
+  const stats = data.count > 0 ? [`${data.centresWithInfant} with infant care`, `${data.cwelccCount} at $10/day`] : [];
+  // Only worth a line when no centre inside the circle takes infants.
+  const farInfant = data.centresWithInfant === 0 && data.nearestInfant ? data.nearestInfant : null;
 
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground">Child care nearby</h3>
-      <div className="rounded-lg border border-border bg-card p-3">
-        <div className="flex items-start gap-2">
-          <Baby className="mt-0.5 h-4 w-4 shrink-0 text-teal-700 dark:text-teal-400" aria-hidden />
-          <div className="min-w-0 text-sm leading-snug">
-            {data.count > 0 ? (
-              <p className="text-foreground">
-                <b>{data.count}</b> licensed {data.count === 1 ? "centre" : "centres"} within {km}
-                <span className="text-muted-foreground"> · </span>
-                <b>{data.infantSpaces}</b> infant spaces
-                {data.infantSpaces > 0 && <span className="text-muted-foreground"> ({data.centresWithInfant} of {data.count} centres)</span>}
-                <span className="text-muted-foreground"> · </span>
-                <b>{data.cwelccCount}</b> at $10 a day
-              </p>
-            ) : (
-              <p className="text-foreground">No licensed child care centre within {km}.</p>
-            )}
-            {data.nearestInfant && (
-              <p className="mt-1 text-muted-foreground">
-                Nearest infant care (under 18 months): {data.nearestInfant.name}, {data.nearestInfant.distanceKm.toFixed(1)} km.
+    <Card
+      count={data.count}
+      km={data.radiusKm}
+      stats={stats}
+      rows={rows}
+      extra={
+        (farInfant || data.neighbourhood) && (
+          <>
+            {farInfant && (
+              <p>
+                Nearest infant care: {farInfant.name}, {farInfant.distanceKm.toFixed(1)} km
               </p>
             )}
             {data.neighbourhood && (
-              <p className="mt-1 text-muted-foreground">
-                {data.neighbourhood.name}: <span className="font-semibold text-foreground">{Math.round(data.neighbourhood.per100)}</span> spaces
-                per 100 children under 5. Toronto: {Math.round(data.cityPer100)}.{" "}
+              <p>
+                {data.neighbourhood.name}: {Math.round(data.neighbourhood.per100)} spaces per 100 kids (Toronto{" "}
+                {Math.round(data.cityPer100)}) ·{" "}
                 <Link href={CHILD_CARE_PATH} className="text-teal-700 underline hover:text-foreground dark:text-teal-400">
-                  See the Toronto map
+                  Map
                 </Link>
               </p>
             )}
-          </div>
-        </div>
-
-        {data.count > 0 && (
-          <>
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              aria-expanded={open}
-              className="mt-3 flex w-full items-center justify-between rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted/40"
-            >
-              {open ? "Hide the centres" : `Show the ${data.count} ${data.count === 1 ? "centre" : "centres"}`}
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
-            </button>
-            {open && (
-              <ul className="mt-2 divide-y divide-border">
-                {shown.map((c) => (
-                  <li key={c.id} className="py-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="truncate text-sm leading-tight text-foreground">{c.name}</span>
-                      <span className="shrink-0 font-mono text-[11px] text-teal-700 dark:text-teal-400">{c.distanceKm.toFixed(1)} km</span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {c.infant > 0 && <Tag className="bg-rose-500/10 text-rose-700 dark:text-rose-300">Infant {c.infant}</Tag>}
-                      {c.toddler > 0 && <Tag className="bg-sky-500/10 text-sky-700 dark:text-sky-300">Toddler {c.toddler}</Tag>}
-                      {c.preschool > 0 && <Tag className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">Preschool {c.preschool}</Tag>}
-                      {c.kindergarten + c.schoolAge > 0 && <Tag className="bg-muted text-muted-foreground">School age {c.kindergarten + c.schoolAge}</Tag>}
-                      {c.cwelcc && <Tag className="bg-amber-500/10 text-amber-700 dark:text-amber-300">$10/day</Tag>}
-                    </div>
-                  </li>
-                ))}
-                {data.count > shown.length && (
-                  <li className="pt-2 text-[11px] text-muted-foreground">and {data.count - shown.length} more within {km}</li>
-                )}
-              </ul>
-            )}
           </>
-        )}
-      </div>
-      <p className="mt-2 text-[10px] text-muted-foreground">
-        City of Toronto licensed centres, updated {data.updated}. Children under 5: 2021 Census. Spaces are licensed capacity, not open
-        spots; most centres have wait lists. Distances are straight-line.
-      </p>
-    </div>
+        )
+      }
+      source={`City of Toronto, ${data.updated}. Licensed spaces, not open spots.`}
+    />
   );
 }
 
 function OntarioCard({ data }: { data: OntarioChildCareResponse }) {
-  const [open, setOpen] = useState(false);
-  const km = `${data.radiusKm} km`;
-  const shown = data.centres.slice(0, LIST_LIMIT);
-
+  const rows: Row[] = data.centres.map((c) => ({
+    id: c.id,
+    name: c.name,
+    distanceKm: c.distanceKm,
+    tags: c.fullDay ? [] : [{ label: "Half day", className: MUTED_TAG }],
+  }));
+  const stats = data.count > 0 && data.fullDayCount < data.count ? [`${data.fullDayCount} full day`] : [];
   return (
-    <div className="mb-6">
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground">Child care nearby</h3>
-      <div className="rounded-lg border border-border bg-card p-3">
-        <div className="flex items-start gap-2">
-          <Baby className="mt-0.5 h-4 w-4 shrink-0 text-teal-700 dark:text-teal-400" aria-hidden />
-          <div className="min-w-0 text-sm leading-snug">
-            {data.count > 0 ? (
-              <p className="text-foreground">
-                <b>{data.count}</b> licensed {data.count === 1 ? "centre" : "centres"} within {km}
-                <span className="text-muted-foreground"> · </span>
-                <b>{data.fullDayCount}</b> full day
-              </p>
-            ) : (
-              <p className="text-foreground">No licensed child care centre within {km}.</p>
-            )}
-          </div>
-        </div>
-
-        {data.count > 0 && (
-          <>
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              aria-expanded={open}
-              className="mt-3 flex w-full items-center justify-between rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted/40"
-            >
-              {open ? "Hide the centres" : `Show the ${data.count} ${data.count === 1 ? "centre" : "centres"}`}
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
-            </button>
-            {open && (
-              <ul className="mt-2 divide-y divide-border">
-                {shown.map((c) => (
-                  <li key={c.id} className="py-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="truncate text-sm leading-tight text-foreground">{c.name}</span>
-                      <span className="shrink-0 font-mono text-[11px] text-teal-700 dark:text-teal-400">{c.distanceKm.toFixed(1)} km</span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {c.fullDay ? (
-                        <Tag className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">Full day</Tag>
-                      ) : (
-                        <Tag className="bg-muted text-muted-foreground">Half day</Tag>
-                      )}
-                    </div>
-                  </li>
-                ))}
-                {data.count > shown.length && (
-                  <li className="pt-2 text-[11px] text-muted-foreground">and {data.count - shown.length} more within {km}</li>
-                )}
-              </ul>
-            )}
-          </>
-        )}
-      </div>
-      <p className="mt-2 text-[10px] text-muted-foreground">
-        Ontario Ministry of Education, licensed child care centres, updated {data.updated} (Open Government Licence – Ontario).
-        Locations are approximate (postal code). Licensed centres, not open spots.
-      </p>
-    </div>
+    <Card
+      count={data.count}
+      km={data.radiusKm}
+      stats={stats}
+      rows={rows}
+      source={`Ontario Ministry of Education, ${data.updated}. Approximate locations. Licensed centres, not open spots.`}
+    />
   );
 }
 
-function Tag({ className, children }: { className: string; children: React.ReactNode }) {
-  return <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${className}`}>{children}</span>;
+function Card({
+  count,
+  km,
+  stats,
+  rows,
+  extra,
+  source,
+}: {
+  count: number;
+  km: number;
+  stats: string[];
+  rows: Row[];
+  extra?: React.ReactNode;
+  source: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const shown = rows.slice(0, open ? LIST_MAX : PREVIEW);
+  const hidden = count - shown.length;
+
+  return (
+    <div className="mb-6">
+      {/* The phone shows MobileCollapse's "Child care" header instead. */}
+      <h3 className="mb-3 hidden text-sm font-semibold uppercase tracking-wider text-foreground lg:block">Child care nearby</h3>
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="flex items-center gap-2 text-sm">
+          <Baby className="h-4 w-4 shrink-0 text-teal-700 dark:text-teal-400" aria-hidden />
+          {count > 0 ? (
+            <p className="text-foreground">
+              <b>{count}</b> {count === 1 ? "centre" : "centres"} within {km} km
+              {stats.length > 0 && <span className="text-muted-foreground"> · {stats.join(" · ")}</span>}
+            </p>
+          ) : (
+            <p className="text-foreground">No licensed centre within {km} km</p>
+          )}
+        </div>
+
+        {shown.length > 0 && (
+          <ul className="mt-2 divide-y divide-border">
+            {shown.map((c) => (
+              <li key={c.id} className="flex items-center gap-2 py-2">
+                <span className="min-w-0 flex-1 truncate text-sm text-foreground">{c.name}</span>
+                {c.tags.map((t) => (
+                  <span key={t.label} className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${t.className}`}>
+                    {t.label}
+                  </span>
+                ))}
+                <span className="w-12 shrink-0 text-right font-mono text-[11px] text-teal-700 dark:text-teal-400">
+                  {c.distanceKm.toFixed(1)} km
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {count > PREVIEW && (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="mt-1 flex items-center gap-1 py-1 text-xs font-semibold text-teal-700 hover:text-foreground dark:text-teal-400"
+          >
+            {open ? "Show less" : `Show all ${count}`}
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+          </button>
+        )}
+        {open && hidden > 0 && <p className="mt-1 text-[11px] text-muted-foreground">and {hidden} more within {km} km</p>}
+
+        {extra && <div className="mt-2 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">{extra}</div>}
+      </div>
+      <p className="mt-2 text-[10px] text-muted-foreground">{source}</p>
+    </div>
+  );
 }
