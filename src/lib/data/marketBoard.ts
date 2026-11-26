@@ -141,7 +141,20 @@ async function computeBoard(): Promise<MarketBoard> {
   const sb = getServiceRoleClient();
   const { data, error } = await sb.from("region_metrics").select("region, payload, computed_at");
   if (error || !data) return { rows: [], dataAsOf: null };
+  return boardFromRegionRows(data as RegionMetricsRow[]);
+}
 
+export interface RegionMetricsRow {
+  region: string;
+  payload: unknown;
+  computed_at: string | null;
+}
+
+/**
+ * The board from raw region_metrics rows. Pure; shared by the page loader and by scripts that
+ * read region_metrics with pg (scripts/data/buildMonthlyReport.ts).
+ */
+export function boardFromRegionRows(data: RegionMetricsRow[]): MarketBoard {
   const byRegion = new Map<string, Precompute>();
   let newest: string | null = null;
   for (const r of data as { region: string; payload: Precompute; computed_at: string | null }[]) {

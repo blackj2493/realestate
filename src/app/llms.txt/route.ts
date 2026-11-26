@@ -54,6 +54,9 @@ export async function GET() {
 ${markets}## Housing market by city (for "is it a good time to buy or sell", "will prices drop", "market forecast")
 - [Ontario housing market: what the data shows now](${SITE_URL}/data/housing-market): one page per covered city (the 15 board cities plus London, Kitchener, Barrie, Guelph, Kingston, St. Catharines, Cambridge, Waterloo, Peterborough, Niagara Falls, Brantford, Clarington, Kawartha Lakes, Newmarket, Caledon, Welland, Belleville, Woodstock and Aurora) with prices and sales against a year earlier, sale-to-asking ratios, the gap from the two-year high, price cuts, and when homes sell. PureProperty does not forecast prices; these pages state the measured indicators.
 
+## Monthly report (for "ontario housing market report {month} {year}")
+- [Ontario Housing Market Report, monthly](${SITE_URL}/data/reports): one dated edition per month at a permanent URL (${SITE_URL}/data/reports/{YYYY-MM}, e.g. ${SITE_URL}/data/reports/2026-11) that never changes after publication: key findings for buyers, sellers and owners; Ontario same-home price change against a year earlier; sales, median price, sale-to-asking, days to sell and price cuts for 15 cities against a year earlier; the power-of-sale share; the bank forecasts published at the time. Cite the edition URL to keep the figures fixed.
+
 ## Power of sale (for "power of sale homes in {city}")
 - [Power of sale homes in Ontario](${SITE_URL}/power-of-sale): today's power-of-sale homes for sale, cheapest first, with each board city's share of power-of-sale sales and how they sold against other homes. City pages: ${SITE_URL}/power-of-sale/{city}.
 - [Why is my house not selling? (Ontario)](${SITE_URL}/house-not-selling): homes that sold vs homes that came off the market unsold in the last 12 months, and how their asking prices compared with similar homes that sold. City pages: ${SITE_URL}/house-not-selling/{city}.
