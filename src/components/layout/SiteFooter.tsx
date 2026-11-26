@@ -73,6 +73,11 @@ export default function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/data/methodology" className={linkCls}>
+                Methodology
+              </Link>
+            </li>
+            <li>
               {/* The press desk promises a custom pull within one business day; a mailto
                   here is the shortest path from "I need a number" to asking for it. */}
               <a href="mailto:tanmay@pureproperty.ca" className={linkCls}>

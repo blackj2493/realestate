@@ -13,6 +13,7 @@ import { TAX_SOURCE_LINE, getTaxData, money, propertyTaxPath, rankedTaxCities } 
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
+import { DATA_PUBLISHER } from "@/lib/seo/publisher";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -91,7 +92,8 @@ export default function PropertyTaxIndexPage() {
     dateModified: updatedIso,
     temporalCoverage: `${file.from}/${file.to}`,
     isAccessibleForFree: true,
-    creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
+    creator: DATA_PUBLISHER,
+    publisher: DATA_PUBLISHER,
     spatialCoverage: { "@type": "Place", name: "Ontario, Canada" },
     measurementTechnique: TAX_SOURCE_LINE,
     variableMeasured: ranked.map((c) => ({ "@type": "PropertyValue", name: `Median annual property tax, ${c.city}`, value: c.all.medianTax, unitText: "CAD per year" })),

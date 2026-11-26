@@ -15,6 +15,7 @@ import PosShareChart from "@/components/powerOfSale/PosShareChart";
 import CopyCitation from "@/components/powerOfSale/CopyCitation";
 import { posIndexPath, editionLabel, type PosIndexEdition } from "@/lib/data/posIndex";
 import { SOURCE_LINE } from "@/lib/data/cityFacts";
+import { DATA_PUBLISHER } from "@/lib/seo/publisher";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 
@@ -38,7 +39,8 @@ export function posIndexJsonLd(d: PosIndexEdition, canonical: string) {
       url: canonical,
       temporalCoverage: `${d.series[0]?.edition ?? d.edition}/${d.edition}`,
       isAccessibleForFree: true,
-      creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
+      creator: DATA_PUBLISHER,
+      publisher: DATA_PUBLISHER,
       spatialCoverage: { "@type": "Place", name: "Ontario, Canada" },
       measurementTechnique: SOURCE_LINE,
       variableMeasured: d.facts.map((f) => ({ "@type": "PropertyValue", ...f.measure })),
@@ -274,6 +276,7 @@ export default function PosIndexView({ d, editions, isLatest }: { d: PosIndexEdi
                 <p className="mt-1 break-words text-xs text-muted-foreground">{citation}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <CopyCitation text={citation} />
+                  <Link href="/data/methodology" className="text-xs underline hover:text-foreground">How we calculate these figures</Link>
                   <Link href="/data/for-journalists" className="text-xs underline hover:text-foreground">For journalists: custom city figures</Link>
                 </div>
               </div>

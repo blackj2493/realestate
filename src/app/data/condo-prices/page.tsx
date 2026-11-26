@@ -13,6 +13,7 @@ import { CONDO_SOURCE_LINE, condoPricesPath, fee2, getCondoData, money, rankedCo
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
+import { DATA_PUBLISHER } from "@/lib/seo/publisher";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -80,7 +81,8 @@ export default function CondoPricesIndexPage() {
     dateModified: updatedIso,
     temporalCoverage: `${file.from}/${file.to}`,
     isAccessibleForFree: true,
-    creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
+    creator: DATA_PUBLISHER,
+    publisher: DATA_PUBLISHER,
     spatialCoverage: { "@type": "Place", name: "Ontario, Canada" },
     measurementTechnique: CONDO_SOURCE_LINE,
     variableMeasured: ranked.map((c) => ({ "@type": "PropertyValue", name: `Median condo price per sq ft, ${c.city}`, value: c.all.pricePsf, unitText: "CAD per sq ft" })),

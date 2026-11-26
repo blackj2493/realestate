@@ -28,6 +28,7 @@ import { TYPE_GROUPS, TYPE_LABEL } from "@/lib/data/priceChangeModel";
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
+import { DATA_PUBLISHER } from "@/lib/seo/publisher";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const dynamicParams = false;
@@ -104,7 +105,8 @@ export default async function PriceChangeCityPage({ params }: { params: Promise<
     dateModified: updatedIso,
     temporalCoverage: `${file.earlierFrom}/${file.laterTo}`,
     isAccessibleForFree: true,
-    creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
+    creator: DATA_PUBLISHER,
+    publisher: DATA_PUBLISHER,
     spatialCoverage: { "@type": "Place", name: `${a.city}, Ontario, Canada` },
     measurementTechnique: "Same-home median price change within matched groups (community, type, bedrooms, size band), cluster bootstrap 95% ranges. " + PRICE_CHANGE_SOURCE_LINE,
     variableMeasured: facts.measures.map((m) => ({ "@type": "PropertyValue", ...m })),

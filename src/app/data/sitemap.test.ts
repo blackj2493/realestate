@@ -23,6 +23,7 @@ describe('/data/sitemap.xml', () => {
 
     expect(urls).toContain(`${SITE}/data`);
     expect(urls).toContain(`${SITE}/data/for-journalists`);
+    expect(urls).toContain(`${SITE}/data/methodology`);
     expect(urls).toContain(`${SITE}/data/findings`);
     for (const t of LIVE_TRACKERS) expect(urls).toContain(`${SITE}/data/${t.slug}`);
     for (const f of LIVE_FINDINGS) expect(urls).toContain(`${SITE}/data/findings/${f.slug}`);
@@ -37,7 +38,7 @@ describe('/data/sitemap.xml', () => {
     expect(urls).toContain(`${SITE}${priceChangePath()}`);
     for (const c of priceCities) expect(urls).toContain(`${SITE}${priceChangePath(c.slug)}`);
     expect(urls).toContain(`${SITE}${CHILD_CARE_PATH}`);
-    expect(urls).toHaveLength(1 /* child care, Toronto */ + 3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 2 + OUTLOOK_CITIES.length * 2 + getCityMarkets().cities.length * 3 + OUTLOOK_CITIES.length + getCityMarkets().cities.length + 1 + basementCities.length + 1 + priceCities.length + 1 + getCondoData().cities.length + 1 + OUTLOOK_CITIES.length + 1 + getSchoolData().cities.length + 1 + getSoldData().cities.length + 1 + getBestTimeData().cities.length + 1 + lttCities().length + 1 + getTaxData().cities.length);
+    expect(urls).toHaveLength(1 /* child care, Toronto */ + 1 /* methodology */ + 3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 2 + OUTLOOK_CITIES.length * 2 + getCityMarkets().cities.length * 3 + OUTLOOK_CITIES.length + getCityMarkets().cities.length + 1 + basementCities.length + 1 + priceCities.length + 1 + getCondoData().cities.length + 1 + OUTLOOK_CITIES.length + 1 + getSchoolData().cities.length + 1 + getSoldData().cities.length + 1 + getBestTimeData().cities.length + 1 + lttCities().length + 1 + getTaxData().cities.length);
   });
 
   it('declares only /data URLs, so its coverage number means one thing', () => {
