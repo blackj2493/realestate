@@ -142,10 +142,12 @@ const defaultAmenity: AmenityState = {
 export type ChildCareKind = "infant" | "any" | "cwelcc";
 
 /**
- * Licensed child care filter (global, Toronto only). Narrows the list + map to homes within
- * `maxKm` straight-line of a centre with infant spaces, any infant/toddler/preschool space,
- * or in the $10-a-day program, via the precomputed NearestInfantCareKm / NearestChildCareKm
- * / NearestCwelccKm Typesense fields. `showCentres` draws the centres as map pins.
+ * Licensed child care filter (global). Narrows the list + map to homes within `maxKm`
+ * straight-line of any licensed centre for children under school age (Toronto + Ontario),
+ * a centre with infant spaces, or one in the $10-a-day program (both Toronto only), via the
+ * precomputed NearestChildCareKm / NearestInfantCareKm / NearestCwelccKm Typesense fields.
+ * Defaults to "any" — outside Toronto the other two match nothing. `showCentres` draws the
+ * centres as map pins.
  */
 export interface ChildCareState {
   enabled: boolean;
@@ -156,7 +158,7 @@ export interface ChildCareState {
 
 export const defaultChildCare: ChildCareState = {
   enabled: false,
-  kind: "infant",
+  kind: "any",
   maxKm: 1,
   showCentres: true,
 };

@@ -95,8 +95,8 @@ describe("setFilters", () => {
 describe("commandCenterStore — child care filter", () => {
   beforeEach(() => get().resetChildCare());
 
-  it("defaults to off, infant care, 1 km, centres shown", () => {
-    expect(get().childCare).toEqual({ enabled: false, kind: "infant", maxKm: 1, showCentres: true });
+  it("defaults to off, any licensed centre, 1 km, centres shown", () => {
+    expect(get().childCare).toEqual({ enabled: false, kind: "any", maxKm: 1, showCentres: true });
   });
 
   it("merges a patch and resets to the default", () => {
@@ -104,12 +104,12 @@ describe("commandCenterStore — child care filter", () => {
     expect(get().childCare).toEqual({ enabled: true, kind: "cwelcc", maxKm: 1, showCentres: true });
     get().resetChildCare();
     expect(get().childCare.enabled).toBe(false);
-    expect(get().childCare.kind).toBe("infant");
+    expect(get().childCare.kind).toBe("any");
   });
 
   it("is cleared by resetFilters", () => {
     get().setChildCare({ enabled: true, maxKm: 2, showCentres: false });
     get().resetFilters();
-    expect(get().childCare).toEqual({ enabled: false, kind: "infant", maxKm: 1, showCentres: true });
+    expect(get().childCare).toEqual({ enabled: false, kind: "any", maxKm: 1, showCentres: true });
   });
 });

@@ -5,20 +5,21 @@ import Link from "next/link";
 import { Baby, ChevronDown } from "lucide-react";
 import { CHILD_CARE_PATH } from "@/lib/childcare/paths";
 import { searchListings } from "@/lib/typesense/client";
-import type { ChildCareResponse } from "@/app/api/childcare/nearby/route";
-import type { NearbyChildCare as Nearby } from "@/lib/childcare/torontoChildCare";
+import type { ChildCareResponse, OntarioChildCareResponse, TorontoChildCareResponse } from "@/app/api/childcare/nearby/route";
 
 const LIST_LIMIT = 8;
 
 /**
- * Licensed child care within 1 km of a Toronto home. Compact by default: one summary card
- * (centres, infant spaces, $10-a-day, the neighbourhood against the city), with the list of
- * centres behind a "Show" toggle so the block stays short. Like NearbyAmenities, the home's
- * coordinates come from the search index. Renders nothing outside Toronto or on any error.
+ * Licensed child care within 1 km of a home. Compact by default: one summary card with the
+ * list of centres behind a "Show" toggle so the block stays short. Two scopes from the API:
+ *   - Toronto (City data): centres, infant spaces, $10-a-day, the neighbourhood vs the city;
+ *   - elsewhere in Ontario (ministry list): a count of centres and how many run a full day,
+ *     with approximate (postal code) locations — no spaces, no $10-a-day flag.
+ * Like NearbyAmenities, the home's coordinates come from the search index. Renders nothing
+ * when the API says `covered: false` or on any error.
  */
 export default function NearbyChildCare({ listingId }: { listingId: string }) {
-  const [data, setData] = useState<Nearby | null>(null);
-  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<TorontoChildCareResponse | OntarioChildCareResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +42,11 @@ export default function NearbyChildCare({ listingId }: { listingId: string }) {
   }, [listingId]);
 
   if (!data) return null;
+  return data.scope === "ontario" ? <OntarioCard data={data} /> : <TorontoCard data={data} />;
+}
+
+function TorontoCard({ data }: { data: TorontoChildCareResponse }) {
+  const [open, setOpen] = useState(false);
   const km = `${data.radiusKm} km`;
   const shown = data.centres.slice(0, LIST_LIMIT);
 
@@ -119,6 +125,74 @@ export default function NearbyChildCare({ listingId }: { listingId: string }) {
       <p className="mt-2 text-[10px] text-muted-foreground">
         City of Toronto licensed centres, updated {data.updated}. Children under 5: 2021 Census. Spaces are licensed capacity, not open
         spots; most centres have wait lists. Distances are straight-line.
+      </p>
+    </div>
+  );
+}
+
+function OntarioCard({ data }: { data: OntarioChildCareResponse }) {
+  const [open, setOpen] = useState(false);
+  const km = `${data.radiusKm} km`;
+  const shown = data.centres.slice(0, LIST_LIMIT);
+
+  return (
+    <div className="mb-6">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground">Child care nearby</h3>
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="flex items-start gap-2">
+          <Baby className="mt-0.5 h-4 w-4 shrink-0 text-teal-700 dark:text-teal-400" aria-hidden />
+          <div className="min-w-0 text-sm leading-snug">
+            {data.count > 0 ? (
+              <p className="text-foreground">
+                <b>{data.count}</b> licensed {data.count === 1 ? "centre" : "centres"} within {km}
+                <span className="text-muted-foreground"> · </span>
+                <b>{data.fullDayCount}</b> full day
+              </p>
+            ) : (
+              <p className="text-foreground">No licensed child care centre within {km}.</p>
+            )}
+          </div>
+        </div>
+
+        {data.count > 0 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              className="mt-3 flex w-full items-center justify-between rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted/40"
+            >
+              {open ? "Hide the centres" : `Show the ${data.count} ${data.count === 1 ? "centre" : "centres"}`}
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+            </button>
+            {open && (
+              <ul className="mt-2 divide-y divide-border">
+                {shown.map((c) => (
+                  <li key={c.id} className="py-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="truncate text-sm leading-tight text-foreground">{c.name}</span>
+                      <span className="shrink-0 font-mono text-[11px] text-teal-700 dark:text-teal-400">{c.distanceKm.toFixed(1)} km</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {c.fullDay ? (
+                        <Tag className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">Full day</Tag>
+                      ) : (
+                        <Tag className="bg-muted text-muted-foreground">Half day</Tag>
+                      )}
+                    </div>
+                  </li>
+                ))}
+                {data.count > shown.length && (
+                  <li className="pt-2 text-[11px] text-muted-foreground">and {data.count - shown.length} more within {km}</li>
+                )}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+      <p className="mt-2 text-[10px] text-muted-foreground">
+        Ontario Ministry of Education, licensed child care centres, updated {data.updated} (Open Government Licence – Ontario).
+        Locations are approximate (postal code). Licensed centres, not open spots.
       </p>
     </div>
   );

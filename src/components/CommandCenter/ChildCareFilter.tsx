@@ -2,12 +2,13 @@
  * ChildCareFilter — licensed child care lens, rendered directly inside the "Child care"
  * drawer of the Instrument Deck rail (the drawer provides the panel, header and close).
  *
- * Picks a centre kind (infant care / any licensed centre / $10-a-day) and a straight-line
- * distance, which the terminal search turns into one NearestInfantCareKm:<=X,
- * NearestChildCareKm:<=X or NearestCwelccKm:<=X filter (precomputed fields, see
- * lib/childcare/nearestChildCare). Toronto only: the City of Toronto is the one source
- * with centre locations and spaces by age group. "Show centres on the map" draws the
- * centres as pins (ChildCareCentresLayer).
+ * Picks a centre kind (any licensed centre / infant care / $10-a-day) and a straight-line
+ * distance, which the terminal search turns into one NearestChildCareKm:<=X,
+ * NearestInfantCareKm:<=X or NearestCwelccKm:<=X filter (precomputed fields, see
+ * lib/childcare/nearestChildCare). "Any licensed centre" works across Ontario (City of
+ * Toronto data + the Ontario ministry list); infant care and $10-a-day are Toronto only,
+ * because only the City publishes spaces by age group and the program flag. "Show centres
+ * on the map" draws the centres as pins (useChildCareCentreLayers).
  */
 
 "use client";
@@ -18,9 +19,9 @@ import { cn } from "@/lib/utils";
 import { useCommandCenterStore, type ChildCareKind } from "@/lib/stores/commandCenterStore";
 
 const KINDS: { id: ChildCareKind; label: string; icon: typeof Baby }[] = [
-  { id: "infant", label: "Infant care (under 18 months)", icon: Baby },
   { id: "any", label: "Any licensed centre", icon: Building2 },
-  { id: "cwelcc", label: "$10-a-day centre", icon: BadgeDollarSign },
+  { id: "infant", label: "Infant care (Toronto only)", icon: Baby },
+  { id: "cwelcc", label: "$10-a-day centre (Toronto only)", icon: BadgeDollarSign },
 ];
 
 const DISTANCES: { km: number; label: string }[] = [
@@ -130,7 +131,7 @@ export default function ChildCareFilter() {
         </button>
       </div>
       <p className="mt-3 text-[9px] leading-tight text-muted-foreground">
-        Toronto only · City of Toronto licensed centres. Spaces are licensed capacity, not open spots.
+        Infant care and $10-a-day: City of Toronto data. Elsewhere: Ontario licensed centres, approximate locations.
       </p>
     </div>
   );

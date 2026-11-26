@@ -1751,8 +1751,9 @@ export default async function PropertyPage({
                 <NearbyAmenities listingId={id} />
               </MobileCollapse>
 
-              {/* Licensed child care — Toronto only (the one city that publishes spaces by age). */}
-              {!isCommercial && isToronto && (
+              {/* Licensed child care — City of Toronto data (spaces by age) in Toronto, the
+                  Ontario ministry list elsewhere. The card renders nothing outside coverage. */}
+              {!isCommercial && (
                 <MobileCollapse id="area-childcare" title="Child care" sub="Licensed centres within 1 km">
                   <NearbyChildCare listingId={id} />
                 </MobileCollapse>

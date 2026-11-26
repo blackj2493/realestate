@@ -12,6 +12,10 @@ describe("childCareFilterClause", () => {
     expect(childCareFilterClause({ enabled: true, kind: "cwelcc", maxKm: 2 })).toBe("NearestCwelccKm:<=2");
   });
 
+  it("falls back to any licensed centre for an unknown kind (e.g. an old saved state)", () => {
+    expect(childCareFilterClause({ enabled: true, kind: "bogus" as never, maxKm: 1 })).toBe("NearestChildCareKm:<=1");
+  });
+
   it("is null for a nonsense distance", () => {
     expect(childCareFilterClause({ enabled: true, kind: "any", maxKm: 0 })).toBeNull();
     expect(childCareFilterClause({ enabled: true, kind: "any", maxKm: NaN })).toBeNull();

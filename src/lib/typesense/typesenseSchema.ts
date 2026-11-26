@@ -196,11 +196,12 @@ export const indexedFields: IndexedField[] = [
   { name: 'NearestGroceryKm', type: 'float', facet: false, sort: true, optional: true },
   { name: 'NearestRecCentreKm', type: 'float', facet: false, sort: true, optional: true },
 
-  // ─── Licensed child care proximity (City of Toronto, Toronto only) ─────────
+  // ─── Licensed child care proximity (City of Toronto + Ontario ministry list) ─
   // Straight-line km to the nearest centre with infant/toddler/preschool spaces, with
   // infant spaces, and in the $10-a-day program. NO_CHILD_CARE_KM (99) sentinel when none
-  // within 5 km; outside Toronto the backfill leaves them missing. Either way `<=X` never
-  // false-matches. optional: backfilled in place on existing documents.
+  // within 5 km. NearestChildCareKm also counts the Ontario ministry centres outside
+  // Toronto; the infant and $10-a-day fields are Toronto only. `<=X` never false-matches.
+  // optional: backfilled in place on existing documents.
   { name: 'NearestChildCareKm', type: 'float', facet: false, sort: true, optional: true },
   { name: 'NearestInfantCareKm', type: 'float', facet: false, sort: true, optional: true },
   { name: 'NearestCwelccKm', type: 'float', facet: false, sort: true, optional: true },
@@ -397,7 +398,7 @@ export const typesenseSchema = {
     { name: 'NearestGroceryKm', type: 'float' as const, facet: false, sort: true, optional: true },
     { name: 'NearestRecCentreKm', type: 'float' as const, facet: false, sort: true, optional: true },
 
-    // ─── Licensed child care proximity — Toronto only (NO_CHILD_CARE_KM sentinel) ──
+    // ─── Licensed child care proximity — any: Ontario; infant / $10-a-day: Toronto (99 sentinel) ──
     { name: 'NearestChildCareKm', type: 'float' as const, facet: false, sort: true, optional: true },
     { name: 'NearestInfantCareKm', type: 'float' as const, facet: false, sort: true, optional: true },
     { name: 'NearestCwelccKm', type: 'float' as const, facet: false, sort: true, optional: true },
@@ -665,7 +666,7 @@ export interface TypesensePropertyDocument {
   // ─── Licensed child care proximity (City of Toronto) ──────────────────────
   /** Straight-line km to the nearest centre with infant/toddler/preschool spaces, with
    *  infant spaces, and in the $10-a-day program. NO_CHILD_CARE_KM (99) when none within
-   *  5 km; missing outside Toronto. */
+   *  5 km. Any: Toronto + Ontario centres; infant / $10-a-day: Toronto only. */
   NearestChildCareKm?: number;
   NearestInfantCareKm?: number;
   NearestCwelccKm?: number;
