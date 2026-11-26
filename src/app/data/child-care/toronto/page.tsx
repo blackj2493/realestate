@@ -24,6 +24,7 @@ import {
 } from "@/lib/childcare/childCarePage";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
+import { DATA_PUBLISHER } from "@/lib/seo/publisher";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const CANONICAL = `${SITE_URL}${CHILD_CARE_PATH}`;
@@ -103,7 +104,8 @@ export default function TorontoChildCarePage() {
     url: CANONICAL,
     dateModified: file.updated,
     isAccessibleForFree: true,
-    creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
+    creator: DATA_PUBLISHER,
+    publisher: DATA_PUBLISHER,
     spatialCoverage: { "@type": "Place", name: "Toronto, Ontario, Canada" },
     measurementTechnique: "Licensed infant, toddler and preschool spaces of each centre, summed by the neighbourhood that contains it, divided by children aged 0 to 4 (2021 Census). " + CHILD_CARE_SOURCE_LINE,
     variableMeasured: [

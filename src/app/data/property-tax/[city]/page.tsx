@@ -29,6 +29,7 @@ import {
 import { titleYear } from "@/lib/seo/titleYear";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
+import { DATA_PUBLISHER } from "@/lib/seo/publisher";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const dynamicParams = false;
@@ -150,7 +151,8 @@ export default async function PropertyTaxCityPage({ params }: { params: Promise<
     dateModified: updatedIso,
     temporalCoverage: `${file.from}/${file.to}`,
     isAccessibleForFree: true,
-    creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
+    creator: DATA_PUBLISHER,
+    publisher: DATA_PUBLISHER,
     spatialCoverage: { "@type": "Place", name: `${c.city}, Ontario, Canada` },
     measurementTechnique: TAX_SOURCE_LINE,
     variableMeasured: facts.measures.map((m) => ({ "@type": "PropertyValue", ...m })),

@@ -25,6 +25,7 @@ import {
 import type { Effect } from "@/lib/data/basementValueModel";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
+import { DATA_PUBLISHER } from "@/lib/seo/publisher";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 const TITLE = "Does a Finished Basement Add Value in Ontario?";
@@ -109,7 +110,8 @@ export default function BasementValueIndexPage() {
     dateModified: updatedIso,
     temporalCoverage: `${file.salesFrom}/${file.salesTo}`,
     isAccessibleForFree: true,
-    creator: { "@type": "Organization", name: "PureProperty", url: "https://www.pureproperty.ca" },
+    creator: DATA_PUBLISHER,
+    publisher: DATA_PUBLISHER,
     spatialCoverage: { "@type": "Place", name: "Ontario, Canada" },
     measurementTechnique: "Within-community comparison of similar houses (log-price regression), cluster bootstrap 95% ranges. " + BASEMENT_SOURCE_LINE,
     variableMeasured: ranked.map((c) => ({ "@type": "PropertyValue", name: `Finished basement price gap, ${c.city}`, value: Math.round(c.modelA!.effects.fin.pct * 10) / 10, unitText: "percent" })),

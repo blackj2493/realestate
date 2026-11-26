@@ -6,6 +6,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowUpRight, Home, Quote, Search } from "lucide-react";
+import { METHODOLOGY_PATH } from "@/lib/seo/publisher";
 import CopyCitation from "./CopyCitation";
 
 /**
@@ -163,6 +164,7 @@ export function CiteBox({ citation }: { citation: string }) {
           <p className="mt-1 break-words text-xs text-muted-foreground">{citation}</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <CopyCitation text={citation} />
+            <Link href={METHODOLOGY_PATH} className="text-xs underline hover:text-foreground">How we calculate these figures</Link>
             <Link href="/data/for-journalists" className="text-xs underline hover:text-foreground">For journalists: custom city figures</Link>
           </div>
         </div>
