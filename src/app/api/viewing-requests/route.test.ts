@@ -18,6 +18,10 @@ const sendSpy = vi.fn().mockResolvedValue({ sent: true });
 vi.mock('@/lib/alerts/sendEmail', () => ({
   sendTransactionalEmail: (...args: unknown[]) => sendSpy(...args),
 }));
+const telegramSpy = vi.fn().mockResolvedValue({ sent: true });
+vi.mock('@/lib/alerts/leadTelegram', () => ({
+  notifyLeadTelegram: (...args: unknown[]) => telegramSpy(...args),
+}));
 vi.mock('@/lib/alerts/leadFollowUpEmail', () => ({
   sendLeadFollowUp: vi.fn().mockResolvedValue({ sent: true }),
 }));
@@ -43,6 +47,8 @@ beforeEach(() => {
   insertSpy.mockResolvedValue({ error: null });
   sendSpy.mockReset();
   sendSpy.mockResolvedValue({ sent: true });
+  telegramSpy.mockReset();
+  telegramSpy.mockResolvedValue({ sent: true });
 });
 
 describe('POST /api/viewing-requests', () => {
@@ -211,5 +217,41 @@ describe('POST /api/viewing-requests', () => {
     expect(sendSpy).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'notification:viewing-request' })
     );
+  });
+
+  it('price check → the lead goes to Telegram with its qualifiers', async () => {
+    const res = await POST(makeReq({
+      listingKey: 'W14185390',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      intent: 'price_opinion',
+      timeline: 'Ready to make an offer',
+      hasAgent: 'Yes',
+      message: 'is 1.995M fair?',
+    }) as never);
+
+    expect(res.status).toBe(200);
+    expect(telegramSpy).toHaveBeenCalledTimes(1);
+    expect(telegramSpy).toHaveBeenCalledWith(expect.objectContaining({
+      label: 'Price second-opinion',
+      listingKey: 'W14185390',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      timeline: 'Ready to make an offer',
+      hasAgent: 'Yes',
+      message: 'is 1.995M fair?',
+    }));
+  });
+
+  it('Telegram not sent → still returns 200 (Telegram is best-effort)', async () => {
+    telegramSpy.mockResolvedValueOnce({ sent: false });
+    const res = await POST(makeReq({ listingKey: 'W12632618', name: 'Jane Doe', email: 'jane@example.com' }) as never);
+    expect(res.status).toBe(200);
+    expect(insertSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejected request → nothing goes to Telegram', async () => {
+    await POST(makeReq({ listingKey: 'bad', name: 'Jane Doe', email: 'jane@example.com' }) as never);
+    expect(telegramSpy).not.toHaveBeenCalled();
   });
 });
