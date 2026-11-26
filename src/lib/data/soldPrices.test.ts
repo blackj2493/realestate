@@ -23,7 +23,8 @@ const file: SoldPricesFile = { generatedAt: "2026-11-25T12:00:00Z", from: "2025-
 describe("soldPrices", () => {
   it("states the median, sale-to-asking, types, bedrooms and the community range", () => {
     const f = buildSoldFacts(city, file, 2026)!;
-    expect(f.title).toBe("Testville Sold Prices 2026: Median Sold Price by Neighbourhood and Home Type");
+    expect(f.title).toBe("Average House Price in Testville (2026): Sold Prices by Neighbourhood and Home Type");
+    expect(f.faqs[0].q).toBe("What is the average house price in Testville?");
     expect(f.facts[0].text).toContain("median $800,000 (5,000 sales, Nov 2025 to Oct 2026), at a median 97.0% of the asking price; 15% sold over asking");
     expect(f.facts.find((x) => x.id === "types")!.text).toContain("detached houses $1,200,000");
     expect(f.facts.find((x) => x.id === "beds")!.text).toContain("4 bedrooms $1,500,000");

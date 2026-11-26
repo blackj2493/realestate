@@ -21,7 +21,7 @@ const SHORT: Record<string, string> = { detached: "Detached", semiTown: "Semi & 
 function load() {
   const file = getSoldData();
   const ranked = rankedSoldCities(file);
-  const title = `Ontario Sold Home Prices ${titleYear()} by City: Median Sold Price by Home Type`;
+  const title = `Average House Prices in Ontario by City (${titleYear()}): Sold Prices by Home Type`;
   const sales = ranked.reduce((s, c) => s + c.all.sales, 0);
   const det = ranked.filter((c) => c.byType.detached?.medianPrice).sort((x, y) => y.byType.detached!.medianPrice! - x.byType.detached!.medianPrice!);
   const summary =
