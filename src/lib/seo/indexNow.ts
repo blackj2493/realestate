@@ -20,6 +20,7 @@ import { getCityMarkets } from "@/lib/data/cityMarkets";
 import { getBasementData } from "@/lib/data/basementValue";
 import { getPriceChangeData } from "@/lib/data/priceChange";
 import { getCondoData } from "@/lib/data/condoPrices";
+import { landTransferTaxPath, lttCities } from "@/lib/data/landTransferTaxPages";
 import { getTaxData } from "@/lib/data/propertyTax";
 import { getSchoolData } from "@/lib/data/schoolPrices";
 import { getSoldData } from "@/lib/data/soldPrices";
@@ -53,8 +54,9 @@ export function nightlyPaths(): string[] {
   const basement = ["/data/basement-value", ...getBasementData().cities.filter((c) => c.modelA).map((c) => `/data/basement-value/${c.slug}`)];
   const priceChange = ["/data/price-change", ...getPriceChangeData().cities.filter((c) => c.all).map((c) => `/data/price-change/${c.slug}`)];
   const condo = ["/data/condo-prices", ...getCondoData().cities.map((c) => `/data/condo-prices/${c.slug}`)];
+  const ltt = [landTransferTaxPath(), ...lttCities().map((c) => landTransferTaxPath(c.slug))];
   const tax = ["/data/property-tax", ...getTaxData().cities.map((c) => `/data/property-tax/${c.slug}`)];
-  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling, ...dom, ...basement, ...priceChange, ...condo, ...tax, "/data/good-time-to-buy", ...[...OUTLOOK_CITIES, ...getCityMarkets().cities].map((c) => `/data/good-time-to-buy/${c.slug}`), ...[...OUTLOOK_CITIES, ...getCityMarkets().cities].map((c) => `/data/rent-vs-buy/${c.slug}`), "/data/school-catchment-prices", ...getSchoolData().cities.map((c) => `/data/school-catchment-prices/${c.slug}`), "/data/sold-prices", ...getSoldData().cities.map((c) => `/data/sold-prices/${c.slug}`), "/data/best-time-to-sell", ...getBestTimeData().cities.map((c) => `/data/best-time-to-sell/${c.slug}`)])];
+  return [...new Set([...hubs, ...data, ...outlook, ...homeValue, ...pos, ...notSelling, ...dom, ...basement, ...priceChange, ...condo, ...ltt, ...tax, "/data/good-time-to-buy", ...[...OUTLOOK_CITIES, ...getCityMarkets().cities].map((c) => `/data/good-time-to-buy/${c.slug}`), ...[...OUTLOOK_CITIES, ...getCityMarkets().cities].map((c) => `/data/rent-vs-buy/${c.slug}`), "/data/school-catchment-prices", ...getSchoolData().cities.map((c) => `/data/school-catchment-prices/${c.slug}`), "/data/sold-prices", ...getSoldData().cities.map((c) => `/data/sold-prices/${c.slug}`), "/data/best-time-to-sell", ...getBestTimeData().cities.map((c) => `/data/best-time-to-sell/${c.slug}`)])];
 }
 
 /** The listing page path: the stored canonical, else the legacy key path (same fallback as the sitemap). */

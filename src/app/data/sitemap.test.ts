@@ -9,6 +9,7 @@ import { basementValuePath, getBasementData } from '@/lib/data/basementValue';
 import { getPriceChangeData, priceChangePath } from '@/lib/data/priceChange';
 import { CHILD_CARE_PATH } from '@/lib/childcare/paths';
 import { condoPricesPath, getCondoData } from '@/lib/data/condoPrices';
+import { landTransferTaxPath, lttCities } from '@/lib/data/landTransferTaxPages';
 import { getTaxData, propertyTaxPath } from '@/lib/data/propertyTax';
 import { getSchoolData } from '@/lib/data/schoolPrices';
 import { getSoldData } from '@/lib/data/soldPrices';
@@ -31,11 +32,12 @@ describe('/data/sitemap.xml', () => {
     for (const c of basementCities) expect(urls).toContain(`${SITE}${basementValuePath(c.slug)}`);
     const priceCities = getPriceChangeData().cities.filter((c) => c.all);
     for (const c of getCondoData().cities) expect(urls).toContain(`${SITE}${condoPricesPath(c.slug)}`);
+    for (const c of lttCities()) expect(urls).toContain(`${SITE}${landTransferTaxPath(c.slug)}`);
     for (const c of getTaxData().cities) expect(urls).toContain(`${SITE}${propertyTaxPath(c.slug)}`);
     expect(urls).toContain(`${SITE}${priceChangePath()}`);
     for (const c of priceCities) expect(urls).toContain(`${SITE}${priceChangePath(c.slug)}`);
     expect(urls).toContain(`${SITE}${CHILD_CARE_PATH}`);
-    expect(urls).toHaveLength(1 /* child care, Toronto */ + 3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 2 + OUTLOOK_CITIES.length * 2 + getCityMarkets().cities.length * 3 + OUTLOOK_CITIES.length + getCityMarkets().cities.length + 1 + basementCities.length + 1 + priceCities.length + 1 + getCondoData().cities.length + 1 + OUTLOOK_CITIES.length + 1 + getSchoolData().cities.length + 1 + getSoldData().cities.length + 1 + getBestTimeData().cities.length + 1 + getTaxData().cities.length);
+    expect(urls).toHaveLength(1 /* child care, Toronto */ + 3 + LIVE_TRACKERS.length + LIVE_FINDINGS.length + 2 + OUTLOOK_CITIES.length * 2 + getCityMarkets().cities.length * 3 + OUTLOOK_CITIES.length + getCityMarkets().cities.length + 1 + basementCities.length + 1 + priceCities.length + 1 + getCondoData().cities.length + 1 + OUTLOOK_CITIES.length + 1 + getSchoolData().cities.length + 1 + getSoldData().cities.length + 1 + getBestTimeData().cities.length + 1 + lttCities().length + 1 + getTaxData().cities.length);
   });
 
   it('declares only /data URLs, so its coverage number means one thing', () => {
