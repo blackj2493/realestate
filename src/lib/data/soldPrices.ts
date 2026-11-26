@@ -80,9 +80,15 @@ export function buildSoldFacts(c: SoldCity, file: SoldPricesFile, year: number):
     });
   }
 
-  const title = `${c.city} Sold Prices ${year}: Median Sold Price by Neighbourhood and Home Type`;
+  // "average house price in {city}" is how people search (Google autocomplete 2026-11-26: Toronto,
+  // Vaughan, Ottawa, London, Hamilton). The figures stay medians; the first FAQ says why.
+  const title = `Average House Price in ${c.city} (${year}): Sold Prices by Neighbourhood and Home Type`;
   const summary = `${facts[0].text}${facts.find((f) => f.id === "types") ? ` ${facts.find((f) => f.id === "types")!.text}` : ""}`;
   const faqs = [
+    {
+      q: `What is the average house price in ${c.city}?`,
+      a: `${summary} These are medians: half the homes sold for more and half for less. We use the median because a few very expensive sales pull a plain average up.`,
+    },
     { q: `What are homes selling for in ${c.city}?`, a: summary },
     ...(c.byType.detached?.medianPrice ? [{ q: `What is the median sold price of a detached house in ${c.city}?`, a: [`${money(c.byType.detached.medianPrice)} (${c.byType.detached.sales.toLocaleString("en-CA")} sales, ${window}).`, facts.find((f) => f.id === "beds")?.text].filter(Boolean).join(" ") }] : []),
     ...(change ? [{ q: `Are sold prices in ${c.city} going down?`, a: facts.find((f) => f.id === "change")!.text }] : []),
