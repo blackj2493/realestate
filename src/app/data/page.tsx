@@ -13,6 +13,8 @@ import { getRentBoard } from "@/lib/data/rentBoard";
 import { getCondoFeeBoard } from "@/lib/data/condoFeeBoard";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
+import { reportPath } from "@/lib/data/reportPaths";
+import { latestEdition } from "@/lib/data/reportEditions";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -177,6 +179,18 @@ export default async function DataHubPage() {
             figure is an aggregate from live MLS® data, rebuilt nightly. Free to cite and embed.
           </p>
         </header>
+
+        {/* The monthly report: the dated, frozen edition journalists and AI answers can cite. */}
+        <Link
+          href={reportPath(latestEdition().edition)}
+          className="mb-10 flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-border bg-card/60 px-4 py-3 transition-colors hover:bg-card"
+        >
+          <span>
+            <span className="terminal-font block text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">Monthly report</span>
+            <span className="font-semibold text-foreground">{latestEdition().title}</span>
+          </span>
+          <span className="text-sm font-medium text-cyan-700 dark:text-cyan-400">Read the report →</span>
+        </Link>
 
         {figures.length > 0 && (
           <section className="mb-10" aria-labelledby="key-figures">

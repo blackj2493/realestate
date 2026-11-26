@@ -19,6 +19,8 @@ import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice"
 import { TRACKERS } from "@/lib/data/trackers";
 import { ogImageUrl } from "@/lib/og/ogImageUrl";
 import { metaDescription } from "@/lib/seo/metaDescription";
+import { reportPath } from "@/lib/data/reportPaths";
+import { latestEdition } from "@/lib/data/reportEditions";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.pureproperty.ca").replace(/\/$/, "");
 export const revalidate = 3600;
@@ -117,6 +119,18 @@ export default function ForJournalistsPage() {
             monthly reports that circulate on price cuts, over-asking and rents are Toronto-area only, so
             for most Ontario towns there is no published figure for these at all. Ask and we&apos;ll cut
             your market.
+          </p>
+          <p className={P}>
+            <strong>Monthly report.</strong> Each month we publish the{" "}
+            <Link href={reportPath()} className="underline underline-offset-4">
+              Ontario Housing Market Report
+            </Link>
+            : prices against similar homes a year earlier, sales, price cuts and power of sale for 15 cities. Each edition keeps its own
+            address and never changes, so a figure you quote keeps its source. Latest:{" "}
+            <Link href={reportPath(latestEdition().edition)} className="underline underline-offset-4">
+              {latestEdition().label}
+            </Link>
+            .
           </p>
           <ul className="mt-4 space-y-3">
             {live.map((t) => (

@@ -1,0 +1,336 @@
+{
+ "edition": "2026-11",
+ "label": "November 2026",
+ "title": "Ontario Housing Market Report: November 2026",
+ "publishedAt": "2026-11-26T16:11:47.242Z",
+ "dataAsOf": "2026-11-26T04:42:51.089Z",
+ "span": "August to October 2026",
+ "lastMonth": "October 2026",
+ "summary": "From November 2025 to October 2026, Ontario homes sold for 6.8% less than similar homes in the same areas a year earlier. In the last 12 months, 76% of homes sold in the 15 cities in this report sold for less than their first asking price.",
+ "findings": [
+  {
+   "id": "same_home",
+   "audience": "Owners",
+   "title": "Homes sell for less than a year ago",
+   "text": "From November 2025 to October 2026, Ontario homes sold for 6.8% less than similar homes in the same areas a year earlier. Condo apartments: −9.2%; detached houses: −5.6%. The drop is getting smaller: −8.2% in Q1 2026, −6.2% in Q3 2026."
+  },
+  {
+   "id": "room",
+   "audience": "Buyers",
+   "title": "Buyers have room to negotiate",
+   "text": "In the last 12 months, 76% of homes sold in the 15 cities in this report sold for less than their first asking price. Of the 27,933 homes for sale there now, 29% have cut their price."
+  },
+  {
+   "id": "sales",
+   "audience": "Sellers",
+   "title": "More homes are selling",
+   "text": "17,385 homes sold in the 15 cities in this report from August to October 2026, 14% more than in the same months a year earlier. The change ranged from +24% in Markham to −5% in Ajax."
+  },
+  {
+   "id": "city_prices",
+   "audience": "Sellers",
+   "title": "The median price fell in 14 of 15 cities",
+   "text": "From August to October 2026, the median sale price was lower than a year earlier in 14 of 15 cities. The largest drop was in Oshawa (−9.1%, to $635,000); Oakville rose 1.7%. Medians move with the mix of homes sold."
+  },
+  {
+   "id": "power_of_sale",
+   "audience": "Owners",
+   "title": "More sales are power of sale",
+   "text": "From August to October 2026, 158 of 36,125 Ontario home sales (0.44%) were power of sale, up from 0.29% a year earlier. That is still a small share of the market."
+  }
+ ],
+ "sameHome": {
+  "window": "November 2025 to October 2026",
+  "earlierWindow": "November 2024 to October 2025",
+  "pct": -6.8,
+  "lo": -7,
+  "hi": -6.6,
+  "significant": true,
+  "shareDownPct": 86,
+  "detachedPct": -5.6,
+  "condoAptPct": -9.2,
+  "quarters": [
+   {
+    "label": "Q3 2025",
+    "pct": -6.2
+   },
+   {
+    "label": "Q4 2025",
+    "pct": -7.7
+   },
+   {
+    "label": "Q1 2026",
+    "pct": -8.2
+   },
+   {
+    "label": "Q2 2026",
+    "pct": -6.7
+   },
+   {
+    "label": "Q3 2026",
+    "pct": -6.2
+   }
+  ]
+ },
+ "combined": {
+  "cities": 15,
+  "sales3m": 17385,
+  "salesBefore": 15242,
+  "salesYoYPct": 14.1,
+  "underAskPct": 76.1,
+  "cutPct": 29.4,
+  "forSale": 27933
+ },
+ "pos": {
+  "from": "August",
+  "to": "October 2026",
+  "sharePct": 0.44,
+  "prevSharePct": 0.29,
+  "pos": 158,
+  "sales": 36125
+ },
+ "cities": [
+  {
+   "city": "Toronto",
+   "slug": "toronto",
+   "medianPrice": 813584,
+   "priceYoYPct": -2.7,
+   "sales3m": 6013,
+   "salesYoYPct": 18.5,
+   "saleToAskPct": 98.5,
+   "medianDom": 21,
+   "cutPct": 27,
+   "underAskPct": 73,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Ottawa",
+   "slug": "ottawa",
+   "medianPrice": 631546,
+   "priceYoYPct": -2,
+   "sales3m": 2701,
+   "salesYoYPct": 10.9,
+   "saleToAskPct": 97.5,
+   "medianDom": 24,
+   "cutPct": 30,
+   "underAskPct": 79,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Mississauga",
+   "slug": "mississauga",
+   "medianPrice": 850266,
+   "priceYoYPct": -4.2,
+   "sales3m": 1411,
+   "salesYoYPct": 20.8,
+   "saleToAskPct": 97.4,
+   "medianDom": 24,
+   "cutPct": 31,
+   "underAskPct": 80,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Brampton",
+   "slug": "brampton",
+   "medianPrice": 809471,
+   "priceYoYPct": -6.3,
+   "sales3m": 1261,
+   "salesYoYPct": 20.6,
+   "saleToAskPct": 97.5,
+   "medianDom": 22,
+   "cutPct": 33,
+   "underAskPct": 78,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Hamilton",
+   "slug": "hamilton",
+   "medianPrice": 661111,
+   "priceYoYPct": -7.2,
+   "sales3m": 1161,
+   "salesYoYPct": 10.5,
+   "saleToAskPct": 96.8,
+   "medianDom": 28,
+   "cutPct": 28,
+   "underAskPct": 85,
+   "marketType": "buyer's market"
+  },
+  {
+   "city": "Markham",
+   "slug": "markham",
+   "medianPrice": 1069396,
+   "priceYoYPct": -5.9,
+   "sales3m": 793,
+   "salesYoYPct": 23.7,
+   "saleToAskPct": 99.1,
+   "medianDom": 21,
+   "cutPct": 26,
+   "underAskPct": 66,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Vaughan",
+   "slug": "vaughan",
+   "medianPrice": 1125225,
+   "priceYoYPct": -3.5,
+   "sales3m": 728,
+   "salesYoYPct": 8.7,
+   "saleToAskPct": 97.3,
+   "medianDom": 23,
+   "cutPct": 28,
+   "underAskPct": 78,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Burlington",
+   "slug": "burlington",
+   "medianPrice": 889535,
+   "priceYoYPct": -6.1,
+   "sales3m": 595,
+   "salesYoYPct": 14.2,
+   "saleToAskPct": 97.3,
+   "medianDom": 22,
+   "cutPct": 33,
+   "underAskPct": 82,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Oakville",
+   "slug": "oakville",
+   "medianPrice": 1197663,
+   "priceYoYPct": 1.7,
+   "sales3m": 560,
+   "salesYoYPct": -0.7,
+   "saleToAskPct": 96.2,
+   "medianDom": 24,
+   "cutPct": 34,
+   "underAskPct": 85,
+   "marketType": "buyer's market"
+  },
+  {
+   "city": "Richmond Hill",
+   "slug": "richmond-hill",
+   "medianPrice": 1098867,
+   "priceYoYPct": -5.6,
+   "sales3m": 524,
+   "salesYoYPct": 16.4,
+   "saleToAskPct": 98.1,
+   "medianDom": 24,
+   "cutPct": 32,
+   "underAskPct": 69,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Oshawa",
+   "slug": "oshawa",
+   "medianPrice": 634576,
+   "priceYoYPct": -9.1,
+   "sales3m": 432,
+   "salesYoYPct": 0.2,
+   "saleToAskPct": 98.4,
+   "medianDom": 19,
+   "cutPct": 34,
+   "underAskPct": 71,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Milton",
+   "slug": "milton",
+   "medianPrice": 898828,
+   "priceYoYPct": -4.3,
+   "sales3m": 369,
+   "salesYoYPct": 4.2,
+   "saleToAskPct": 97.6,
+   "medianDom": 21,
+   "cutPct": 34,
+   "underAskPct": 78,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Whitby",
+   "slug": "whitby",
+   "medianPrice": 836768,
+   "priceYoYPct": -3.1,
+   "sales3m": 328,
+   "salesYoYPct": 3.1,
+   "saleToAskPct": 98.9,
+   "medianDom": 16,
+   "cutPct": 31,
+   "underAskPct": 71,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Pickering",
+   "slug": "pickering",
+   "medianPrice": 819574,
+   "priceYoYPct": -5.9,
+   "sales3m": 282,
+   "salesYoYPct": 1.4,
+   "saleToAskPct": 98.8,
+   "medianDom": 19,
+   "cutPct": 31,
+   "underAskPct": 68,
+   "marketType": "balanced market"
+  },
+  {
+   "city": "Ajax",
+   "slug": "ajax",
+   "medianPrice": 797088,
+   "priceYoYPct": -7,
+   "sales3m": 227,
+   "salesYoYPct": -5.4,
+   "saleToAskPct": 99,
+   "medianDom": 17,
+   "cutPct": 27,
+   "underAskPct": 66,
+   "marketType": "balanced market"
+  }
+ ],
+ "forecasts": {
+  "year": 2027,
+  "forecasts": [
+   {
+    "source": "Desjardins",
+    "report": "Canadian Housing Outlook",
+    "url": "https://www.desjardins.com/en/savings-investment/economic-studies/canada-housing-outlook-november-16-2026.html",
+    "published": "2026-11-16",
+    "year": 2027,
+    "pricePct": 2.3,
+    "salesPct": 4.6
+   },
+   {
+    "source": "CREA",
+    "report": "Resale housing market forecast",
+    "url": "https://www.globenewswire.com/news-release/2026/10/16/3382342/0/en/crea-revises-resale-housing-market-forecast.html",
+    "published": "2026-10-16",
+    "year": 2027,
+    "pricePct": 0.7,
+    "salesPct": 5.3
+   },
+   {
+    "source": "TD Economics",
+    "report": "Provincial Resale Market Outlook",
+    "url": "https://economics.td.com/ca-provincial-housing-outlook",
+    "published": "2026-09-29",
+    "year": 2027,
+    "pricePct": 0.6,
+    "salesPct": 7.4
+   },
+   {
+    "source": "RBC Economics",
+    "report": "Mid-year outlook for Canada's housing market",
+    "url": "https://www.rbc.com/en/economics/canadian-analysis/canadian-housing/special-housing-reports/mid-year-outlook-for-canadas-housing-market-between-correction-and-recovery/",
+    "published": "2026-09-01",
+    "year": 2027,
+    "pricePct": 0.7,
+    "priceMeasure": "the RPS home price index",
+    "salesPct": 8.2
+   }
+  ],
+  "priceLow": 0.6,
+  "priceHigh": 2.3,
+  "salesLow": 4.6,
+  "salesHigh": 8.2,
+  "publishedSpan": "September to November 2026"
+ }
+}
