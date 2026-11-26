@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: `${TITLE} | PureProperty`,
   description: metaDescription(DESCRIPTION),
   alternates: { canonical: `${SITE_URL}/home-value` },
-  openGraph: { title: TITLE, description: DESCRIPTION, url: `${SITE_URL}/home-value`, siteName: "PureProperty", type: "website" },
+  openGraph: { title: TITLE, description: metaDescription(DESCRIPTION), url: `${SITE_URL}/home-value`, siteName: "PureProperty", type: "website" },
 };
 
 export default function HomeValueIndex() {

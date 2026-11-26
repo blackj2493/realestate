@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOutlook, outlookYear } from "./marketOutlook";
+import { buildOutlook, outlookTitle, outlookYear } from "./marketOutlook";
 import type { MarketRow } from "./marketBoard";
 
 const months = (from: string, n: number) => {
@@ -74,7 +74,8 @@ describe("buildOutlook", () => {
 
   it("answers the searched questions without forecasting", () => {
     const o = buildOutlook("Toronto", row(), AS_OF)!;
-    expect(o.title).toBe("Toronto Housing Market 2027: What the Data Shows Now");
+    expect(o.title).toBe("Toronto Housing Market Report (November 2026) and 2027 Outlook");
+    expect(outlookTitle("Toronto", "2027-03-02T08:00:00.000Z")).toBe("Toronto Housing Market Report (March 2027)");
     const drop = o.faqs.find((f) => f.q === "Will house prices drop in Toronto in 2027?")!;
     expect(drop.a.startsWith("No one can know future prices, and PureProperty does not forecast them.")).toBe(true);
     expect(o.faqs.map((f) => f.q)).toContain("Is the Toronto housing market crashing?");

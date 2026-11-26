@@ -114,7 +114,7 @@ export async function generateMetadata({
     title,
     description: metaDescription(description),
     alternates: { canonical },
-    openGraph: { title: pub.address, description, url: canonical, siteName: "PureProperty", type: "website" },
+    openGraph: { title: pub.address, description: metaDescription(description), url: canonical, siteName: "PureProperty", type: "website" },
   };
 }
 

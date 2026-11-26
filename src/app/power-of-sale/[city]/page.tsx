@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
     alternates: { canonical },
     // Thin non-board pages are not indexed (same floor as the city hubs).
     robots: data.board || data.totalFound >= MIN_POS_CITY ? undefined : { index: false, follow: true },
-    openGraph: { title, description: data.facts.summary.slice(0, 300), url: canonical, siteName: "PureProperty", type: "website" },
+    openGraph: { title, description: metaDescription(data.facts.summary), url: canonical, siteName: "PureProperty", type: "website" },
   };
 }
 

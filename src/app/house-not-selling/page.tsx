@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: `${title} | PureProperty`,
     description: metaDescription(facts.summary.slice(0, 300)),
     alternates: { canonical: `${SITE_URL}/house-not-selling` },
-    openGraph: { title, description: facts.summary.slice(0, 300), url: `${SITE_URL}/house-not-selling`, siteName: "PureProperty", type: "website" },
+    openGraph: { title, description: metaDescription(facts.summary), url: `${SITE_URL}/house-not-selling`, siteName: "PureProperty", type: "website" },
   };
 }
 
