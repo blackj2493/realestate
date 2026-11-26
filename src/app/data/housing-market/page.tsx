@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getMarketBoard } from "@/lib/data/marketBoard";
 import { boardRowFor } from "@/lib/data/cityFacts";
-import { buildOutlook, outlookYear } from "@/lib/data/marketOutlook";
+import { buildOutlook, outlookTitle, outlookYear } from "@/lib/data/marketOutlook";
 import { OUTLOOK_CITIES, outlookPath } from "@/lib/data/outlookCities";
 import { getCityMarkets, toMarketRow } from "@/lib/data/cityMarkets";
 import ListingComplianceNotice from "@/components/legal/ListingComplianceNotice";
@@ -21,34 +21,36 @@ function extraItems() {
   return f.cities.map((c) => ({ city: c.city, slug: c.slug, outlook: buildOutlook(c.city, toMarketRow(c), f.generatedAt) }));
 }
 
+const HUB_TITLE = "Ontario Housing Market Report";
+
 async function rows() {
   try {
     const board = await getMarketBoard();
     return {
       year: board.dataAsOf ? outlookYear(board.dataAsOf) : null,
+      title: board.dataAsOf ? outlookTitle("Ontario", board.dataAsOf) : HUB_TITLE,
       items: [...OUTLOOK_CITIES.map((c) => ({ ...c, outlook: buildOutlook(c.city, boardRowFor(board.rows, c.city), board.dataAsOf) })), ...extraItems()],
     };
   } catch {
-    return { year: null, items: [...OUTLOOK_CITIES.map((c) => ({ ...c, outlook: null })), ...extraItems()] };
+    return { year: null, title: HUB_TITLE, items: [...OUTLOOK_CITIES.map((c) => ({ ...c, outlook: null })), ...extraItems()] };
   }
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { year } = await rows();
-  const title = year ? `Ontario Housing Market ${year}: What the Data Shows Now` : "Ontario Housing Market: What the Data Shows Now";
+  const { title, items } = await rows();
   const description =
-    "Sale prices, sales, sale-to-asking ratios and price cuts for 26 Ontario cities against a year earlier, from MLS® data. No forecasts.";
+    `Sale prices, sales, sale-to-asking ratios and price cuts for ${items.length} Ontario cities against a year earlier, from MLS® data. No forecasts.`;
   return {
     metadataBase: new URL(SITE_URL),
     title: `${title} | PureProperty`,
     description: metaDescription(description),
     alternates: { canonical: `${SITE_URL}/data/housing-market` },
-    openGraph: { title, description, url: `${SITE_URL}/data/housing-market`, siteName: "PureProperty", type: "website" },
+    openGraph: { title, description: metaDescription(description), url: `${SITE_URL}/data/housing-market`, siteName: "PureProperty", type: "website" },
   };
 }
 
 export default async function HousingMarketIndex() {
-  const { year, items } = await rows();
+  const { year, title, items } = await rows();
   return (
     <main className="min-h-app bg-background text-foreground">
       <div className="mx-auto max-w-3xl px-4 py-8">
@@ -58,7 +60,7 @@ export default async function HousingMarketIndex() {
           <span className="text-foreground">Housing market</span>
         </nav>
         <h1 className="text-2xl font-bold sm:text-3xl">
-          {year ? `Ontario Housing Market ${year}: What the Data Shows Now` : "Ontario Housing Market: What the Data Shows Now"}
+          {title}
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           PureProperty does not forecast prices. Each city page shows the measures that forecasts are built from: prices and sales against a year

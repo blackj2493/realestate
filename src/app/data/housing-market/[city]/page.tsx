@@ -1,5 +1,5 @@
 /**
- * /data/housing-market/{city} — "{City} Housing Market {year}: What the Data Shows Now".
+ * /data/housing-market/{city} — "{City} Housing Market Report ({Month} {Year}) and {year} Outlook".
  *
  * Answers the most-searched housing question in every board city (forecast / crash /
  * good time to buy or sell) with measured indicators only — PureProperty does not
@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
   if (!data) return {};
   const { city, outlook } = data;
   const canonical = `${SITE_URL}${outlookPath(slug)}`;
-  const title = outlook?.title ?? `${city} Housing Market: What the Data Shows Now`;
+  const title = outlook?.title ?? `${city} Housing Market Report`;
   const description = outlook?.summary ?? `Sale prices, sales and price cuts in ${city}, from MLS® data, updated nightly.`;
   return {
     metadataBase: new URL(SITE_URL),

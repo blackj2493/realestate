@@ -52,6 +52,20 @@ export function outlookYear(dataAsOf: string): number {
   return m >= 9 ? y + 1 : y;
 }
 
+/**
+ * "Toronto Housing Market Report (November 2026) and 2027 Outlook". The pages that rank for
+ * "{city} housing market forecast {year}" (2026-11-25 check) are dated monthly reports:
+ * "{City} Housing Market Report — {Month} {Year}". The month is the refresh month; the page
+ * rebuilds hourly, so it turns over on the 1st. From January to August the two years are the
+ * same, and the title drops the outlook year.
+ */
+export function outlookTitle(place: string, dataAsOf: string): string {
+  const month = torontoMonth(dataAsOf);
+  const year = outlookYear(dataAsOf);
+  const report = `${place} Housing Market Report (${monthLabel(month)})`;
+  return year > Number(month.slice(0, 4)) ? `${report} and ${year} Outlook` : report;
+}
+
 type Point = MarketRow["monthly"][number];
 
 interface Window {
@@ -251,7 +265,7 @@ export function buildOutlook(city: string, row: MarketRow | null, dataAsOf: stri
   return {
     city,
     year,
-    title: `${city} Housing Market ${year}: What the Data Shows Now`,
+    title: outlookTitle(city, dataAsOf),
     summary,
     facts,
     typeText,

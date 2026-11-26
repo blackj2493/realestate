@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ city: str
     title: `${title} | PureProperty`,
     description: metaDescription(data.facts.summary.slice(0, 300)),
     alternates: { canonical },
-    openGraph: { title, description: data.facts.summary.slice(0, 300), url: canonical, siteName: "PureProperty", type: "website" },
+    openGraph: { title, description: metaDescription(data.facts.summary), url: canonical, siteName: "PureProperty", type: "website" },
   };
 }
 
