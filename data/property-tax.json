@@ -1,0 +1,8351 @@
+{
+ "generatedAt": "2026-11-26T11:19:47.985Z",
+ "from": "2025-11-01",
+ "to": "2026-11-01",
+ "cities": [
+  {
+   "city": "Toronto",
+   "slug": "toronto",
+   "taxYear": 2025,
+   "all": {
+    "sales": 20579,
+    "medianTax": 4170,
+    "lowTax": 2920,
+    "highTax": 6130,
+    "medianPrice": 825000,
+    "taxPer100k": 501
+   },
+   "byType": {
+    "detached": {
+     "sales": 6779,
+     "medianTax": 6230,
+     "lowTax": 4650,
+     "highTax": 9160,
+     "medianPrice": 1236000,
+     "taxPer100k": 498
+    },
+    "semi": {
+     "sales": 2273,
+     "medianTax": 5270,
+     "lowTax": 4300,
+     "highTax": 6730,
+     "medianPrice": 1088000,
+     "taxPer100k": 479
+    },
+    "town": {
+     "sales": 814,
+     "medianTax": 5410,
+     "lowTax": 4280,
+     "highTax": 6700,
+     "medianPrice": 1081000,
+     "taxPer100k": 500
+    },
+    "condoTown": {
+     "sales": 1252,
+     "medianTax": 3330,
+     "lowTax": 2780,
+     "highTax": 4120,
+     "medianPrice": 700000,
+     "taxPer100k": 474
+    },
+    "condoApt": {
+     "sales": 9461,
+     "medianTax": 2930,
+     "lowTax": 2340,
+     "highTax": 3790,
+     "medianPrice": 555000,
+     "taxPer100k": 513
+    }
+   },
+   "communities": [
+    {
+     "name": "Waterfront Communities C1",
+     "sales": 1144,
+     "medianTax": 3380,
+     "lowTax": 2750,
+     "highTax": 4340,
+     "medianPrice": 615000,
+     "taxPer100k": 541
+    },
+    {
+     "name": "Willowdale East",
+     "sales": 619,
+     "medianTax": 3440,
+     "lowTax": 2720,
+     "highTax": 5140,
+     "medianPrice": 630000,
+     "taxPer100k": 551
+    },
+    {
+     "name": "Mimico",
+     "sales": 553,
+     "medianTax": 3160,
+     "lowTax": 2520,
+     "highTax": 4470,
+     "medianPrice": 675000,
+     "taxPer100k": 465
+    },
+    {
+     "name": "Niagara",
+     "sales": 548,
+     "medianTax": 3080,
+     "lowTax": 2650,
+     "highTax": 3850,
+     "medianPrice": 618000,
+     "taxPer100k": 494
+    },
+    {
+     "name": "Islington-City Centre West",
+     "sales": 525,
+     "medianTax": 2800,
+     "lowTax": 2210,
+     "highTax": 5290,
+     "medianPrice": 585000,
+     "taxPer100k": 478
+    },
+    {
+     "name": "Church-Yonge Corridor",
+     "sales": 497,
+     "medianTax": 3470,
+     "lowTax": 2840,
+     "highTax": 4200,
+     "medianPrice": 575000,
+     "taxPer100k": 591
+    },
+    {
+     "name": "Bay Street Corridor",
+     "sales": 399,
+     "medianTax": 3620,
+     "lowTax": 3000,
+     "highTax": 4780,
+     "medianPrice": 588000,
+     "taxPer100k": 604
+    },
+    {
+     "name": "Mount Pleasant West",
+     "sales": 385,
+     "medianTax": 3560,
+     "lowTax": 3010,
+     "highTax": 4430,
+     "medianPrice": 629000,
+     "taxPer100k": 557
+    },
+    {
+     "name": "Waterfront Communities C8",
+     "sales": 346,
+     "medianTax": 3440,
+     "lowTax": 2770,
+     "highTax": 4350,
+     "medianPrice": 615000,
+     "taxPer100k": 554
+    },
+    {
+     "name": "Bayview Village",
+     "sales": 346,
+     "medianTax": 3240,
+     "lowTax": 2560,
+     "highTax": 5360,
+     "medianPrice": 611000,
+     "taxPer100k": 546
+    },
+    {
+     "name": "South Riverdale",
+     "sales": 326,
+     "medianTax": 5100,
+     "lowTax": 3500,
+     "highTax": 6200,
+     "medianPrice": 1093000,
+     "taxPer100k": 468
+    },
+    {
+     "name": "Annex",
+     "sales": 317,
+     "medianTax": 5780,
+     "lowTax": 4070,
+     "highTax": 9170,
+     "medianPrice": 1080000,
+     "taxPer100k": 553
+    },
+    {
+     "name": "Banbury-Don Mills",
+     "sales": 277,
+     "medianTax": 3960,
+     "lowTax": 2870,
+     "highTax": 8340,
+     "medianPrice": 760000,
+     "taxPer100k": 525
+    },
+    {
+     "name": "Dovercourt-Wallace Emerson-Junction",
+     "sales": 265,
+     "medianTax": 4940,
+     "lowTax": 3420,
+     "highTax": 5990,
+     "medianPrice": 1005000,
+     "taxPer100k": 471
+    },
+    {
+     "name": "Woburn",
+     "sales": 260,
+     "medianTax": 3760,
+     "lowTax": 2210,
+     "highTax": 4250,
+     "medianPrice": 740000,
+     "taxPer100k": 478
+    },
+    {
+     "name": "Moss Park",
+     "sales": 252,
+     "medianTax": 3130,
+     "lowTax": 2610,
+     "highTax": 3980,
+     "medianPrice": 555000,
+     "taxPer100k": 552
+    },
+    {
+     "name": "Downsview-Roding-CFB",
+     "sales": 220,
+     "medianTax": 3970,
+     "lowTax": 2800,
+     "highTax": 4730,
+     "medianPrice": 846000,
+     "taxPer100k": 486
+    },
+    {
+     "name": "Malvern",
+     "sales": 219,
+     "medianTax": 2950,
+     "lowTax": 1950,
+     "highTax": 3470,
+     "medianPrice": 672000,
+     "taxPer100k": 422
+    },
+    {
+     "name": "High Park-Swansea",
+     "sales": 216,
+     "medianTax": 5420,
+     "lowTax": 3150,
+     "highTax": 8800,
+     "medianPrice": 1088000,
+     "taxPer100k": 489
+    },
+    {
+     "name": "Birchcliffe-Cliffside",
+     "sales": 209,
+     "medianTax": 4710,
+     "lowTax": 3910,
+     "highTax": 6180,
+     "medianPrice": 925000,
+     "taxPer100k": 501
+    },
+    {
+     "name": "The Beaches",
+     "sales": 209,
+     "medianTax": 7040,
+     "lowTax": 5420,
+     "highTax": 9310,
+     "medianPrice": 1450000,
+     "taxPer100k": 480
+    },
+    {
+     "name": "L'Amoreaux",
+     "sales": 207,
+     "medianTax": 3660,
+     "lowTax": 2480,
+     "highTax": 5690,
+     "medianPrice": 760000,
+     "taxPer100k": 490
+    },
+    {
+     "name": "Willowdale West",
+     "sales": 204,
+     "medianTax": 4150,
+     "lowTax": 2910,
+     "highTax": 7740,
+     "medianPrice": 797000,
+     "taxPer100k": 541
+    },
+    {
+     "name": "Bendale",
+     "sales": 200,
+     "medianTax": 3270,
+     "lowTax": 2280,
+     "highTax": 4200,
+     "medianPrice": 665000,
+     "taxPer100k": 489
+    },
+    {
+     "name": "Rosedale-Moore Park",
+     "sales": 196,
+     "medianTax": 11200,
+     "lowTax": 5530,
+     "highTax": 17730,
+     "medianPrice": 2195000,
+     "taxPer100k": 518
+    },
+    {
+     "name": "Stonegate-Queensway",
+     "sales": 190,
+     "medianTax": 5940,
+     "lowTax": 4790,
+     "highTax": 7620,
+     "medianPrice": 1265000,
+     "taxPer100k": 463
+    },
+    {
+     "name": "Agincourt South-Malvern West",
+     "sales": 188,
+     "medianTax": 2490,
+     "lowTax": 2050,
+     "highTax": 4380,
+     "medianPrice": 523000,
+     "taxPer100k": 504
+    },
+    {
+     "name": "Clairlea-Birchmount",
+     "sales": 177,
+     "medianTax": 4310,
+     "lowTax": 3600,
+     "highTax": 4710,
+     "medianPrice": 825000,
+     "taxPer100k": 509
+    },
+    {
+     "name": "Newtonbrook West",
+     "sales": 177,
+     "medianTax": 5110,
+     "lowTax": 3300,
+     "highTax": 7050,
+     "medianPrice": 950000,
+     "taxPer100k": 555
+    },
+    {
+     "name": "Mount Pleasant East",
+     "sales": 174,
+     "medianTax": 7780,
+     "lowTax": 6480,
+     "highTax": 9550,
+     "medianPrice": 1441000,
+     "taxPer100k": 533
+    },
+    {
+     "name": "Don Valley Village",
+     "sales": 173,
+     "medianTax": 4110,
+     "lowTax": 2820,
+     "highTax": 6730,
+     "medianPrice": 820000,
+     "taxPer100k": 532
+    },
+    {
+     "name": "Parkwoods-Donalda",
+     "sales": 170,
+     "medianTax": 4820,
+     "lowTax": 2700,
+     "highTax": 6940,
+     "medianPrice": 859000,
+     "taxPer100k": 538
+    },
+    {
+     "name": "Henry Farm",
+     "sales": 169,
+     "medianTax": 2550,
+     "lowTax": 2270,
+     "highTax": 3210,
+     "medianPrice": 498000,
+     "taxPer100k": 529
+    },
+    {
+     "name": "Danforth Village-East York",
+     "sales": 168,
+     "medianTax": 5270,
+     "lowTax": 4760,
+     "highTax": 5950,
+     "medianPrice": 1150000,
+     "taxPer100k": 483
+    },
+    {
+     "name": "Bedford Park-Nortown",
+     "sales": 165,
+     "medianTax": 11890,
+     "lowTax": 7780,
+     "highTax": 15130,
+     "medianPrice": 2250000,
+     "taxPer100k": 517
+    },
+    {
+     "name": "West Hill",
+     "sales": 161,
+     "medianTax": 3650,
+     "lowTax": 2430,
+     "highTax": 4070,
+     "medianPrice": 772000,
+     "taxPer100k": 462
+    },
+    {
+     "name": "Leaside",
+     "sales": 161,
+     "medianTax": 9680,
+     "lowTax": 7610,
+     "highTax": 12590,
+     "medianPrice": 1800000,
+     "taxPer100k": 517
+    },
+    {
+     "name": "Agincourt North",
+     "sales": 159,
+     "medianTax": 4020,
+     "lowTax": 2230,
+     "highTax": 5060,
+     "medianPrice": 803000,
+     "taxPer100k": 492
+    },
+    {
+     "name": "Clanton Park",
+     "sales": 158,
+     "medianTax": 3190,
+     "lowTax": 2370,
+     "highTax": 6280,
+     "medianPrice": 570000,
+     "taxPer100k": 541
+    },
+    {
+     "name": "Hillcrest Village",
+     "sales": 153,
+     "medianTax": 4340,
+     "lowTax": 3470,
+     "highTax": 6290,
+     "medianPrice": 848000,
+     "taxPer100k": 518
+    },
+    {
+     "name": "Dorset Park",
+     "sales": 150,
+     "medianTax": 3640,
+     "lowTax": 1580,
+     "highTax": 4370,
+     "medianPrice": 728000,
+     "taxPer100k": 469
+    },
+    {
+     "name": "Greenwood-Coxwell",
+     "sales": 147,
+     "medianTax": 5120,
+     "lowTax": 4440,
+     "highTax": 5850,
+     "medianPrice": 1115000,
+     "taxPer100k": 480
+    },
+    {
+     "name": "Oakwood Village",
+     "sales": 147,
+     "medianTax": 5100,
+     "lowTax": 4500,
+     "highTax": 6030,
+     "medianPrice": 1116000,
+     "taxPer100k": 463
+    },
+    {
+     "name": "East End-Danforth",
+     "sales": 146,
+     "medianTax": 4980,
+     "lowTax": 4200,
+     "highTax": 5730,
+     "medianPrice": 1090000,
+     "taxPer100k": 461
+    },
+    {
+     "name": "Trinity-Bellwoods",
+     "sales": 142,
+     "medianTax": 7010,
+     "lowTax": 5810,
+     "highTax": 8110,
+     "medianPrice": 1268000,
+     "taxPer100k": 520
+    },
+    {
+     "name": "Kensington-Chinatown",
+     "sales": 140,
+     "medianTax": 3690,
+     "lowTax": 2900,
+     "highTax": 5040,
+     "medianPrice": 648000,
+     "taxPer100k": 571
+    },
+    {
+     "name": "Newtonbrook East",
+     "sales": 140,
+     "medianTax": 7880,
+     "lowTax": 2820,
+     "highTax": 9250,
+     "medianPrice": 1229000,
+     "taxPer100k": 604
+    },
+    {
+     "name": "Lawrence Park North",
+     "sales": 139,
+     "medianTax": 9160,
+     "lowTax": 8020,
+     "highTax": 11360,
+     "medianPrice": 1868000,
+     "taxPer100k": 509
+    },
+    {
+     "name": "Yonge-St. Clair",
+     "sales": 138,
+     "medianTax": 8380,
+     "lowTax": 4810,
+     "highTax": 12860,
+     "medianPrice": 1697000,
+     "taxPer100k": 515
+    },
+    {
+     "name": "Lansing-Westgate",
+     "sales": 137,
+     "medianTax": 3970,
+     "lowTax": 3150,
+     "highTax": 8720,
+     "medianPrice": 805000,
+     "taxPer100k": 516
+    },
+    {
+     "name": "Tam O'Shanter-Sullivan",
+     "sales": 135,
+     "medianTax": 4200,
+     "lowTax": 2880,
+     "highTax": 5430,
+     "medianPrice": 790000,
+     "taxPer100k": 506
+    },
+    {
+     "name": "Steeles",
+     "sales": 132,
+     "medianTax": 4990,
+     "lowTax": 2580,
+     "highTax": 6340,
+     "medianPrice": 884000,
+     "taxPer100k": 520
+    },
+    {
+     "name": "Wexford-Maryvale",
+     "sales": 130,
+     "medianTax": 4520,
+     "lowTax": 4210,
+     "highTax": 4730,
+     "medianPrice": 869000,
+     "taxPer100k": 502
+    },
+    {
+     "name": "Lawrence Park South",
+     "sales": 130,
+     "medianTax": 11570,
+     "lowTax": 7800,
+     "highTax": 16430,
+     "medianPrice": 2236000,
+     "taxPer100k": 511
+    },
+    {
+     "name": "York University Heights",
+     "sales": 130,
+     "medianTax": 3320,
+     "lowTax": 1930,
+     "highTax": 4290,
+     "medianPrice": 746000,
+     "taxPer100k": 438
+    },
+    {
+     "name": "Willowridge-Martingrove-Richview",
+     "sales": 128,
+     "medianTax": 4990,
+     "lowTax": 4450,
+     "highTax": 5800,
+     "medianPrice": 1100000,
+     "taxPer100k": 459
+    },
+    {
+     "name": "Roncesvalles",
+     "sales": 126,
+     "medianTax": 6470,
+     "lowTax": 3770,
+     "highTax": 7850,
+     "medianPrice": 1310000,
+     "taxPer100k": 453
+    },
+    {
+     "name": "St. Andrew-Windfields",
+     "sales": 125,
+     "medianTax": 11050,
+     "lowTax": 6460,
+     "highTax": 16130,
+     "medianPrice": 2100000,
+     "taxPer100k": 590
+    },
+    {
+     "name": "Englemount-Lawrence",
+     "sales": 122,
+     "medianTax": 3550,
+     "lowTax": 2690,
+     "highTax": 6470,
+     "medianPrice": 778000,
+     "taxPer100k": 497
+    },
+    {
+     "name": "West Humber-Clairville",
+     "sales": 121,
+     "medianTax": 3450,
+     "lowTax": 2120,
+     "highTax": 4030,
+     "medianPrice": 765000,
+     "taxPer100k": 438
+    },
+    {
+     "name": "Rouge E11",
+     "sales": 120,
+     "medianTax": 4410,
+     "lowTax": 3250,
+     "highTax": 5240,
+     "medianPrice": 884000,
+     "taxPer100k": 462
+    },
+    {
+     "name": "Eringate-Centennial-West Deane",
+     "sales": 118,
+     "medianTax": 4900,
+     "lowTax": 3450,
+     "highTax": 5470,
+     "medianPrice": 1009000,
+     "taxPer100k": 446
+    },
+    {
+     "name": "High Park North",
+     "sales": 117,
+     "medianTax": 6670,
+     "lowTax": 3760,
+     "highTax": 8100,
+     "medianPrice": 1291000,
+     "taxPer100k": 481
+    },
+    {
+     "name": "Little Portugal",
+     "sales": 116,
+     "medianTax": 3700,
+     "lowTax": 2590,
+     "highTax": 5940,
+     "medianPrice": 746000,
+     "taxPer100k": 490
+    },
+    {
+     "name": "Regent Park",
+     "sales": 112,
+     "medianTax": 2940,
+     "lowTax": 2410,
+     "highTax": 3550,
+     "medianPrice": 555000,
+     "taxPer100k": 516
+    },
+    {
+     "name": "Westminster-Branson",
+     "sales": 110,
+     "medianTax": 2660,
+     "lowTax": 2270,
+     "highTax": 4800,
+     "medianPrice": 604000,
+     "taxPer100k": 480
+    },
+    {
+     "name": "Yorkdale-Glen Park",
+     "sales": 109,
+     "medianTax": 3080,
+     "lowTax": 2500,
+     "highTax": 5540,
+     "medianPrice": 620000,
+     "taxPer100k": 517
+    },
+    {
+     "name": "Rockcliffe-Smythe",
+     "sales": 107,
+     "medianTax": 3480,
+     "lowTax": 2530,
+     "highTax": 4090,
+     "medianPrice": 750000,
+     "taxPer100k": 457
+    },
+    {
+     "name": "Woodbine Corridor",
+     "sales": 106,
+     "medianTax": 5330,
+     "lowTax": 4680,
+     "highTax": 6260,
+     "medianPrice": 1200000,
+     "taxPer100k": 466
+    },
+    {
+     "name": "Edenbridge-Humber Valley",
+     "sales": 105,
+     "medianTax": 6610,
+     "lowTax": 3020,
+     "highTax": 10470,
+     "medianPrice": 1460000,
+     "taxPer100k": 487
+    },
+    {
+     "name": "Kingsview Village-The Westway",
+     "sales": 105,
+     "medianTax": 3360,
+     "lowTax": 1160,
+     "highTax": 5160,
+     "medianPrice": 770000,
+     "taxPer100k": 432
+    },
+    {
+     "name": "Milliken",
+     "sales": 105,
+     "medianTax": 4390,
+     "lowTax": 2180,
+     "highTax": 5320,
+     "medianPrice": 840000,
+     "taxPer100k": 504
+    },
+    {
+     "name": "Long Branch",
+     "sales": 105,
+     "medianTax": 4070,
+     "lowTax": 3240,
+     "highTax": 5890,
+     "medianPrice": 855000,
+     "taxPer100k": 470
+    },
+    {
+     "name": "Cabbagetown-South St. James Town",
+     "sales": 105,
+     "medianTax": 3170,
+     "lowTax": 2650,
+     "highTax": 7310,
+     "medianPrice": 655000,
+     "taxPer100k": 530
+    },
+    {
+     "name": "Flemingdon Park",
+     "sales": 104,
+     "medianTax": 1760,
+     "lowTax": 1450,
+     "highTax": 2590,
+     "medianPrice": 450000,
+     "taxPer100k": 411
+    },
+    {
+     "name": "Kingsway South",
+     "sales": 100,
+     "medianTax": 10440,
+     "lowTax": 7270,
+     "highTax": 13130,
+     "medianPrice": 2300000,
+     "taxPer100k": 452
+    },
+    {
+     "name": "Yonge-Eglinton",
+     "sales": 99,
+     "medianTax": 6780,
+     "lowTax": 3500,
+     "highTax": 9760,
+     "medianPrice": 1340000,
+     "taxPer100k": 547
+    },
+    {
+     "name": "Corso Italia-Davenport",
+     "sales": 98,
+     "medianTax": 4660,
+     "lowTax": 4270,
+     "highTax": 5330,
+     "medianPrice": 1058000,
+     "taxPer100k": 459
+    },
+    {
+     "name": "Runnymede-Bloor West Village",
+     "sales": 98,
+     "medianTax": 6720,
+     "lowTax": 5850,
+     "highTax": 8100,
+     "medianPrice": 1421000,
+     "taxPer100k": 476
+    },
+    {
+     "name": "Weston",
+     "sales": 97,
+     "medianTax": 3130,
+     "lowTax": 1540,
+     "highTax": 4030,
+     "medianPrice": 652000,
+     "taxPer100k": 439
+    },
+    {
+     "name": "Alderwood",
+     "sales": 95,
+     "medianTax": 4890,
+     "lowTax": 4600,
+     "highTax": 5680,
+     "medianPrice": 1045000,
+     "taxPer100k": 474
+    },
+    {
+     "name": "Markland Wood",
+     "sales": 95,
+     "medianTax": 3710,
+     "lowTax": 2570,
+     "highTax": 6300,
+     "medianPrice": 815000,
+     "taxPer100k": 457
+    },
+    {
+     "name": "O'Connor-Parkview",
+     "sales": 93,
+     "medianTax": 4810,
+     "lowTax": 4190,
+     "highTax": 6480,
+     "medianPrice": 955000,
+     "taxPer100k": 496
+    },
+    {
+     "name": "Cliffcrest",
+     "sales": 92,
+     "medianTax": 4440,
+     "lowTax": 4040,
+     "highTax": 5520,
+     "medianPrice": 868000,
+     "taxPer100k": 526
+    },
+    {
+     "name": "Junction Area",
+     "sales": 92,
+     "medianTax": 4340,
+     "lowTax": 3120,
+     "highTax": 6170,
+     "medianPrice": 903000,
+     "taxPer100k": 476
+    },
+    {
+     "name": "Pleasant View",
+     "sales": 91,
+     "medianTax": 5010,
+     "lowTax": 3270,
+     "highTax": 5580,
+     "medianPrice": 893000,
+     "taxPer100k": 531
+    },
+    {
+     "name": "Bridle Path-Sunnybrook-York Mills",
+     "sales": 91,
+     "medianTax": 13570,
+     "lowTax": 8140,
+     "highTax": 23460,
+     "medianPrice": 2595000,
+     "taxPer100k": 529
+    },
+    {
+     "name": "Briar Hill-Belgravia",
+     "sales": 90,
+     "medianTax": 3820,
+     "lowTax": 2910,
+     "highTax": 4260,
+     "medianPrice": 750000,
+     "taxPer100k": 470
+    },
+    {
+     "name": "Glenfield-Jane Heights",
+     "sales": 90,
+     "medianTax": 3630,
+     "lowTax": 3230,
+     "highTax": 3950,
+     "medianPrice": 824000,
+     "taxPer100k": 427
+    },
+    {
+     "name": "Humewood-Cedarvale",
+     "sales": 89,
+     "medianTax": 6970,
+     "lowTax": 5060,
+     "highTax": 9880,
+     "medianPrice": 1618000,
+     "taxPer100k": 483
+    },
+    {
+     "name": "Centennial Scarborough",
+     "sales": 88,
+     "medianTax": 4850,
+     "lowTax": 4320,
+     "highTax": 5680,
+     "medianPrice": 1038000,
+     "taxPer100k": 483
+    },
+    {
+     "name": "North Riverdale",
+     "sales": 88,
+     "medianTax": 7590,
+     "lowTax": 6800,
+     "highTax": 8720,
+     "medianPrice": 1660000,
+     "taxPer100k": 465
+    },
+    {
+     "name": "Guildwood",
+     "sales": 87,
+     "medianTax": 4580,
+     "lowTax": 3420,
+     "highTax": 4960,
+     "medianPrice": 914000,
+     "taxPer100k": 471
+    },
+    {
+     "name": "Casa Loma",
+     "sales": 87,
+     "medianTax": 7740,
+     "lowTax": 4640,
+     "highTax": 12670,
+     "medianPrice": 1713000,
+     "taxPer100k": 500
+    },
+    {
+     "name": "Princess-Rosethorn",
+     "sales": 86,
+     "medianTax": 8210,
+     "lowTax": 6050,
+     "highTax": 10160,
+     "medianPrice": 1738000,
+     "taxPer100k": 463
+    },
+    {
+     "name": "Palmerston-Little Italy",
+     "sales": 84,
+     "medianTax": 7430,
+     "lowTax": 6560,
+     "highTax": 8600,
+     "medianPrice": 1393000,
+     "taxPer100k": 530
+    },
+    {
+     "name": "Forest Hill South",
+     "sales": 83,
+     "medianTax": 10660,
+     "lowTax": 6100,
+     "highTax": 22650,
+     "medianPrice": 2236000,
+     "taxPer100k": 508
+    },
+    {
+     "name": "Bathurst Manor",
+     "sales": 83,
+     "medianTax": 6480,
+     "lowTax": 2870,
+     "highTax": 6760,
+     "medianPrice": 1155000,
+     "taxPer100k": 503
+    },
+    {
+     "name": "Eglinton East",
+     "sales": 82,
+     "medianTax": 2720,
+     "lowTax": 1490,
+     "highTax": 4070,
+     "medianPrice": 657000,
+     "taxPer100k": 439
+    },
+    {
+     "name": "Etobicoke West Mall",
+     "sales": 81,
+     "medianTax": 2690,
+     "lowTax": 1850,
+     "highTax": 4860,
+     "medianPrice": 528000,
+     "taxPer100k": 445
+    },
+    {
+     "name": "Kennedy Park",
+     "sales": 80,
+     "medianTax": 3620,
+     "lowTax": 1710,
+     "highTax": 4110,
+     "medianPrice": 760000,
+     "taxPer100k": 441
+    },
+    {
+     "name": "Weston-Pellam Park",
+     "sales": 80,
+     "medianTax": 3890,
+     "lowTax": 3370,
+     "highTax": 4390,
+     "medianPrice": 870000,
+     "taxPer100k": 449
+    },
+    {
+     "name": "East York",
+     "sales": 79,
+     "medianTax": 5250,
+     "lowTax": 4610,
+     "highTax": 6430,
+     "medianPrice": 1088000,
+     "taxPer100k": 511
+    },
+    {
+     "name": "Bayview Woods-Steeles",
+     "sales": 78,
+     "medianTax": 7700,
+     "lowTax": 5490,
+     "highTax": 8870,
+     "medianPrice": 1310000,
+     "taxPer100k": 567
+    },
+    {
+     "name": "New Toronto",
+     "sales": 77,
+     "medianTax": 4310,
+     "lowTax": 3890,
+     "highTax": 4980,
+     "medianPrice": 950000,
+     "taxPer100k": 446
+    },
+    {
+     "name": "Morningside",
+     "sales": 76,
+     "medianTax": 3740,
+     "lowTax": 2430,
+     "highTax": 4150,
+     "medianPrice": 788000,
+     "taxPer100k": 442
+    },
+    {
+     "name": "Scarborough Village",
+     "sales": 75,
+     "medianTax": 2720,
+     "lowTax": 1460,
+     "highTax": 4710,
+     "medianPrice": 705000,
+     "taxPer100k": 422
+    },
+    {
+     "name": "Victoria Village",
+     "sales": 75,
+     "medianTax": 4560,
+     "lowTax": 2100,
+     "highTax": 6170,
+     "medianPrice": 875000,
+     "taxPer100k": 477
+    },
+    {
+     "name": "South Parkdale",
+     "sales": 74,
+     "medianTax": 3510,
+     "lowTax": 2530,
+     "highTax": 5470,
+     "medianPrice": 625000,
+     "taxPer100k": 540
+    },
+    {
+     "name": "Mount Olive-Silverstone-Jamestown",
+     "sales": 72,
+     "medianTax": 2360,
+     "lowTax": 1480,
+     "highTax": 3580,
+     "medianPrice": 635000,
+     "taxPer100k": 389
+    },
+    {
+     "name": "Woodbine-Lumsden",
+     "sales": 71,
+     "medianTax": 4680,
+     "lowTax": 4190,
+     "highTax": 5590,
+     "medianPrice": 950000,
+     "taxPer100k": 484
+    },
+    {
+     "name": "Wychwood",
+     "sales": 71,
+     "medianTax": 6650,
+     "lowTax": 5230,
+     "highTax": 7390,
+     "medianPrice": 1320000,
+     "taxPer100k": 492
+    },
+    {
+     "name": "Dufferin Grove",
+     "sales": 70,
+     "medianTax": 5620,
+     "lowTax": 3610,
+     "highTax": 6990,
+     "medianPrice": 1038000,
+     "taxPer100k": 473
+    },
+    {
+     "name": "Elms-Old Rexdale",
+     "sales": 69,
+     "medianTax": 3460,
+     "lowTax": 960,
+     "highTax": 3910,
+     "medianPrice": 762000,
+     "taxPer100k": 415
+    },
+    {
+     "name": "North St. James Town",
+     "sales": 67,
+     "medianTax": 3420,
+     "lowTax": 2970,
+     "highTax": 4090,
+     "medianPrice": 570000,
+     "taxPer100k": 603
+    },
+    {
+     "name": "Caledonia-Fairbank",
+     "sales": 66,
+     "medianTax": 4250,
+     "lowTax": 3840,
+     "highTax": 4870,
+     "medianPrice": 879000,
+     "taxPer100k": 501
+    },
+    {
+     "name": "Keelesdale-Eglinton West",
+     "sales": 64,
+     "medianTax": 3640,
+     "lowTax": 3260,
+     "highTax": 4050,
+     "medianPrice": 780000,
+     "taxPer100k": 460
+    },
+    {
+     "name": "Rexdale-Kipling",
+     "sales": 63,
+     "medianTax": 3770,
+     "lowTax": 3610,
+     "highTax": 3980,
+     "medianPrice": 835000,
+     "taxPer100k": 447
+    },
+    {
+     "name": "Crescent Town",
+     "sales": 62,
+     "medianTax": 3460,
+     "lowTax": 1200,
+     "highTax": 4340,
+     "medianPrice": 738000,
+     "taxPer100k": 405
+    },
+    {
+     "name": "Danforth",
+     "sales": 62,
+     "medianTax": 5550,
+     "lowTax": 5240,
+     "highTax": 6470,
+     "medianPrice": 1195000,
+     "taxPer100k": 471
+    },
+    {
+     "name": "Broadview North",
+     "sales": 59,
+     "medianTax": 6010,
+     "lowTax": 4330,
+     "highTax": 7390,
+     "medianPrice": 1235000,
+     "taxPer100k": 499
+    },
+    {
+     "name": "Rouge E10",
+     "sales": 58,
+     "medianTax": 4660,
+     "lowTax": 3930,
+     "highTax": 5480,
+     "medianPrice": 985000,
+     "taxPer100k": 479
+    },
+    {
+     "name": "Humbermede",
+     "sales": 57,
+     "medianTax": 3560,
+     "lowTax": 3270,
+     "highTax": 4280,
+     "medianPrice": 790000,
+     "taxPer100k": 434
+    },
+    {
+     "name": "Humber Summit",
+     "sales": 57,
+     "medianTax": 3750,
+     "lowTax": 3610,
+     "highTax": 4160,
+     "medianPrice": 836000,
+     "taxPer100k": 459
+    },
+    {
+     "name": "Humber Heights",
+     "sales": 56,
+     "medianTax": 4720,
+     "lowTax": 2790,
+     "highTax": 5610,
+     "medianPrice": 948000,
+     "taxPer100k": 475
+    },
+    {
+     "name": "Lambton Baby Point",
+     "sales": 55,
+     "medianTax": 8340,
+     "lowTax": 6790,
+     "highTax": 9900,
+     "medianPrice": 1652000,
+     "taxPer100k": 474
+    },
+    {
+     "name": "Highland Creek",
+     "sales": 53,
+     "medianTax": 5560,
+     "lowTax": 5210,
+     "highTax": 6180,
+     "medianPrice": 1160000,
+     "taxPer100k": 482
+    },
+    {
+     "name": "Black Creek",
+     "sales": 53,
+     "medianTax": 3390,
+     "lowTax": 910,
+     "highTax": 3640,
+     "medianPrice": 810000,
+     "taxPer100k": 412
+    },
+    {
+     "name": "Brookhaven-Amesbury",
+     "sales": 51,
+     "medianTax": 4260,
+     "lowTax": 2810,
+     "highTax": 5050,
+     "medianPrice": 885000,
+     "taxPer100k": 458
+    },
+    {
+     "name": "University",
+     "sales": 51,
+     "medianTax": 7950,
+     "lowTax": 6150,
+     "highTax": 9740,
+     "medianPrice": 1419000,
+     "taxPer100k": 565
+    },
+    {
+     "name": "Blake-Jones",
+     "sales": 50,
+     "medianTax": 5630,
+     "lowTax": 4740,
+     "highTax": 6530,
+     "medianPrice": 1164000,
+     "taxPer100k": 466
+    },
+    {
+     "name": "Thistletown-Beaumonde Heights",
+     "sales": 50,
+     "medianTax": 3990,
+     "lowTax": 3690,
+     "highTax": 4470,
+     "medianPrice": 896000,
+     "taxPer100k": 452
+    },
+    {
+     "name": "Maple Leaf",
+     "sales": 49,
+     "medianTax": 5200,
+     "lowTax": 4890,
+     "highTax": 5450,
+     "medianPrice": 1056000,
+     "taxPer100k": 495
+    },
+    {
+     "name": "Humberlea-Pelmo Park W5",
+     "sales": 47,
+     "medianTax": 3690,
+     "lowTax": 2710,
+     "highTax": 4280,
+     "medianPrice": 823000,
+     "taxPer100k": 428
+    },
+    {
+     "name": "Mount Dennis",
+     "sales": 43,
+     "medianTax": 2740,
+     "lowTax": 1760,
+     "highTax": 3280,
+     "medianPrice": 590000,
+     "taxPer100k": 408
+    },
+    {
+     "name": "Forest Hill North",
+     "sales": 42,
+     "medianTax": 12040,
+     "lowTax": 10530,
+     "highTax": 15860,
+     "medianPrice": 2375000,
+     "taxPer100k": 490
+    },
+    {
+     "name": "Playter Estates-Danforth",
+     "sales": 41,
+     "medianTax": 7330,
+     "lowTax": 6580,
+     "highTax": 8420,
+     "medianPrice": 1550000,
+     "taxPer100k": 478
+    },
+    {
+     "name": "Ionview",
+     "sales": 41,
+     "medianTax": 4070,
+     "lowTax": 3010,
+     "highTax": 4380,
+     "medianPrice": 800000,
+     "taxPer100k": 472
+    },
+    {
+     "name": "Oakridge",
+     "sales": 39,
+     "medianTax": 3620,
+     "lowTax": 3080,
+     "highTax": 4100,
+     "medianPrice": 780000,
+     "taxPer100k": 457
+    },
+    {
+     "name": "Thorncliffe Park",
+     "sales": 36,
+     "medianTax": 2460,
+     "lowTax": 2180,
+     "highTax": 3310,
+     "medianPrice": 487000,
+     "taxPer100k": 505
+    },
+    {
+     "name": "Beechborough-Greenbrook",
+     "sales": 27,
+     "medianTax": 3510,
+     "lowTax": 2550,
+     "highTax": 4360,
+     "medianPrice": 738000,
+     "taxPer100k": 477
+    },
+    {
+     "name": "Rustic",
+     "sales": 25,
+     "medianTax": 5050,
+     "lowTax": 4660,
+     "highTax": 5800,
+     "medianPrice": 1015000,
+     "taxPer100k": 481
+    }
+   ]
+  },
+  {
+   "city": "Mississauga",
+   "slug": "mississauga",
+   "taxYear": 2025,
+   "all": {
+    "sales": 4859,
+    "medianTax": 5490,
+    "lowTax": 3730,
+    "highTax": 7360,
+    "medianPrice": 870000,
+    "taxPer100k": 630
+   },
+   "byType": {
+    "detached": {
+     "sales": 1921,
+     "medianTax": 7730,
+     "lowTax": 6800,
+     "highTax": 9140,
+     "medianPrice": 1225000,
+     "taxPer100k": 642
+    },
+    "semi": {
+     "sales": 725,
+     "medianTax": 5590,
+     "lowTax": 5110,
+     "highTax": 6020,
+     "medianPrice": 890000,
+     "taxPer100k": 623
+    },
+    "town": {
+     "sales": 151,
+     "medianTax": 5490,
+     "lowTax": 5060,
+     "highTax": 5890,
+     "medianPrice": 875000,
+     "taxPer100k": 633
+    },
+    "condoTown": {
+     "sales": 821,
+     "medianTax": 4210,
+     "lowTax": 3580,
+     "highTax": 4790,
+     "medianPrice": 689000,
+     "taxPer100k": 601
+    },
+    "condoApt": {
+     "sales": 1241,
+     "medianTax": 3050,
+     "lowTax": 2550,
+     "highTax": 3660,
+     "medianPrice": 485000,
+     "taxPer100k": 641
+    }
+   },
+   "communities": [
+    {
+     "name": "City Centre",
+     "sales": 466,
+     "medianTax": 3110,
+     "lowTax": 2780,
+     "highTax": 3570,
+     "medianPrice": 480000,
+     "taxPer100k": 673
+    },
+    {
+     "name": "Hurontario",
+     "sales": 409,
+     "medianTax": 5340,
+     "lowTax": 3310,
+     "highTax": 7200,
+     "medianPrice": 835000,
+     "taxPer100k": 633
+    },
+    {
+     "name": "Erin Mills",
+     "sales": 320,
+     "medianTax": 5840,
+     "lowTax": 4430,
+     "highTax": 7510,
+     "medianPrice": 914000,
+     "taxPer100k": 642
+    },
+    {
+     "name": "Churchill Meadows",
+     "sales": 308,
+     "medianTax": 6000,
+     "lowTax": 5200,
+     "highTax": 7170,
+     "medianPrice": 955000,
+     "taxPer100k": 629
+    },
+    {
+     "name": "Meadowvale",
+     "sales": 298,
+     "medianTax": 5090,
+     "lowTax": 3550,
+     "highTax": 5900,
+     "medianPrice": 837000,
+     "taxPer100k": 586
+    },
+    {
+     "name": "Central Erin Mills",
+     "sales": 277,
+     "medianTax": 4890,
+     "lowTax": 3670,
+     "highTax": 8040,
+     "medianPrice": 785000,
+     "taxPer100k": 646
+    },
+    {
+     "name": "East Credit",
+     "sales": 272,
+     "medianTax": 6760,
+     "lowTax": 5220,
+     "highTax": 8110,
+     "medianPrice": 1050000,
+     "taxPer100k": 636
+    },
+    {
+     "name": "Clarkson",
+     "sales": 261,
+     "medianTax": 5030,
+     "lowTax": 3910,
+     "highTax": 6960,
+     "medianPrice": 858000,
+     "taxPer100k": 602
+    },
+    {
+     "name": "Cooksville",
+     "sales": 252,
+     "medianTax": 4740,
+     "lowTax": 2460,
+     "highTax": 7050,
+     "medianPrice": 760000,
+     "taxPer100k": 609
+    },
+    {
+     "name": "Lisgar",
+     "sales": 227,
+     "medianTax": 5920,
+     "lowTax": 5110,
+     "highTax": 7030,
+     "medianPrice": 962000,
+     "taxPer100k": 600
+    },
+    {
+     "name": "Lakeview",
+     "sales": 211,
+     "medianTax": 6730,
+     "lowTax": 5020,
+     "highTax": 8480,
+     "medianPrice": 1050000,
+     "taxPer100k": 638
+    },
+    {
+     "name": "Malton",
+     "sales": 160,
+     "medianTax": 4580,
+     "lowTax": 4080,
+     "highTax": 5160,
+     "medianPrice": 755000,
+     "taxPer100k": 591
+    },
+    {
+     "name": "Applewood",
+     "sales": 159,
+     "medianTax": 5680,
+     "lowTax": 3060,
+     "highTax": 7070,
+     "medianPrice": 875000,
+     "taxPer100k": 630
+    },
+    {
+     "name": "Rathwood",
+     "sales": 159,
+     "medianTax": 6420,
+     "lowTax": 4490,
+     "highTax": 7980,
+     "medianPrice": 977000,
+     "taxPer100k": 629
+    },
+    {
+     "name": "Erindale",
+     "sales": 147,
+     "medianTax": 5690,
+     "lowTax": 3850,
+     "highTax": 7330,
+     "medianPrice": 860000,
+     "taxPer100k": 662
+    },
+    {
+     "name": "Meadowvale Village",
+     "sales": 132,
+     "medianTax": 5950,
+     "lowTax": 5300,
+     "highTax": 7930,
+     "medianPrice": 955000,
+     "taxPer100k": 618
+    },
+    {
+     "name": "Mississauga Valleys",
+     "sales": 130,
+     "medianTax": 3630,
+     "lowTax": 2760,
+     "highTax": 5290,
+     "medianPrice": 600000,
+     "taxPer100k": 601
+    },
+    {
+     "name": "Port Credit",
+     "sales": 113,
+     "medianTax": 7380,
+     "lowTax": 4430,
+     "highTax": 10560,
+     "medianPrice": 1100000,
+     "taxPer100k": 658
+    },
+    {
+     "name": "Streetsville",
+     "sales": 108,
+     "medianTax": 6280,
+     "lowTax": 3890,
+     "highTax": 7630,
+     "medianPrice": 873000,
+     "taxPer100k": 629
+    },
+    {
+     "name": "Sheridan",
+     "sales": 101,
+     "medianTax": 8140,
+     "lowTax": 6380,
+     "highTax": 11250,
+     "medianPrice": 1320000,
+     "taxPer100k": 625
+    },
+    {
+     "name": "Lorne Park",
+     "sales": 101,
+     "medianTax": 11880,
+     "lowTax": 9490,
+     "highTax": 15960,
+     "medianPrice": 1820000,
+     "taxPer100k": 642
+    },
+    {
+     "name": "Mineola",
+     "sales": 93,
+     "medianTax": 9010,
+     "lowTax": 7180,
+     "highTax": 14450,
+     "medianPrice": 1350000,
+     "taxPer100k": 699
+    },
+    {
+     "name": "Creditview",
+     "sales": 92,
+     "medianTax": 6080,
+     "lowTax": 5000,
+     "highTax": 7030,
+     "medianPrice": 927000,
+     "taxPer100k": 650
+    },
+    {
+     "name": "Fairview",
+     "sales": 61,
+     "medianTax": 6670,
+     "lowTax": 3370,
+     "highTax": 8500,
+     "medianPrice": 975000,
+     "taxPer100k": 675
+    }
+   ]
+  },
+  {
+   "city": "Brampton",
+   "slug": "brampton",
+   "taxYear": 2025,
+   "all": {
+    "sales": 4230,
+    "medianTax": 5790,
+    "lowTax": 4950,
+    "highTax": 7030,
+    "medianPrice": 830000,
+    "taxPer100k": 702
+   },
+   "byType": {
+    "detached": {
+     "sales": 2407,
+     "medianTax": 6620,
+     "lowTax": 5680,
+     "highTax": 8140,
+     "medianPrice": 950000,
+     "taxPer100k": 708
+    },
+    "semi": {
+     "sales": 767,
+     "medianTax": 5210,
+     "lowTax": 4770,
+     "highTax": 5860,
+     "medianPrice": 790000,
+     "taxPer100k": 679
+    },
+    "town": {
+     "sales": 573,
+     "medianTax": 5360,
+     "lowTax": 4790,
+     "highTax": 5810,
+     "medianPrice": 750000,
+     "taxPer100k": 704
+    },
+    "condoTown": {
+     "sales": 249,
+     "medianTax": 3670,
+     "lowTax": 3340,
+     "highTax": 4360,
+     "medianPrice": 570000,
+     "taxPer100k": 677
+    },
+    "condoApt": {
+     "sales": 234,
+     "medianTax": 2990,
+     "lowTax": 2590,
+     "highTax": 3400,
+     "medianPrice": 415000,
+     "taxPer100k": 724
+    }
+   },
+   "communities": [
+    {
+     "name": "Sandringham-Wellington",
+     "sales": 465,
+     "medianTax": 6010,
+     "lowTax": 5190,
+     "highTax": 7440,
+     "medianPrice": 860000,
+     "taxPer100k": 703
+    },
+    {
+     "name": "Northwest Brampton",
+     "sales": 400,
+     "medianTax": 5980,
+     "lowTax": 5360,
+     "highTax": 7040,
+     "medianPrice": 843000,
+     "taxPer100k": 716
+    },
+    {
+     "name": "Fletcher's Meadow",
+     "sales": 341,
+     "medianTax": 5850,
+     "lowTax": 5260,
+     "highTax": 6500,
+     "medianPrice": 870000,
+     "taxPer100k": 669
+    },
+    {
+     "name": "Credit Valley",
+     "sales": 250,
+     "medianTax": 7290,
+     "lowTax": 6120,
+     "highTax": 9470,
+     "medianPrice": 1040000,
+     "taxPer100k": 711
+    },
+    {
+     "name": "Bram East",
+     "sales": 229,
+     "medianTax": 7490,
+     "lowTax": 6450,
+     "highTax": 9100,
+     "medianPrice": 1014000,
+     "taxPer100k": 734
+    },
+    {
+     "name": "Madoc",
+     "sales": 178,
+     "medianTax": 5110,
+     "lowTax": 4580,
+     "highTax": 5590,
+     "medianPrice": 750000,
+     "taxPer100k": 676
+    },
+    {
+     "name": "Bram West",
+     "sales": 168,
+     "medianTax": 7700,
+     "lowTax": 6170,
+     "highTax": 9630,
+     "medianPrice": 953000,
+     "taxPer100k": 768
+    },
+    {
+     "name": "Fletcher's Creek South",
+     "sales": 133,
+     "medianTax": 5360,
+     "lowTax": 4270,
+     "highTax": 6520,
+     "medianPrice": 780000,
+     "taxPer100k": 703
+    },
+    {
+     "name": "Central Park",
+     "sales": 131,
+     "medianTax": 4200,
+     "lowTax": 3700,
+     "highTax": 5750,
+     "medianPrice": 685000,
+     "taxPer100k": 677
+    },
+    {
+     "name": "Heart Lake West",
+     "sales": 122,
+     "medianTax": 5240,
+     "lowTax": 4770,
+     "highTax": 5960,
+     "medianPrice": 771000,
+     "taxPer100k": 676
+    },
+    {
+     "name": "Brampton East",
+     "sales": 121,
+     "medianTax": 5800,
+     "lowTax": 5280,
+     "highTax": 6150,
+     "medianPrice": 772000,
+     "taxPer100k": 738
+    },
+    {
+     "name": "Brampton North",
+     "sales": 116,
+     "medianTax": 4680,
+     "lowTax": 4150,
+     "highTax": 5140,
+     "medianPrice": 699000,
+     "taxPer100k": 662
+    },
+    {
+     "name": "Northgate",
+     "sales": 115,
+     "medianTax": 4880,
+     "lowTax": 4090,
+     "highTax": 5720,
+     "medianPrice": 715000,
+     "taxPer100k": 684
+    },
+    {
+     "name": "Fletcher's West",
+     "sales": 114,
+     "medianTax": 5860,
+     "lowTax": 5100,
+     "highTax": 6450,
+     "medianPrice": 820000,
+     "taxPer100k": 692
+    },
+    {
+     "name": "Southgate",
+     "sales": 113,
+     "medianTax": 4850,
+     "lowTax": 4440,
+     "highTax": 5440,
+     "medianPrice": 724000,
+     "taxPer100k": 676
+    },
+    {
+     "name": "Brampton West",
+     "sales": 111,
+     "medianTax": 5100,
+     "lowTax": 4760,
+     "highTax": 5500,
+     "medianPrice": 748000,
+     "taxPer100k": 681
+    },
+    {
+     "name": "Queen Street Corridor",
+     "sales": 98,
+     "medianTax": 2700,
+     "lowTax": 2260,
+     "highTax": 3250,
+     "medianPrice": 440000,
+     "taxPer100k": 632
+    },
+    {
+     "name": "Northwest Sandalwood Parkway",
+     "sales": 98,
+     "medianTax": 6020,
+     "lowTax": 5140,
+     "highTax": 6740,
+     "medianPrice": 884000,
+     "taxPer100k": 691
+    },
+    {
+     "name": "Brampton South",
+     "sales": 93,
+     "medianTax": 5580,
+     "lowTax": 3350,
+     "highTax": 6480,
+     "medianPrice": 744000,
+     "taxPer100k": 742
+    },
+    {
+     "name": "Snelgrove",
+     "sales": 93,
+     "medianTax": 7250,
+     "lowTax": 6470,
+     "highTax": 8180,
+     "medianPrice": 975000,
+     "taxPer100k": 729
+    },
+    {
+     "name": "Heart Lake East",
+     "sales": 84,
+     "medianTax": 5370,
+     "lowTax": 4760,
+     "highTax": 6010,
+     "medianPrice": 740000,
+     "taxPer100k": 683
+    },
+    {
+     "name": "Westgate",
+     "sales": 83,
+     "medianTax": 6100,
+     "lowTax": 5400,
+     "highTax": 7080,
+     "medianPrice": 870000,
+     "taxPer100k": 692
+    },
+    {
+     "name": "Downtown Brampton",
+     "sales": 80,
+     "medianTax": 4950,
+     "lowTax": 3950,
+     "highTax": 5910,
+     "medianPrice": 650000,
+     "taxPer100k": 755
+    },
+    {
+     "name": "Northwood Park",
+     "sales": 78,
+     "medianTax": 5570,
+     "lowTax": 5110,
+     "highTax": 6320,
+     "medianPrice": 820000,
+     "taxPer100k": 690
+    },
+    {
+     "name": "Vales of Castlemore",
+     "sales": 72,
+     "medianTax": 8370,
+     "lowTax": 7300,
+     "highTax": 9840,
+     "medianPrice": 1114000,
+     "taxPer100k": 737
+    },
+    {
+     "name": "Fletcher's Creek Village",
+     "sales": 70,
+     "medianTax": 5310,
+     "lowTax": 4930,
+     "highTax": 6230,
+     "medianPrice": 843000,
+     "taxPer100k": 649
+    },
+    {
+     "name": "Avondale",
+     "sales": 57,
+     "medianTax": 5090,
+     "lowTax": 4620,
+     "highTax": 5430,
+     "medianPrice": 763000,
+     "taxPer100k": 672
+    },
+    {
+     "name": "Toronto Gore Rural Estate",
+     "sales": 52,
+     "medianTax": 13050,
+     "lowTax": 11380,
+     "highTax": 15370,
+     "medianPrice": 1715000,
+     "taxPer100k": 743
+    },
+    {
+     "name": "Sandringham-Wellington North",
+     "sales": 51,
+     "medianTax": 7800,
+     "lowTax": 6240,
+     "highTax": 9290,
+     "medianPrice": 1022000,
+     "taxPer100k": 776
+    },
+    {
+     "name": "Goreway Drive Corridor",
+     "sales": 28,
+     "medianTax": 3590,
+     "lowTax": 3270,
+     "highTax": 4080,
+     "medianPrice": 508000,
+     "taxPer100k": 761
+    },
+    {
+     "name": "Vales of Castlemore North",
+     "sales": 26,
+     "medianTax": 9900,
+     "lowTax": 8910,
+     "highTax": 11120,
+     "medianPrice": 1299000,
+     "taxPer100k": 768
+    }
+   ]
+  },
+  {
+   "city": "Markham",
+   "slug": "markham",
+   "taxYear": 2025,
+   "all": {
+    "sales": 2634,
+    "medianTax": 5120,
+    "lowTax": 3380,
+    "highTax": 6740,
+    "medianPrice": 1080000,
+    "taxPer100k": 470
+   },
+   "byType": {
+    "detached": {
+     "sales": 1176,
+     "medianTax": 6900,
+     "lowTax": 5780,
+     "highTax": 8300,
+     "medianPrice": 1417000,
+     "taxPer100k": 481
+    },
+    "semi": {
+     "sales": 264,
+     "medianTax": 4860,
+     "lowTax": 4450,
+     "highTax": 5280,
+     "medianPrice": 1045000,
+     "taxPer100k": 464
+    },
+    "town": {
+     "sales": 361,
+     "medianTax": 4810,
+     "lowTax": 4100,
+     "highTax": 5570,
+     "medianPrice": 994000,
+     "taxPer100k": 473
+    },
+    "condoTown": {
+     "sales": 212,
+     "medianTax": 3480,
+     "lowTax": 3020,
+     "highTax": 4300,
+     "medianPrice": 750000,
+     "taxPer100k": 473
+    },
+    "condoApt": {
+     "sales": 621,
+     "medianTax": 2460,
+     "lowTax": 2210,
+     "highTax": 2930,
+     "medianPrice": 560000,
+     "taxPer100k": 447
+    }
+   },
+   "communities": [
+    {
+     "name": "Unionville",
+     "sales": 457,
+     "medianTax": 3430,
+     "lowTax": 2450,
+     "highTax": 7600,
+     "medianPrice": 750000,
+     "taxPer100k": 471
+    },
+    {
+     "name": "Cornell",
+     "sales": 197,
+     "medianTax": 4290,
+     "lowTax": 3280,
+     "highTax": 5150,
+     "medianPrice": 935000,
+     "taxPer100k": 467
+    },
+    {
+     "name": "Berczy",
+     "sales": 161,
+     "medianTax": 5590,
+     "lowTax": 4800,
+     "highTax": 7030,
+     "medianPrice": 1229000,
+     "taxPer100k": 459
+    },
+    {
+     "name": "Wismer",
+     "sales": 160,
+     "medianTax": 4940,
+     "lowTax": 4040,
+     "highTax": 6250,
+     "medianPrice": 1134000,
+     "taxPer100k": 446
+    },
+    {
+     "name": "Greensborough",
+     "sales": 142,
+     "medianTax": 4640,
+     "lowTax": 3760,
+     "highTax": 5620,
+     "medianPrice": 992000,
+     "taxPer100k": 459
+    },
+    {
+     "name": "Commerce Valley",
+     "sales": 123,
+     "medianTax": 2480,
+     "lowTax": 2180,
+     "highTax": 3640,
+     "medianPrice": 625000,
+     "taxPer100k": 430
+    },
+    {
+     "name": "Markham Village",
+     "sales": 97,
+     "medianTax": 5680,
+     "lowTax": 5290,
+     "highTax": 6320,
+     "medianPrice": 1230000,
+     "taxPer100k": 455
+    },
+    {
+     "name": "Aileen-Willowbrook",
+     "sales": 89,
+     "medianTax": 4220,
+     "lowTax": 3060,
+     "highTax": 6730,
+     "medianPrice": 853000,
+     "taxPer100k": 481
+    },
+    {
+     "name": "Royal Orchard",
+     "sales": 87,
+     "medianTax": 5800,
+     "lowTax": 2910,
+     "highTax": 6630,
+     "medianPrice": 1070000,
+     "taxPer100k": 494
+    },
+    {
+     "name": "Middlefield",
+     "sales": 83,
+     "medianTax": 5250,
+     "lowTax": 4590,
+     "highTax": 5930,
+     "medianPrice": 1165000,
+     "taxPer100k": 463
+    },
+    {
+     "name": "Milliken Mills East",
+     "sales": 81,
+     "medianTax": 4980,
+     "lowTax": 4170,
+     "highTax": 6660,
+     "medianPrice": 1100000,
+     "taxPer100k": 458
+    },
+    {
+     "name": "Angus Glen",
+     "sales": 75,
+     "medianTax": 6290,
+     "lowTax": 5650,
+     "highTax": 8590,
+     "medianPrice": 1230000,
+     "taxPer100k": 531
+    },
+    {
+     "name": "Milliken Mills West",
+     "sales": 59,
+     "medianTax": 5220,
+     "lowTax": 4900,
+     "highTax": 5730,
+     "medianPrice": 1080000,
+     "taxPer100k": 482
+    },
+    {
+     "name": "Thornhill",
+     "sales": 59,
+     "medianTax": 3080,
+     "lowTax": 2410,
+     "highTax": 6860,
+     "medianPrice": 640000,
+     "taxPer100k": 491
+    },
+    {
+     "name": "Box Grove",
+     "sales": 57,
+     "medianTax": 5620,
+     "lowTax": 4630,
+     "highTax": 6470,
+     "medianPrice": 1190000,
+     "taxPer100k": 485
+    },
+    {
+     "name": "Cachet",
+     "sales": 54,
+     "medianTax": 8500,
+     "lowTax": 5780,
+     "highTax": 10980,
+     "medianPrice": 1780000,
+     "taxPer100k": 475
+    },
+    {
+     "name": "Markville",
+     "sales": 53,
+     "medianTax": 5400,
+     "lowTax": 4380,
+     "highTax": 7430,
+     "medianPrice": 1236000,
+     "taxPer100k": 473
+    },
+    {
+     "name": "Grandview",
+     "sales": 50,
+     "medianTax": 7240,
+     "lowTax": 2480,
+     "highTax": 8400,
+     "medianPrice": 1078000,
+     "taxPer100k": 563
+    },
+    {
+     "name": "Victoria Square",
+     "sales": 49,
+     "medianTax": 5970,
+     "lowTax": 5370,
+     "highTax": 6660,
+     "medianPrice": 1176000,
+     "taxPer100k": 479
+    },
+    {
+     "name": "Cathedraltown",
+     "sales": 48,
+     "medianTax": 5360,
+     "lowTax": 4840,
+     "highTax": 5940,
+     "medianPrice": 1158000,
+     "taxPer100k": 470
+    },
+    {
+     "name": "Cedarwood",
+     "sales": 46,
+     "medianTax": 4770,
+     "lowTax": 3730,
+     "highTax": 5100,
+     "medianPrice": 962000,
+     "taxPer100k": 469
+    },
+    {
+     "name": "Raymerville",
+     "sales": 45,
+     "medianTax": 5130,
+     "lowTax": 4130,
+     "highTax": 5980,
+     "medianPrice": 1158000,
+     "taxPer100k": 464
+    },
+    {
+     "name": "Village Green-South Unionville",
+     "sales": 44,
+     "medianTax": 5080,
+     "lowTax": 4630,
+     "highTax": 7200,
+     "medianPrice": 1167000,
+     "taxPer100k": 468
+    },
+    {
+     "name": "Bullock",
+     "sales": 43,
+     "medianTax": 5670,
+     "lowTax": 5070,
+     "highTax": 6490,
+     "medianPrice": 1138000,
+     "taxPer100k": 476
+    },
+    {
+     "name": "German Mills",
+     "sales": 37,
+     "medianTax": 5690,
+     "lowTax": 5030,
+     "highTax": 7330,
+     "medianPrice": 1112000,
+     "taxPer100k": 494
+    },
+    {
+     "name": "Old Markham Village",
+     "sales": 30,
+     "medianTax": 4790,
+     "lowTax": 3010,
+     "highTax": 6200,
+     "medianPrice": 935000,
+     "taxPer100k": 494
+    },
+    {
+     "name": "Buttonville",
+     "sales": 30,
+     "medianTax": 7760,
+     "lowTax": 7010,
+     "highTax": 8560,
+     "medianPrice": 1505000,
+     "taxPer100k": 513
+    },
+    {
+     "name": "Thornlea",
+     "sales": 28,
+     "medianTax": 7940,
+     "lowTax": 7040,
+     "highTax": 9010,
+     "medianPrice": 1586000,
+     "taxPer100k": 499
+    }
+   ]
+  },
+  {
+   "city": "Vaughan",
+   "slug": "vaughan",
+   "taxYear": 2025,
+   "all": {
+    "sales": 2561,
+    "medianTax": 5090,
+    "lowTax": 3570,
+    "highTax": 6590,
+    "medianPrice": 1108000,
+    "taxPer100k": 469
+   },
+   "byType": {
+    "detached": {
+     "sales": 1267,
+     "medianTax": 6570,
+     "lowTax": 5630,
+     "highTax": 8050,
+     "medianPrice": 1420000,
+     "taxPer100k": 461
+    },
+    "semi": {
+     "sales": 187,
+     "medianTax": 4550,
+     "lowTax": 4200,
+     "highTax": 4870,
+     "medianPrice": 1040000,
+     "taxPer100k": 448
+    },
+    "town": {
+     "sales": 365,
+     "medianTax": 4520,
+     "lowTax": 4040,
+     "highTax": 5270,
+     "medianPrice": 1000000,
+     "taxPer100k": 459
+    },
+    "condoTown": {
+     "sales": 98,
+     "medianTax": 3610,
+     "lowTax": 3350,
+     "highTax": 4580,
+     "medianPrice": 770000,
+     "taxPer100k": 498
+    },
+    "condoApt": {
+     "sales": 644,
+     "medianTax": 2780,
+     "lowTax": 2430,
+     "highTax": 3230,
+     "medianPrice": 529000,
+     "taxPer100k": 499
+    }
+   },
+   "communities": [
+    {
+     "name": "Patterson",
+     "sales": 404,
+     "medianTax": 6400,
+     "lowTax": 5430,
+     "highTax": 7850,
+     "medianPrice": 1330000,
+     "taxPer100k": 471
+    },
+    {
+     "name": "Vellore Village",
+     "sales": 336,
+     "medianTax": 5190,
+     "lowTax": 4490,
+     "highTax": 6600,
+     "medianPrice": 1143000,
+     "taxPer100k": 459
+    },
+    {
+     "name": "Maple",
+     "sales": 306,
+     "medianTax": 4780,
+     "lowTax": 3550,
+     "highTax": 5830,
+     "medianPrice": 1065000,
+     "taxPer100k": 456
+    },
+    {
+     "name": "East Woodbridge",
+     "sales": 207,
+     "medianTax": 5170,
+     "lowTax": 3970,
+     "highTax": 6540,
+     "medianPrice": 1130000,
+     "taxPer100k": 452
+    },
+    {
+     "name": "Crestwood-Springfarm-Yorkhill",
+     "sales": 189,
+     "medianTax": 4370,
+     "lowTax": 2980,
+     "highTax": 6210,
+     "medianPrice": 865000,
+     "taxPer100k": 500
+    },
+    {
+     "name": "Kleinburg",
+     "sales": 171,
+     "medianTax": 6830,
+     "lowTax": 5060,
+     "highTax": 10160,
+     "medianPrice": 1610000,
+     "taxPer100k": 432
+    },
+    {
+     "name": "Beverley Glen",
+     "sales": 126,
+     "medianTax": 3350,
+     "lowTax": 2510,
+     "highTax": 6740,
+     "medianPrice": 644000,
+     "taxPer100k": 497
+    },
+    {
+     "name": "Brownridge",
+     "sales": 125,
+     "medianTax": 5000,
+     "lowTax": 3190,
+     "highTax": 5960,
+     "medianPrice": 1025000,
+     "taxPer100k": 477
+    },
+    {
+     "name": "Vaughan Corporate Centre",
+     "sales": 117,
+     "medianTax": 2590,
+     "lowTax": 2340,
+     "highTax": 2950,
+     "medianPrice": 478000,
+     "taxPer100k": 564
+    },
+    {
+     "name": "West Woodbridge",
+     "sales": 113,
+     "medianTax": 4540,
+     "lowTax": 3310,
+     "highTax": 5510,
+     "medianPrice": 970000,
+     "taxPer100k": 453
+    },
+    {
+     "name": "Concord",
+     "sales": 113,
+     "medianTax": 2770,
+     "lowTax": 2340,
+     "highTax": 3050,
+     "medianPrice": 520000,
+     "taxPer100k": 510
+    },
+    {
+     "name": "Sonoma Heights",
+     "sales": 72,
+     "medianTax": 5090,
+     "lowTax": 4270,
+     "highTax": 5940,
+     "medianPrice": 1149000,
+     "taxPer100k": 440
+    },
+    {
+     "name": "Rural Vaughan",
+     "sales": 56,
+     "medianTax": 4600,
+     "lowTax": 3060,
+     "highTax": 7490,
+     "medianPrice": 1038000,
+     "taxPer100k": 449
+    },
+    {
+     "name": "Islington Woods",
+     "sales": 55,
+     "medianTax": 8050,
+     "lowTax": 6460,
+     "highTax": 10010,
+     "medianPrice": 1800000,
+     "taxPer100k": 460
+    },
+    {
+     "name": "Vaughan Grove",
+     "sales": 45,
+     "medianTax": 2810,
+     "lowTax": 2460,
+     "highTax": 3200,
+     "medianPrice": 610000,
+     "taxPer100k": 473
+    },
+    {
+     "name": "Uplands",
+     "sales": 38,
+     "medianTax": 7940,
+     "lowTax": 6970,
+     "highTax": 10330,
+     "medianPrice": 1645000,
+     "taxPer100k": 491
+    },
+    {
+     "name": "Glen Shields",
+     "sales": 36,
+     "medianTax": 4650,
+     "lowTax": 4120,
+     "highTax": 5200,
+     "medianPrice": 983000,
+     "taxPer100k": 454
+    },
+    {
+     "name": "Lakeview Estates",
+     "sales": 34,
+     "medianTax": 4130,
+     "lowTax": 2670,
+     "highTax": 5480,
+     "medianPrice": 885000,
+     "taxPer100k": 494
+    }
+   ]
+  },
+  {
+   "city": "Richmond Hill",
+   "slug": "richmond-hill",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1727,
+    "medianTax": 5770,
+    "lowTax": 4110,
+    "highTax": 7480,
+    "medianPrice": 1135000,
+    "taxPer100k": 500
+   },
+   "byType": {
+    "detached": {
+     "sales": 882,
+     "medianTax": 7410,
+     "lowTax": 6380,
+     "highTax": 8760,
+     "medianPrice": 1475000,
+     "taxPer100k": 512
+    },
+    "semi": {
+     "sales": 89,
+     "medianTax": 5030,
+     "lowTax": 4700,
+     "highTax": 5930,
+     "medianPrice": 1050000,
+     "taxPer100k": 504
+    },
+    "town": {
+     "sales": 306,
+     "medianTax": 5120,
+     "lowTax": 4670,
+     "highTax": 5670,
+     "medianPrice": 1039000,
+     "taxPer100k": 500
+    },
+    "condoTown": {
+     "sales": 94,
+     "medianTax": 3810,
+     "lowTax": 3390,
+     "highTax": 4290,
+     "medianPrice": 720000,
+     "taxPer100k": 512
+    },
+    "condoApt": {
+     "sales": 356,
+     "medianTax": 2520,
+     "lowTax": 2220,
+     "highTax": 2940,
+     "medianPrice": 530000,
+     "taxPer100k": 470
+    }
+   },
+   "communities": [
+    {
+     "name": "Langstaff",
+     "sales": 196,
+     "medianTax": 2640,
+     "lowTax": 2190,
+     "highTax": 4760,
+     "medianPrice": 573000,
+     "taxPer100k": 479
+    },
+    {
+     "name": "Oak Ridges",
+     "sales": 178,
+     "medianTax": 5860,
+     "lowTax": 4820,
+     "highTax": 7090,
+     "medianPrice": 1218000,
+     "taxPer100k": 485
+    },
+    {
+     "name": "Jefferson",
+     "sales": 146,
+     "medianTax": 6720,
+     "lowTax": 5240,
+     "highTax": 7740,
+     "medianPrice": 1335000,
+     "taxPer100k": 497
+    },
+    {
+     "name": "Oak Ridges Lake Wilcox",
+     "sales": 139,
+     "medianTax": 6050,
+     "lowTax": 5060,
+     "highTax": 7090,
+     "medianPrice": 1180000,
+     "taxPer100k": 481
+    },
+    {
+     "name": "North Richvale",
+     "sales": 136,
+     "medianTax": 4570,
+     "lowTax": 2860,
+     "highTax": 6210,
+     "medianPrice": 908000,
+     "taxPer100k": 491
+    },
+    {
+     "name": "Rural Richmond Hill",
+     "sales": 107,
+     "medianTax": 5600,
+     "lowTax": 3930,
+     "highTax": 7060,
+     "medianPrice": 1150000,
+     "taxPer100k": 525
+    },
+    {
+     "name": "Rouge Woods",
+     "sales": 102,
+     "medianTax": 7040,
+     "lowTax": 5830,
+     "highTax": 7940,
+     "medianPrice": 1434000,
+     "taxPer100k": 510
+    },
+    {
+     "name": "Westbrook",
+     "sales": 100,
+     "medianTax": 7080,
+     "lowTax": 5770,
+     "highTax": 7700,
+     "medianPrice": 1390000,
+     "taxPer100k": 500
+    },
+    {
+     "name": "Crosby",
+     "sales": 89,
+     "medianTax": 5340,
+     "lowTax": 4750,
+     "highTax": 6010,
+     "medianPrice": 975000,
+     "taxPer100k": 546
+    },
+    {
+     "name": "Mill Pond",
+     "sales": 87,
+     "medianTax": 7260,
+     "lowTax": 5940,
+     "highTax": 8470,
+     "medianPrice": 1370000,
+     "taxPer100k": 523
+    },
+    {
+     "name": "Observatory",
+     "sales": 86,
+     "medianTax": 3570,
+     "lowTax": 2730,
+     "highTax": 8110,
+     "medianPrice": 735000,
+     "taxPer100k": 493
+    },
+    {
+     "name": "Doncrest",
+     "sales": 84,
+     "medianTax": 6100,
+     "lowTax": 2600,
+     "highTax": 8580,
+     "medianPrice": 1195000,
+     "taxPer100k": 505
+    },
+    {
+     "name": "Devonsleigh",
+     "sales": 73,
+     "medianTax": 6510,
+     "lowTax": 5010,
+     "highTax": 7270,
+     "medianPrice": 1295000,
+     "taxPer100k": 506
+    },
+    {
+     "name": "Harding",
+     "sales": 73,
+     "medianTax": 5040,
+     "lowTax": 2840,
+     "highTax": 6480,
+     "medianPrice": 900000,
+     "taxPer100k": 500
+    },
+    {
+     "name": "South Richvale",
+     "sales": 67,
+     "medianTax": 7690,
+     "lowTax": 3210,
+     "highTax": 10580,
+     "medianPrice": 1438000,
+     "taxPer100k": 519
+    },
+    {
+     "name": "Bayview Hill",
+     "sales": 48,
+     "medianTax": 14590,
+     "lowTax": 13230,
+     "highTax": 15660,
+     "medianPrice": 2445000,
+     "taxPer100k": 609
+    }
+   ]
+  },
+  {
+   "city": "Oshawa",
+   "slug": "oshawa",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1644,
+    "medianTax": 5060,
+    "lowTax": 4180,
+    "highTax": 6250,
+    "medianPrice": 670000,
+    "taxPer100k": 754
+   },
+   "byType": {
+    "detached": {
+     "sales": 1122,
+     "medianTax": 5460,
+     "lowTax": 4680,
+     "highTax": 6920,
+     "medianPrice": 732000,
+     "taxPer100k": 761
+    },
+    "semi": {
+     "sales": 210,
+     "medianTax": 4090,
+     "lowTax": 3840,
+     "highTax": 4480,
+     "medianPrice": 610000,
+     "taxPer100k": 683
+    },
+    "town": {
+     "sales": 112,
+     "medianTax": 5110,
+     "lowTax": 4540,
+     "highTax": 5670,
+     "medianPrice": 659000,
+     "taxPer100k": 770
+    },
+    "condoTown": {
+     "sales": 123,
+     "medianTax": 3250,
+     "lowTax": 2740,
+     "highTax": 5650,
+     "medianPrice": 522000,
+     "taxPer100k": 686
+    },
+    "condoApt": {
+     "sales": 77,
+     "medianTax": 2990,
+     "lowTax": 2520,
+     "highTax": 3880,
+     "medianPrice": 338000,
+     "taxPer100k": 899
+    }
+   },
+   "communities": [
+    {
+     "name": "Windfields",
+     "sales": 156,
+     "medianTax": 6110,
+     "lowTax": 5140,
+     "highTax": 7340,
+     "medianPrice": 658000,
+     "taxPer100k": 880
+    },
+    {
+     "name": "Donevan",
+     "sales": 138,
+     "medianTax": 4830,
+     "lowTax": 4440,
+     "highTax": 5170,
+     "medianPrice": 650000,
+     "taxPer100k": 732
+    },
+    {
+     "name": "Eastdale",
+     "sales": 138,
+     "medianTax": 5410,
+     "lowTax": 4410,
+     "highTax": 6700,
+     "medianPrice": 715000,
+     "taxPer100k": 733
+    },
+    {
+     "name": "Samac",
+     "sales": 137,
+     "medianTax": 5090,
+     "lowTax": 4510,
+     "highTax": 6270,
+     "medianPrice": 717000,
+     "taxPer100k": 759
+    },
+    {
+     "name": "Lakeview",
+     "sales": 135,
+     "medianTax": 3890,
+     "lowTax": 3580,
+     "highTax": 4360,
+     "medianPrice": 590000,
+     "taxPer100k": 664
+    },
+    {
+     "name": "O'Neill",
+     "sales": 132,
+     "medianTax": 4550,
+     "lowTax": 3980,
+     "highTax": 5300,
+     "medianPrice": 631000,
+     "taxPer100k": 759
+    },
+    {
+     "name": "McLaughlin",
+     "sales": 131,
+     "medianTax": 5180,
+     "lowTax": 4720,
+     "highTax": 5880,
+     "medianPrice": 680000,
+     "taxPer100k": 759
+    },
+    {
+     "name": "Taunton",
+     "sales": 128,
+     "medianTax": 7900,
+     "lowTax": 6880,
+     "highTax": 8760,
+     "medianPrice": 962000,
+     "taxPer100k": 795
+    },
+    {
+     "name": "Centennial",
+     "sales": 127,
+     "medianTax": 5110,
+     "lowTax": 4270,
+     "highTax": 5660,
+     "medianPrice": 685000,
+     "taxPer100k": 723
+    },
+    {
+     "name": "Pinecrest",
+     "sales": 117,
+     "medianTax": 5610,
+     "lowTax": 4850,
+     "highTax": 6620,
+     "medianPrice": 750000,
+     "taxPer100k": 751
+    },
+    {
+     "name": "Vanier",
+     "sales": 111,
+     "medianTax": 3980,
+     "lowTax": 3570,
+     "highTax": 4410,
+     "medianPrice": 590000,
+     "taxPer100k": 714
+    },
+    {
+     "name": "Central",
+     "sales": 105,
+     "medianTax": 3900,
+     "lowTax": 3220,
+     "highTax": 4490,
+     "medianPrice": 548000,
+     "taxPer100k": 746
+    },
+    {
+     "name": "Northglen",
+     "sales": 44,
+     "medianTax": 6490,
+     "lowTax": 5840,
+     "highTax": 7050,
+     "medianPrice": 844000,
+     "taxPer100k": 765
+    },
+    {
+     "name": "Kedron",
+     "sales": 32,
+     "medianTax": 7930,
+     "lowTax": 6560,
+     "highTax": 8890,
+     "medianPrice": 934000,
+     "taxPer100k": 826
+    }
+   ]
+  },
+  {
+   "city": "Whitby",
+   "slug": "whitby",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1274,
+    "medianTax": 6320,
+    "lowTax": 5360,
+    "highTax": 7600,
+    "medianPrice": 870000,
+    "taxPer100k": 717
+   },
+   "byType": {
+    "detached": {
+     "sales": 801,
+     "medianTax": 7160,
+     "lowTax": 6190,
+     "highTax": 8430,
+     "medianPrice": 975000,
+     "taxPer100k": 726
+    },
+    "semi": {
+     "sales": 122,
+     "medianTax": 5680,
+     "lowTax": 5250,
+     "highTax": 6290,
+     "medianPrice": 822000,
+     "taxPer100k": 703
+    },
+    "town": {
+     "sales": 211,
+     "medianTax": 5410,
+     "lowTax": 4980,
+     "highTax": 5870,
+     "medianPrice": 762000,
+     "taxPer100k": 708
+    },
+    "condoTown": {
+     "sales": 60,
+     "medianTax": 3680,
+     "lowTax": 3440,
+     "highTax": 4080,
+     "medianPrice": 618000,
+     "taxPer100k": 612
+    },
+    "condoApt": {
+     "sales": 80,
+     "medianTax": 4100,
+     "lowTax": 3400,
+     "highTax": 4750,
+     "medianPrice": 553000,
+     "taxPer100k": 733
+    }
+   },
+   "communities": [
+    {
+     "name": "Brooklin",
+     "sales": 219,
+     "medianTax": 7190,
+     "lowTax": 6130,
+     "highTax": 8710,
+     "medianPrice": 940000,
+     "taxPer100k": 737
+    },
+    {
+     "name": "Pringle Creek",
+     "sales": 192,
+     "medianTax": 5510,
+     "lowTax": 4320,
+     "highTax": 6910,
+     "medianPrice": 775000,
+     "taxPer100k": 691
+    },
+    {
+     "name": "Williamsburg",
+     "sales": 140,
+     "medianTax": 6490,
+     "lowTax": 5380,
+     "highTax": 7830,
+     "medianPrice": 908000,
+     "taxPer100k": 694
+    },
+    {
+     "name": "Rolling Acres",
+     "sales": 122,
+     "medianTax": 6570,
+     "lowTax": 5520,
+     "highTax": 7560,
+     "medianPrice": 900000,
+     "taxPer100k": 716
+    },
+    {
+     "name": "Rural Whitby",
+     "sales": 117,
+     "medianTax": 7650,
+     "lowTax": 6330,
+     "highTax": 10520,
+     "medianPrice": 942000,
+     "taxPer100k": 799
+    },
+    {
+     "name": "Port Whitby",
+     "sales": 107,
+     "medianTax": 5580,
+     "lowTax": 4620,
+     "highTax": 6830,
+     "medianPrice": 772000,
+     "taxPer100k": 716
+    },
+    {
+     "name": "Lynde Creek",
+     "sales": 103,
+     "medianTax": 5740,
+     "lowTax": 5250,
+     "highTax": 8060,
+     "medianPrice": 815000,
+     "taxPer100k": 723
+    },
+    {
+     "name": "Blue Grass Meadows",
+     "sales": 102,
+     "medianTax": 6250,
+     "lowTax": 5440,
+     "highTax": 6940,
+     "medianPrice": 875000,
+     "taxPer100k": 696
+    },
+    {
+     "name": "Downtown Whitby",
+     "sales": 101,
+     "medianTax": 5460,
+     "lowTax": 4800,
+     "highTax": 6170,
+     "medianPrice": 765000,
+     "taxPer100k": 702
+    },
+    {
+     "name": "Taunton North",
+     "sales": 71,
+     "medianTax": 6510,
+     "lowTax": 5730,
+     "highTax": 7770,
+     "medianPrice": 865000,
+     "taxPer100k": 733
+    }
+   ]
+  },
+  {
+   "city": "Ajax",
+   "slug": "ajax",
+   "taxYear": 2025,
+   "all": {
+    "sales": 913,
+    "medianTax": 6100,
+    "lowTax": 5060,
+    "highTax": 7720,
+    "medianPrice": 835000,
+    "taxPer100k": 730
+   },
+   "byType": {
+    "detached": {
+     "sales": 604,
+     "medianTax": 7030,
+     "lowTax": 5790,
+     "highTax": 8340,
+     "medianPrice": 926000,
+     "taxPer100k": 740
+    },
+    "semi": {
+     "sales": 71,
+     "medianTax": 5410,
+     "lowTax": 4990,
+     "highTax": 5830,
+     "medianPrice": 790000,
+     "taxPer100k": 702
+    },
+    "town": {
+     "sales": 136,
+     "medianTax": 5290,
+     "lowTax": 4780,
+     "highTax": 6100,
+     "medianPrice": 750000,
+     "taxPer100k": 723
+    },
+    "condoTown": {
+     "sales": 52,
+     "medianTax": 4030,
+     "lowTax": 3500,
+     "highTax": 4430,
+     "medianPrice": 628000,
+     "taxPer100k": 648
+    },
+    "condoApt": {
+     "sales": 50,
+     "medianTax": 3050,
+     "lowTax": 2940,
+     "highTax": 3410,
+     "medianPrice": 443000,
+     "taxPer100k": 716
+    }
+   },
+   "communities": [
+    {
+     "name": "South East",
+     "sales": 216,
+     "medianTax": 5840,
+     "lowTax": 4790,
+     "highTax": 6740,
+     "medianPrice": 783000,
+     "taxPer100k": 736
+    },
+    {
+     "name": "Central West",
+     "sales": 154,
+     "medianTax": 6610,
+     "lowTax": 5310,
+     "highTax": 8360,
+     "medianPrice": 883000,
+     "taxPer100k": 715
+    },
+    {
+     "name": "Central",
+     "sales": 149,
+     "medianTax": 5550,
+     "lowTax": 4610,
+     "highTax": 6350,
+     "medianPrice": 785000,
+     "taxPer100k": 694
+    },
+    {
+     "name": "Northwest Ajax",
+     "sales": 126,
+     "medianTax": 7770,
+     "lowTax": 6650,
+     "highTax": 8820,
+     "medianPrice": 990000,
+     "taxPer100k": 757
+    },
+    {
+     "name": "Northeast Ajax",
+     "sales": 106,
+     "medianTax": 7570,
+     "lowTax": 5580,
+     "highTax": 8900,
+     "medianPrice": 988000,
+     "taxPer100k": 749
+    },
+    {
+     "name": "South West",
+     "sales": 91,
+     "medianTax": 4980,
+     "lowTax": 4150,
+     "highTax": 6120,
+     "medianPrice": 730000,
+     "taxPer100k": 702
+    },
+    {
+     "name": "Central East",
+     "sales": 71,
+     "medianTax": 5580,
+     "lowTax": 5010,
+     "highTax": 7230,
+     "medianPrice": 777000,
+     "taxPer100k": 742
+    }
+   ]
+  },
+  {
+   "city": "Pickering",
+   "slug": "pickering",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1027,
+    "medianTax": 6130,
+    "lowTax": 4840,
+    "highTax": 7660,
+    "medianPrice": 845000,
+    "taxPer100k": 731
+   },
+   "byType": {
+    "detached": {
+     "sales": 543,
+     "medianTax": 7500,
+     "lowTax": 6410,
+     "highTax": 8860,
+     "medianPrice": 1033000,
+     "taxPer100k": 726
+    },
+    "semi": {
+     "sales": 78,
+     "medianTax": 5610,
+     "lowTax": 5120,
+     "highTax": 5990,
+     "medianPrice": 824000,
+     "taxPer100k": 690
+    },
+    "town": {
+     "sales": 133,
+     "medianTax": 5620,
+     "lowTax": 5090,
+     "highTax": 6420,
+     "medianPrice": 769000,
+     "taxPer100k": 735
+    },
+    "condoTown": {
+     "sales": 147,
+     "medianTax": 4390,
+     "lowTax": 3840,
+     "highTax": 4930,
+     "medianPrice": 608000,
+     "taxPer100k": 751
+    },
+    "condoApt": {
+     "sales": 126,
+     "medianTax": 3710,
+     "lowTax": 3170,
+     "highTax": 4480,
+     "medianPrice": 470000,
+     "taxPer100k": 765
+    }
+   },
+   "communities": [
+    {
+     "name": "Rural Pickering",
+     "sales": 157,
+     "medianTax": 7490,
+     "lowTax": 5820,
+     "highTax": 8720,
+     "medianPrice": 940000,
+     "taxPer100k": 770
+    },
+    {
+     "name": "Bay Ridges",
+     "sales": 144,
+     "medianTax": 5110,
+     "lowTax": 3980,
+     "highTax": 5860,
+     "medianPrice": 715000,
+     "taxPer100k": 729
+    },
+    {
+     "name": "Liverpool",
+     "sales": 132,
+     "medianTax": 6670,
+     "lowTax": 5460,
+     "highTax": 7470,
+     "medianPrice": 938000,
+     "taxPer100k": 694
+    },
+    {
+     "name": "Amberlea",
+     "sales": 100,
+     "medianTax": 6970,
+     "lowTax": 6270,
+     "highTax": 7750,
+     "medianPrice": 948000,
+     "taxPer100k": 718
+    },
+    {
+     "name": "Duffin Heights",
+     "sales": 89,
+     "medianTax": 5010,
+     "lowTax": 4470,
+     "highTax": 6100,
+     "medianPrice": 625000,
+     "taxPer100k": 795
+    },
+    {
+     "name": "Town Centre",
+     "sales": 75,
+     "medianTax": 4200,
+     "lowTax": 3550,
+     "highTax": 4650,
+     "medianPrice": 550000,
+     "taxPer100k": 741
+    },
+    {
+     "name": "West Shore",
+     "sales": 71,
+     "medianTax": 6140,
+     "lowTax": 5780,
+     "highTax": 7370,
+     "medianPrice": 850000,
+     "taxPer100k": 728
+    },
+    {
+     "name": "Highbush",
+     "sales": 55,
+     "medianTax": 6880,
+     "lowTax": 5730,
+     "highTax": 8580,
+     "medianPrice": 918000,
+     "taxPer100k": 722
+    },
+    {
+     "name": "Village East",
+     "sales": 54,
+     "medianTax": 3940,
+     "lowTax": 3520,
+     "highTax": 5190,
+     "medianPrice": 638000,
+     "taxPer100k": 707
+    },
+    {
+     "name": "Brock Ridge",
+     "sales": 48,
+     "medianTax": 6430,
+     "lowTax": 5840,
+     "highTax": 7580,
+     "medianPrice": 937000,
+     "taxPer100k": 694
+    }
+   ]
+  },
+  {
+   "city": "Oakville",
+   "slug": "oakville",
+   "taxYear": 2025,
+   "all": {
+    "sales": 2182,
+    "medianTax": 5850,
+    "lowTax": 4220,
+    "highTax": 8080,
+    "medianPrice": 1267000,
+    "taxPer100k": 480
+   },
+   "byType": {
+    "detached": {
+     "sales": 1209,
+     "medianTax": 7560,
+     "lowTax": 6220,
+     "highTax": 9680,
+     "medianPrice": 1615000,
+     "taxPer100k": 476
+    },
+    "semi": {
+     "sales": 98,
+     "medianTax": 5000,
+     "lowTax": 4430,
+     "highTax": 5380,
+     "medianPrice": 1064000,
+     "taxPer100k": 456
+    },
+    "town": {
+     "sales": 358,
+     "medianTax": 4690,
+     "lowTax": 4140,
+     "highTax": 5390,
+     "medianPrice": 999000,
+     "taxPer100k": 469
+    },
+    "condoTown": {
+     "sales": 183,
+     "medianTax": 3150,
+     "lowTax": 2930,
+     "highTax": 3740,
+     "medianPrice": 700000,
+     "taxPer100k": 470
+    },
+    "condoApt": {
+     "sales": 334,
+     "medianTax": 2780,
+     "lowTax": 2400,
+     "highTax": 3770,
+     "medianPrice": 525000,
+     "taxPer100k": 525
+    }
+   },
+   "communities": [
+    {
+     "name": "1015 - RO River Oaks",
+     "sales": 276,
+     "medianTax": 4780,
+     "lowTax": 3060,
+     "highTax": 6310,
+     "medianPrice": 956000,
+     "taxPer100k": 485
+    },
+    {
+     "name": "1019 - WM Westmount",
+     "sales": 210,
+     "medianTax": 5240,
+     "lowTax": 3770,
+     "highTax": 6910,
+     "medianPrice": 1147000,
+     "taxPer100k": 468
+    },
+    {
+     "name": "1008 - GO Glenorchy",
+     "sales": 207,
+     "medianTax": 5220,
+     "lowTax": 3720,
+     "highTax": 8260,
+     "medianPrice": 1054000,
+     "taxPer100k": 502
+    },
+    {
+     "name": "1007 - GA Glen Abbey",
+     "sales": 195,
+     "medianTax": 6360,
+     "lowTax": 4150,
+     "highTax": 7950,
+     "medianPrice": 1398000,
+     "taxPer100k": 454
+    },
+    {
+     "name": "1001 - BR Bronte",
+     "sales": 188,
+     "medianTax": 6110,
+     "lowTax": 4760,
+     "highTax": 7750,
+     "medianPrice": 1337000,
+     "taxPer100k": 470
+    },
+    {
+     "name": "1020 - WO West",
+     "sales": 152,
+     "medianTax": 6070,
+     "lowTax": 5280,
+     "highTax": 8790,
+     "medianPrice": 1323000,
+     "taxPer100k": 469
+    },
+    {
+     "name": "1010 - JM Joshua Meadows",
+     "sales": 100,
+     "medianTax": 4170,
+     "lowTax": 2900,
+     "highTax": 6870,
+     "medianPrice": 915000,
+     "taxPer100k": 508
+    },
+    {
+     "name": "1022 - WT West Oak Trails",
+     "sales": 100,
+     "medianTax": 5220,
+     "lowTax": 4430,
+     "highTax": 6390,
+     "medianPrice": 1200000,
+     "taxPer100k": 440
+    },
+    {
+     "name": "1005 - FA Falgarwood",
+     "sales": 89,
+     "medianTax": 4230,
+     "lowTax": 2920,
+     "highTax": 6240,
+     "medianPrice": 910000,
+     "taxPer100k": 465
+    },
+    {
+     "name": "1003 - CP College Park",
+     "sales": 89,
+     "medianTax": 4200,
+     "lowTax": 3180,
+     "highTax": 5540,
+     "medianPrice": 895000,
+     "taxPer100k": 461
+    },
+    {
+     "name": "1009 - JC Joshua Creek",
+     "sales": 82,
+     "medianTax": 8430,
+     "lowTax": 5900,
+     "highTax": 11350,
+     "medianPrice": 1725000,
+     "taxPer100k": 501
+    },
+    {
+     "name": "1002 - CO Central",
+     "sales": 81,
+     "medianTax": 5010,
+     "lowTax": 3340,
+     "highTax": 7750,
+     "medianPrice": 1035000,
+     "taxPer100k": 507
+    },
+    {
+     "name": "1006 - FD Ford",
+     "sales": 69,
+     "medianTax": 9360,
+     "lowTax": 7960,
+     "highTax": 12550,
+     "medianPrice": 1880000,
+     "taxPer100k": 529
+    },
+    {
+     "name": "1000 - BC Bronte Creek",
+     "sales": 67,
+     "medianTax": 7370,
+     "lowTax": 5020,
+     "highTax": 9050,
+     "medianPrice": 1450000,
+     "taxPer100k": 482
+    },
+    {
+     "name": "1013 - OO Old Oakville",
+     "sales": 66,
+     "medianTax": 10930,
+     "lowTax": 7700,
+     "highTax": 14270,
+     "medianPrice": 2132000,
+     "taxPer100k": 489
+    },
+    {
+     "name": "1011 - MO Morrison",
+     "sales": 60,
+     "medianTax": 16140,
+     "lowTax": 13410,
+     "highTax": 22700,
+     "medianPrice": 3149000,
+     "taxPer100k": 518
+    },
+    {
+     "name": "1018 - WC Wedgewood Creek",
+     "sales": 56,
+     "medianTax": 6270,
+     "lowTax": 4980,
+     "highTax": 7200,
+     "medianPrice": 1276000,
+     "taxPer100k": 483
+    },
+    {
+     "name": "1004 - CV Clearview",
+     "sales": 41,
+     "medianTax": 7200,
+     "lowTax": 6550,
+     "highTax": 7890,
+     "medianPrice": 1492000,
+     "taxPer100k": 479
+    },
+    {
+     "name": "1017 - SW Southwest",
+     "sales": 34,
+     "medianTax": 11100,
+     "lowTax": 8240,
+     "highTax": 19030,
+     "medianPrice": 2660000,
+     "taxPer100k": 462
+    }
+   ]
+  },
+  {
+   "city": "Burlington",
+   "slug": "burlington",
+   "taxYear": 2025,
+   "all": {
+    "sales": 2100,
+    "medianTax": 5040,
+    "lowTax": 3790,
+    "highTax": 6490,
+    "medianPrice": 938000,
+    "taxPer100k": 530
+   },
+   "byType": {
+    "detached": {
+     "sales": 1085,
+     "medianTax": 6250,
+     "lowTax": 5260,
+     "highTax": 7730,
+     "medianPrice": 1230000,
+     "taxPer100k": 519
+    },
+    "semi": {
+     "sales": 116,
+     "medianTax": 4500,
+     "lowTax": 3960,
+     "highTax": 5140,
+     "medianPrice": 884000,
+     "taxPer100k": 516
+    },
+    "town": {
+     "sales": 159,
+     "medianTax": 4450,
+     "lowTax": 4240,
+     "highTax": 4970,
+     "medianPrice": 850000,
+     "taxPer100k": 530
+    },
+    "condoTown": {
+     "sales": 368,
+     "medianTax": 3570,
+     "lowTax": 3100,
+     "highTax": 4360,
+     "medianPrice": 690000,
+     "taxPer100k": 526
+    },
+    "condoApt": {
+     "sales": 372,
+     "medianTax": 3040,
+     "lowTax": 2610,
+     "highTax": 3810,
+     "medianPrice": 530000,
+     "taxPer100k": 587
+    }
+   },
+   "communities": [
+    {
+     "name": "Brant",
+     "sales": 292,
+     "medianTax": 5530,
+     "lowTax": 3820,
+     "highTax": 6610,
+     "medianPrice": 928000,
+     "taxPer100k": 551
+    },
+    {
+     "name": "Appleby",
+     "sales": 234,
+     "medianTax": 4880,
+     "lowTax": 3520,
+     "highTax": 5620,
+     "medianPrice": 915000,
+     "taxPer100k": 512
+    },
+    {
+     "name": "Roseland",
+     "sales": 149,
+     "medianTax": 5250,
+     "lowTax": 3300,
+     "highTax": 7210,
+     "medianPrice": 1015000,
+     "taxPer100k": 501
+    },
+    {
+     "name": "Shoreacres",
+     "sales": 147,
+     "medianTax": 6330,
+     "lowTax": 4430,
+     "highTax": 8590,
+     "medianPrice": 1272000,
+     "taxPer100k": 519
+    },
+    {
+     "name": "Headon",
+     "sales": 142,
+     "medianTax": 4630,
+     "lowTax": 3610,
+     "highTax": 6190,
+     "medianPrice": 905000,
+     "taxPer100k": 521
+    },
+    {
+     "name": "LaSalle",
+     "sales": 132,
+     "medianTax": 5430,
+     "lowTax": 3650,
+     "highTax": 7060,
+     "medianPrice": 925000,
+     "taxPer100k": 556
+    },
+    {
+     "name": "Brant Hills",
+     "sales": 128,
+     "medianTax": 4290,
+     "lowTax": 3190,
+     "highTax": 5560,
+     "medianPrice": 820000,
+     "taxPer100k": 501
+    },
+    {
+     "name": "Alton",
+     "sales": 126,
+     "medianTax": 6170,
+     "lowTax": 4720,
+     "highTax": 7150,
+     "medianPrice": 1163000,
+     "taxPer100k": 546
+    },
+    {
+     "name": "Orchard",
+     "sales": 110,
+     "medianTax": 5490,
+     "lowTax": 4750,
+     "highTax": 6620,
+     "medianPrice": 1043000,
+     "taxPer100k": 533
+    },
+    {
+     "name": "Mountainside",
+     "sales": 107,
+     "medianTax": 4450,
+     "lowTax": 3420,
+     "highTax": 4750,
+     "medianPrice": 825000,
+     "taxPer100k": 527
+    },
+    {
+     "name": "Rose",
+     "sales": 102,
+     "medianTax": 6230,
+     "lowTax": 4970,
+     "highTax": 8480,
+     "medianPrice": 1063000,
+     "taxPer100k": 543
+    },
+    {
+     "name": "Tansley",
+     "sales": 76,
+     "medianTax": 3290,
+     "lowTax": 2610,
+     "highTax": 5420,
+     "medianPrice": 565000,
+     "taxPer100k": 551
+    },
+    {
+     "name": "Uptown",
+     "sales": 74,
+     "medianTax": 4070,
+     "lowTax": 3090,
+     "highTax": 4460,
+     "medianPrice": 688000,
+     "taxPer100k": 548
+    },
+    {
+     "name": "Tyandaga",
+     "sales": 72,
+     "medianTax": 5910,
+     "lowTax": 4240,
+     "highTax": 8760,
+     "medianPrice": 1245000,
+     "taxPer100k": 538
+    },
+    {
+     "name": "Palmer",
+     "sales": 70,
+     "medianTax": 4710,
+     "lowTax": 4040,
+     "highTax": 5060,
+     "medianPrice": 892000,
+     "taxPer100k": 514
+    },
+    {
+     "name": "Bayview",
+     "sales": 49,
+     "medianTax": 6030,
+     "lowTax": 3750,
+     "highTax": 8070,
+     "medianPrice": 1178000,
+     "taxPer100k": 518
+    },
+    {
+     "name": "Freeman",
+     "sales": 46,
+     "medianTax": 4070,
+     "lowTax": 3460,
+     "highTax": 4510,
+     "medianPrice": 754000,
+     "taxPer100k": 549
+    },
+    {
+     "name": "Rural Burlington",
+     "sales": 38,
+     "medianTax": 8230,
+     "lowTax": 6720,
+     "highTax": 12130,
+     "medianPrice": 1838000,
+     "taxPer100k": 498
+    }
+   ]
+  },
+  {
+   "city": "Milton",
+   "slug": "milton",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1280,
+    "medianTax": 4080,
+    "lowTax": 3520,
+    "highTax": 5110,
+    "medianPrice": 899000,
+    "taxPer100k": 460
+   },
+   "byType": {
+    "detached": {
+     "sales": 582,
+     "medianTax": 5220,
+     "lowTax": 4640,
+     "highTax": 5900,
+     "medianPrice": 1125000,
+     "taxPer100k": 466
+    },
+    "semi": {
+     "sales": 128,
+     "medianTax": 4030,
+     "lowTax": 3850,
+     "highTax": 4260,
+     "medianPrice": 900000,
+     "taxPer100k": 454
+    },
+    "town": {
+     "sales": 401,
+     "medianTax": 3640,
+     "lowTax": 3350,
+     "highTax": 3840,
+     "medianPrice": 810000,
+     "taxPer100k": 453
+    },
+    "condoTown": {
+     "sales": 55,
+     "medianTax": 2680,
+     "lowTax": 2500,
+     "highTax": 2950,
+     "medianPrice": 630000,
+     "taxPer100k": 434
+    },
+    "condoApt": {
+     "sales": 114,
+     "medianTax": 2480,
+     "lowTax": 2220,
+     "highTax": 2950,
+     "medianPrice": 519000,
+     "taxPer100k": 494
+    }
+   },
+   "communities": [
+    {
+     "name": "1023 - BE Beaty",
+     "sales": 152,
+     "medianTax": 4500,
+     "lowTax": 3690,
+     "highTax": 5290,
+     "medianPrice": 938000,
+     "taxPer100k": 467
+    },
+    {
+     "name": "1027 - CL Clarke",
+     "sales": 137,
+     "medianTax": 4010,
+     "lowTax": 3710,
+     "highTax": 4900,
+     "medianPrice": 868000,
+     "taxPer100k": 466
+    },
+    {
+     "name": "1038 - WI Willmott",
+     "sales": 110,
+     "medianTax": 3830,
+     "lowTax": 3390,
+     "highTax": 4650,
+     "medianPrice": 840000,
+     "taxPer100k": 461
+    },
+    {
+     "name": "1029 - DE Dempsey",
+     "sales": 109,
+     "medianTax": 3570,
+     "lowTax": 2680,
+     "highTax": 4460,
+     "medianPrice": 789000,
+     "taxPer100k": 463
+    },
+    {
+     "name": "1032 - FO Ford",
+     "sales": 104,
+     "medianTax": 3890,
+     "lowTax": 3600,
+     "highTax": 4890,
+     "medianPrice": 962000,
+     "taxPer100k": 413
+    },
+    {
+     "name": "1033 - HA Harrison",
+     "sales": 104,
+     "medianTax": 4080,
+     "lowTax": 3500,
+     "highTax": 4960,
+     "medianPrice": 895000,
+     "taxPer100k": 470
+    },
+    {
+     "name": "1028 - CO Coates",
+     "sales": 91,
+     "medianTax": 4010,
+     "lowTax": 3680,
+     "highTax": 5070,
+     "medianPrice": 855000,
+     "taxPer100k": 458
+    },
+    {
+     "name": "1036 - SC Scott",
+     "sales": 85,
+     "medianTax": 4590,
+     "lowTax": 4010,
+     "highTax": 5820,
+     "medianPrice": 1050000,
+     "taxPer100k": 465
+    },
+    {
+     "name": "1037 - TM Timberlea",
+     "sales": 80,
+     "medianTax": 4080,
+     "lowTax": 3120,
+     "highTax": 5660,
+     "medianPrice": 890000,
+     "taxPer100k": 477
+    },
+    {
+     "name": "1035 - OM Old Milton",
+     "sales": 79,
+     "medianTax": 3860,
+     "lowTax": 2750,
+     "highTax": 4600,
+     "medianPrice": 790000,
+     "taxPer100k": 452
+    },
+    {
+     "name": "1026 - CB Cobban",
+     "sales": 50,
+     "medianTax": 4360,
+     "lowTax": 3340,
+     "highTax": 4830,
+     "medianPrice": 953000,
+     "taxPer100k": 426
+    },
+    {
+     "name": "1051 - Walker",
+     "sales": 42,
+     "medianTax": 4170,
+     "lowTax": 3790,
+     "highTax": 5340,
+     "medianPrice": 963000,
+     "taxPer100k": 448
+    },
+    {
+     "name": "1031 - DP Dorset Park",
+     "sales": 38,
+     "medianTax": 4330,
+     "lowTax": 2950,
+     "highTax": 4720,
+     "medianPrice": 855000,
+     "taxPer100k": 487
+    }
+   ]
+  },
+  {
+   "city": "Hamilton",
+   "slug": "hamilton",
+   "taxYear": 2025,
+   "all": {
+    "sales": 4228,
+    "medianTax": 4840,
+    "lowTax": 3910,
+    "highTax": 6130,
+    "medianPrice": 675000,
+    "taxPer100k": 707
+   },
+   "byType": {
+    "detached": {
+     "sales": 2904,
+     "medianTax": 5210,
+     "lowTax": 4250,
+     "highTax": 6720,
+     "medianPrice": 740000,
+     "taxPer100k": 702
+    },
+    "semi": {
+     "sales": 218,
+     "medianTax": 4300,
+     "lowTax": 3620,
+     "highTax": 5000,
+     "medianPrice": 601000,
+     "taxPer100k": 694
+    },
+    "town": {
+     "sales": 433,
+     "medianTax": 4740,
+     "lowTax": 4250,
+     "highTax": 5330,
+     "medianPrice": 665000,
+     "taxPer100k": 711
+    },
+    "condoTown": {
+     "sales": 370,
+     "medianTax": 3870,
+     "lowTax": 3170,
+     "highTax": 4810,
+     "medianPrice": 553000,
+     "taxPer100k": 700
+    },
+    "condoApt": {
+     "sales": 303,
+     "medianTax": 3210,
+     "lowTax": 2540,
+     "highTax": 4090,
+     "medianPrice": 375000,
+     "taxPer100k": 852
+    }
+   },
+   "communities": [
+    {
+     "name": "Waterdown",
+     "sales": 324,
+     "medianTax": 5970,
+     "lowTax": 4940,
+     "highTax": 7100,
+     "medianPrice": 880000,
+     "taxPer100k": 669
+    },
+    {
+     "name": "Ancaster",
+     "sales": 250,
+     "medianTax": 6800,
+     "lowTax": 5210,
+     "highTax": 8860,
+     "medianPrice": 1025000,
+     "taxPer100k": 678
+    },
+    {
+     "name": "Stoney Creek",
+     "sales": 248,
+     "medianTax": 4720,
+     "lowTax": 3940,
+     "highTax": 5750,
+     "medianPrice": 700000,
+     "taxPer100k": 687
+    },
+    {
+     "name": "Stoney Creek Mountain",
+     "sales": 204,
+     "medianTax": 4730,
+     "lowTax": 4200,
+     "highTax": 5460,
+     "medianPrice": 712000,
+     "taxPer100k": 668
+    },
+    {
+     "name": "Dundas",
+     "sales": 157,
+     "medianTax": 5700,
+     "lowTax": 4740,
+     "highTax": 7000,
+     "medianPrice": 831000,
+     "taxPer100k": 688
+    },
+    {
+     "name": "Binbrook",
+     "sales": 122,
+     "medianTax": 4880,
+     "lowTax": 4010,
+     "highTax": 5690,
+     "medianPrice": 710000,
+     "taxPer100k": 646
+    },
+    {
+     "name": "Crown Point",
+     "sales": 115,
+     "medianTax": 2870,
+     "lowTax": 2570,
+     "highTax": 3240,
+     "medianPrice": 463000,
+     "taxPer100k": 627
+    },
+    {
+     "name": "Meadowlands",
+     "sales": 114,
+     "medianTax": 6870,
+     "lowTax": 5540,
+     "highTax": 8130,
+     "medianPrice": 905000,
+     "taxPer100k": 748
+    },
+    {
+     "name": "Rural Glanbrook",
+     "sales": 113,
+     "medianTax": 5370,
+     "lowTax": 4560,
+     "highTax": 6290,
+     "medianPrice": 785000,
+     "taxPer100k": 700
+    },
+    {
+     "name": "Homeside",
+     "sales": 72,
+     "medianTax": 3150,
+     "lowTax": 2910,
+     "highTax": 3330,
+     "medianPrice": 447000,
+     "taxPer100k": 683
+    },
+    {
+     "name": "Lakeshore",
+     "sales": 70,
+     "medianTax": 4230,
+     "lowTax": 3190,
+     "highTax": 4830,
+     "medianPrice": 579000,
+     "taxPer100k": 720
+    },
+    {
+     "name": "Ainslie Wood",
+     "sales": 69,
+     "medianTax": 5520,
+     "lowTax": 3910,
+     "highTax": 5950,
+     "medianPrice": 650000,
+     "taxPer100k": 853
+    },
+    {
+     "name": "Vincent",
+     "sales": 64,
+     "medianTax": 3410,
+     "lowTax": 1930,
+     "highTax": 5190,
+     "medianPrice": 480000,
+     "taxPer100k": 707
+    },
+    {
+     "name": "Rural Flamborough",
+     "sales": 63,
+     "medianTax": 6230,
+     "lowTax": 5190,
+     "highTax": 8290,
+     "medianPrice": 1100000,
+     "taxPer100k": 620
+    },
+    {
+     "name": "Delta",
+     "sales": 63,
+     "medianTax": 4160,
+     "lowTax": 3980,
+     "highTax": 4490,
+     "medianPrice": 640000,
+     "taxPer100k": 663
+    },
+    {
+     "name": "Kirkendall",
+     "sales": 57,
+     "medianTax": 6320,
+     "lowTax": 5420,
+     "highTax": 8440,
+     "medianPrice": 764000,
+     "taxPer100k": 834
+    },
+    {
+     "name": "McQuesten",
+     "sales": 56,
+     "medianTax": 3450,
+     "lowTax": 3020,
+     "highTax": 3740,
+     "medianPrice": 519000,
+     "taxPer100k": 665
+    },
+    {
+     "name": "Westdale",
+     "sales": 55,
+     "medianTax": 7140,
+     "lowTax": 6260,
+     "highTax": 8240,
+     "medianPrice": 815000,
+     "taxPer100k": 891
+    },
+    {
+     "name": "Stipley",
+     "sales": 50,
+     "medianTax": 3120,
+     "lowTax": 2800,
+     "highTax": 4340,
+     "medianPrice": 493000,
+     "taxPer100k": 656
+    },
+    {
+     "name": "Durand",
+     "sales": 46,
+     "medianTax": 4950,
+     "lowTax": 3630,
+     "highTax": 7520,
+     "medianPrice": 493000,
+     "taxPer100k": 934
+    },
+    {
+     "name": "Eastmount",
+     "sales": 46,
+     "medianTax": 4040,
+     "lowTax": 3690,
+     "highTax": 4320,
+     "medianPrice": 555000,
+     "taxPer100k": 710
+    },
+    {
+     "name": "Inch Park",
+     "sales": 46,
+     "medianTax": 4380,
+     "lowTax": 4120,
+     "highTax": 4840,
+     "medianPrice": 585000,
+     "taxPer100k": 741
+    },
+    {
+     "name": "Mountview",
+     "sales": 44,
+     "medianTax": 5840,
+     "lowTax": 5360,
+     "highTax": 6160,
+     "medianPrice": 730000,
+     "taxPer100k": 798
+    },
+    {
+     "name": "Mount Hope",
+     "sales": 44,
+     "medianTax": 5200,
+     "lowTax": 4620,
+     "highTax": 5620,
+     "medianPrice": 779000,
+     "taxPer100k": 691
+    },
+    {
+     "name": "Westcliffe",
+     "sales": 42,
+     "medianTax": 5200,
+     "lowTax": 4870,
+     "highTax": 5870,
+     "medianPrice": 687000,
+     "taxPer100k": 754
+    },
+    {
+     "name": "Beasley",
+     "sales": 42,
+     "medianTax": 3580,
+     "lowTax": 3070,
+     "highTax": 4190,
+     "medianPrice": 396000,
+     "taxPer100k": 910
+    },
+    {
+     "name": "Landsdale",
+     "sales": 42,
+     "medianTax": 2810,
+     "lowTax": 2410,
+     "highTax": 3210,
+     "medianPrice": 473000,
+     "taxPer100k": 624
+    },
+    {
+     "name": "Huntington",
+     "sales": 38,
+     "medianTax": 4850,
+     "lowTax": 4640,
+     "highTax": 5210,
+     "medianPrice": 650000,
+     "taxPer100k": 779
+    },
+    {
+     "name": "Raleigh",
+     "sales": 38,
+     "medianTax": 4100,
+     "lowTax": 3740,
+     "highTax": 4470,
+     "medianPrice": 573000,
+     "taxPer100k": 729
+    },
+    {
+     "name": "Normanhurst",
+     "sales": 37,
+     "medianTax": 3160,
+     "lowTax": 2770,
+     "highTax": 3380,
+     "medianPrice": 448000,
+     "taxPer100k": 670
+    },
+    {
+     "name": "Gourley",
+     "sales": 36,
+     "medianTax": 4940,
+     "lowTax": 4040,
+     "highTax": 6070,
+     "medianPrice": 630000,
+     "taxPer100k": 727
+    },
+    {
+     "name": "Strathcona",
+     "sales": 36,
+     "medianTax": 4200,
+     "lowTax": 3500,
+     "highTax": 4630,
+     "medianPrice": 500000,
+     "taxPer100k": 786
+    },
+    {
+     "name": "Rosedale",
+     "sales": 35,
+     "medianTax": 4540,
+     "lowTax": 4310,
+     "highTax": 4960,
+     "medianPrice": 625000,
+     "taxPer100k": 731
+    },
+    {
+     "name": "Industrial Sector",
+     "sales": 35,
+     "medianTax": 2490,
+     "lowTax": 2260,
+     "highTax": 2640,
+     "medianPrice": 395000,
+     "taxPer100k": 630
+    },
+    {
+     "name": "Parkview",
+     "sales": 35,
+     "medianTax": 3350,
+     "lowTax": 3150,
+     "highTax": 3780,
+     "medianPrice": 485000,
+     "taxPer100k": 718
+    },
+    {
+     "name": "Winona Park",
+     "sales": 34,
+     "medianTax": 6080,
+     "lowTax": 4830,
+     "highTax": 7600,
+     "medianPrice": 888000,
+     "taxPer100k": 685
+    },
+    {
+     "name": "North End",
+     "sales": 34,
+     "medianTax": 3950,
+     "lowTax": 3200,
+     "highTax": 4450,
+     "medianPrice": 590000,
+     "taxPer100k": 674
+    },
+    {
+     "name": "Gibson",
+     "sales": 32,
+     "medianTax": 2920,
+     "lowTax": 2510,
+     "highTax": 3440,
+     "medianPrice": 448000,
+     "taxPer100k": 682
+    },
+    {
+     "name": "Corktown",
+     "sales": 31,
+     "medianTax": 3550,
+     "lowTax": 2210,
+     "highTax": 4180,
+     "medianPrice": 325000,
+     "taxPer100k": 808
+    },
+    {
+     "name": "Bartonville",
+     "sales": 31,
+     "medianTax": 4100,
+     "lowTax": 3900,
+     "highTax": 4360,
+     "medianPrice": 575000,
+     "taxPer100k": 700
+    },
+    {
+     "name": "Central",
+     "sales": 30,
+     "medianTax": 3450,
+     "lowTax": 2610,
+     "highTax": 4110,
+     "medianPrice": 423000,
+     "taxPer100k": 849
+    },
+    {
+     "name": "Fessenden",
+     "sales": 29,
+     "medianTax": 4360,
+     "lowTax": 3890,
+     "highTax": 4750,
+     "medianPrice": 568000,
+     "taxPer100k": 717
+    },
+    {
+     "name": "Hill Park",
+     "sales": 29,
+     "medianTax": 4840,
+     "lowTax": 4590,
+     "highTax": 5150,
+     "medianPrice": 600000,
+     "taxPer100k": 786
+    },
+    {
+     "name": "St. Clair",
+     "sales": 29,
+     "medianTax": 4920,
+     "lowTax": 4050,
+     "highTax": 5170,
+     "medianPrice": 672000,
+     "taxPer100k": 676
+    },
+    {
+     "name": "Bruleville",
+     "sales": 28,
+     "medianTax": 5010,
+     "lowTax": 4580,
+     "highTax": 6140,
+     "medianPrice": 703000,
+     "taxPer100k": 748
+    },
+    {
+     "name": "Red Hill",
+     "sales": 28,
+     "medianTax": 4460,
+     "lowTax": 3300,
+     "highTax": 5130,
+     "medianPrice": 588000,
+     "taxPer100k": 752
+    },
+    {
+     "name": "Gurnett",
+     "sales": 27,
+     "medianTax": 5560,
+     "lowTax": 4920,
+     "highTax": 6560,
+     "medianPrice": 763000,
+     "taxPer100k": 747
+    },
+    {
+     "name": "Centremount",
+     "sales": 27,
+     "medianTax": 4520,
+     "lowTax": 4180,
+     "highTax": 5140,
+     "medianPrice": 630000,
+     "taxPer100k": 799
+    },
+    {
+     "name": "Gilbert",
+     "sales": 26,
+     "medianTax": 4860,
+     "lowTax": 4550,
+     "highTax": 5280,
+     "medianPrice": 702000,
+     "taxPer100k": 716
+    },
+    {
+     "name": "Barnstown",
+     "sales": 26,
+     "medianTax": 6730,
+     "lowTax": 5460,
+     "highTax": 7060,
+     "medianPrice": 781000,
+     "taxPer100k": 802
+    },
+    {
+     "name": "Berrisfield",
+     "sales": 25,
+     "medianTax": 4570,
+     "lowTax": 4270,
+     "highTax": 4870,
+     "medianPrice": 620000,
+     "taxPer100k": 721
+    }
+   ]
+  },
+  {
+   "city": "Ottawa",
+   "slug": "ottawa",
+   "taxYear": 2025,
+   "all": {
+    "sales": 9589,
+    "medianTax": 4560,
+    "lowTax": 3660,
+    "highTax": 5740,
+    "medianPrice": 642000,
+    "taxPer100k": 708
+   },
+   "byType": {
+    "detached": {
+     "sales": 4355,
+     "medianTax": 5530,
+     "lowTax": 4760,
+     "highTax": 6770,
+     "medianPrice": 820000,
+     "taxPer100k": 682
+    },
+    "semi": {
+     "sales": 619,
+     "medianTax": 4500,
+     "lowTax": 3880,
+     "highTax": 5990,
+     "medianPrice": 651000,
+     "taxPer100k": 694
+    },
+    "town": {
+     "sales": 2169,
+     "medianTax": 4160,
+     "lowTax": 3740,
+     "highTax": 4600,
+     "medianPrice": 595000,
+     "taxPer100k": 698
+    },
+    "condoTown": {
+     "sales": 1039,
+     "medianTax": 2810,
+     "lowTax": 2530,
+     "highTax": 3210,
+     "medianPrice": 393000,
+     "taxPer100k": 721
+    },
+    "condoApt": {
+     "sales": 1407,
+     "medianTax": 3520,
+     "lowTax": 2650,
+     "highTax": 4550,
+     "medianPrice": 375000,
+     "taxPer100k": 899
+    }
+   },
+   "communities": [
+    {
+     "name": "9010 - Kanata - Emerald Meadows/Trailwest",
+     "sales": 355,
+     "medianTax": 4350,
+     "lowTax": 3770,
+     "highTax": 5260,
+     "medianPrice": 625000,
+     "taxPer100k": 688
+    },
+    {
+     "name": "7711 - Barrhaven - Half Moon Bay",
+     "sales": 260,
+     "medianTax": 4400,
+     "lowTax": 3770,
+     "highTax": 5570,
+     "medianPrice": 642000,
+     "taxPer100k": 700
+    },
+    {
+     "name": "2602 - Riverside South/Gloucester Glen",
+     "sales": 235,
+     "medianTax": 4800,
+     "lowTax": 4240,
+     "highTax": 5940,
+     "medianPrice": 690000,
+     "taxPer100k": 705
+    },
+    {
+     "name": "7706 - Barrhaven - Longfields",
+     "sales": 217,
+     "medianTax": 4200,
+     "lowTax": 3530,
+     "highTax": 4940,
+     "medianPrice": 608000,
+     "taxPer100k": 688
+    },
+    {
+     "name": "2605 - Blossom Park/Kemp Park/Findlay Creek",
+     "sales": 180,
+     "medianTax": 4910,
+     "lowTax": 4300,
+     "highTax": 6000,
+     "medianPrice": 657000,
+     "taxPer100k": 722
+    },
+    {
+     "name": "9007 - Kanata - Kanata Lakes/Heritage Hills",
+     "sales": 170,
+     "medianTax": 5350,
+     "lowTax": 4440,
+     "highTax": 6710,
+     "medianPrice": 776000,
+     "taxPer100k": 696
+    },
+    {
+     "name": "8211 - Stittsville (North)",
+     "sales": 165,
+     "medianTax": 4560,
+     "lowTax": 3960,
+     "highTax": 5290,
+     "medianPrice": 658000,
+     "taxPer100k": 675
+    },
+    {
+     "name": "9004 - Kanata - Bridlewood",
+     "sales": 150,
+     "medianTax": 4840,
+     "lowTax": 4180,
+     "highTax": 5660,
+     "medianPrice": 746000,
+     "taxPer100k": 665
+    },
+    {
+     "name": "1118 - Avalon East",
+     "sales": 149,
+     "medianTax": 4220,
+     "lowTax": 3740,
+     "highTax": 5320,
+     "medianPrice": 617000,
+     "taxPer100k": 693
+    },
+    {
+     "name": "4102 - Ottawa Centre",
+     "sales": 149,
+     "medianTax": 3980,
+     "lowTax": 3490,
+     "highTax": 4870,
+     "medianPrice": 415000,
+     "taxPer100k": 952
+    },
+    {
+     "name": "1117 - Avalon West",
+     "sales": 136,
+     "medianTax": 4530,
+     "lowTax": 3980,
+     "highTax": 5520,
+     "medianPrice": 630000,
+     "taxPer100k": 726
+    },
+    {
+     "name": "9008 - Kanata - Morgan's Grant/South March",
+     "sales": 125,
+     "medianTax": 4380,
+     "lowTax": 3870,
+     "highTax": 5360,
+     "medianPrice": 636000,
+     "taxPer100k": 673
+    },
+    {
+     "name": "8202 - Stittsville (Central)",
+     "sales": 125,
+     "medianTax": 5020,
+     "lowTax": 4220,
+     "highTax": 5840,
+     "medianPrice": 765000,
+     "taxPer100k": 651
+    },
+    {
+     "name": "8203 - Stittsville (South)",
+     "sales": 121,
+     "medianTax": 5430,
+     "lowTax": 4600,
+     "highTax": 6330,
+     "medianPrice": 815000,
+     "taxPer100k": 659
+    },
+    {
+     "name": "9002 - Kanata - Katimavik",
+     "sales": 117,
+     "medianTax": 3800,
+     "lowTax": 2860,
+     "highTax": 4690,
+     "medianPrice": 553000,
+     "taxPer100k": 697
+    },
+    {
+     "name": "7710 - Barrhaven East",
+     "sales": 114,
+     "medianTax": 4570,
+     "lowTax": 3360,
+     "highTax": 5660,
+     "medianPrice": 650000,
+     "taxPer100k": 705
+    },
+    {
+     "name": "7202 - Borden Farm/Stewart Farm/Carleton Heights/Parkwood Hills",
+     "sales": 112,
+     "medianTax": 4350,
+     "lowTax": 2420,
+     "highTax": 5300,
+     "medianPrice": 571000,
+     "taxPer100k": 780
+    },
+    {
+     "name": "3806 - Hunt Club Park/Greenboro",
+     "sales": 110,
+     "medianTax": 3790,
+     "lowTax": 3010,
+     "highTax": 4360,
+     "medianPrice": 537000,
+     "taxPer100k": 717
+    },
+    {
+     "name": "2013 - Mer Bleue/Bradley Estates/Anderson Park",
+     "sales": 106,
+     "medianTax": 4540,
+     "lowTax": 4210,
+     "highTax": 5860,
+     "medianPrice": 648000,
+     "taxPer100k": 703
+    },
+    {
+     "name": "1105 - Fallingbrook/Pineridge",
+     "sales": 105,
+     "medianTax": 3860,
+     "lowTax": 2870,
+     "highTax": 4720,
+     "medianPrice": 605000,
+     "taxPer100k": 661
+    },
+    {
+     "name": "1106 - Fallingbrook/Gardenway South",
+     "sales": 104,
+     "medianTax": 4480,
+     "lowTax": 3660,
+     "highTax": 5140,
+     "medianPrice": 640000,
+     "taxPer100k": 671
+    },
+    {
+     "name": "7708 - Barrhaven - Stonebridge",
+     "sales": 100,
+     "medianTax": 4910,
+     "lowTax": 4430,
+     "highTax": 7350,
+     "medianPrice": 648000,
+     "taxPer100k": 765
+    },
+    {
+     "name": "1601 - Greely",
+     "sales": 93,
+     "medianTax": 5540,
+     "lowTax": 4680,
+     "highTax": 6740,
+     "medianPrice": 1045000,
+     "taxPer100k": 546
+    },
+    {
+     "name": "7709 - Barrhaven - Strandherd",
+     "sales": 90,
+     "medianTax": 4210,
+     "lowTax": 3090,
+     "highTax": 4840,
+     "medianPrice": 595000,
+     "taxPer100k": 705
+    },
+    {
+     "name": "3602 - Riverview Park",
+     "sales": 90,
+     "medianTax": 4870,
+     "lowTax": 3970,
+     "highTax": 5690,
+     "medianPrice": 628000,
+     "taxPer100k": 788
+    },
+    {
+     "name": "1102 - Bilberry Creek/Queenswood Heights",
+     "sales": 87,
+     "medianTax": 4200,
+     "lowTax": 3620,
+     "highTax": 4660,
+     "medianPrice": 597000,
+     "taxPer100k": 689
+    },
+    {
+     "name": "1119 - Notting Hill/Summerside",
+     "sales": 85,
+     "medianTax": 4480,
+     "lowTax": 3870,
+     "highTax": 5530,
+     "medianPrice": 654000,
+     "taxPer100k": 699
+    },
+    {
+     "name": "4003 - Sandy Hill",
+     "sales": 84,
+     "medianTax": 4280,
+     "lowTax": 3820,
+     "highTax": 5590,
+     "medianPrice": 388000,
+     "taxPer100k": 1181
+    },
+    {
+     "name": "9003 - Kanata - Glencairn/Hazeldean",
+     "sales": 83,
+     "medianTax": 3810,
+     "lowTax": 3330,
+     "highTax": 4290,
+     "medianPrice": 590000,
+     "taxPer100k": 650
+    },
+    {
+     "name": "7703 - Barrhaven - Cedargrove/Fraserdale",
+     "sales": 80,
+     "medianTax": 4140,
+     "lowTax": 3650,
+     "highTax": 5210,
+     "medianPrice": 614000,
+     "taxPer100k": 681
+    },
+    {
+     "name": "9001 - Kanata - Beaverbrook",
+     "sales": 78,
+     "medianTax": 3550,
+     "lowTax": 2900,
+     "highTax": 5890,
+     "medianPrice": 532000,
+     "taxPer100k": 680
+    },
+    {
+     "name": "5003 - Westboro/Hampton Park",
+     "sales": 77,
+     "medianTax": 6920,
+     "lowTax": 5280,
+     "highTax": 8890,
+     "medianPrice": 875000,
+     "taxPer100k": 812
+    },
+    {
+     "name": "7704 - Barrhaven - Heritage Park",
+     "sales": 75,
+     "medianTax": 4060,
+     "lowTax": 3500,
+     "highTax": 4720,
+     "medianPrice": 587000,
+     "taxPer100k": 703
+    },
+    {
+     "name": "4103 - Ottawa Centre",
+     "sales": 74,
+     "medianTax": 4970,
+     "lowTax": 4160,
+     "highTax": 6240,
+     "medianPrice": 547000,
+     "taxPer100k": 922
+    },
+    {
+     "name": "2010 - Chateauneuf",
+     "sales": 73,
+     "medianTax": 4600,
+     "lowTax": 3700,
+     "highTax": 5160,
+     "medianPrice": 688000,
+     "taxPer100k": 659
+    },
+    {
+     "name": "1101 - Chatelaine Village",
+     "sales": 69,
+     "medianTax": 4010,
+     "lowTax": 3380,
+     "highTax": 4440,
+     "medianPrice": 550000,
+     "taxPer100k": 700
+    },
+    {
+     "name": "3808 - Hunt Club Park",
+     "sales": 64,
+     "medianTax": 4470,
+     "lowTax": 3840,
+     "highTax": 5620,
+     "medianPrice": 616000,
+     "taxPer100k": 727
+    },
+    {
+     "name": "7701 - Barrhaven - Pheasant Run",
+     "sales": 64,
+     "medianTax": 4010,
+     "lowTax": 3350,
+     "highTax": 4780,
+     "medianPrice": 579000,
+     "taxPer100k": 686
+    },
+    {
+     "name": "2005 - Convent Glen North",
+     "sales": 62,
+     "medianTax": 3030,
+     "lowTax": 2660,
+     "highTax": 3430,
+     "medianPrice": 425000,
+     "taxPer100k": 669
+    },
+    {
+     "name": "3402 - Vanier",
+     "sales": 61,
+     "medianTax": 4110,
+     "lowTax": 3250,
+     "highTax": 4610,
+     "medianPrice": 520000,
+     "taxPer100k": 807
+    },
+    {
+     "name": "2204 - Pineview",
+     "sales": 59,
+     "medianTax": 2870,
+     "lowTax": 2560,
+     "highTax": 4230,
+     "medianPrice": 405000,
+     "taxPer100k": 701
+    },
+    {
+     "name": "8204 - Richmond",
+     "sales": 59,
+     "medianTax": 4090,
+     "lowTax": 3660,
+     "highTax": 5480,
+     "medianPrice": 675000,
+     "taxPer100k": 615
+    },
+    {
+     "name": "3103 - Viscount Alexander Park",
+     "sales": 57,
+     "medianTax": 2580,
+     "lowTax": 2440,
+     "highTax": 3340,
+     "medianPrice": 300000,
+     "taxPer100k": 838
+    },
+    {
+     "name": "5304 - Central Park",
+     "sales": 57,
+     "medianTax": 3950,
+     "lowTax": 3390,
+     "highTax": 4420,
+     "medianPrice": 555000,
+     "taxPer100k": 763
+    },
+    {
+     "name": "1107 - Springridge/East Village",
+     "sales": 56,
+     "medianTax": 4840,
+     "lowTax": 4180,
+     "highTax": 5860,
+     "medianPrice": 673000,
+     "taxPer100k": 720
+    },
+    {
+     "name": "3609 - Guildwood Estates - Urbandale Acres",
+     "sales": 55,
+     "medianTax": 5200,
+     "lowTax": 3330,
+     "highTax": 7220,
+     "medianPrice": 700000,
+     "taxPer100k": 768
+    },
+    {
+     "name": "1103 - Fallingbrook/Ridgemount",
+     "sales": 54,
+     "medianTax": 4670,
+     "lowTax": 3890,
+     "highTax": 6130,
+     "medianPrice": 721000,
+     "taxPer100k": 669
+    },
+    {
+     "name": "3104 - CFB Rockcliffe and Area",
+     "sales": 53,
+     "medianTax": 5140,
+     "lowTax": 3900,
+     "highTax": 6780,
+     "medianPrice": 569000,
+     "taxPer100k": 872
+    },
+    {
+     "name": "2009 - Chapel Hill",
+     "sales": 53,
+     "medianTax": 4080,
+     "lowTax": 3610,
+     "highTax": 5000,
+     "medianPrice": 632000,
+     "taxPer100k": 658
+    },
+    {
+     "name": "7802 - Westcliffe Estates",
+     "sales": 52,
+     "medianTax": 3160,
+     "lowTax": 2440,
+     "highTax": 3600,
+     "medianPrice": 483000,
+     "taxPer100k": 686
+    },
+    {
+     "name": "4502 - West Centre Town",
+     "sales": 52,
+     "medianTax": 4670,
+     "lowTax": 3880,
+     "highTax": 5590,
+     "medianPrice": 494000,
+     "taxPer100k": 987
+    },
+    {
+     "name": "3502 - Overbrook/Castle Heights",
+     "sales": 51,
+     "medianTax": 4590,
+     "lowTax": 4260,
+     "highTax": 4900,
+     "medianPrice": 610000,
+     "taxPer100k": 751
+    },
+    {
+     "name": "2501 - Leitrim",
+     "sales": 51,
+     "medianTax": 5060,
+     "lowTax": 4390,
+     "highTax": 6080,
+     "medianPrice": 715000,
+     "taxPer100k": 709
+    },
+    {
+     "name": "7607 - Centrepointe",
+     "sales": 49,
+     "medianTax": 4560,
+     "lowTax": 3790,
+     "highTax": 5440,
+     "medianPrice": 570000,
+     "taxPer100k": 788
+    },
+    {
+     "name": "4101 - Ottawa Centre",
+     "sales": 47,
+     "medianTax": 3920,
+     "lowTax": 3310,
+     "highTax": 4990,
+     "medianPrice": 390000,
+     "taxPer100k": 1077
+    },
+    {
+     "name": "2012 - Chapel Hill South - Orleans Village",
+     "sales": 47,
+     "medianTax": 5500,
+     "lowTax": 4650,
+     "highTax": 6240,
+     "medianPrice": 790000,
+     "taxPer100k": 699
+    },
+    {
+     "name": "6001 - Woodroffe",
+     "sales": 47,
+     "medianTax": 2640,
+     "lowTax": 2440,
+     "highTax": 3080,
+     "medianPrice": 303000,
+     "taxPer100k": 848
+    },
+    {
+     "name": "4104 - Ottawa Centre/Golden Triangle",
+     "sales": 46,
+     "medianTax": 6570,
+     "lowTax": 3930,
+     "highTax": 8520,
+     "medianPrice": 710000,
+     "taxPer100k": 830
+    },
+    {
+     "name": "4001 - Lower Town/Byward Market",
+     "sales": 46,
+     "medianTax": 4090,
+     "lowTax": 3580,
+     "highTax": 5400,
+     "medianPrice": 367000,
+     "taxPer100k": 1122
+    },
+    {
+     "name": "1104 - Queenswood Heights South",
+     "sales": 45,
+     "medianTax": 4090,
+     "lowTax": 3420,
+     "highTax": 4550,
+     "medianPrice": 600000,
+     "taxPer100k": 685
+    },
+    {
+     "name": "3302 - Lindenlea",
+     "sales": 45,
+     "medianTax": 7260,
+     "lowTax": 5320,
+     "highTax": 8590,
+     "medianPrice": 870000,
+     "taxPer100k": 811
+    },
+    {
+     "name": "3505 - Carson Meadows",
+     "sales": 44,
+     "medianTax": 3960,
+     "lowTax": 2630,
+     "highTax": 5110,
+     "medianPrice": 465000,
+     "taxPer100k": 827
+    },
+    {
+     "name": "3404 - Vanier",
+     "sales": 42,
+     "medianTax": 2840,
+     "lowTax": 2490,
+     "highTax": 3550,
+     "medianPrice": 307000,
+     "taxPer100k": 949
+    },
+    {
+     "name": "5104 - McKellar/Highland",
+     "sales": 42,
+     "medianTax": 9100,
+     "lowTax": 7660,
+     "highTax": 11750,
+     "medianPrice": 1369000,
+     "taxPer100k": 674
+    },
+    {
+     "name": "4803 - Hunt Club/Western Community",
+     "sales": 41,
+     "medianTax": 5630,
+     "lowTax": 4600,
+     "highTax": 6460,
+     "medianPrice": 725000,
+     "taxPer100k": 772
+    },
+    {
+     "name": "4401 - Glebe",
+     "sales": 40,
+     "medianTax": 10670,
+     "lowTax": 8220,
+     "highTax": 12350,
+     "medianPrice": 1475000,
+     "taxPer100k": 762
+    },
+    {
+     "name": "2011 - Orleans/Sunridge",
+     "sales": 40,
+     "medianTax": 4800,
+     "lowTax": 4380,
+     "highTax": 5310,
+     "medianPrice": 705000,
+     "taxPer100k": 680
+    },
+    {
+     "name": "2008 - Chapel Hill",
+     "sales": 39,
+     "medianTax": 4810,
+     "lowTax": 4300,
+     "highTax": 5210,
+     "medianPrice": 717000,
+     "taxPer100k": 661
+    },
+    {
+     "name": "4403 - Old Ottawa South",
+     "sales": 39,
+     "medianTax": 7450,
+     "lowTax": 6420,
+     "highTax": 8350,
+     "medianPrice": 975000,
+     "taxPer100k": 760
+    },
+    {
+     "name": "4402 - Glebe",
+     "sales": 39,
+     "medianTax": 7950,
+     "lowTax": 6720,
+     "highTax": 9900,
+     "medianPrice": 1020000,
+     "taxPer100k": 792
+    },
+    {
+     "name": "1110 - Camelot",
+     "sales": 38,
+     "medianTax": 4900,
+     "lowTax": 4240,
+     "highTax": 5410,
+     "medianPrice": 709000,
+     "taxPer100k": 679
+    },
+    {
+     "name": "2105 - Beaconwood",
+     "sales": 38,
+     "medianTax": 2780,
+     "lowTax": 2550,
+     "highTax": 3090,
+     "medianPrice": 395000,
+     "taxPer100k": 774
+    },
+    {
+     "name": "2107 - Beacon Hill South",
+     "sales": 38,
+     "medianTax": 2740,
+     "lowTax": 2460,
+     "highTax": 4740,
+     "medianPrice": 384000,
+     "taxPer100k": 735
+    },
+    {
+     "name": "8207 - Remainder of Stittsville & Area",
+     "sales": 37,
+     "medianTax": 5040,
+     "lowTax": 4440,
+     "highTax": 6860,
+     "medianPrice": 785000,
+     "taxPer100k": 630
+    },
+    {
+     "name": "7601 - Leslie Park",
+     "sales": 37,
+     "medianTax": 3190,
+     "lowTax": 2760,
+     "highTax": 4050,
+     "medianPrice": 453000,
+     "taxPer100k": 757
+    },
+    {
+     "name": "4302 - Ottawa West",
+     "sales": 37,
+     "medianTax": 6080,
+     "lowTax": 3810,
+     "highTax": 7030,
+     "medianPrice": 750000,
+     "taxPer100k": 819
+    },
+    {
+     "name": "3805 - South Keys",
+     "sales": 36,
+     "medianTax": 2820,
+     "lowTax": 2370,
+     "highTax": 4460,
+     "medianPrice": 352000,
+     "taxPer100k": 811
+    },
+    {
+     "name": "6102 - Britannia",
+     "sales": 36,
+     "medianTax": 2980,
+     "lowTax": 2750,
+     "highTax": 3300,
+     "medianPrice": 338000,
+     "taxPer100k": 883
+    },
+    {
+     "name": "4303 - Ottawa West",
+     "sales": 36,
+     "medianTax": 8240,
+     "lowTax": 6680,
+     "highTax": 11150,
+     "medianPrice": 1225000,
+     "taxPer100k": 671
+    },
+    {
+     "name": "2202 - Carson Grove",
+     "sales": 36,
+     "medianTax": 4800,
+     "lowTax": 3590,
+     "highTax": 5320,
+     "medianPrice": 673000,
+     "taxPer100k": 712
+    },
+    {
+     "name": "7302 - Meadowlands/Crestview",
+     "sales": 35,
+     "medianTax": 4680,
+     "lowTax": 4260,
+     "highTax": 4910,
+     "medianPrice": 650000,
+     "taxPer100k": 735
+    },
+    {
+     "name": "8209 - Goulbourn Twp From Franktown Rd/South To Rideau",
+     "sales": 35,
+     "medianTax": 5350,
+     "lowTax": 4830,
+     "highTax": 5980,
+     "medianPrice": 720000,
+     "taxPer100k": 719
+    },
+    {
+     "name": "7501 - Tanglewood",
+     "sales": 35,
+     "medianTax": 3110,
+     "lowTax": 2490,
+     "highTax": 3720,
+     "medianPrice": 420000,
+     "taxPer100k": 705
+    },
+    {
+     "name": "2303 - Blackburn Hamlet (South)",
+     "sales": 35,
+     "medianTax": 2760,
+     "lowTax": 2530,
+     "highTax": 3000,
+     "medianPrice": 418000,
+     "taxPer100k": 683
+    },
+    {
+     "name": "5102 - Westboro West",
+     "sales": 35,
+     "medianTax": 6390,
+     "lowTax": 4830,
+     "highTax": 10560,
+     "medianPrice": 935000,
+     "taxPer100k": 877
+    },
+    {
+     "name": "4504 - Civic Hospital",
+     "sales": 34,
+     "medianTax": 7690,
+     "lowTax": 6020,
+     "highTax": 9150,
+     "medianPrice": 1045000,
+     "taxPer100k": 701
+    },
+    {
+     "name": "2003 - Orleans Wood",
+     "sales": 34,
+     "medianTax": 3480,
+     "lowTax": 2100,
+     "highTax": 4050,
+     "medianPrice": 526000,
+     "taxPer100k": 698
+    },
+    {
+     "name": "4201 - Mechanicsville",
+     "sales": 34,
+     "medianTax": 4370,
+     "lowTax": 3550,
+     "highTax": 4950,
+     "medianPrice": 496000,
+     "taxPer100k": 862
+    },
+    {
+     "name": "7301 - Meadowlands/St. Claire Gardens",
+     "sales": 33,
+     "medianTax": 5630,
+     "lowTax": 5150,
+     "highTax": 6670,
+     "medianPrice": 850000,
+     "taxPer100k": 717
+    },
+    {
+     "name": "7805 - Arbeatha Park",
+     "sales": 33,
+     "medianTax": 2770,
+     "lowTax": 2450,
+     "highTax": 4710,
+     "medianPrice": 430000,
+     "taxPer100k": 646
+    },
+    {
+     "name": "9301 - Constance Bay",
+     "sales": 33,
+     "medianTax": 3660,
+     "lowTax": 3020,
+     "highTax": 4140,
+     "medianPrice": 575000,
+     "taxPer100k": 560
+    },
+    {
+     "name": "3702 - Elmvale Acres",
+     "sales": 33,
+     "medianTax": 4820,
+     "lowTax": 4630,
+     "highTax": 5080,
+     "medianPrice": 684000,
+     "taxPer100k": 697
+    },
+    {
+     "name": "2108 - Beacon Hill South",
+     "sales": 32,
+     "medianTax": 1830,
+     "lowTax": 1710,
+     "highTax": 2070,
+     "medianPrice": 230000,
+     "taxPer100k": 790
+    },
+    {
+     "name": "5201 - McKellar Heights/Glabar Park",
+     "sales": 32,
+     "medianTax": 6700,
+     "lowTax": 5560,
+     "highTax": 7710,
+     "medianPrice": 773000,
+     "taxPer100k": 769
+    },
+    {
+     "name": "7201 - City View/Skyline/Fisher Heights/Parkwood Hills",
+     "sales": 32,
+     "medianTax": 5370,
+     "lowTax": 4920,
+     "highTax": 6440,
+     "medianPrice": 733000,
+     "taxPer100k": 737
+    },
+    {
+     "name": "2001 - Convent Glen",
+     "sales": 32,
+     "medianTax": 5260,
+     "lowTax": 4740,
+     "highTax": 5460,
+     "medianPrice": 755000,
+     "taxPer100k": 680
+    },
+    {
+     "name": "6202 - Fairfield Heights",
+     "sales": 32,
+     "medianTax": 3830,
+     "lowTax": 3050,
+     "highTax": 4440,
+     "medianPrice": 540000,
+     "taxPer100k": 783
+    },
+    {
+     "name": "6301 - Redwood Park",
+     "sales": 31,
+     "medianTax": 3730,
+     "lowTax": 2210,
+     "highTax": 4330,
+     "medianPrice": 440000,
+     "taxPer100k": 752
+    },
+    {
+     "name": "8003 - Mahogany Community",
+     "sales": 31,
+     "medianTax": 6730,
+     "lowTax": 6300,
+     "highTax": 7740,
+     "medianPrice": 1160000,
+     "taxPer100k": 587
+    },
+    {
+     "name": "3804 - Heron Gate/Industrial Park",
+     "sales": 31,
+     "medianTax": 2760,
+     "lowTax": 2300,
+     "highTax": 2930,
+     "medianPrice": 350000,
+     "taxPer100k": 775
+    },
+    {
+     "name": "5406 - Copeland Park",
+     "sales": 30,
+     "medianTax": 2840,
+     "lowTax": 2470,
+     "highTax": 4320,
+     "medianPrice": 354000,
+     "taxPer100k": 780
+    },
+    {
+     "name": "4204 - West Centre Town",
+     "sales": 30,
+     "medianTax": 5220,
+     "lowTax": 4420,
+     "highTax": 5840,
+     "medianPrice": 665000,
+     "taxPer100k": 858
+    },
+    {
+     "name": "2004 - Convent Glen North",
+     "sales": 30,
+     "medianTax": 4300,
+     "lowTax": 3830,
+     "highTax": 4880,
+     "medianPrice": 597000,
+     "taxPer100k": 681
+    },
+    {
+     "name": "3501 - Overbrook",
+     "sales": 29,
+     "medianTax": 4810,
+     "lowTax": 4060,
+     "highTax": 5450,
+     "medianPrice": 612000,
+     "taxPer100k": 700
+    },
+    {
+     "name": "2604 - Emerald Woods/Sawmill Creek",
+     "sales": 29,
+     "medianTax": 4000,
+     "lowTax": 2570,
+     "highTax": 4470,
+     "medianPrice": 570000,
+     "taxPer100k": 735
+    },
+    {
+     "name": "4702 - Carleton Square",
+     "sales": 29,
+     "medianTax": 3030,
+     "lowTax": 2680,
+     "highTax": 3260,
+     "medianPrice": 321000,
+     "taxPer100k": 869
+    },
+    {
+     "name": "4203 - Hintonburg",
+     "sales": 29,
+     "medianTax": 5180,
+     "lowTax": 4680,
+     "highTax": 6130,
+     "medianPrice": 625000,
+     "taxPer100k": 826
+    },
+    {
+     "name": "8002 - Manotick Village & Manotick Estates",
+     "sales": 28,
+     "medianTax": 7870,
+     "lowTax": 4030,
+     "highTax": 8880,
+     "medianPrice": 1500000,
+     "taxPer100k": 542
+    },
+    {
+     "name": "5002 - Westboro South",
+     "sales": 28,
+     "medianTax": 4800,
+     "lowTax": 3760,
+     "highTax": 8010,
+     "medianPrice": 516000,
+     "taxPer100k": 894
+    },
+    {
+     "name": "4004 - Sandy Hill",
+     "sales": 28,
+     "medianTax": 6640,
+     "lowTax": 5350,
+     "highTax": 7310,
+     "medianPrice": 734000,
+     "taxPer100k": 892
+    },
+    {
+     "name": "4604 - Mooneys Bay/Riverside Park",
+     "sales": 28,
+     "medianTax": 4610,
+     "lowTax": 3480,
+     "highTax": 5240,
+     "medianPrice": 588000,
+     "taxPer100k": 767
+    },
+    {
+     "name": "4805 - Hunt Club",
+     "sales": 28,
+     "medianTax": 3020,
+     "lowTax": 2560,
+     "highTax": 5210,
+     "medianPrice": 372000,
+     "taxPer100k": 811
+    },
+    {
+     "name": "7604 - Craig Henry/Woodvale",
+     "sales": 28,
+     "medianTax": 4500,
+     "lowTax": 2480,
+     "highTax": 5930,
+     "medianPrice": 667000,
+     "taxPer100k": 700
+    },
+    {
+     "name": "2103 - Beacon Hill North",
+     "sales": 27,
+     "medianTax": 4930,
+     "lowTax": 4070,
+     "highTax": 5300,
+     "medianPrice": 670000,
+     "taxPer100k": 696
+    },
+    {
+     "name": "7606 - Manordale",
+     "sales": 27,
+     "medianTax": 4850,
+     "lowTax": 4520,
+     "highTax": 5290,
+     "medianPrice": 760000,
+     "taxPer100k": 649
+    },
+    {
+     "name": "1603 - Osgoode",
+     "sales": 27,
+     "medianTax": 3340,
+     "lowTax": 2890,
+     "highTax": 4750,
+     "medianPrice": 653000,
+     "taxPer100k": 552
+    },
+    {
+     "name": "2102 - Beacon Hill North",
+     "sales": 26,
+     "medianTax": 5640,
+     "lowTax": 5300,
+     "highTax": 6550,
+     "medianPrice": 902000,
+     "taxPer100k": 656
+    },
+    {
+     "name": "4407 - Ottawa East",
+     "sales": 26,
+     "medianTax": 7510,
+     "lowTax": 6750,
+     "highTax": 8720,
+     "medianPrice": 899000,
+     "taxPer100k": 810
+    },
+    {
+     "name": "3703 - Elmvale Acres/Urbandale",
+     "sales": 26,
+     "medianTax": 4490,
+     "lowTax": 4320,
+     "highTax": 4790,
+     "medianPrice": 675000,
+     "taxPer100k": 659
+    },
+    {
+     "name": "7605 - Arlington Woods",
+     "sales": 26,
+     "medianTax": 4520,
+     "lowTax": 2790,
+     "highTax": 6220,
+     "medianPrice": 699000,
+     "taxPer100k": 648
+    },
+    {
+     "name": "2301 - Blackburn Hamlet",
+     "sales": 25,
+     "medianTax": 4970,
+     "lowTax": 4750,
+     "highTax": 5230,
+     "medianPrice": 740000,
+     "taxPer100k": 677
+    },
+    {
+     "name": "4703 - Carleton Heights",
+     "sales": 25,
+     "medianTax": 5790,
+     "lowTax": 3690,
+     "highTax": 9010,
+     "medianPrice": 695000,
+     "taxPer100k": 807
+    },
+    {
+     "name": "6203 - Queensway Terrace North",
+     "sales": 25,
+     "medianTax": 4360,
+     "lowTax": 3510,
+     "highTax": 4720,
+     "medianPrice": 593000,
+     "taxPer100k": 698
+    },
+    {
+     "name": "9105 - Huntley Ward (South West)",
+     "sales": 25,
+     "medianTax": 4610,
+     "lowTax": 4290,
+     "highTax": 5160,
+     "medianPrice": 830000,
+     "taxPer100k": 562
+    },
+    {
+     "name": "7004 - Bayshore",
+     "sales": 25,
+     "medianTax": 4740,
+     "lowTax": 2130,
+     "highTax": 5660,
+     "medianPrice": 525000,
+     "taxPer100k": 786
+    }
+   ]
+  },
+  {
+   "city": "London",
+   "slug": "london",
+   "taxYear": 2025,
+   "all": {
+    "sales": 3736,
+    "medianTax": 4060,
+    "lowTax": 3000,
+    "highTax": 5300,
+    "medianPrice": 543000,
+    "taxPer100k": 737
+   },
+   "byType": {
+    "detached": {
+     "sales": 2596,
+     "medianTax": 4510,
+     "lowTax": 3500,
+     "highTax": 5880,
+     "medianPrice": 610000,
+     "taxPer100k": 742
+    },
+    "semi": {
+     "sales": 150,
+     "medianTax": 2850,
+     "lowTax": 2650,
+     "highTax": 3180,
+     "medianPrice": 455000,
+     "taxPer100k": 652
+    },
+    "town": {
+     "sales": 36,
+     "medianTax": 4280,
+     "lowTax": 3740,
+     "highTax": 5020,
+     "medianPrice": 575000,
+     "taxPer100k": 731
+    },
+    "condoTown": {
+     "sales": 611,
+     "medianTax": 3070,
+     "lowTax": 2160,
+     "highTax": 4190,
+     "medianPrice": 425000,
+     "taxPer100k": 715
+    },
+    "condoApt": {
+     "sales": 343,
+     "medianTax": 2410,
+     "lowTax": 1540,
+     "highTax": 3510,
+     "medianPrice": 285000,
+     "taxPer100k": 793
+    }
+   },
+   "communities": [
+    {
+     "name": "South X",
+     "sales": 153,
+     "medianTax": 2730,
+     "lowTax": 1640,
+     "highTax": 3540,
+     "medianPrice": 421000,
+     "taxPer100k": 631
+    },
+    {
+     "name": "East I",
+     "sales": 143,
+     "medianTax": 3150,
+     "lowTax": 2670,
+     "highTax": 3760,
+     "medianPrice": 490000,
+     "taxPer100k": 652
+    },
+    {
+     "name": "North I",
+     "sales": 127,
+     "medianTax": 4020,
+     "lowTax": 3090,
+     "highTax": 5040,
+     "medianPrice": 512000,
+     "taxPer100k": 762
+    },
+    {
+     "name": "North C",
+     "sales": 117,
+     "medianTax": 4690,
+     "lowTax": 4040,
+     "highTax": 5340,
+     "medianPrice": 599000,
+     "taxPer100k": 754
+    },
+    {
+     "name": "South B",
+     "sales": 109,
+     "medianTax": 4960,
+     "lowTax": 4210,
+     "highTax": 7020,
+     "medianPrice": 658000,
+     "taxPer100k": 759
+    },
+    {
+     "name": "East H",
+     "sales": 109,
+     "medianTax": 2800,
+     "lowTax": 1910,
+     "highTax": 3250,
+     "medianPrice": 415000,
+     "taxPer100k": 638
+    },
+    {
+     "name": "East D",
+     "sales": 107,
+     "medianTax": 3670,
+     "lowTax": 3160,
+     "highTax": 4280,
+     "medianPrice": 510000,
+     "taxPer100k": 706
+    },
+    {
+     "name": "South V",
+     "sales": 106,
+     "medianTax": 6660,
+     "lowTax": 4790,
+     "highTax": 8830,
+     "medianPrice": 848000,
+     "taxPer100k": 758
+    },
+    {
+     "name": "North M",
+     "sales": 91,
+     "medianTax": 5060,
+     "lowTax": 4500,
+     "highTax": 5650,
+     "medianPrice": 650000,
+     "taxPer100k": 779
+    },
+    {
+     "name": "South U",
+     "sales": 89,
+     "medianTax": 4690,
+     "lowTax": 3960,
+     "highTax": 5160,
+     "medianPrice": 635000,
+     "taxPer100k": 739
+    },
+    {
+     "name": "East B",
+     "sales": 87,
+     "medianTax": 5350,
+     "lowTax": 4120,
+     "highTax": 6480,
+     "medianPrice": 640000,
+     "taxPer100k": 825
+    },
+    {
+     "name": "South K",
+     "sales": 87,
+     "medianTax": 5750,
+     "lowTax": 4280,
+     "highTax": 7020,
+     "medianPrice": 760000,
+     "taxPer100k": 730
+    },
+    {
+     "name": "South F",
+     "sales": 86,
+     "medianTax": 4330,
+     "lowTax": 3650,
+     "highTax": 4950,
+     "medianPrice": 563000,
+     "taxPer100k": 752
+    },
+    {
+     "name": "North P",
+     "sales": 84,
+     "medianTax": 4420,
+     "lowTax": 3830,
+     "highTax": 5350,
+     "medianPrice": 610000,
+     "taxPer100k": 763
+    },
+    {
+     "name": "East M",
+     "sales": 81,
+     "medianTax": 2530,
+     "lowTax": 2260,
+     "highTax": 2830,
+     "medianPrice": 395000,
+     "taxPer100k": 674
+    },
+    {
+     "name": "North G",
+     "sales": 81,
+     "medianTax": 5450,
+     "lowTax": 4120,
+     "highTax": 7310,
+     "medianPrice": 662000,
+     "taxPer100k": 813
+    },
+    {
+     "name": "East A",
+     "sales": 78,
+     "medianTax": 3980,
+     "lowTax": 3390,
+     "highTax": 4690,
+     "medianPrice": 561000,
+     "taxPer100k": 717
+    },
+    {
+     "name": "East C",
+     "sales": 78,
+     "medianTax": 3130,
+     "lowTax": 2630,
+     "highTax": 3710,
+     "medianPrice": 431000,
+     "taxPer100k": 707
+    },
+    {
+     "name": "South Y",
+     "sales": 78,
+     "medianTax": 3170,
+     "lowTax": 2280,
+     "highTax": 3540,
+     "medianPrice": 485000,
+     "taxPer100k": 617
+    },
+    {
+     "name": "North R",
+     "sales": 76,
+     "medianTax": 6610,
+     "lowTax": 5150,
+     "highTax": 9970,
+     "medianPrice": 760000,
+     "taxPer100k": 845
+    },
+    {
+     "name": "East G",
+     "sales": 75,
+     "medianTax": 2720,
+     "lowTax": 1620,
+     "highTax": 3240,
+     "medianPrice": 399000,
+     "taxPer100k": 718
+    },
+    {
+     "name": "North F",
+     "sales": 73,
+     "medianTax": 3440,
+     "lowTax": 2330,
+     "highTax": 4310,
+     "medianPrice": 477000,
+     "taxPer100k": 705
+    },
+    {
+     "name": "North S",
+     "sales": 72,
+     "medianTax": 6300,
+     "lowTax": 5210,
+     "highTax": 7550,
+     "medianPrice": 800000,
+     "taxPer100k": 785
+    },
+    {
+     "name": "South J",
+     "sales": 68,
+     "medianTax": 3500,
+     "lowTax": 3010,
+     "highTax": 3910,
+     "medianPrice": 504000,
+     "taxPer100k": 692
+    },
+    {
+     "name": "South N",
+     "sales": 68,
+     "medianTax": 4320,
+     "lowTax": 3430,
+     "highTax": 5470,
+     "medianPrice": 584000,
+     "taxPer100k": 746
+    },
+    {
+     "name": "South T",
+     "sales": 67,
+     "medianTax": 3250,
+     "lowTax": 2530,
+     "highTax": 3670,
+     "medianPrice": 485000,
+     "taxPer100k": 671
+    },
+    {
+     "name": "South G",
+     "sales": 66,
+     "medianTax": 5130,
+     "lowTax": 4020,
+     "highTax": 6090,
+     "medianPrice": 640000,
+     "taxPer100k": 792
+    },
+    {
+     "name": "East F",
+     "sales": 65,
+     "medianTax": 3550,
+     "lowTax": 3050,
+     "highTax": 4880,
+     "medianPrice": 380000,
+     "taxPer100k": 962
+    },
+    {
+     "name": "East O",
+     "sales": 63,
+     "medianTax": 3150,
+     "lowTax": 2990,
+     "highTax": 3500,
+     "medianPrice": 475000,
+     "taxPer100k": 678
+    },
+    {
+     "name": "North N",
+     "sales": 62,
+     "medianTax": 3800,
+     "lowTax": 3150,
+     "highTax": 4500,
+     "medianPrice": 478000,
+     "taxPer100k": 784
+    },
+    {
+     "name": "East K",
+     "sales": 62,
+     "medianTax": 2570,
+     "lowTax": 2230,
+     "highTax": 2800,
+     "medianPrice": 292000,
+     "taxPer100k": 1008
+    },
+    {
+     "name": "South O",
+     "sales": 60,
+     "medianTax": 3780,
+     "lowTax": 2210,
+     "highTax": 4490,
+     "medianPrice": 515000,
+     "taxPer100k": 685
+    },
+    {
+     "name": "South M",
+     "sales": 57,
+     "medianTax": 4540,
+     "lowTax": 3770,
+     "highTax": 5100,
+     "medianPrice": 630000,
+     "taxPer100k": 720
+    },
+    {
+     "name": "South W",
+     "sales": 57,
+     "medianTax": 5130,
+     "lowTax": 4360,
+     "highTax": 5850,
+     "medianPrice": 700000,
+     "taxPer100k": 755
+    },
+    {
+     "name": "South A",
+     "sales": 57,
+     "medianTax": 6790,
+     "lowTax": 5230,
+     "highTax": 8300,
+     "medianPrice": 840000,
+     "taxPer100k": 804
+    },
+    {
+     "name": "South E",
+     "sales": 56,
+     "medianTax": 2710,
+     "lowTax": 2190,
+     "highTax": 3420,
+     "medianPrice": 418000,
+     "taxPer100k": 695
+    },
+    {
+     "name": "North B",
+     "sales": 54,
+     "medianTax": 6630,
+     "lowTax": 5440,
+     "highTax": 8080,
+     "medianPrice": 850000,
+     "taxPer100k": 801
+    },
+    {
+     "name": "North E",
+     "sales": 54,
+     "medianTax": 4900,
+     "lowTax": 4720,
+     "highTax": 5430,
+     "medianPrice": 646000,
+     "taxPer100k": 756
+    },
+    {
+     "name": "South R",
+     "sales": 49,
+     "medianTax": 2480,
+     "lowTax": 2260,
+     "highTax": 4390,
+     "medianPrice": 405000,
+     "taxPer100k": 674
+    },
+    {
+     "name": "South D",
+     "sales": 47,
+     "medianTax": 3520,
+     "lowTax": 2820,
+     "highTax": 4010,
+     "medianPrice": 480000,
+     "taxPer100k": 751
+    },
+    {
+     "name": "South Q",
+     "sales": 46,
+     "medianTax": 3420,
+     "lowTax": 2760,
+     "highTax": 4040,
+     "medianPrice": 510000,
+     "taxPer100k": 687
+    },
+    {
+     "name": "East N",
+     "sales": 44,
+     "medianTax": 2990,
+     "lowTax": 2650,
+     "highTax": 3270,
+     "medianPrice": 458000,
+     "taxPer100k": 672
+    },
+    {
+     "name": "East L",
+     "sales": 44,
+     "medianTax": 2390,
+     "lowTax": 2070,
+     "highTax": 2730,
+     "medianPrice": 378000,
+     "taxPer100k": 645
+    },
+    {
+     "name": "North A",
+     "sales": 39,
+     "medianTax": 8030,
+     "lowTax": 6800,
+     "highTax": 9510,
+     "medianPrice": 939000,
+     "taxPer100k": 842
+    },
+    {
+     "name": "South L",
+     "sales": 33,
+     "medianTax": 6270,
+     "lowTax": 5450,
+     "highTax": 6890,
+     "medianPrice": 790000,
+     "taxPer100k": 787
+    },
+    {
+     "name": "South I",
+     "sales": 33,
+     "medianTax": 2700,
+     "lowTax": 2480,
+     "highTax": 2970,
+     "medianPrice": 400000,
+     "taxPer100k": 740
+    },
+    {
+     "name": "South H",
+     "sales": 32,
+     "medianTax": 3070,
+     "lowTax": 2090,
+     "highTax": 3690,
+     "medianPrice": 415000,
+     "taxPer100k": 731
+    },
+    {
+     "name": "North H",
+     "sales": 32,
+     "medianTax": 4410,
+     "lowTax": 3990,
+     "highTax": 4910,
+     "medianPrice": 583000,
+     "taxPer100k": 763
+    },
+    {
+     "name": "North L",
+     "sales": 32,
+     "medianTax": 7100,
+     "lowTax": 5820,
+     "highTax": 8640,
+     "medianPrice": 920000,
+     "taxPer100k": 774
+    },
+    {
+     "name": "North K",
+     "sales": 30,
+     "medianTax": 4810,
+     "lowTax": 4410,
+     "highTax": 5040,
+     "medianPrice": 624000,
+     "taxPer100k": 763
+    },
+    {
+     "name": "North O",
+     "sales": 28,
+     "medianTax": 5940,
+     "lowTax": 4820,
+     "highTax": 7640,
+     "medianPrice": 774000,
+     "taxPer100k": 797
+    },
+    {
+     "name": "East P",
+     "sales": 25,
+     "medianTax": 3470,
+     "lowTax": 3170,
+     "highTax": 4040,
+     "medianPrice": 530000,
+     "taxPer100k": 673
+    }
+   ]
+  },
+  {
+   "city": "Kitchener",
+   "slug": "kitchener",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1630,
+    "medianTax": 4220,
+    "lowTax": 3530,
+    "highTax": 5110,
+    "medianPrice": 662000,
+    "taxPer100k": 652
+   },
+   "byType": {
+    "detached": {
+     "sales": 1025,
+     "medianTax": 4650,
+     "lowTax": 4060,
+     "highTax": 5770,
+     "medianPrice": 740000,
+     "taxPer100k": 641
+    },
+    "semi": {
+     "sales": 100,
+     "medianTax": 3530,
+     "lowTax": 3240,
+     "highTax": 3980,
+     "medianPrice": 593000,
+     "taxPer100k": 616
+    },
+    "town": {
+     "sales": 154,
+     "medianTax": 4100,
+     "lowTax": 3730,
+     "highTax": 4560,
+     "medianPrice": 633000,
+     "taxPer100k": 650
+    },
+    "condoTown": {
+     "sales": 186,
+     "medianTax": 3010,
+     "lowTax": 2540,
+     "highTax": 3640,
+     "medianPrice": 450000,
+     "taxPer100k": 681
+    },
+    "condoApt": {
+     "sales": 165,
+     "medianTax": 2920,
+     "lowTax": 2130,
+     "highTax": 3510,
+     "medianPrice": 325000,
+     "taxPer100k": 840
+    }
+   },
+   "communities": []
+  },
+  {
+   "city": "Barrie",
+   "slug": "barrie",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1616,
+    "medianTax": 4700,
+    "lowTax": 4000,
+    "highTax": 5590,
+    "medianPrice": 650000,
+    "taxPer100k": 727
+   },
+   "byType": {
+    "detached": {
+     "sales": 1044,
+     "medianTax": 5170,
+     "lowTax": 4550,
+     "highTax": 5970,
+     "medianPrice": 715000,
+     "taxPer100k": 727
+    },
+    "semi": {
+     "sales": 86,
+     "medianTax": 4000,
+     "lowTax": 3600,
+     "highTax": 4350,
+     "medianPrice": 600000,
+     "taxPer100k": 681
+    },
+    "town": {
+     "sales": 222,
+     "medianTax": 4000,
+     "lowTax": 3690,
+     "highTax": 4390,
+     "medianPrice": 573000,
+     "taxPer100k": 711
+    },
+    "condoTown": {
+     "sales": 61,
+     "medianTax": 2770,
+     "lowTax": 2580,
+     "highTax": 3400,
+     "medianPrice": 440000,
+     "taxPer100k": 650
+    },
+    "condoApt": {
+     "sales": 203,
+     "medianTax": 3630,
+     "lowTax": 2780,
+     "highTax": 4850,
+     "medianPrice": 406000,
+     "taxPer100k": 863
+    }
+   },
+   "communities": [
+    {
+     "name": "Holly",
+     "sales": 182,
+     "medianTax": 4680,
+     "lowTax": 4110,
+     "highTax": 5430,
+     "medianPrice": 663000,
+     "taxPer100k": 707
+    },
+    {
+     "name": "Ardagh",
+     "sales": 152,
+     "medianTax": 4580,
+     "lowTax": 3680,
+     "highTax": 5890,
+     "medianPrice": 636000,
+     "taxPer100k": 715
+    },
+    {
+     "name": "Painswick South",
+     "sales": 118,
+     "medianTax": 4920,
+     "lowTax": 3980,
+     "highTax": 5590,
+     "medianPrice": 685000,
+     "taxPer100k": 702
+    },
+    {
+     "name": "Innis-Shore",
+     "sales": 106,
+     "medianTax": 5860,
+     "lowTax": 4480,
+     "highTax": 6990,
+     "medianPrice": 775000,
+     "taxPer100k": 740
+    },
+    {
+     "name": "Painswick North",
+     "sales": 76,
+     "medianTax": 4340,
+     "lowTax": 3800,
+     "highTax": 4770,
+     "medianPrice": 629000,
+     "taxPer100k": 678
+    },
+    {
+     "name": "Rural Barrie Southeast",
+     "sales": 60,
+     "medianTax": 4950,
+     "lowTax": 4200,
+     "highTax": 5780,
+     "medianPrice": 679000,
+     "taxPer100k": 747
+    },
+    {
+     "name": "Northwest",
+     "sales": 58,
+     "medianTax": 4820,
+     "lowTax": 4010,
+     "highTax": 5230,
+     "medianPrice": 654000,
+     "taxPer100k": 692
+    },
+    {
+     "name": "Allandale Heights",
+     "sales": 57,
+     "medianTax": 4930,
+     "lowTax": 4500,
+     "highTax": 5380,
+     "medianPrice": 690000,
+     "taxPer100k": 738
+    },
+    {
+     "name": "Letitia Heights",
+     "sales": 56,
+     "medianTax": 3770,
+     "lowTax": 3140,
+     "highTax": 4440,
+     "medianPrice": 543000,
+     "taxPer100k": 660
+    },
+    {
+     "name": "East Bayfield",
+     "sales": 56,
+     "medianTax": 4720,
+     "lowTax": 4210,
+     "highTax": 5520,
+     "medianPrice": 640000,
+     "taxPer100k": 728
+    },
+    {
+     "name": "City Centre",
+     "sales": 55,
+     "medianTax": 4970,
+     "lowTax": 3600,
+     "highTax": 6300,
+     "medianPrice": 522000,
+     "taxPer100k": 908
+    },
+    {
+     "name": "Sunnidale",
+     "sales": 54,
+     "medianTax": 4640,
+     "lowTax": 4270,
+     "highTax": 5320,
+     "medianPrice": 644000,
+     "taxPer100k": 732
+    },
+    {
+     "name": "Grove East",
+     "sales": 54,
+     "medianTax": 4510,
+     "lowTax": 4110,
+     "highTax": 4950,
+     "medianPrice": 620000,
+     "taxPer100k": 702
+    },
+    {
+     "name": "Bayshore",
+     "sales": 52,
+     "medianTax": 6070,
+     "lowTax": 5200,
+     "highTax": 6620,
+     "medianPrice": 811000,
+     "taxPer100k": 746
+    },
+    {
+     "name": "Cundles East",
+     "sales": 47,
+     "medianTax": 4080,
+     "lowTax": 3630,
+     "highTax": 4450,
+     "medianPrice": 589000,
+     "taxPer100k": 680
+    },
+    {
+     "name": "Allandale",
+     "sales": 45,
+     "medianTax": 4360,
+     "lowTax": 3850,
+     "highTax": 4700,
+     "medianPrice": 593000,
+     "taxPer100k": 716
+    },
+    {
+     "name": "Codrington",
+     "sales": 43,
+     "medianTax": 5320,
+     "lowTax": 4740,
+     "highTax": 6250,
+     "medianPrice": 715000,
+     "taxPer100k": 789
+    },
+    {
+     "name": "Edgehill Drive",
+     "sales": 43,
+     "medianTax": 5180,
+     "lowTax": 4090,
+     "highTax": 5750,
+     "medianPrice": 725000,
+     "taxPer100k": 703
+    },
+    {
+     "name": "Georgian Drive",
+     "sales": 43,
+     "medianTax": 3760,
+     "lowTax": 3490,
+     "highTax": 4770,
+     "medianPrice": 538000,
+     "taxPer100k": 719
+    },
+    {
+     "name": "Wellington",
+     "sales": 41,
+     "medianTax": 4530,
+     "lowTax": 4110,
+     "highTax": 4910,
+     "medianPrice": 600000,
+     "taxPer100k": 749
+    },
+    {
+     "name": "West Bayfield",
+     "sales": 37,
+     "medianTax": 4910,
+     "lowTax": 4000,
+     "highTax": 5800,
+     "medianPrice": 682000,
+     "taxPer100k": 736
+    },
+    {
+     "name": "Little Lake",
+     "sales": 31,
+     "medianTax": 5080,
+     "lowTax": 4280,
+     "highTax": 5890,
+     "medianPrice": 700000,
+     "taxPer100k": 749
+    },
+    {
+     "name": "400 West",
+     "sales": 30,
+     "medianTax": 4750,
+     "lowTax": 3940,
+     "highTax": 5300,
+     "medianPrice": 567000,
+     "taxPer100k": 854
+    },
+    {
+     "name": "Rural Barrie Southwest",
+     "sales": 25,
+     "medianTax": 5320,
+     "lowTax": 4310,
+     "highTax": 6600,
+     "medianPrice": 638000,
+     "taxPer100k": 756
+    }
+   ]
+  },
+  {
+   "city": "Guelph",
+   "slug": "guelph",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1331,
+    "medianTax": 4970,
+    "lowTax": 4180,
+    "highTax": 6170,
+    "medianPrice": 735000,
+    "taxPer100k": 695
+   },
+   "byType": {
+    "detached": {
+     "sales": 780,
+     "medianTax": 5630,
+     "lowTax": 4860,
+     "highTax": 7110,
+     "medianPrice": 825000,
+     "taxPer100k": 690
+    },
+    "semi": {
+     "sales": 79,
+     "medianTax": 4470,
+     "lowTax": 3990,
+     "highTax": 4960,
+     "medianPrice": 680000,
+     "taxPer100k": 657
+    },
+    "town": {
+     "sales": 89,
+     "medianTax": 4750,
+     "lowTax": 4460,
+     "highTax": 5240,
+     "medianPrice": 708000,
+     "taxPer100k": 671
+    },
+    "condoTown": {
+     "sales": 211,
+     "medianTax": 4010,
+     "lowTax": 3210,
+     "highTax": 4770,
+     "medianPrice": 575000,
+     "taxPer100k": 694
+    },
+    "condoApt": {
+     "sales": 172,
+     "medianTax": 3700,
+     "lowTax": 2990,
+     "highTax": 4290,
+     "medianPrice": 450000,
+     "taxPer100k": 777
+    }
+   },
+   "communities": [
+    {
+     "name": "Grange Road",
+     "sales": 214,
+     "medianTax": 4830,
+     "lowTax": 4330,
+     "highTax": 5600,
+     "medianPrice": 732000,
+     "taxPer100k": 669
+    },
+    {
+     "name": "Pineridge/Westminster Woods",
+     "sales": 160,
+     "medianTax": 5470,
+     "lowTax": 4300,
+     "highTax": 6680,
+     "medianPrice": 748000,
+     "taxPer100k": 730
+    },
+    {
+     "name": "Willow West/Sugarbush/West Acres",
+     "sales": 152,
+     "medianTax": 4820,
+     "lowTax": 3720,
+     "highTax": 5570,
+     "medianPrice": 735000,
+     "taxPer100k": 670
+    },
+    {
+     "name": "Kortright West",
+     "sales": 119,
+     "medianTax": 5030,
+     "lowTax": 4460,
+     "highTax": 6250,
+     "medianPrice": 759000,
+     "taxPer100k": 692
+    },
+    {
+     "name": "Dovercliffe Park/Old University",
+     "sales": 82,
+     "medianTax": 5550,
+     "lowTax": 3840,
+     "highTax": 6860,
+     "medianPrice": 792000,
+     "taxPer100k": 702
+    },
+    {
+     "name": "Victoria North",
+     "sales": 82,
+     "medianTax": 4800,
+     "lowTax": 3990,
+     "highTax": 5500,
+     "medianPrice": 725000,
+     "taxPer100k": 673
+    },
+    {
+     "name": "St. Patrick's Ward",
+     "sales": 70,
+     "medianTax": 4260,
+     "lowTax": 3620,
+     "highTax": 4920,
+     "medianPrice": 613000,
+     "taxPer100k": 725
+    },
+    {
+     "name": "Riverside Park",
+     "sales": 66,
+     "medianTax": 4560,
+     "lowTax": 3450,
+     "highTax": 5320,
+     "medianPrice": 652000,
+     "taxPer100k": 712
+    },
+    {
+     "name": "Kortright East",
+     "sales": 63,
+     "medianTax": 8010,
+     "lowTax": 5300,
+     "highTax": 9620,
+     "medianPrice": 1020000,
+     "taxPer100k": 782
+    },
+    {
+     "name": "Junction/Onward Willow",
+     "sales": 58,
+     "medianTax": 4060,
+     "lowTax": 2760,
+     "highTax": 4790,
+     "medianPrice": 626000,
+     "taxPer100k": 662
+    },
+    {
+     "name": "St. George's",
+     "sales": 54,
+     "medianTax": 4740,
+     "lowTax": 4460,
+     "highTax": 6900,
+     "medianPrice": 729000,
+     "taxPer100k": 662
+    },
+    {
+     "name": "Kortright Hills",
+     "sales": 46,
+     "medianTax": 7400,
+     "lowTax": 6240,
+     "highTax": 8180,
+     "medianPrice": 1073000,
+     "taxPer100k": 702
+    },
+    {
+     "name": "Clairfields/Hanlon Business Park",
+     "sales": 46,
+     "medianTax": 5440,
+     "lowTax": 4730,
+     "highTax": 6670,
+     "medianPrice": 818000,
+     "taxPer100k": 691
+    },
+    {
+     "name": "Exhibition Park",
+     "sales": 38,
+     "medianTax": 5720,
+     "lowTax": 4850,
+     "highTax": 6440,
+     "medianPrice": 754000,
+     "taxPer100k": 728
+    },
+    {
+     "name": "Downtown",
+     "sales": 37,
+     "medianTax": 5410,
+     "lowTax": 4390,
+     "highTax": 6950,
+     "medianPrice": 730000,
+     "taxPer100k": 754
+    },
+    {
+     "name": "General Hospital",
+     "sales": 28,
+     "medianTax": 5030,
+     "lowTax": 4560,
+     "highTax": 5680,
+     "medianPrice": 715000,
+     "taxPer100k": 729
+    }
+   ]
+  },
+  {
+   "city": "Kingston",
+   "slug": "kingston",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1344,
+    "medianTax": 4380,
+    "lowTax": 3600,
+    "highTax": 5360,
+    "medianPrice": 580000,
+    "taxPer100k": 756
+   },
+   "byType": {
+    "detached": {
+     "sales": 910,
+     "medianTax": 4630,
+     "lowTax": 3990,
+     "highTax": 5810,
+     "medianPrice": 630000,
+     "taxPer100k": 741
+    },
+    "semi": {
+     "sales": 141,
+     "medianTax": 3360,
+     "lowTax": 3120,
+     "highTax": 3770,
+     "medianPrice": 490000,
+     "taxPer100k": 706
+    },
+    "town": {
+     "sales": 113,
+     "medianTax": 4520,
+     "lowTax": 3840,
+     "highTax": 4950,
+     "medianPrice": 544000,
+     "taxPer100k": 810
+    },
+    "condoTown": {
+     "sales": 41,
+     "medianTax": 2560,
+     "lowTax": 2300,
+     "highTax": 3290,
+     "medianPrice": 370000,
+     "taxPer100k": 763
+    },
+    "condoApt": {
+     "sales": 139,
+     "medianTax": 3730,
+     "lowTax": 2180,
+     "highTax": 4920,
+     "medianPrice": 350000,
+     "taxPer100k": 884
+    }
+   },
+   "communities": [
+    {
+     "name": "42 - City Northwest",
+     "sales": 206,
+     "medianTax": 4910,
+     "lowTax": 4300,
+     "highTax": 5820,
+     "medianPrice": 637000,
+     "taxPer100k": 763
+    },
+    {
+     "name": "13 - Kingston East (Incl Barret Crt)",
+     "sales": 138,
+     "medianTax": 4720,
+     "lowTax": 4060,
+     "highTax": 5520,
+     "medianPrice": 630000,
+     "taxPer100k": 734
+    },
+    {
+     "name": "28 - City SouthWest",
+     "sales": 131,
+     "medianTax": 4360,
+     "lowTax": 3830,
+     "highTax": 5450,
+     "medianPrice": 590000,
+     "taxPer100k": 763
+    },
+    {
+     "name": "22 - East of Sir John A. Blvd",
+     "sales": 118,
+     "medianTax": 3610,
+     "lowTax": 3110,
+     "highTax": 4540,
+     "medianPrice": 486000,
+     "taxPer100k": 779
+    },
+    {
+     "name": "14 - Central City East",
+     "sales": 115,
+     "medianTax": 5280,
+     "lowTax": 4550,
+     "highTax": 8340,
+     "medianPrice": 640000,
+     "taxPer100k": 936
+    },
+    {
+     "name": "37 - South of Taylor-Kidd Blvd",
+     "sales": 103,
+     "medianTax": 3970,
+     "lowTax": 3620,
+     "highTax": 4250,
+     "medianPrice": 569000,
+     "taxPer100k": 708
+    },
+    {
+     "name": "39 - North of Taylor-Kidd Blvd",
+     "sales": 101,
+     "medianTax": 4570,
+     "lowTax": 3680,
+     "highTax": 5550,
+     "medianPrice": 645000,
+     "taxPer100k": 715
+    },
+    {
+     "name": "35 - East Gardiners Rd",
+     "sales": 97,
+     "medianTax": 3920,
+     "lowTax": 3180,
+     "highTax": 4740,
+     "medianPrice": 530000,
+     "taxPer100k": 758
+    },
+    {
+     "name": "18 - Central City West",
+     "sales": 93,
+     "medianTax": 4520,
+     "lowTax": 3910,
+     "highTax": 5400,
+     "medianPrice": 530000,
+     "taxPer100k": 857
+    },
+    {
+     "name": "44 - City North of 401",
+     "sales": 85,
+     "medianTax": 4200,
+     "lowTax": 3500,
+     "highTax": 6550,
+     "medianPrice": 655000,
+     "taxPer100k": 666
+    },
+    {
+     "name": "25 - West of Sir John A. Blvd",
+     "sales": 65,
+     "medianTax": 3930,
+     "lowTax": 2700,
+     "highTax": 4580,
+     "medianPrice": 515000,
+     "taxPer100k": 726
+    },
+    {
+     "name": "23 - Rideau",
+     "sales": 61,
+     "medianTax": 3370,
+     "lowTax": 3000,
+     "highTax": 3720,
+     "medianPrice": 460000,
+     "taxPer100k": 713
+    },
+    {
+     "name": "11 - Kingston East (Incl CFB Kingston)",
+     "sales": 25,
+     "medianTax": 6680,
+     "lowTax": 5000,
+     "highTax": 8250,
+     "medianPrice": 835000,
+     "taxPer100k": 768
+    }
+   ]
+  },
+  {
+   "city": "St. Catharines",
+   "slug": "st-catharines",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1378,
+    "medianTax": 4210,
+    "lowTax": 3150,
+    "highTax": 5180,
+    "medianPrice": 535000,
+    "taxPer100k": 775
+   },
+   "byType": {
+    "detached": {
+     "sales": 990,
+     "medianTax": 4420,
+     "lowTax": 3420,
+     "highTax": 5360,
+     "medianPrice": 575000,
+     "taxPer100k": 757
+    },
+    "semi": {
+     "sales": 94,
+     "medianTax": 3610,
+     "lowTax": 3210,
+     "highTax": 4040,
+     "medianPrice": 491000,
+     "taxPer100k": 739
+    },
+    "town": {
+     "sales": 32,
+     "medianTax": 4730,
+     "lowTax": 4510,
+     "highTax": 5200,
+     "medianPrice": 535000,
+     "taxPer100k": 878
+    },
+    "condoTown": {
+     "sales": 123,
+     "medianTax": 3410,
+     "lowTax": 2660,
+     "highTax": 5180,
+     "medianPrice": 425000,
+     "taxPer100k": 792
+    },
+    "condoApt": {
+     "sales": 139,
+     "medianTax": 2990,
+     "lowTax": 2340,
+     "highTax": 3770,
+     "medianPrice": 305000,
+     "taxPer100k": 913
+    }
+   },
+   "communities": [
+    {
+     "name": "451 - Downtown",
+     "sales": 120,
+     "medianTax": 3140,
+     "lowTax": 2870,
+     "highTax": 3660,
+     "medianPrice": 455000,
+     "taxPer100k": 715
+    },
+    {
+     "name": "442 - Vine/Linwell",
+     "sales": 114,
+     "medianTax": 4880,
+     "lowTax": 4430,
+     "highTax": 5190,
+     "medianPrice": 626000,
+     "taxPer100k": 769
+    },
+    {
+     "name": "443 - Lakeport",
+     "sales": 112,
+     "medianTax": 4110,
+     "lowTax": 3090,
+     "highTax": 4890,
+     "medianPrice": 528000,
+     "taxPer100k": 752
+    },
+    {
+     "name": "444 - Carlton/Bunting",
+     "sales": 109,
+     "medianTax": 3960,
+     "lowTax": 2860,
+     "highTax": 4600,
+     "medianPrice": 532000,
+     "taxPer100k": 754
+    },
+    {
+     "name": "450 - E. Chester",
+     "sales": 88,
+     "medianTax": 2980,
+     "lowTax": 2430,
+     "highTax": 3340,
+     "medianPrice": 374000,
+     "taxPer100k": 797
+    },
+    {
+     "name": "437 - Lakeshore",
+     "sales": 79,
+     "medianTax": 5360,
+     "lowTax": 4910,
+     "highTax": 6420,
+     "medianPrice": 720000,
+     "taxPer100k": 751
+    },
+    {
+     "name": "461 - Glendale/Glenridge",
+     "sales": 77,
+     "medianTax": 4960,
+     "lowTax": 4350,
+     "highTax": 5860,
+     "medianPrice": 585000,
+     "taxPer100k": 864
+    },
+    {
+     "name": "455 - Secord Woods",
+     "sales": 76,
+     "medianTax": 3820,
+     "lowTax": 3420,
+     "highTax": 4230,
+     "medianPrice": 511000,
+     "taxPer100k": 763
+    },
+    {
+     "name": "462 - Rykert/Vansickle",
+     "sales": 70,
+     "medianTax": 5080,
+     "lowTax": 4420,
+     "highTax": 6690,
+     "medianPrice": 685000,
+     "taxPer100k": 808
+    },
+    {
+     "name": "453 - Grapeview",
+     "sales": 62,
+     "medianTax": 5620,
+     "lowTax": 4590,
+     "highTax": 7060,
+     "medianPrice": 680000,
+     "taxPer100k": 870
+    },
+    {
+     "name": "458 - Western Hill",
+     "sales": 59,
+     "medianTax": 3130,
+     "lowTax": 2620,
+     "highTax": 3710,
+     "medianPrice": 420000,
+     "taxPer100k": 746
+    },
+    {
+     "name": "456 - Oakdale",
+     "sales": 56,
+     "medianTax": 3190,
+     "lowTax": 2700,
+     "highTax": 4090,
+     "medianPrice": 412000,
+     "taxPer100k": 839
+    },
+    {
+     "name": "446 - Fairview",
+     "sales": 56,
+     "medianTax": 3050,
+     "lowTax": 2360,
+     "highTax": 3850,
+     "medianPrice": 420000,
+     "taxPer100k": 812
+    },
+    {
+     "name": "441 - Bunting/Linwell",
+     "sales": 53,
+     "medianTax": 4560,
+     "lowTax": 4130,
+     "highTax": 5080,
+     "medianPrice": 608000,
+     "taxPer100k": 768
+    },
+    {
+     "name": "438 - Port Dalhousie",
+     "sales": 44,
+     "medianTax": 5500,
+     "lowTax": 4890,
+     "highTax": 7590,
+     "medianPrice": 758000,
+     "taxPer100k": 772
+    },
+    {
+     "name": "452 - Haig",
+     "sales": 42,
+     "medianTax": 3410,
+     "lowTax": 2840,
+     "highTax": 3950,
+     "medianPrice": 470000,
+     "taxPer100k": 729
+    },
+    {
+     "name": "445 - Facer",
+     "sales": 32,
+     "medianTax": 2860,
+     "lowTax": 2330,
+     "highTax": 3140,
+     "medianPrice": 427000,
+     "taxPer100k": 711
+    },
+    {
+     "name": "460 - Burleigh Hill",
+     "sales": 31,
+     "medianTax": 4100,
+     "lowTax": 3550,
+     "highTax": 5570,
+     "medianPrice": 588000,
+     "taxPer100k": 781
+    },
+    {
+     "name": "439 - Martindale Pond",
+     "sales": 26,
+     "medianTax": 7520,
+     "lowTax": 6480,
+     "highTax": 11140,
+     "medianPrice": 983000,
+     "taxPer100k": 873
+    },
+    {
+     "name": "436 - Port Weller",
+     "sales": 26,
+     "medianTax": 4160,
+     "lowTax": 3410,
+     "highTax": 5430,
+     "medianPrice": 608000,
+     "taxPer100k": 714
+    }
+   ]
+  },
+  {
+   "city": "Cambridge",
+   "slug": "cambridge",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1021,
+    "medianTax": 4430,
+    "lowTax": 3740,
+    "highTax": 5420,
+    "medianPrice": 675000,
+    "taxPer100k": 662
+   },
+   "byType": {
+    "detached": {
+     "sales": 702,
+     "medianTax": 4790,
+     "lowTax": 4060,
+     "highTax": 6060,
+     "medianPrice": 743000,
+     "taxPer100k": 663
+    },
+    "semi": {
+     "sales": 85,
+     "medianTax": 3430,
+     "lowTax": 3150,
+     "highTax": 3940,
+     "medianPrice": 585000,
+     "taxPer100k": 607
+    },
+    "town": {
+     "sales": 110,
+     "medianTax": 4370,
+     "lowTax": 3900,
+     "highTax": 4850,
+     "medianPrice": 633000,
+     "taxPer100k": 686
+    },
+    "condoTown": {
+     "sales": 75,
+     "medianTax": 3010,
+     "lowTax": 2170,
+     "highTax": 3920,
+     "medianPrice": 460000,
+     "taxPer100k": 625
+    },
+    "condoApt": {
+     "sales": 49,
+     "medianTax": 3050,
+     "lowTax": 2620,
+     "highTax": 4090,
+     "medianPrice": 400000,
+     "taxPer100k": 784
+    }
+   },
+   "communities": []
+  },
+  {
+   "city": "Waterloo",
+   "slug": "waterloo",
+   "taxYear": 2025,
+   "all": {
+    "sales": 881,
+    "medianTax": 4580,
+    "lowTax": 3770,
+    "highTax": 6020,
+    "medianPrice": 690000,
+    "taxPer100k": 686
+   },
+   "byType": {
+    "detached": {
+     "sales": 491,
+     "medianTax": 5530,
+     "lowTax": 4560,
+     "highTax": 7280,
+     "medianPrice": 843000,
+     "taxPer100k": 659
+    },
+    "semi": {
+     "sales": 43,
+     "medianTax": 3800,
+     "lowTax": 3440,
+     "highTax": 4030,
+     "medianPrice": 635000,
+     "taxPer100k": 606
+    },
+    "town": {
+     "sales": 45,
+     "medianTax": 4330,
+     "lowTax": 3950,
+     "highTax": 4860,
+     "medianPrice": 676000,
+     "taxPer100k": 631
+    },
+    "condoTown": {
+     "sales": 106,
+     "medianTax": 3510,
+     "lowTax": 3080,
+     "highTax": 4380,
+     "medianPrice": 495000,
+     "taxPer100k": 740
+    },
+    "condoApt": {
+     "sales": 196,
+     "medianTax": 3480,
+     "lowTax": 2810,
+     "highTax": 4360,
+     "medianPrice": 402000,
+     "taxPer100k": 863
+    }
+   },
+   "communities": []
+  },
+  {
+   "city": "Peterborough",
+   "slug": "peterborough",
+   "taxYear": 2025,
+   "all": {
+    "sales": 901,
+    "medianTax": 4550,
+    "lowTax": 3960,
+    "highTax": 5750,
+    "medianPrice": 550000,
+    "taxPer100k": 852
+   },
+   "byType": {
+    "detached": {
+     "sales": 737,
+     "medianTax": 4580,
+     "lowTax": 4020,
+     "highTax": 5780,
+     "medianPrice": 560000,
+     "taxPer100k": 845
+    },
+    "semi": null,
+    "town": {
+     "sales": 37,
+     "medianTax": 4430,
+     "lowTax": 4210,
+     "highTax": 4870,
+     "medianPrice": 545000,
+     "taxPer100k": 830
+    },
+    "condoTown": {
+     "sales": 51,
+     "medianTax": 6070,
+     "lowTax": 4050,
+     "highTax": 6800,
+     "medianPrice": 600000,
+     "taxPer100k": 951
+    },
+    "condoApt": {
+     "sales": 54,
+     "medianTax": 3870,
+     "lowTax": 3370,
+     "highTax": 4490,
+     "medianPrice": 424000,
+     "taxPer100k": 904
+    }
+   },
+   "communities": [
+    {
+     "name": "Monaghan Ward 2",
+     "sales": 219,
+     "medianTax": 5710,
+     "lowTax": 4570,
+     "highTax": 6850,
+     "medianPrice": 645000,
+     "taxPer100k": 857
+    },
+    {
+     "name": "Northcrest Ward 5",
+     "sales": 218,
+     "medianTax": 4670,
+     "lowTax": 4120,
+     "highTax": 5580,
+     "medianPrice": 565000,
+     "taxPer100k": 854
+    },
+    {
+     "name": "Otonabee Ward 1",
+     "sales": 195,
+     "medianTax": 4120,
+     "lowTax": 3600,
+     "highTax": 4640,
+     "medianPrice": 500000,
+     "taxPer100k": 838
+    },
+    {
+     "name": "Ashburnham Ward 4",
+     "sales": 154,
+     "medianTax": 4430,
+     "lowTax": 4000,
+     "highTax": 5230,
+     "medianPrice": 540000,
+     "taxPer100k": 839
+    },
+    {
+     "name": "Town Ward 3",
+     "sales": 113,
+     "medianTax": 3980,
+     "lowTax": 3490,
+     "highTax": 4720,
+     "medianPrice": 450000,
+     "taxPer100k": 885
+    }
+   ]
+  },
+  {
+   "city": "Niagara Falls",
+   "slug": "niagara-falls",
+   "taxYear": 2025,
+   "all": {
+    "sales": 924,
+    "medianTax": 3940,
+    "lowTax": 3160,
+    "highTax": 5190,
+    "medianPrice": 550000,
+    "taxPer100k": 740
+   },
+   "byType": {
+    "detached": {
+     "sales": 732,
+     "medianTax": 3990,
+     "lowTax": 3230,
+     "highTax": 5400,
+     "medianPrice": 577000,
+     "taxPer100k": 728
+    },
+    "semi": {
+     "sales": 54,
+     "medianTax": 3090,
+     "lowTax": 2700,
+     "highTax": 3400,
+     "medianPrice": 465000,
+     "taxPer100k": 682
+    },
+    "town": {
+     "sales": 27,
+     "medianTax": 4670,
+     "lowTax": 4300,
+     "highTax": 5470,
+     "medianPrice": 540000,
+     "taxPer100k": 856
+    },
+    "condoTown": {
+     "sales": 66,
+     "medianTax": 4090,
+     "lowTax": 3150,
+     "highTax": 4840,
+     "medianPrice": 475000,
+     "taxPer100k": 804
+    },
+    "condoApt": {
+     "sales": 45,
+     "medianTax": 3920,
+     "lowTax": 3030,
+     "highTax": 4610,
+     "medianPrice": 379000,
+     "taxPer100k": 968
+    }
+   },
+   "communities": [
+    {
+     "name": "213 - Ascot",
+     "sales": 91,
+     "medianTax": 4730,
+     "lowTax": 3930,
+     "highTax": 5510,
+     "medianPrice": 605000,
+     "taxPer100k": 782
+    },
+    {
+     "name": "206 - Stamford",
+     "sales": 84,
+     "medianTax": 4170,
+     "lowTax": 3470,
+     "highTax": 5370,
+     "medianPrice": 550000,
+     "taxPer100k": 770
+    },
+    {
+     "name": "219 - Forestview",
+     "sales": 77,
+     "medianTax": 6640,
+     "lowTax": 5540,
+     "highTax": 8010,
+     "medianPrice": 770000,
+     "taxPer100k": 858
+    },
+    {
+     "name": "212 - Morrison",
+     "sales": 73,
+     "medianTax": 3900,
+     "lowTax": 3420,
+     "highTax": 4420,
+     "medianPrice": 525000,
+     "taxPer100k": 729
+    },
+    {
+     "name": "211 - Cherrywood",
+     "sales": 68,
+     "medianTax": 2770,
+     "lowTax": 2360,
+     "highTax": 3260,
+     "medianPrice": 431000,
+     "taxPer100k": 631
+    },
+    {
+     "name": "216 - Dorchester",
+     "sales": 59,
+     "medianTax": 3170,
+     "lowTax": 2780,
+     "highTax": 3690,
+     "medianPrice": 456000,
+     "taxPer100k": 686
+    },
+    {
+     "name": "210 - Downtown",
+     "sales": 55,
+     "medianTax": 2520,
+     "lowTax": 2140,
+     "highTax": 2850,
+     "medianPrice": 385000,
+     "taxPer100k": 675
+    },
+    {
+     "name": "205 - Church's Lane",
+     "sales": 52,
+     "medianTax": 3590,
+     "lowTax": 3200,
+     "highTax": 4000,
+     "medianPrice": 535000,
+     "taxPer100k": 698
+    },
+    {
+     "name": "223 - Chippawa",
+     "sales": 51,
+     "medianTax": 3920,
+     "lowTax": 3420,
+     "highTax": 4410,
+     "medianPrice": 525000,
+     "taxPer100k": 726
+    },
+    {
+     "name": "217 - Arad/Fallsview",
+     "sales": 48,
+     "medianTax": 3290,
+     "lowTax": 2840,
+     "highTax": 3740,
+     "medianPrice": 498000,
+     "taxPer100k": 662
+    },
+    {
+     "name": "207 - Casey",
+     "sales": 43,
+     "medianTax": 4580,
+     "lowTax": 4290,
+     "highTax": 5320,
+     "medianPrice": 635000,
+     "taxPer100k": 757
+    },
+    {
+     "name": "218 - West Wood",
+     "sales": 40,
+     "medianTax": 4210,
+     "lowTax": 3550,
+     "highTax": 4580,
+     "medianPrice": 580000,
+     "taxPer100k": 715
+    },
+    {
+     "name": "222 - Brown",
+     "sales": 38,
+     "medianTax": 6110,
+     "lowTax": 5120,
+     "highTax": 7510,
+     "medianPrice": 658000,
+     "taxPer100k": 957
+    },
+    {
+     "name": "215 - Hospital",
+     "sales": 38,
+     "medianTax": 3290,
+     "lowTax": 2960,
+     "highTax": 3790,
+     "medianPrice": 463000,
+     "taxPer100k": 730
+    },
+    {
+     "name": "208 - Mt. Carmel",
+     "sales": 37,
+     "medianTax": 5110,
+     "lowTax": 4580,
+     "highTax": 6410,
+     "medianPrice": 670000,
+     "taxPer100k": 800
+    },
+    {
+     "name": "220 - Oldfield",
+     "sales": 33,
+     "medianTax": 4300,
+     "lowTax": 3350,
+     "highTax": 4560,
+     "medianPrice": 520000,
+     "taxPer100k": 731
+    }
+   ]
+  },
+  {
+   "city": "Brantford",
+   "slug": "brantford",
+   "taxYear": 2025,
+   "all": {
+    "sales": 725,
+    "medianTax": 4050,
+    "lowTax": 3100,
+    "highTax": 4930,
+    "medianPrice": 590000,
+    "taxPer100k": 693
+   },
+   "byType": {
+    "detached": {
+     "sales": 553,
+     "medianTax": 4230,
+     "lowTax": 3350,
+     "highTax": 5260,
+     "medianPrice": 642000,
+     "taxPer100k": 682
+    },
+    "semi": {
+     "sales": 41,
+     "medianTax": 2980,
+     "lowTax": 2830,
+     "highTax": 3470,
+     "medianPrice": 505000,
+     "taxPer100k": 599
+    },
+    "town": {
+     "sales": 63,
+     "medianTax": 4210,
+     "lowTax": 3790,
+     "highTax": 4430,
+     "medianPrice": 555000,
+     "taxPer100k": 755
+    },
+    "condoTown": {
+     "sales": 41,
+     "medianTax": 3760,
+     "lowTax": 2270,
+     "highTax": 4230,
+     "medianPrice": 496000,
+     "taxPer100k": 722
+    },
+    "condoApt": {
+     "sales": 27,
+     "medianTax": 2580,
+     "lowTax": 2170,
+     "highTax": 2770,
+     "medianPrice": 320000,
+     "taxPer100k": 775
+    }
+   },
+   "communities": []
+  },
+  {
+   "city": "Clarington",
+   "slug": "clarington",
+   "taxYear": 2025,
+   "all": {
+    "sales": 1204,
+    "medianTax": 4890,
+    "lowTax": 4120,
+    "highTax": 6050,
+    "medianPrice": 739000,
+    "taxPer100k": 666
+   },
+   "byType": {
+    "detached": {
+     "sales": 791,
+     "medianTax": 5470,
+     "lowTax": 4660,
+     "highTax": 6630,
+     "medianPrice": 820000,
+     "taxPer100k": 668
+    },
+    "semi": {
+     "sales": 121,
+     "medianTax": 4460,
+     "lowTax": 4010,
+     "highTax": 4850,
+     "medianPrice": 696000,
+     "taxPer100k": 639
+    },
+    "town": {
+     "sales": 153,
+     "medianTax": 4230,
+     "lowTax": 3790,
+     "highTax": 4610,
+     "medianPrice": 650000,
+     "taxPer100k": 651
+    },
+    "condoTown": {
+     "sales": 37,
+     "medianTax": 3260,
+     "lowTax": 2960,
+     "highTax": 4270,
+     "medianPrice": 516000,
+     "taxPer100k": 691
+    },
+    "condoApt": {
+     "sales": 102,
+     "medianTax": 3260,
+     "lowTax": 2910,
+     "highTax": 4140,
+     "medianPrice": 440000,
+     "taxPer100k": 738
+    }
+   },
+   "communities": [
+    {
+     "name": "Bowmanville",
+     "sales": 603,
+     "medianTax": 4700,
+     "lowTax": 3920,
+     "highTax": 5820,
+     "medianPrice": 710000,
+     "taxPer100k": 669
+    },
+    {
+     "name": "Courtice",
+     "sales": 316,
+     "medianTax": 4900,
+     "lowTax": 4320,
+     "highTax": 5770,
+     "medianPrice": 735000,
+     "taxPer100k": 656
+    },
+    {
+     "name": "Newcastle",
+     "sales": 181,
+     "medianTax": 4940,
+     "lowTax": 3990,
+     "highTax": 5980,
+     "medianPrice": 755000,
+     "taxPer100k": 660
+    },
+    {
+     "name": "Rural Clarington",
+     "sales": 86,
+     "medianTax": 6870,
+     "lowTax": 5530,
+     "highTax": 8780,
+     "medianPrice": 1048000,
+     "taxPer100k": 679
+    }
+   ]
+  },
+  {
+   "city": "Kawartha Lakes",
+   "slug": "kawartha-lakes",
+   "taxYear": 2025,
+   "all": {
+    "sales": 969,
+    "medianTax": 3580,
+    "lowTax": 2700,
+    "highTax": 4680,
+    "medianPrice": 615000,
+    "taxPer100k": 583
+   },
+   "byType": {
+    "detached": {
+     "sales": 909,
+     "medianTax": 3610,
+     "lowTax": 2700,
+     "highTax": 4760,
+     "medianPrice": 625000,
+     "taxPer100k": 576
+    },
+    "semi": null,
+    "town": null,
+    "condoTown": null,
+    "condoApt": {
+     "sales": 28,
+     "medianTax": 3160,
+     "lowTax": 2100,
+     "highTax": 3720,
+     "medianPrice": 438000,
+     "taxPer100k": 699
+    }
+   },
+   "communities": [
+    {
+     "name": "Lindsay",
+     "sales": 312,
+     "medianTax": 3770,
+     "lowTax": 3170,
+     "highTax": 4500,
+     "medianPrice": 550000,
+     "taxPer100k": 693
+    },
+    {
+     "name": "Bobcaygeon",
+     "sales": 77,
+     "medianTax": 3690,
+     "lowTax": 2880,
+     "highTax": 5070,
+     "medianPrice": 660000,
+     "taxPer100k": 562
+    },
+    {
+     "name": "Fenelon",
+     "sales": 67,
+     "medianTax": 3550,
+     "lowTax": 2550,
+     "highTax": 4960,
+     "medianPrice": 670000,
+     "taxPer100k": 525
+    },
+    {
+     "name": "Verulam",
+     "sales": 59,
+     "medianTax": 3560,
+     "lowTax": 2440,
+     "highTax": 4990,
+     "medianPrice": 700000,
+     "taxPer100k": 490
+    },
+    {
+     "name": "Emily",
+     "sales": 56,
+     "medianTax": 3220,
+     "lowTax": 2780,
+     "highTax": 4300,
+     "medianPrice": 630000,
+     "taxPer100k": 515
+    },
+    {
+     "name": "Fenelon Falls",
+     "sales": 54,
+     "medianTax": 3120,
+     "lowTax": 2170,
+     "highTax": 4690,
+     "medianPrice": 586000,
+     "taxPer100k": 525
+    },
+    {
+     "name": "Carden",
+     "sales": 42,
+     "medianTax": 3070,
+     "lowTax": 2310,
+     "highTax": 4170,
+     "medianPrice": 665000,
+     "taxPer100k": 562
+    },
+    {
+     "name": "Mariposa",
+     "sales": 36,
+     "medianTax": 4010,
+     "lowTax": 3350,
+     "highTax": 4690,
+     "medianPrice": 778000,
+     "taxPer100k": 532
+    },
+    {
+     "name": "Somerville",
+     "sales": 35,
+     "medianTax": 3070,
+     "lowTax": 2350,
+     "highTax": 4970,
+     "medianPrice": 608000,
+     "taxPer100k": 569
+    },
+    {
+     "name": "Omemee",
+     "sales": 28,
+     "medianTax": 2500,
+     "lowTax": 2070,
+     "highTax": 3230,
+     "medianPrice": 503000,
+     "taxPer100k": 482
+    },
+    {
+     "name": "Manvers",
+     "sales": 28,
+     "medianTax": 4890,
+     "lowTax": 3880,
+     "highTax": 6470,
+     "medianPrice": 1088000,
+     "taxPer100k": 480
+    },
+    {
+     "name": "Bexley",
+     "sales": 27,
+     "medianTax": 3860,
+     "lowTax": 2150,
+     "highTax": 6880,
+     "medianPrice": 720000,
+     "taxPer100k": 536
+    }
+   ]
+  },
+  {
+   "city": "Newmarket",
+   "slug": "newmarket",
+   "taxYear": 2025,
+   "all": {
+    "sales": 792,
+    "medianTax": 5230,
+    "lowTax": 4370,
+    "highTax": 6220,
+    "medianPrice": 939000,
+    "taxPer100k": 546
+   },
+   "byType": {
+    "detached": {
+     "sales": 506,
+     "medianTax": 5880,
+     "lowTax": 5180,
+     "highTax": 6810,
+     "medianPrice": 1071000,
+     "taxPer100k": 549
+    },
+    "semi": {
+     "sales": 92,
+     "medianTax": 4390,
+     "lowTax": 3830,
+     "highTax": 4740,
+     "medianPrice": 827000,
+     "taxPer100k": 539
+    },
+    "town": {
+     "sales": 99,
+     "medianTax": 4570,
+     "lowTax": 4250,
+     "highTax": 5050,
+     "medianPrice": 827000,
+     "taxPer100k": 555
+    },
+    "condoTown": {
+     "sales": 40,
+     "medianTax": 3240,
+     "lowTax": 2920,
+     "highTax": 3950,
+     "medianPrice": 683000,
+     "taxPer100k": 486
+    },
+    "condoApt": {
+     "sales": 55,
+     "medianTax": 3000,
+     "lowTax": 2500,
+     "highTax": 3480,
+     "medianPrice": 510000,
+     "taxPer100k": 547
+    }
+   },
+   "communities": [
+    {
+     "name": "Central Newmarket",
+     "sales": 124,
+     "medianTax": 4320,
+     "lowTax": 3270,
+     "highTax": 5010,
+     "medianPrice": 776000,
+     "taxPer100k": 547
+    },
+    {
+     "name": "Woodland Hill",
+     "sales": 110,
+     "medianTax": 5690,
+     "lowTax": 4740,
+     "highTax": 6470,
+     "medianPrice": 1004000,
+     "taxPer100k": 558
+    },
+    {
+     "name": "Summerhill Estates",
+     "sales": 102,
+     "medianTax": 5180,
+     "lowTax": 4330,
+     "highTax": 5940,
+     "medianPrice": 945000,
+     "taxPer100k": 546
+    },
+    {
+     "name": "Gorham-College Manor",
+     "sales": 99,
+     "medianTax": 5180,
+     "lowTax": 4320,
+     "highTax": 5760,
+     "medianPrice": 915000,
+     "taxPer100k": 534
+    },
+    {
+     "name": "Stonehaven-Wyndham",
+     "sales": 98,
+     "medianTax": 7840,
+     "lowTax": 5620,
+     "highTax": 9160,
+     "medianPrice": 1390000,
+     "taxPer100k": 540
+    },
+    {
+     "name": "Bristol-London",
+     "sales": 91,
+     "medianTax": 5140,
+     "lowTax": 3960,
+     "highTax": 5520,
+     "medianPrice": 910000,
+     "taxPer100k": 562
+    },
+    {
+     "name": "Huron Heights-Leslie Valley",
+     "sales": 78,
+     "medianTax": 4850,
+     "lowTax": 4320,
+     "highTax": 5450,
+     "medianPrice": 850000,
+     "taxPer100k": 546
+    },
+    {
+     "name": "Glenway Estates",
+     "sales": 62,
+     "medianTax": 6210,
+     "lowTax": 5270,
+     "highTax": 6980,
+     "medianPrice": 1138000,
+     "taxPer100k": 556
+    },
+    {
+     "name": "Armitage",
+     "sales": 28,
+     "medianTax": 6230,
+     "lowTax": 4160,
+     "highTax": 6680,
+     "medianPrice": 1131000,
+     "taxPer100k": 528
+    }
+   ]
+  },
+  {
+   "city": "Caledon",
+   "slug": "caledon",
+   "taxYear": 2025,
+   "all": {
+    "sales": 611,
+    "medianTax": 5600,
+    "lowTax": 4660,
+    "highTax": 6690,
+    "medianPrice": 1050000,
+    "taxPer100k": 544
+   },
+   "byType": {
+    "detached": {
+     "sales": 455,
+     "medianTax": 6110,
+     "lowTax": 5440,
+     "highTax": 7240,
+     "medianPrice": 1195000,
+     "taxPer100k": 539
+    },
+    "semi": {
+     "sales": 47,
+     "medianTax": 4710,
+     "lowTax": 4440,
+     "highTax": 4960,
+     "medianPrice": 860000,
+     "taxPer100k": 538
+    },
+    "town": {
+     "sales": 104,
+     "medianTax": 4420,
+     "lowTax": 4130,
+     "highTax": 4650,
+     "medianPrice": 810000,
+     "taxPer100k": 552
+    },
+    "condoTown": null,
+    "condoApt": null
+   },
+   "communities": [
+    {
+     "name": "Rural Caledon",
+     "sales": 259,
+     "medianTax": 5960,
+     "lowTax": 4680,
+     "highTax": 6940,
+     "medianPrice": 1150000,
+     "taxPer100k": 548
+    },
+    {
+     "name": "Bolton East",
+     "sales": 96,
+     "medianTax": 5160,
+     "lowTax": 4410,
+     "highTax": 5700,
+     "medianPrice": 912000,
+     "taxPer100k": 530
+    },
+    {
+     "name": "Bolton West",
+     "sales": 76,
+     "medianTax": 5240,
+     "lowTax": 4480,
+     "highTax": 5610,
+     "medianPrice": 918000,
+     "taxPer100k": 553
+    },
+    {
+     "name": "Caledon East",
+     "sales": 63,
+     "medianTax": 6640,
+     "lowTax": 5150,
+     "highTax": 7720,
+     "medianPrice": 1265000,
+     "taxPer100k": 547
+    },
+    {
+     "name": "Bolton North",
+     "sales": 57,
+     "medianTax": 5570,
+     "lowTax": 4850,
+     "highTax": 6120,
+     "medianPrice": 1045000,
+     "taxPer100k": 530
+    }
+   ]
+  },
+  {
+   "city": "Welland",
+   "slug": "welland",
+   "taxYear": 2025,
+   "all": {
+    "sales": 637,
+    "medianTax": 4050,
+    "lowTax": 3180,
+    "highTax": 5120,
+    "medianPrice": 520000,
+    "taxPer100k": 787
+   },
+   "byType": {
+    "detached": {
+     "sales": 525,
+     "medianTax": 4060,
+     "lowTax": 3120,
+     "highTax": 5150,
+     "medianPrice": 540000,
+     "taxPer100k": 778
+    },
+    "semi": {
+     "sales": 50,
+     "medianTax": 3500,
+     "lowTax": 3200,
+     "highTax": 4000,
+     "medianPrice": 475000,
+     "taxPer100k": 724
+    },
+    "town": {
+     "sales": 40,
+     "medianTax": 4890,
+     "lowTax": 4610,
+     "highTax": 5570,
+     "medianPrice": 502000,
+     "taxPer100k": 958
+    },
+    "condoTown": null,
+    "condoApt": null
+   },
+   "communities": [
+    {
+     "name": "773 - Lincoln/Crowland",
+     "sales": 159,
+     "medianTax": 3230,
+     "lowTax": 2490,
+     "highTax": 3930,
+     "medianPrice": 435000,
+     "taxPer100k": 762
+    },
+    {
+     "name": "767 - N. Welland",
+     "sales": 145,
+     "medianTax": 4490,
+     "lowTax": 3770,
+     "highTax": 5350,
+     "medianPrice": 570000,
+     "taxPer100k": 802
+    },
+    {
+     "name": "769 - Prince Charles",
+     "sales": 97,
+     "medianTax": 4260,
+     "lowTax": 3820,
+     "highTax": 4780,
+     "medianPrice": 562000,
+     "taxPer100k": 787
+    },
+    {
+     "name": "772 - Broadway",
+     "sales": 70,
+     "medianTax": 3240,
+     "lowTax": 2900,
+     "highTax": 3590,
+     "medianPrice": 448000,
+     "taxPer100k": 704
+    },
+    {
+     "name": "771 - Coyle Creek",
+     "sales": 38,
+     "medianTax": 6750,
+     "lowTax": 5150,
+     "highTax": 7280,
+     "medianPrice": 761000,
+     "taxPer100k": 901
+    },
+    {
+     "name": "768 - Welland Downtown",
+     "sales": 34,
+     "medianTax": 2650,
+     "lowTax": 2320,
+     "highTax": 2990,
+     "medianPrice": 386000,
+     "taxPer100k": 700
+    },
+    {
+     "name": "770 - West Welland",
+     "sales": 33,
+     "medianTax": 4870,
+     "lowTax": 4340,
+     "highTax": 5570,
+     "medianPrice": 570000,
+     "taxPer100k": 873
+    },
+    {
+     "name": "774 - Dain City",
+     "sales": 25,
+     "medianTax": 4200,
+     "lowTax": 3350,
+     "highTax": 6600,
+     "medianPrice": 590000,
+     "taxPer100k": 812
+    }
+   ]
+  },
+  {
+   "city": "Belleville",
+   "slug": "belleville",
+   "taxYear": 2025,
+   "all": {
+    "sales": 616,
+    "medianTax": 4100,
+    "lowTax": 3290,
+    "highTax": 5240,
+    "medianPrice": 494000,
+    "taxPer100k": 852
+   },
+   "byType": {
+    "detached": {
+     "sales": 488,
+     "medianTax": 4100,
+     "lowTax": 3430,
+     "highTax": 5410,
+     "medianPrice": 510000,
+     "taxPer100k": 839
+    },
+    "semi": null,
+    "town": {
+     "sales": 45,
+     "medianTax": 4770,
+     "lowTax": 4350,
+     "highTax": 5180,
+     "medianPrice": 510000,
+     "taxPer100k": 915
+    },
+    "condoTown": {
+     "sales": 39,
+     "medianTax": 3080,
+     "lowTax": 2380,
+     "highTax": 3520,
+     "medianPrice": 355000,
+     "taxPer100k": 861
+    },
+    "condoApt": {
+     "sales": 28,
+     "medianTax": 2550,
+     "lowTax": 2220,
+     "highTax": 3880,
+     "medianPrice": 288000,
+     "taxPer100k": 919
+    }
+   },
+   "communities": [
+    {
+     "name": "Belleville Ward",
+     "sales": 455,
+     "medianTax": 3920,
+     "lowTax": 3190,
+     "highTax": 4910,
+     "medianPrice": 460000,
+     "taxPer100k": 872
+    },
+    {
+     "name": "Thurlow Ward",
+     "sales": 161,
+     "medianTax": 4930,
+     "lowTax": 3620,
+     "highTax": 5870,
+     "medianPrice": 625000,
+     "taxPer100k": 796
+    }
+   ]
+  },
+  {
+   "city": "Woodstock",
+   "slug": "woodstock",
+   "taxYear": 2025,
+   "all": {
+    "sales": 591,
+    "medianTax": 4150,
+    "lowTax": 3390,
+    "highTax": 5320,
+    "medianPrice": 565000,
+    "taxPer100k": 754
+   },
+   "byType": {
+    "detached": {
+     "sales": 431,
+     "medianTax": 4350,
+     "lowTax": 3680,
+     "highTax": 5690,
+     "medianPrice": 600000,
+     "taxPer100k": 764
+    },
+    "semi": {
+     "sales": 46,
+     "medianTax": 3190,
+     "lowTax": 2920,
+     "highTax": 3800,
+     "medianPrice": 478000,
+     "taxPer100k": 671
+    },
+    "town": {
+     "sales": 35,
+     "medianTax": 4220,
+     "lowTax": 3780,
+     "highTax": 5070,
+     "medianPrice": 590000,
+     "taxPer100k": 751
+    },
+    "condoTown": {
+     "sales": 69,
+     "medianTax": 3570,
+     "lowTax": 2220,
+     "highTax": 4570,
+     "medianPrice": 463000,
+     "taxPer100k": 718
+    },
+    "condoApt": null
+   },
+   "communities": [
+    {
+     "name": "Woodstock - North",
+     "sales": 405,
+     "medianTax": 4410,
+     "lowTax": 3620,
+     "highTax": 5550,
+     "medianPrice": 600000,
+     "taxPer100k": 761
+    },
+    {
+     "name": "Woodstock - South",
+     "sales": 186,
+     "medianTax": 3840,
+     "lowTax": 3090,
+     "highTax": 4520,
+     "medianPrice": 513000,
+     "taxPer100k": 742
+    }
+   ]
+  },
+  {
+   "city": "Aurora",
+   "slug": "aurora",
+   "taxYear": 2025,
+   "all": {
+    "sales": 576,
+    "medianTax": 5810,
+    "lowTax": 4500,
+    "highTax": 7460,
+    "medianPrice": 1120000,
+    "taxPer100k": 520
+   },
+   "byType": {
+    "detached": {
+     "sales": 344,
+     "medianTax": 6990,
+     "lowTax": 5920,
+     "highTax": 8570,
+     "medianPrice": 1375000,
+     "taxPer100k": 520
+    },
+    "semi": {
+     "sales": 37,
+     "medianTax": 4460,
+     "lowTax": 4090,
+     "highTax": 5000,
+     "medianPrice": 917000,
+     "taxPer100k": 513
+    },
+    "town": {
+     "sales": 94,
+     "medianTax": 4650,
+     "lowTax": 4270,
+     "highTax": 5280,
+     "medianPrice": 900000,
+     "taxPer100k": 521
+    },
+    "condoTown": {
+     "sales": 57,
+     "medianTax": 3780,
+     "lowTax": 2980,
+     "highTax": 4290,
+     "medianPrice": 675000,
+     "taxPer100k": 488
+    },
+    "condoApt": {
+     "sales": 44,
+     "medianTax": 3090,
+     "lowTax": 2550,
+     "highTax": 4020,
+     "medianPrice": 566000,
+     "taxPer100k": 546
+    }
+   },
+   "communities": [
+    {
+     "name": "Aurora Highlands",
+     "sales": 125,
+     "medianTax": 6540,
+     "lowTax": 4550,
+     "highTax": 7780,
+     "medianPrice": 1258000,
+     "taxPer100k": 509
+    },
+    {
+     "name": "Aurora Village",
+     "sales": 86,
+     "medianTax": 4690,
+     "lowTax": 2660,
+     "highTax": 5940,
+     "medianPrice": 896000,
+     "taxPer100k": 506
+    },
+    {
+     "name": "Rural Aurora",
+     "sales": 83,
+     "medianTax": 7110,
+     "lowTax": 5410,
+     "highTax": 8450,
+     "medianPrice": 1468000,
+     "taxPer100k": 513
+    },
+    {
+     "name": "Bayview Wellington",
+     "sales": 73,
+     "medianTax": 4450,
+     "lowTax": 4170,
+     "highTax": 4990,
+     "medianPrice": 880000,
+     "taxPer100k": 503
+    },
+    {
+     "name": "Bayview Northeast",
+     "sales": 72,
+     "medianTax": 6210,
+     "lowTax": 5100,
+     "highTax": 7140,
+     "medianPrice": 1095000,
+     "taxPer100k": 545
+    },
+    {
+     "name": "Aurora Heights",
+     "sales": 59,
+     "medianTax": 5520,
+     "lowTax": 4720,
+     "highTax": 6410,
+     "medianPrice": 1100000,
+     "taxPer100k": 521
+    }
+   ]
+  }
+ ]
+}

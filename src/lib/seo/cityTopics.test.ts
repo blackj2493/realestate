@@ -7,6 +7,7 @@ import { notSellingPath } from "@/components/notSelling/NotSellingView";
 import { basementValuePath } from "@/lib/data/basementValue";
 import { priceChangePath } from "@/lib/data/priceChange";
 import { condoPricesPath } from "@/lib/data/condoPrices";
+import { propertyTaxPath } from "@/lib/data/propertyTax";
 import { goodTimeToBuyPath } from "@/lib/data/goodTimeToBuy";
 import { rentVsBuyPath } from "@/lib/data/rentVsBuy";
 import { schoolPricesPath } from "@/lib/data/schoolPrices";
@@ -35,6 +36,8 @@ describe("cityTopics", () => {
     expect(by["price-change"].hub).toBe(priceChangePath());
     expect(by["condo-prices"].path("markham")).toBe(condoPricesPath("markham"));
     expect(by["condo-prices"].hub).toBe(condoPricesPath());
+    expect(by["property-tax"].path("markham")).toBe(propertyTaxPath("markham"));
+    expect(by["property-tax"].hub).toBe(propertyTaxPath());
     expect(by["good-time-to-buy"].path("markham")).toBe(goodTimeToBuyPath("markham"));
     expect(by["good-time-to-buy"].hub).toBe(goodTimeToBuyPath());
     expect(by["rent-vs-buy"].path("london")).toBe(rentVsBuyPath("london"));
