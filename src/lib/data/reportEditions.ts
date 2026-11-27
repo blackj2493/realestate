@@ -3,7 +3,8 @@
  * frozen snapshot (data/reports/{YYYY-MM}.json, scripts/data/buildMonthlyReport.ts), so the
  * page at /data/reports/{YYYY-MM} never changes after it is published.
  *
- * MONTHLY STEP: after the script writes a new file, import it here and add it to the end.
+ * The script's --write adds each new edition here (src/lib/data/registerEdition.ts). Keep the
+ * import lines and the one-line EDITIONS array in this shape, or that step fails.
  */
 import e202611 from "@/data/reports/2026-11.json";
 import type { ReportEdition } from "./monthlyReport";

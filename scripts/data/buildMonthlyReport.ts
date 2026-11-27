@@ -10,13 +10,15 @@
  * pos_monthly_stats. Also reads data/price-change.json and src/lib/data/bankForecasts.ts, so
  * run it AFTER the monthly price-change refresh and after any bank forecast update.
  *
- * MONTHLY STEP (by the 25th): run with --write, add the new file to EDITIONS in
- * src/lib/data/reportEditions.ts, commit, merge. A written edition is never rebuilt: the
- * script refuses to overwrite an existing file, so a quoted figure never changes.
+ * MONTHLY: .github/workflows/build-monthly-report.yml runs this with --write on the 20th, which
+ * writes the JSON AND registers it in EDITIONS (src/lib/data/reportEditions.ts), pushes the
+ * branch report/{YYYY-MM} and sends the PR link to Telegram. The founder reads it and merges.
+ * A written edition is never rebuilt: the script refuses to overwrite an existing file, so a
+ * quoted figure never changes.
  * Model: src/lib/data/monthlyReport.ts.
  */
 import "dotenv/config";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { Client } from "pg";
 import { boardFromRegionRows, type RegionMetricsRow } from "@/lib/data/marketBoard";
 import { getPriceChangeData } from "@/lib/data/priceChange";
@@ -24,6 +26,7 @@ import { forecastRange } from "@/lib/data/bankForecasts";
 import { outlookYear } from "@/lib/data/marketOutlook";
 import { OUTLOOK_CITIES } from "@/lib/data/outlookCities";
 import { buildReportEdition, editionFor } from "@/lib/data/monthlyReport";
+import { registerEdition } from "@/lib/data/registerEdition";
 import type { PosMonthRow } from "@/lib/data/posIndex";
 
 const WRITE = process.argv.includes("--write");
@@ -88,6 +91,9 @@ async function main() {
     mkdirSync("data/reports", { recursive: true });
     writeFileSync(out, JSON.stringify(edition, null, 1) + "\n");
     console.log(`\nWrote ${out}`);
+    const editionsFile = "src/lib/data/reportEditions.ts";
+    writeFileSync(editionsFile, registerEdition(readFileSync(editionsFile, "utf8"), editionFor(publishedAt)));
+    console.log(`Registered ${editionFor(publishedAt)} in ${editionsFile}`);
   }
 }
 

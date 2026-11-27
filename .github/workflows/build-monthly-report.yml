@@ -1,0 +1,80 @@
+name: Build Monthly Report
+
+# Builds the next edition of the Ontario Housing Market Report (data/reports/{YYYY-MM}.json,
+# page /data/reports/{YYYY-MM}), registers it in src/lib/data/reportEditions.ts, pushes it to
+# the branch report/{YYYY-MM} and sends the findings and the PR link to Telegram. Nothing goes
+# live until the founder opens the PR and merges it: the figures in an edition never change
+# once published, so a person reads them first. Read-only on the database.
+#
+# CADENCE: monthly, the 20th. The edition is the Toronto month of the run, with figures to the
+# last full month; the 20th is after the price change refresh (the 5th), and leaves time to
+# merge before the pitches go out at the start of the next month.
+#
+# NO PR FROM HERE: the repo does not let GITHUB_TOKEN create pull requests (a security setting),
+# so the job pushes the branch and the Telegram message carries the "open a PR" link.
+#
+# NEW-WORKFLOW GOTCHA: workflow_dispatch only activates once this file is on main. Test with
+# the Actions "Run workflow" button, or: gh workflow run build-monthly-report.yml
+on:
+  # NOT scheduled by GitHub (it drops `schedule` runs under load). Supabase pg_cron POSTs a
+  # workflow_dispatch at 11:17 UTC on the 20th — supabase/migrations/178_pg_cron_monthly_report.sql.
+  # Change the time in cron.job, NOT here.
+  workflow_dispatch:
+
+permissions:
+  contents: write # pushes the report/{YYYY-MM} branch
+
+concurrency:
+  group: build-monthly-report
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build the edition
+        timeout-minutes: 10
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        # pipefail: `tsx … | tee` otherwise returns tee's 0 and a Fatal goes green.
+        run: |
+          set -o pipefail
+          npx tsx scripts/data/buildMonthlyReport.ts --write 2>&1 | tee report-run.log
+          echo "EDITION=$(TZ=America/Toronto date +%Y-%m)" >> "$GITHUB_ENV"
+
+      - name: Test the edition
+        run: npx vitest run src/lib/data/monthlyReport.test.ts src/lib/data/registerEdition.test.ts src/app/data/sitemap.test.ts
+
+      - name: Push the branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "report/$EDITION"
+          git add "data/reports/$EDITION.json" src/lib/data/reportEditions.ts
+          git commit -m "feat(data): Ontario Housing Market Report, $EDITION edition"
+          git push origin "report/$EDITION"
+
+      - name: Send the findings to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          URL="https://github.com/${GITHUB_REPOSITORY}/compare/main...report/${EDITION}?expand=1"
+          FINDINGS=$(sed '/^city /,$d' report-run.log | head -c 3300)
+          TEXT=$(printf 'Monthly report %s is built. Read the findings, then open the PR and merge it to publish:\n%s\n\n%s' "$EDITION" "$URL" "$FINDINGS")
+          curl -sS -f "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${TEXT}" \
+            --data-urlencode "disable_web_page_preview=true" > /dev/null
